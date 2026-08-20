@@ -1,0 +1,33 @@
+# Final de linha
+#
+# Tudo que é texto fica em LF no repositório E no disco, em qualquer sistema.
+#
+# Sem isto, o git no Windows materializa CRLF no checkout e o Biome — que
+# está configurado com `lineEnding: "lf"`, como a CI no Linux espera — acusa
+# o arquivo inteiro como mal formatado. O resultado era `npm run verify`
+# falhando em ~58 arquivos numa máquina Windows logo depois de um `git pull`,
+# sem nada de errado no conteúdo.
+#
+# `eol=lf` é mais forte que `text=auto`: normaliza na gravação e também na
+# extração, então não depende da configuração `core.autocrlf` de cada
+# máquina.
+
+* text=auto eol=lf
+
+# Binários: nunca tocar.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.pdf   binary
+*.node  binary
+
+# Gerado pelo npm; diff enorme e sem valor de revisão.
+package-lock.json -diff linguist-generated=true
+
+# Avatares gerados por script (DiceBear, CC0). Ver scripts/gerar-avatares.mjs.
+public/avatares/*.svg linguist-generated=true
