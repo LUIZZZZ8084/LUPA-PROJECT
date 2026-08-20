@@ -172,31 +172,34 @@ test.describe("segurança da demonstração", () => {
 
 test.describe("área administrativa", () => {
   /**
-   * Sem sessão, o painel não pode existir aos olhos de quem pede.
+   * O 404 precisa ser de verdade, não só na aparência.
    *
-   * Um 403 confirmaria que há uma área administrativa neste endereço, o que
-   * já é informação para quem estiver sondando o app.
+   * A versão anterior deste teste verificava o texto da página. Passava com
+   * status 200 servindo o corpo do 404 — media a aparência, não a
+   * propriedade. Monitoramento e scanner leem o status, não o texto.
    */
-  test("responde 404 para quem não está autenticado", async ({ page }) => {
-    for (const rota of ["/admin", "/admin/painel"]) {
-      await page.goto(rota);
-      await expect(
-        page.getByText(/Não encontramos essa página/),
-        `${rota} deveria responder 404`,
-      ).toBeVisible();
+  test("responde 404 de verdade para quem não está autenticado", async ({
+    request,
+  }) => {
+    for (const rota of ["/admin", "/admin/painel", "/api/admin/metricas"]) {
+      const resposta = await request.get(rota);
+      expect(resposta.status(), `${rota} deveria responder 404`).toBe(404);
     }
   });
 
-  test("a API de métricas responde 404, não 401 nem 403", async ({
-    request,
-  }) => {
-    const resposta = await request.get("/api/admin/metricas");
-    expect(resposta.status()).toBe(404);
+  /**
+   * O título da aba não pode revelar que existe um painel neste endereço —
+   * era o que acontecia quando o metadata da rota protegida era resolvido
+   * antes da guarda.
+   */
+  test("o título não revela a existência do painel", async ({ page }) => {
+    await page.goto("/admin/painel");
+    await expect(page).not.toHaveTitle(/Painel/);
+    await expect(page.getByText(/Não encontramos essa página/)).toBeVisible();
   });
 
-  test("o painel não é indexável por buscador", async ({ request }) => {
-    const resposta = await request.get("/admin/painel");
-    // Mesmo no 404, o cabeçalho de robots não deve convidar indexação.
-    expect(resposta.headers()["x-robots-tag"] ?? "").not.toContain("index,");
+  test("a rota de API devolve JSON, não HTML", async ({ request }) => {
+    const resposta = await request.get("/api/admin/metricas");
+    expect(resposta.headers()["content-type"]).toContain("application/json");
   });
 });
