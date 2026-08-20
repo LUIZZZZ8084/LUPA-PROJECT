@@ -1,5 +1,6 @@
 import { ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import {
   EmptyState,
   PageShell,
@@ -11,14 +12,25 @@ import { Panel } from "@/components/ui/card";
 import { ROLE_LABELS, VERIFICATION_LABELS } from "@/lib/constants";
 import { getVerificationQueue } from "@/lib/data";
 import { formatPhone, timeAgo } from "@/lib/format";
+import { sessaoAtual } from "@/server/auth/cookies";
+import { pode } from "@/server/auth/rbac";
 import { VerificationActions } from "./actions-ui";
 
 export const metadata: Metadata = {
   title: "Verificações",
   description: "Fila de aprovação manual de documentos.",
+  robots: { index: false, follow: false },
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
+  const sessao = await sessaoAtual();
+
+  // Sem permissão a rota não existe: um 403 confirmaria que há uma área
+  // administrativa neste endereço.
+  if (!sessao || !pode(sessao.papel, "admin:decidir_verificacao")) notFound();
+
   const queue = await getVerificationQueue();
 
   return (
