@@ -56,6 +56,9 @@ export default defineConfig({
         // Clientes do Supabase: dependem do runtime do Next.
         "src/lib/supabase/client.ts",
         "src/lib/supabase/server.ts",
+        // Casca fina sobre next/headers; a lógica está em auth/session.ts,
+        // que é testada, e o caminho completo é coberto pelo Playwright.
+        "src/server/auth/cookies.ts",
       ],
       thresholds: {
         // Piso um pouco abaixo do atingido hoje, para travar o patamar sem

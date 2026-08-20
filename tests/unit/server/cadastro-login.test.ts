@@ -1,0 +1,353 @@
+/**
+ * @vitest-environment node
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CONFIG_LIMITE, limparLimites } from "@/server/auth/rate-limit";
+import { schemaCadastro, schemaLogin } from "@/server/auth/schemas";
+import { cadastrar, entrar, usuarioDaSessao } from "@/server/auth/servico";
+import { ehAppError } from "@/server/errors";
+import { RepositorioMemoria, usarRepositorio } from "@/server/repositories";
+import { validar } from "@/server/validation";
+
+const SENHA = "uma senha bem longa";
+
+const candidato = {
+  papel: "candidato_clt" as const,
+  nomeCompleto: "Everton Rodrigues",
+  email: "everton@teste.lupa",
+  senha: SENHA,
+  telefone: "66999220001",
+  cidade: "Sinop" as const,
+  areaDesejada: "Agronegócio" as const,
+};
+
+const prestador = {
+  papel: "prestador_servico" as const,
+  nomeCompleto: "João Silva",
+  email: "joao@teste.lupa",
+  senha: SENHA,
+  telefone: "66999110001",
+  cidade: "Sinop" as const,
+  categoriaId: 1,
+  descricao: "Instalações elétricas residenciais e comerciais em Sinop.",
+  precoInicial: 150,
+  bairrosAtendidos: ["Centro", "Menezes"],
+};
+
+const empresa = {
+  papel: "empresa" as const,
+  nomeCompleto: "Luiz Fernando",
+  email: "contato@agronorte.teste",
+  senha: SENHA,
+  telefone: "66999330001",
+  cidade: "Sinop" as const,
+  razaoSocial: "Agro Norte Ltda.",
+  cnpj: "11222333000181",
+  porte: "Média" as const,
+};
+
+describe("cadastro e login", () => {
+  let repo: RepositorioMemoria;
+  let restaurar: () => void;
+
+  beforeEach(() => {
+    repo = new RepositorioMemoria();
+    restaurar = usarRepositorio(repo);
+    limparLimites();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    restaurar();
+    vi.restoreAllMocks();
+  });
+
+  /* ---------- Schemas ---------- */
+
+  describe("validação por papel", () => {
+    it("aceita os três papéis com os campos próprios", () => {
+      for (const dados of [candidato, prestador, empresa]) {
+        const r = validar(schemaCadastro, dados);
+        expect(
+          r.ok,
+          `${dados.papel}: ${JSON.stringify(!r.ok && r.erro.campos)}`,
+        ).toBe(true);
+      }
+    });
+
+    /** O trabalhador comum é o público mais numeroso e o menos paciente. */
+    it("candidato precisa de poucos campos", () => {
+      const r = validar(schemaCadastro, candidato);
+      expect(r.ok).toBe(true);
+      // Sem currículo, sem experiência, sem formação no cadastro.
+      expect(Object.keys(candidato)).toHaveLength(7);
+    });
+
+    it("prestador sem descrição é recusado — o perfil é o anúncio", () => {
+      const { descricao: _, ...semDescricao } = prestador;
+      expect(validar(schemaCadastro, semDescricao).ok).toBe(false);
+    });
+
+    it("prestador com categoria inexistente é recusado", () => {
+      const r = validar(schemaCadastro, { ...prestador, categoriaId: 999 });
+      expect(r.ok).toBe(false);
+      if (r.ok) return;
+      expect(r.erro.campos?.[0].campo).toBe("categoriaId");
+    });
+
+    it("empresa com CNPJ de dígito errado é recusada", () => {
+      const r = validar(schemaCadastro, { ...empresa, cnpj: "11222333000182" });
+      expect(r.ok).toBe(false);
+      if (r.ok) return;
+      expect(r.erro.campos?.some((c) => c.campo === "cnpj")).toBe(true);
+    });
+
+    it("telefone fixo é recusado em qualquer papel", () => {
+      for (const dados of [candidato, prestador, empresa]) {
+        const r = validar(schemaCadastro, { ...dados, telefone: "6635112200" });
+        expect(r.ok, dados.papel).toBe(false);
+      }
+    });
+
+    it("senha curta é recusada", () => {
+      expect(validar(schemaCadastro, { ...candidato, senha: "curta" }).ok).toBe(
+        false,
+      );
+    });
+
+    it("papel desconhecido não passa", () => {
+      expect(validar(schemaCadastro, { ...candidato, papel: "root" }).ok).toBe(
+        false,
+      );
+    });
+  });
+
+  /* ---------- Cadastro ---------- */
+
+  describe("cadastrar", () => {
+    it("cria usuário e perfil do papel, em uma passada", async () => {
+      const criado = await cadastrar(validarOk(prestador));
+
+      expect(criado.papel).toBe("prestador_servico");
+      expect(await repo.perfilPrestador(criado.id)).toMatchObject({
+        categoriaId: 1,
+        precoInicial: 150,
+      });
+    });
+
+    it("cria o perfil certo para cada papel", async () => {
+      const c = await cadastrar(validarOk(candidato));
+      const e = await cadastrar(validarOk(empresa));
+
+      expect(await repo.perfilCandidato(c.id)).toMatchObject({
+        areaDesejada: "Agronegócio",
+      });
+      expect(await repo.perfilEmpresa(e.id)).toMatchObject({
+        cnpj: "11222333000181",
+        plano: "trial",
+      });
+    });
+
+    /** O objeto devolvido circula pela aplicação; o hash não pode ir junto. */
+    it("nunca devolve o hash da senha", async () => {
+      const criado = await cadastrar(validarOk(candidato));
+      expect(criado).not.toHaveProperty("senhaHash");
+      expect(JSON.stringify(criado)).not.toContain("argon2");
+    });
+
+    it("guarda o hash, nunca a senha em claro", async () => {
+      const criado = await cadastrar(validarOk(candidato));
+      const noBanco = await repo.porId(criado.id);
+
+      expect(noBanco?.senhaHash).toMatch(/^\$argon2id\$/);
+      expect(noBanco?.senhaHash).not.toContain(SENHA);
+    });
+
+    it("normaliza o e-mail para minúscula", async () => {
+      const criado = await cadastrar(
+        validarOk({ ...candidato, email: "EVERTON@Teste.Lupa" }),
+      );
+      expect(criado.email).toBe("everton@teste.lupa");
+    });
+
+    /**
+     * No cadastro, avisar é necessário: sem isso a pessoa tenta de novo sem
+     * entender. No login o mesmo aviso seria enumeração de contas.
+     */
+    it("e-mail repetido avisa claramente e manda entrar", async () => {
+      await cadastrar(validarOk(candidato));
+
+      await expect(cadastrar(validarOk(candidato))).rejects.toMatchObject({
+        codigo: "conflito",
+        mensagem: expect.stringContaining("Tente entrar"),
+      });
+    });
+
+    it("CNPJ repetido é recusado", async () => {
+      await cadastrar(validarOk(empresa));
+
+      await expect(
+        cadastrar(validarOk({ ...empresa, email: "outro@agronorte.teste" })),
+      ).rejects.toMatchObject({ codigo: "conflito" });
+    });
+
+    it("começa sem nenhuma verificação concluída", async () => {
+      const criado = await cadastrar(validarOk(candidato));
+      expect(criado.emailVerificado).toBe(false);
+      expect(criado.telefoneVerificado).toBe(false);
+      expect(criado.docVerificado).toBe(false);
+    });
+  });
+
+  /* ---------- Login ---------- */
+
+  describe("entrar", () => {
+    beforeEach(async () => {
+      await cadastrar(validarOk(candidato));
+    });
+
+    it("entra com a senha certa", async () => {
+      const usuario = await entrar(
+        validarOkLogin({ email: candidato.email, senha: SENHA }),
+      );
+      expect(usuario.email).toBe(candidato.email);
+      expect(usuario).not.toHaveProperty("senhaHash");
+    });
+
+    it("registra o acesso", async () => {
+      const antes = await repo.porEmail(candidato.email);
+      expect(antes?.ultimoAcessoEm).toBeNull();
+
+      await entrar(validarOkLogin({ email: candidato.email, senha: SENHA }));
+
+      const depois = await repo.porEmail(candidato.email);
+      expect(depois?.ultimoAcessoEm).toBeTruthy();
+    });
+
+    /**
+     * Distinguir "e-mail não existe" de "senha errada" entrega a lista de
+     * quem tem conta — aqui, de quem está procurando emprego.
+     */
+    it("mesma mensagem para e-mail inexistente e senha errada", async () => {
+      const semConta = await capturarErro(() =>
+        entrar(validarOkLogin({ email: "ninguem@teste.lupa", senha: SENHA })),
+      );
+      const senhaErrada = await capturarErro(() =>
+        entrar(
+          validarOkLogin({ email: candidato.email, senha: "outra senha aqui" }),
+        ),
+      );
+
+      expect(semConta.mensagem).toBe("E-mail ou senha incorretos.");
+      expect(senhaErrada.mensagem).toBe(semConta.mensagem);
+      expect(senhaErrada.codigo).toBe(semConta.codigo);
+    });
+
+    it("o detalhe técnico distingue os casos, só no log", async () => {
+      const semConta = await capturarErro(() =>
+        entrar(validarOkLogin({ email: "ninguem@teste.lupa", senha: SENHA })),
+      );
+      expect(semConta.message).toContain("não encontrado");
+      // Mas não vaza para o cliente.
+      expect(JSON.stringify(semConta.paraCliente())).not.toContain(
+        "não encontrado",
+      );
+    });
+
+    it("bloqueia depois do teto de tentativas", async () => {
+      for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS; i++) {
+        await capturarErro(() =>
+          entrar(
+            validarOkLogin({ email: candidato.email, senha: "errada!!!" }),
+          ),
+        );
+      }
+
+      const bloqueado = await capturarErro(() =>
+        entrar(validarOkLogin({ email: candidato.email, senha: SENHA })),
+      );
+
+      expect(bloqueado.codigo).toBe("muitas_tentativas");
+      expect(bloqueado.status).toBe(429);
+    });
+
+    it("login bem-sucedido zera o contador", async () => {
+      for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS - 1; i++) {
+        await capturarErro(() =>
+          entrar(
+            validarOkLogin({ email: candidato.email, senha: "errada!!!" }),
+          ),
+        );
+      }
+
+      await entrar(validarOkLogin({ email: candidato.email, senha: SENHA }));
+
+      // Depois do sucesso, ainda há margem para errar de novo.
+      const erro = await capturarErro(() =>
+        entrar(validarOkLogin({ email: candidato.email, senha: "errada!!!" })),
+      );
+      expect(erro.codigo).toBe("nao_autenticado");
+    });
+
+    it("o bloqueio é por e-mail, não afeta outra conta", async () => {
+      await cadastrar(validarOk(prestador));
+
+      for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS; i++) {
+        await capturarErro(() =>
+          entrar(
+            validarOkLogin({ email: candidato.email, senha: "errada!!!" }),
+          ),
+        );
+      }
+
+      await expect(
+        entrar(validarOkLogin({ email: prestador.email, senha: SENHA })),
+      ).resolves.toBeTruthy();
+    });
+
+    it("senha vazia é barrada na validação, antes do serviço", () => {
+      expect(
+        validar(schemaLogin, { email: candidato.email, senha: "" }).ok,
+      ).toBe(false);
+    });
+  });
+
+  describe("usuarioDaSessao", () => {
+    it("devolve o perfil sem hash", async () => {
+      const criado = await cadastrar(validarOk(candidato));
+      const daSessao = await usuarioDaSessao(criado.id);
+
+      expect(daSessao?.email).toBe(candidato.email);
+      expect(daSessao).not.toHaveProperty("senhaHash");
+    });
+
+    it("id inexistente devolve null", async () => {
+      expect(await usuarioDaSessao("nao-existe")).toBeNull();
+    });
+  });
+});
+
+/* ---------- Auxiliares ---------- */
+
+function validarOk(dados: unknown) {
+  const r = validar(schemaCadastro, dados);
+  if (!r.ok) throw new Error(JSON.stringify(r.erro.campos));
+  return r.valor;
+}
+
+function validarOkLogin(dados: unknown) {
+  const r = validar(schemaLogin, dados);
+  if (!r.ok) throw new Error(JSON.stringify(r.erro.campos));
+  return r.valor;
+}
+
+async function capturarErro(fn: () => Promise<unknown>) {
+  try {
+    await fn();
+    throw new Error("esperava um erro, mas passou");
+  } catch (e) {
+    if (!ehAppError(e)) throw e;
+    return e;
+  }
+}

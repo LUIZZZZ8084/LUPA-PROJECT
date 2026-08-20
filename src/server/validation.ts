@@ -98,6 +98,12 @@ export const zSenha = z
   .min(10, "Use pelo menos 10 caracteres.")
   .max(200, "Senha longa demais.");
 
+export const zNome = z
+  .string()
+  .trim()
+  .min(3, "Informe o nome completo.")
+  .max(120, "Nome longo demais.");
+
 export const zCelular = z
   .string()
   .transform(onlyDigits)

@@ -1,0 +1,130 @@
+import { z } from "zod";
+import {
+  JOB_CATEGORIES,
+  PILOT_CITY,
+  SERVICE_CATEGORIES,
+  SINOP_NEIGHBORHOODS,
+} from "@/lib/constants";
+import { zCelular, zCnpj, zEmail, zNome, zSenha, zTexto } from "../validation";
+
+/**
+ * Schemas de cadastro, um por papel.
+ *
+ * O que cada papel precisa informar é decisão de produto, não de tecnologia,
+ * e está documentada em AGENTS.md. O princípio: pedir agora só o que é
+ * necessário para a conta existir e para a pessoa ser encontrada. O resto
+ * vai para a edição de perfil, depois.
+ */
+
+const zBairro = z
+  .enum(SINOP_NEIGHBORHOODS)
+  .optional()
+  .or(z.literal("").transform(() => undefined));
+
+const base = {
+  nomeCompleto: zNome,
+  email: zEmail,
+  senha: zSenha,
+  telefone: zCelular,
+  cidade: z.literal(PILOT_CITY).default(PILOT_CITY),
+  bairro: zBairro,
+};
+
+/**
+ * Trabalhador comum.
+ *
+ * Cadastro curto de propósito. É o público mais numeroso e o menos paciente
+ * com formulário: quem está procurando emprego no celular, muitas vezes em
+ * dado móvel limitado, abandona uma tela com quinze campos. Currículo,
+ * experiência e formação entram depois, na edição de perfil, quando a pessoa
+ * já viu que existem vagas de verdade aqui.
+ */
+export const schemaCandidato = z.object({
+  ...base,
+  papel: z.literal("candidato_clt"),
+  areaDesejada: z.enum(JOB_CATEGORIES),
+});
+
+/**
+ * Prestador de serviço.
+ *
+ * Precisa de mais no cadastro porque o perfil já nasce sendo o anúncio: sem
+ * categoria e descrição, ninguém o encontra na busca e ele conclui que a
+ * plataforma não funciona.
+ */
+export const schemaPrestador = z.object({
+  ...base,
+  papel: z.literal("prestador_servico"),
+  categoriaId: z.coerce
+    .number()
+    .int()
+    .refine(
+      (id) => SERVICE_CATEGORIES.some((c) => c.id === id),
+      "Escolha uma categoria da lista.",
+    ),
+  descricao: zTexto(20, 1000, "A descrição"),
+  precoInicial: z.coerce
+    .number()
+    .min(0, "Preço não pode ser negativo.")
+    .max(100_000, "Preço fora do razoável.")
+    .optional(),
+  anosExperiencia: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(70, "Confira os anos de experiência.")
+    .optional(),
+  bairrosAtendidos: z
+    .union([z.string(), z.array(z.string())])
+    .transform((v) => (Array.isArray(v) ? v : [v]))
+    .pipe(z.array(z.enum(SINOP_NEIGHBORHOODS)).max(14))
+    .optional(),
+});
+
+/**
+ * Empresa.
+ *
+ * CNPJ é obrigatório e validado por dígito verificador. É o que separa uma
+ * empresa real de alguém publicando vaga falsa — o risco mais concreto numa
+ * plataforma de emprego, onde vaga falsa vira golpe de taxa de cadastro.
+ */
+export const schemaEmpresa = z.object({
+  ...base,
+  papel: z.literal("empresa"),
+  razaoSocial: z
+    .string()
+    .trim()
+    .min(2, "Informe o nome da empresa.")
+    .max(150, "Nome longo demais."),
+  cnpj: zCnpj,
+  setor: z.string().trim().max(80).optional(),
+  porte: z.enum(["MEI", "Micro", "Pequena", "Média", "Grande"]).optional(),
+  site: z
+    .union([z.url("Endereço de site inválido."), z.literal("")])
+    .optional()
+    .transform((v) => (v ? v : undefined)),
+  descricao: zTexto(20, 2000, "A descrição").optional(),
+});
+
+/** União discriminada: o papel escolhe qual conjunto de campos vale. */
+export const schemaCadastro = z.discriminatedUnion("papel", [
+  schemaCandidato,
+  schemaPrestador,
+  schemaEmpresa,
+]);
+
+export type DadosCadastro = z.infer<typeof schemaCadastro>;
+
+/**
+ * Login.
+ *
+ * A senha aqui só exige presença. Aplicar a regra de comprimento no login
+ * revelaria a política para quem está sondando, e recusaria a entrada de
+ * quem tem uma senha antiga válida.
+ */
+export const schemaLogin = z.object({
+  email: zEmail,
+  senha: z.string().min(1, "Informe a senha."),
+});
+
+export type DadosLogin = z.infer<typeof schemaLogin>;
