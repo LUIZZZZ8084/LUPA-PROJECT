@@ -18,7 +18,7 @@ export function ProviderCard({
   return (
     <div
       className={cn(
-        "group relative flex gap-3.5 rounded-[var(--radius-card)] border border-line bg-panel p-4",
+        "group relative flex min-w-0 gap-3.5 rounded-[var(--radius-card)] border border-line bg-panel p-4",
         "transition-colors hover:border-servicos/40 hover:bg-panel-2",
         className,
       )}
@@ -31,8 +31,9 @@ export function ProviderCard({
           href={`/servicos/${provider.profile_id}`}
           className="after:absolute after:inset-0 after:content-['']"
         >
-          <h3 className="flex items-center gap-1.5 truncate text-[15px] font-semibold text-ink group-hover:text-servicos">
-            {provider.full_name}
+          {/* truncate no texto, não no flex — ver comentário em job-card.tsx */}
+          <h3 className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold text-ink group-hover:text-servicos">
+            <span className="truncate">{provider.full_name}</span>
             {provider.doc_verified && <VerifiedMark size={14} />}
           </h3>
         </Link>

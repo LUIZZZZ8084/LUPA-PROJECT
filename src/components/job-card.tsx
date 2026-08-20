@@ -24,7 +24,7 @@ export function JobCard({
     <Link
       href={`/vagas/${job.id}`}
       className={cn(
-        "group flex gap-3.5 rounded-[var(--radius-card)] border border-line bg-panel p-4",
+        "group flex min-w-0 gap-3.5 rounded-[var(--radius-card)] border border-line bg-panel p-4",
         "transition-colors hover:border-vagas/40 hover:bg-panel-2",
         className,
       )}
@@ -32,15 +32,17 @@ export function JobCard({
       <Avatar name={job.company.company_name} src={job.company.logo_url} square />
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="truncate text-[15px] leading-snug font-semibold text-ink group-hover:text-vagas">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <h3 className="min-w-0 truncate text-[15px] leading-snug font-semibold text-ink group-hover:text-vagas">
             {job.title}
           </h3>
           {isNew(job.created_at) && <Badge tone="vagas">Novo</Badge>}
         </div>
 
-        <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted">
-          {job.company.company_name}
+        {/* O truncate precisa ficar no texto, não no contêiner flex: em flex
+            o ellipsis não se aplica e o nowrap trava a largura do card. */}
+        <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-muted">
+          <span className="truncate">{job.company.company_name}</span>
           {job.company.doc_verified && <VerifiedMark size={13} />}
         </p>
 
