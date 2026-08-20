@@ -99,13 +99,18 @@ describe("Field", () => {
     expect(campo).toHaveValue("66999");
   });
 
-  it("marca campo obrigatório", () => {
+  it("marca campo obrigatório para o leitor de tela", () => {
     render(
       <Field label="E-mail" required>
         <Input />
       </Field>,
     );
-    expect(screen.getByLabelText("obrigatório")).toBeInTheDocument();
+    // O asterisco é decorativo (aria-hidden); quem carrega a informação é
+    // o aria-required no próprio campo.
+    expect(screen.getByLabelText(/E-mail/)).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
   });
 
   it("mostra a dica, e o erro substitui a dica", () => {

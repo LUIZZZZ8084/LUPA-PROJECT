@@ -142,6 +142,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/server/logger.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
     }
   ]
 }
