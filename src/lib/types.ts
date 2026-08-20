@@ -1,0 +1,167 @@
+/**
+ * Tipos do domínio Lupa — espelham o schema em supabase/schema.sql.
+ * Mantenha os dois em sincronia ao alterar tabelas.
+ */
+
+export type Role = "candidato_clt" | "prestador_servico" | "empresa";
+
+export type VerificationStatus =
+  | "pendente"
+  | "em_analise"
+  | "aprovado"
+  | "reprovado";
+
+export type ApplicationStatus =
+  | "enviada"
+  | "visualizada"
+  | "entrevista"
+  | "aprovada"
+  | "rejeitada";
+
+export type JobStatus = "aberta" | "fechada";
+
+export type ContractType =
+  | "CLT"
+  | "Estágio"
+  | "Temporário"
+  | "Freelance"
+  | "Jovem Aprendiz";
+
+export type CompanyPlan = "trial" | "mensal";
+
+export interface Profile {
+  id: string;
+  full_name: string;
+  phone: string;
+  role: Role;
+  city: string;
+  neighborhood: string | null;
+  avatar_url: string | null;
+  phone_verified: boolean;
+  doc_verified: boolean;
+  verification_status: VerificationStatus;
+  created_at: string;
+}
+
+export interface CltProfile {
+  profile_id: string;
+  desired_area: string | null;
+  experiences: Experience[];
+  education: string | null;
+  skills: string[];
+  resume_url: string | null;
+  availability: string | null;
+}
+
+export interface Experience {
+  role: string;
+  company: string;
+  period: string;
+  description?: string;
+}
+
+export interface ServiceCategory {
+  id: number;
+  slug: string;
+  name: string;
+}
+
+export interface ProviderProfile {
+  profile_id: string;
+  category_id: number;
+  description: string | null;
+  starting_price: number | null;
+  years_experience: number | null;
+  service_area: string[];
+  photo_urls: string[];
+  avg_rating: number;
+  review_count: number;
+}
+
+export interface Company {
+  profile_id: string;
+  company_name: string;
+  cnpj: string | null;
+  logo_url: string | null;
+  plan: CompanyPlan;
+}
+
+export interface Job {
+  id: string;
+  company_id: string;
+  title: string;
+  description: string;
+  category: string | null;
+  city: string;
+  neighborhood: string | null;
+  contract_type: ContractType | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  status: JobStatus;
+  created_at: string;
+}
+
+export interface Application {
+  id: string;
+  job_id: string;
+  candidate_id: string;
+  status: ApplicationStatus;
+  created_at: string;
+}
+
+export interface Review {
+  id: string;
+  provider_id: string;
+  reviewer_name: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+/* ---------- Views compostas usadas pela UI ---------- */
+
+/** Vaga já com os dados da empresa embutidos, como aparece nos cards. */
+export interface JobListing extends Job {
+  company: Pick<Company, "company_name" | "logo_url"> & {
+    doc_verified: boolean;
+  };
+  applicant_count: number;
+}
+
+/** Prestador com nome, verificação e categoria resolvidos. */
+export interface ProviderListing extends ProviderProfile {
+  full_name: string;
+  phone: string;
+  city: string;
+  neighborhood: string | null;
+  avatar_url: string | null;
+  phone_verified: boolean;
+  doc_verified: boolean;
+  category: ServiceCategory;
+}
+
+/** Candidatura vista pelo painel da empresa. */
+export interface ApplicationWithCandidate extends Application {
+  candidate: Pick<Profile, "full_name" | "avatar_url" | "neighborhood"> & {
+    desired_area: string | null;
+    resume_url: string | null;
+  };
+  job_title: string;
+}
+
+/* ---------- Filtros de busca ---------- */
+
+export interface JobFilters {
+  city?: string;
+  category?: string;
+  contract_type?: string;
+  q?: string;
+}
+
+export interface ProviderFilters {
+  city?: string;
+  category?: string;
+  /** Nota mínima, ex.: 4 mostra só quem tem 4,0 ou mais. */
+  min_rating?: number;
+  q?: string;
+}

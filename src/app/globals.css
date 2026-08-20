@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+/* ============================================================
+   LUPA — Design tokens
+   Dark theme com três cores por vertical:
+   verde = vagas/emprego · azul = serviços · roxo = empresas
+   ============================================================ */
+
+@theme {
+  /* Superfícies */
+  --color-bg: #0b0f14;
+  --color-panel: #121821;
+  --color-panel-2: #161d28;
+  --color-panel-3: #1b2330;
+  --color-line: #232b38;
+  --color-line-soft: #1a212c;
+
+  /* Texto */
+  --color-ink: #f2f5f8;
+  --color-muted: #8b97a5;
+  --color-faint: #5d6875;
+
+  /* Verticais */
+  --color-vagas: #3ecf8e;
+  --color-vagas-dim: #2aa871;
+  --color-servicos: #4d9fff;
+  --color-servicos-dim: #3a7fd4;
+  --color-empresas: #a879ff;
+  --color-empresas-dim: #8a5be0;
+
+  /* Semânticas */
+  --color-warn: #f5b544;
+  --color-danger: #f56565;
+  --color-star: #f5b544;
+  --color-whatsapp: #25d366;
+
+  /* Tipografia */
+  --font-sans: var(--font-geist-sans), "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+
+  /* Raios */
+  --radius-card: 18px;
+  --radius-panel: 22px;
+
+  /* Animações */
+  --animate-fade-up: fade-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-bg);
+  color-scheme: dark;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Espaço para a bottom nav no mobile + safe area do iOS */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-vagas) 30%, transparent);
+}
+
+/* Scrollbar discreta */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 99px;
+  border: 3px solid var(--color-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-panel-3);
+}
+
+/* Faixa de filtros com rolagem horizontal sem barra visível */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Foco visível e consistente em toda a interface */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-vagas);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Brilho ambiente usado no topo das telas principais */
+.aurora {
+  background-image: radial-gradient(
+      60rem 30rem at 15% -10%,
+      color-mix(in oklab, var(--color-vagas) 12%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      50rem 26rem at 90% 0%,
+      color-mix(in oklab, var(--color-empresas) 12%, transparent),
+      transparent 55%
+    );
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-panel) 25%,
+    var(--color-panel-3) 50%,
+    var(--color-panel) 75%
+  );
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
