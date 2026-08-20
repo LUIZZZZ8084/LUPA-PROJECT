@@ -68,9 +68,14 @@ descritor curto em português com hífens.
   de dados cai para dados de Sinop e o app roda completo, inclusive criar
   conta e entrar. É o que permite demonstrar antes de existir
   infraestrutura, e é requisito de negócio, não atalho técnico.
-- **Banco.** `supabase/schema.sql` mais as migrações em
-  `supabase/migrations/`. As migrações são a fonte da verdade a partir da
-  0001. `src/lib/types.ts` espelha o schema; altere os dois juntos.
+- **Banco.** `supabase/schema.sql` é a fonte da verdade e roda de uma vez num
+  banco limpo. Ele é **executado por teste** contra um Postgres real
+  (`tests/unit/schema.test.ts`, via PGlite) — schema não executado é schema
+  que ninguém sabe se funciona. Passo a passo em `docs/supabase.md`.
+- **Duas chaves do Supabase.** A anônima vai para o navegador e só lê o que é
+  público. A de serviço fica no servidor, ignora RLS e é a única que alcança
+  `usuarios`, que guarda hash de senha. `SUPABASE_SERVICE_ROLE_KEY` nunca
+  leva prefixo `NEXT_PUBLIC_`; há teste que trava isso.
 - **Sem chat interno.** O contato com prestador acontece por deep link
   `wa.me` (`src/lib/format.ts` → `whatsappLink`). Decisão de produto do V0,
   não pendência.
