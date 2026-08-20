@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
 
+  /*
+   * @node-rs/argon2 é um binding nativo: precisa ser carregado pelo Node em
+   * tempo de execução, não empacotado. Sem isto o build resolve o `.node`
+   * como se fosse JavaScript e quebra no deploy.
+   */
+  serverExternalPackages: ["@node-rs/argon2"],
+
   async headers() {
     return [
       {
