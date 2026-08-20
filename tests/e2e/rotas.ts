@@ -1,4 +1,10 @@
-/** Rotas públicas do V0, usadas pelas varreduras de layout e acessibilidade. */
+/**
+ * Rotas públicas, usadas pelas varreduras de layout e acessibilidade.
+ *
+ * As rotas de admin ficam de fora: sem sessão elas respondem 404, e a
+ * varredura estaria medindo a página de erro enquanto diz que mede o painel.
+ * Que elas respondem 404 para anônimo é verificado em fluxos.spec.ts.
+ */
 export const ROTAS = [
   { path: "/", nome: "Início" },
   { path: "/vagas", nome: "Busca de vagas" },
@@ -12,7 +18,6 @@ export const ROTAS = [
   { path: "/cadastro?tipo=empresa", nome: "Cadastro de empresa" },
   { path: "/entrar", nome: "Login" },
   { path: "/perfil", nome: "Perfil" },
-  { path: "/admin", nome: "Verificações" },
 ] as const;
 
 /**

@@ -169,3 +169,34 @@ test.describe("segurança da demonstração", () => {
     }
   });
 });
+
+test.describe("área administrativa", () => {
+  /**
+   * Sem sessão, o painel não pode existir aos olhos de quem pede.
+   *
+   * Um 403 confirmaria que há uma área administrativa neste endereço, o que
+   * já é informação para quem estiver sondando o app.
+   */
+  test("responde 404 para quem não está autenticado", async ({ page }) => {
+    for (const rota of ["/admin", "/admin/painel"]) {
+      await page.goto(rota);
+      await expect(
+        page.getByText(/Não encontramos essa página/),
+        `${rota} deveria responder 404`,
+      ).toBeVisible();
+    }
+  });
+
+  test("a API de métricas responde 404, não 401 nem 403", async ({
+    request,
+  }) => {
+    const resposta = await request.get("/api/admin/metricas");
+    expect(resposta.status()).toBe(404);
+  });
+
+  test("o painel não é indexável por buscador", async ({ request }) => {
+    const resposta = await request.get("/admin/painel");
+    // Mesmo no 404, o cabeçalho de robots não deve convidar indexação.
+    expect(resposta.headers()["x-robots-tag"] ?? "").not.toContain("index,");
+  });
+});

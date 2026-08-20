@@ -21,7 +21,9 @@
     "e2e:ui": "playwright test --ui",
     "e2e:report": "playwright show-report",
     "verify": "npm run typecheck && npm run lint && npm run knip && npm run arch && npm run test:cov",
-    "prepare": "husky"
+    "prepare": "husky",
+    "seed:avatares": "node scripts/gerar-avatares.mjs",
+    "admin:criar": "node scripts/criar-admin.mjs"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.1.0",
@@ -45,6 +47,8 @@
     "@biomejs/biome": "^2.5.9",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
+    "@dicebear/collection": "^9.4.2",
+    "@dicebear/core": "^9.4.3",
     "@playwright/test": "^1.62.1",
     "@stryker-mutator/core": "^10.0.0",
     "@stryker-mutator/vitest-runner": "^10.0.0",
