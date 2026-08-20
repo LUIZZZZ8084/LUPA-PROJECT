@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { DemoBanner } from "@/components/demo-banner";
 import { AppHeader } from "@/components/layout/app-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import "./globals.css";
@@ -51,6 +52,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${geist.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-bg text-ink">
+        <DemoBanner />
         <AppHeader />
         <div className="flex-1">{children}</div>
         <BottomNav />

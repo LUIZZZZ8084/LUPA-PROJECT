@@ -1,6 +1,7 @@
+import { resolveContact } from "@/lib/demo";
 import { whatsappLink } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ButtonAnchor } from "./ui/button";
+import { ButtonAnchor, buttonVariants } from "./ui/button";
 
 function WhatsAppIcon({ size = 18 }: { size?: number }) {
   return (
@@ -19,12 +20,31 @@ function WhatsAppIcon({ size = 18 }: { size?: number }) {
 }
 
 /**
+ * Monta a mensagem e resolve para quem o contato vai.
+ *
+ * Em demonstração o destino é o número do fundador, não o do prestador
+ * fictício — ver src/lib/demo.ts para o porquê.
+ */
+function buildContact(providerPhone: string, providerName: string, context?: string) {
+  const { phone, redirected } = resolveContact(providerPhone);
+  const firstName = providerName.split(" ")[0];
+
+  const message = redirected
+    ? `Olá! Vim pela demonstração da Lupa e cliquei no perfil de ${providerName}` +
+      `${context ? ` (${context})` : ""}.`
+    : `Olá, ${firstName}! Vi seu perfil${context ? ` de ${context}` : ""} na Lupa ` +
+      `e gostaria de um orçamento.`;
+
+  return { phone, message };
+}
+
+/**
  * Contato direto via wa.me. No V0 não existe chat interno: a conversa
  * acontece no WhatsApp, que é onde o público de Sinop já está.
  * A mensagem vai pré-preenchida para o prestador saber de onde veio o lead.
  */
 export function WhatsAppButton({
-  phone,
+  phone: providerPhone,
   providerName,
   context,
   size = "md",
@@ -41,9 +61,25 @@ export function WhatsAppButton({
   label?: string;
   className?: string;
 }) {
-  const message = context
-    ? `Olá, ${providerName.split(" ")[0]}! Vi seu perfil de ${context} na Lupa e gostaria de um orçamento.`
-    : `Olá, ${providerName.split(" ")[0]}! Vi seu perfil na Lupa e gostaria de um orçamento.`;
+  const { phone, message } = buildContact(providerPhone, providerName, context);
+
+  // Demonstração sem número de contato configurado: não abrir wa.me para um
+  // número fictício que pode pertencer a alguém de verdade.
+  if (!phone) {
+    return (
+      <span
+        aria-disabled
+        className={cn(
+          buttonVariants({ variant: "outline", size, block }),
+          "cursor-not-allowed opacity-60",
+          className,
+        )}
+      >
+        <WhatsAppIcon size={size === "sm" ? 15 : 18} />
+        Contato indisponível na demonstração
+      </span>
+    );
+  }
 
   return (
     <ButtonAnchor
@@ -63,7 +99,7 @@ export function WhatsAppButton({
 
 /** Versão só ícone, para o canto dos cards de busca. */
 export function WhatsAppIconButton({
-  phone,
+  phone: providerPhone,
   providerName,
   context,
   className,
@@ -73,9 +109,9 @@ export function WhatsAppIconButton({
   context?: string;
   className?: string;
 }) {
-  const message = context
-    ? `Olá, ${providerName.split(" ")[0]}! Vi seu perfil de ${context} na Lupa e gostaria de um orçamento.`
-    : `Olá, ${providerName.split(" ")[0]}! Vi seu perfil na Lupa e gostaria de um orçamento.`;
+  const { phone, message } = buildContact(providerPhone, providerName, context);
+
+  if (!phone) return null;
 
   return (
     <a
