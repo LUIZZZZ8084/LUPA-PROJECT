@@ -5,7 +5,7 @@
  * em inglês porque é o vocabulário do Conventional Commits — o que permite
  * gerar changelog e versionar automaticamente depois.
  */
-export default {
+const configuracao = {
   extends: ["@commitlint/config-conventional"],
   rules: {
     "type-enum": [
@@ -33,3 +33,5 @@ export default {
     "body-max-line-length": [2, "always", 100],
   },
 };
+
+export default configuracao;

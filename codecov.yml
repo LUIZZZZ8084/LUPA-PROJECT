@@ -1,0 +1,37 @@
+# Codecov — cobertura de testes
+#
+# O escopo medido é o mesmo do vitest.config.mts: domínio, dados,
+# formatação e componentes de apresentação. Rotas, formulários e server
+# actions ficam de fora porque quem os exercita é o Playwright.
+
+coverage:
+  precision: 1
+  round: down
+  range: "70...95"
+
+  status:
+    project:
+      default:
+        # Uma queda de até 1% não trava o pull request; abaixo disso, trava.
+        target: auto
+        threshold: 1%
+        if_ci_failed: error
+    patch:
+      default:
+        # Código novo entra coberto. É mais barato testar agora do que depois.
+        target: 80%
+        threshold: 5%
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: true
+
+ignore:
+  - "src/app/**"
+  - "src/lib/mock-data.ts"
+  - "src/components/ui/skeleton.tsx"
+  - "src/components/motion/**"
+  - "src/components/layout/**"
+  - "tests/**"
+  - "supabase/**"

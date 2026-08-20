@@ -17,9 +17,7 @@ const NB = " ";
 
 describe("formatSalaryRange", () => {
   it("mostra a faixa quando há piso e teto", () => {
-    expect(formatSalaryRange(3200, 4200)).toBe(
-      `R$${NB}3.200 – R$${NB}4.200`,
-    );
+    expect(formatSalaryRange(3200, 4200)).toBe(`R$${NB}3.200 – R$${NB}4.200`);
   });
 
   it("usa 'a partir de' quando só há piso", () => {

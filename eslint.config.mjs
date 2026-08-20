@@ -7,11 +7,17 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // Override default ignores of eslint-config-next.
   globalIgnores([
-    // Default ignores of eslint-config-next:
+    // Padrão do eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Saídas de ferramenta: código gerado, não código nosso.
+    "coverage/**",
+    "playwright-report/**",
+    "test-results/**",
+    "reports/**",
+    ".stryker-tmp/**",
   ]),
 ]);
 

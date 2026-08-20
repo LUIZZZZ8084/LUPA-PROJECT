@@ -65,9 +65,9 @@ describe("getJobs", () => {
   it("encontra pela empresa, não só pelo cargo", async () => {
     const jobs = await getJobs({ q: "Agro Norte" });
     expect(jobs.length).toBeGreaterThan(0);
-    expect(
-      jobs.every((j) => /agro norte/i.test(j.company.company_name)),
-    ).toBe(true);
+    expect(jobs.every((j) => /agro norte/i.test(j.company.company_name))).toBe(
+      true,
+    );
   });
 
   it("devolve lista vazia sem resultado, em vez de quebrar", async () => {

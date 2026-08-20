@@ -38,7 +38,11 @@ for (const { w, h, nome: larguraNome } of LARGURAS) {
             }
           }
 
-          return { vw, scrollW: doc.scrollWidth, culpados: culpados.slice(0, 5) };
+          return {
+            vw,
+            scrollW: doc.scrollWidth,
+            culpados: culpados.slice(0, 5),
+          };
         });
 
         expect(

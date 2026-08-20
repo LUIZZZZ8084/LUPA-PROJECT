@@ -1,16 +1,21 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.1/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "$schema": "https://biomejs.dev/schemas/2.5.9/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
     "includes": [
       "**",
-      "!**/.next/**",
-      "!**/node_modules/**",
-      "!**/coverage/**",
-      "!**/playwright-report/**",
-      "!**/test-results/**",
+      "!**/.next",
+      "!**/node_modules",
+      "!**/coverage",
+      "!**/playwright-report",
+      "!**/test-results",
       "!**/next-env.d.ts",
-      "!**/package-lock.json"
+      "!**/package-lock.json",
+      "!docs"
     ]
   },
   "formatter": {
@@ -23,7 +28,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "correctness": {
         "noUnusedImports": "error",
         "noUnusedVariables": "error",
@@ -31,15 +36,24 @@
       },
       "suspicious": {
         "noExplicitAny": "error",
-        "noConsole": { "level": "error", "options": { "allow": ["warn", "error"] } }
+        "noConsole": {
+          "level": "error",
+          "options": {
+            "allow": ["warn", "error"]
+          }
+        }
       },
       "style": {
         "useConst": "error",
         "useTemplate": "error",
         "noNonNullAssertion": "off"
       },
-      "a11y": { "recommended": true },
-      "nursery": { "recommended": false }
+      "a11y": {
+        "preset": "recommended"
+      },
+      "nursery": {
+        "preset": "none"
+      }
     }
   },
   "javascript": {
@@ -50,17 +64,83 @@
       "arrowParentheses": "always"
     }
   },
-  "json": { "formatter": { "enabled": true } },
-  "css": { "formatter": { "enabled": true }, "linter": { "enabled": true } },
+  "json": {
+    "formatter": {
+      "enabled": true
+    }
+  },
+  "css": {
+    "formatter": {
+      "enabled": true
+    },
+    "linter": {
+      "enabled": true
+    },
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "overrides": [
     {
+      "includes": ["src/app/globals.css"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/app/**/loading.tsx",
+        "src/components/ui/skeleton.tsx",
+        "src/app/servicos/**/page.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noArrayIndexKey": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/components/ui/avatar.tsx"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noImgElement": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["src/lib/mock-data.ts", "supabase/**"],
-      "formatter": { "lineWidth": 200 }
+      "formatter": {
+        "lineWidth": 200
+      }
     },
     {
       "includes": ["tests/**"],
       "linter": {
-        "rules": { "suspicious": { "noConsole": "off" } }
+        "rules": {
+          "suspicious": {
+            "noConsole": "off",
+            "noThenProperty": "off",
+            "noArrayIndexKey": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/app/icon.tsx", "src/app/apple-icon.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noSvgWithoutTitle": "off"
+          }
+        }
       }
     }
   ]

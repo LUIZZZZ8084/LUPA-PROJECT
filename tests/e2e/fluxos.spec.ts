@@ -23,7 +23,9 @@ test.describe("busca de vagas", () => {
   }) => {
     await page.goto("/vagas?categoria=Agroneg%C3%B3cio&tipo=Est%C3%A1gio");
     await expect(page.getByText(/vaga(s)? encontrada/)).toBeVisible();
-    await expect(page.getByRole("link", { name: /Estágio em Agronomia/ })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /Estágio em Agronomia/ }),
+    ).toBeVisible();
   });
 
   test("busca por texto encontra a vaga", async ({ page }) => {
@@ -36,10 +38,16 @@ test.describe("busca de vagas", () => {
     ).toBeVisible();
   });
 
-  test("mostra estado vazio quando nada bate, sem quebrar", async ({ page }) => {
+  test("mostra estado vazio quando nada bate, sem quebrar", async ({
+    page,
+  }) => {
     await page.goto("/vagas?q=cargoinexistentexyz");
-    await expect(page.getByText(/Nenhuma vaga com esses filtros/)).toBeVisible();
-    await expect(page.getByRole("link", { name: "Limpar busca" })).toBeVisible();
+    await expect(
+      page.getByText(/Nenhuma vaga com esses filtros/),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Limpar busca" }),
+    ).toBeVisible();
   });
 
   test("abre o detalhe e mostra a descrição completa", async ({ page }) => {
@@ -59,7 +67,9 @@ test.describe("busca de prestadores", () => {
     await aguardarHidratacao(page);
     await page.getByLabel("Categoria").selectOption("eletricista");
     await expect(page).toHaveURL(/categoria=eletricista/);
-    await expect(page.getByText(/profissionais encontrados|profissional encontrado/)).toBeVisible();
+    await expect(
+      page.getByText(/profissionais encontrados|profissional encontrado/),
+    ).toBeVisible();
   });
 
   test("filtra por nota mínima", async ({ page }) => {
@@ -71,7 +81,9 @@ test.describe("busca de prestadores", () => {
           .map((e) => e.getAttribute("aria-label") ?? "")
           // "Nota 4,7, 7 avaliações" → 4.7 (sem engolir a vírgula seguinte)
           .map((s) =>
-            Number((s.match(/Nota (\d+(?:,\d+)?)/)?.[1] ?? "0").replace(",", ".")),
+            Number(
+              (s.match(/Nota (\d+(?:,\d+)?)/)?.[1] ?? "0").replace(",", "."),
+            ),
           )
           .filter((n) => n > 0),
       );
@@ -83,7 +95,9 @@ test.describe("busca de prestadores", () => {
     await page.goto("/servicos/prv-joao-silva");
 
     const total = Number(
-      (await page.getByText(/^\d+ avaliações$/).textContent())?.match(/\d+/)?.[0],
+      (await page.getByText(/^\d+ avaliações$/).textContent())?.match(
+        /\d+/,
+      )?.[0],
     );
     const listadas = await page.locator("main ul li").count();
 

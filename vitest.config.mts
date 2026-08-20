@@ -28,24 +28,38 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov", "json-summary"],
       reportsDirectory: "./coverage",
-      include: ["src/**/*.{ts,tsx}"],
+      /*
+       * A métrica cobre o que teste unitário deve cobrir: domínio, dados,
+       * formatação e componentes de apresentação.
+       *
+       * Rotas, formulários e server actions ficam de fora de propósito —
+       * quem os exercita é o Playwright, num navegador de verdade. Incluí-
+       * los aqui produziria um número baixo que não diz nada sobre risco e
+       * empurraria para escrever teste de fachada só para subir a barra.
+       */
+      include: ["src/lib/**/*.ts", "src/components/**/*.tsx"],
       exclude: [
         "src/**/*.d.ts",
-        // Camadas sem lógica própria: layout, ícones gerados e configuração.
-        "src/app/**/layout.tsx",
-        "src/app/icon.tsx",
-        "src/app/apple-icon.tsx",
-        "src/app/manifest.ts",
+        // Dados de demonstração: conteúdo, não lógica.
         "src/lib/mock-data.ts",
-        "src/proxy.ts",
-        "src/instrumentation*.ts",
+        // Só marcação; o que importa deles é a forma, verificada no e2e.
+        "src/components/ui/skeleton.tsx",
+        // Client components de navegação e movimento, cobertos pelo e2e.
+        "src/components/filter-bar.tsx",
+        "src/components/motion/**",
+        "src/components/layout/**",
+        "src/components/apply-button.tsx",
+        // Clientes do Supabase: dependem do runtime do Next.
+        "src/lib/supabase/client.ts",
+        "src/lib/supabase/server.ts",
       ],
       thresholds: {
-        // Piso deliberadamente alcançável: sobe conforme a suíte cresce.
-        lines: 60,
-        functions: 60,
-        branches: 70,
-        statements: 60,
+        // Piso um pouco abaixo do atingido hoje, para travar o patamar sem
+        // quebrar o build por variação de uma linha. Sobe junto com a suíte.
+        lines: 90,
+        functions: 85,
+        branches: 80,
+        statements: 88,
       },
     },
   },

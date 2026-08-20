@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { JobCard } from "@/components/job-card";
 import { ProviderCard } from "@/components/provider-card";
@@ -73,7 +73,9 @@ describe("ProviderCard", () => {
     unmount();
 
     render(<ProviderCard provider={{ ...provider, doc_verified: false }} />);
-    expect(screen.queryByLabelText("Perfil verificado")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Perfil verificado"),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -95,11 +97,15 @@ describe("contrato de layout", () => {
 
     for (const arquivo of arquivos) {
       const conteudo = readFileSync(arquivo, "utf8");
-      const classNames = conteudo.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g);
+      const classNames = conteudo.matchAll(
+        /className=(?:"([^"]*)"|\{`([^`]*)`\})/g,
+      );
 
       for (const m of classNames) {
         const classes = (m[1] ?? m[2] ?? "").split(/\s+/);
-        const temFlex = classes.some((c) => c === "flex" || c === "inline-flex");
+        const temFlex = classes.some(
+          (c) => c === "flex" || c === "inline-flex",
+        );
         const temTruncate = classes.includes("truncate");
         if (temFlex && temTruncate) {
           infratores.push(`${arquivo}: ${(m[1] ?? m[2] ?? "").slice(0, 70)}`);
