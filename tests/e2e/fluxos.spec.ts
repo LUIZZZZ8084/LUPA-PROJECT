@@ -99,10 +99,15 @@ test.describe("busca de prestadores", () => {
         /\d+/,
       )?.[0],
     );
-    const listadas = await page.locator("main ul li").count();
-
-    // Regressão: o perfil já anunciou 27 avaliações exibindo 3.
-    expect(listadas).toBe(total);
+    /*
+     * Regressão: o perfil já anunciou 27 avaliações exibindo 3.
+     *
+     * toHaveCount aguarda, em vez de contar na hora: o painel de avaliações
+     * é carregado sob demanda e, sobre a rede real, o chunk chega depois do
+     * resto da página. Com count() o teste passava local e falhava em
+     * produção — o que mede latência, não corretude.
+     */
+    await expect(page.locator("main ul li")).toHaveCount(total);
   });
 });
 
