@@ -26,6 +26,14 @@ export function repositorioUsuarios(): RepositorioUsuarios {
   return cache;
 }
 
+/**
+ * A instância em memória, para quem precisa dela diretamente — as métricas
+ * do painel administrativo somam os cadastros feitos na sessão.
+ */
+export function repositorioUsuariosMemoria(): RepositorioMemoria {
+  return memoria;
+}
+
 /** Só para teste: injeta uma implementação e devolve o restaurador. */
 export function usarRepositorio(repo: RepositorioUsuarios): () => void {
   const anterior = cache;

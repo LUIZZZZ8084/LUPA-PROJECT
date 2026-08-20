@@ -116,6 +116,11 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     return this.candidatos.get(usuarioId) ?? null;
   }
 
+  /** Todos os usuários. Usado pelas métricas do painel administrativo. */
+  todos(): Usuario[] {
+    return [...this.usuarios.values()];
+  }
+
   limpar(): void {
     this.usuarios.clear();
     this.porEmailIndice.clear();

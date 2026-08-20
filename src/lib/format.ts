@@ -6,6 +6,11 @@ const brl = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 0,
 });
 
+/** Valor em reais, sem centavos. Usado no painel administrativo. */
+export function formatMoneyBRL(valor: number): string {
+  return brl.format(valor);
+}
+
 /** "R$ 3.200 – R$ 4.200", "A partir de R$ 1.800" ou "A combinar". */
 export function formatSalaryRange(
   min: number | null | undefined,
