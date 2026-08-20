@@ -57,7 +57,7 @@ export function NewJobForm() {
           />
         </Field>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Categoria" required error={state.fieldErrors?.category}>
             <Select name="category" required defaultValue="">
               <option value="" disabled>
@@ -89,7 +89,7 @@ export function NewJobForm() {
           </Field>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Cidade">
             <Input value={PILOT_LABEL} disabled readOnly />
           </Field>
@@ -106,7 +106,7 @@ export function NewJobForm() {
           </Field>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field
             label="Salário de (R$)"
             hint="Deixe em branco para 'a combinar'."

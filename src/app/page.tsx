@@ -43,7 +43,7 @@ export default async function HomePage() {
             direto no WhatsApp.
           </p>
 
-          <div className="mt-7 grid gap-3 sm:grid-cols-3">
+          <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <ActionCard
               href="/vagas"
               icon={<Briefcase size={20} />}
@@ -70,7 +70,7 @@ export default async function HomePage() {
       </section>
 
       <PageShell>
-        <div className="grid gap-8 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
           <FeedSection
             title="Vagas em destaque"
             href="/vagas"

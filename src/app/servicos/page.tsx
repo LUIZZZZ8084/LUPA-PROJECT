@@ -1,6 +1,5 @@
 import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { FilterBar } from "@/components/filter-bar";
 import { EmptyState, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
@@ -43,40 +42,44 @@ export default async function ServicosPage({
         description="Profissionais da sua região, com avaliação e verificação de documento."
       />
 
-      <Suspense fallback={<div className="mb-5 h-24" />}>
-        <FilterBar
-          accent="servicos"
-          searchPlaceholder="Buscar eletricista, diarista, pintor..."
-          filters={[
-            {
-              key: "cidade",
-              placeholder: "Sinop - MT",
-              locked: true,
-              options: CITIES.filter((c) => c.active).map((c) => ({
-                value: c.name,
-                label: `${c.name} - ${c.state}`,
-              })),
-            },
-            {
-              key: "categoria",
-              placeholder: "Categoria",
-              options: SERVICE_CATEGORIES.map((c) => ({
-                value: c.slug,
-                label: c.name,
-              })),
-            },
-            {
-              key: "avaliacao",
-              placeholder: "Avaliação",
-              options: [
-                { value: "4.5", label: "4,5+ estrelas" },
-                { value: "4", label: "4,0+ estrelas" },
-                { value: "3", label: "3,0+ estrelas" },
-              ],
-            },
-          ]}
-        />
-      </Suspense>
+      <FilterBar
+        accent="servicos"
+        searchPlaceholder="Buscar eletricista, diarista, pintor..."
+        values={{
+          cidade: single("cidade"),
+          categoria: single("categoria"),
+          avaliacao: minRating,
+          q: single("q"),
+        }}
+        filters={[
+          {
+            key: "cidade",
+            placeholder: "Sinop - MT",
+            locked: true,
+            options: CITIES.filter((c) => c.active).map((c) => ({
+              value: c.name,
+              label: `${c.name} - ${c.state}`,
+            })),
+          },
+          {
+            key: "categoria",
+            placeholder: "Categoria",
+            options: SERVICE_CATEGORIES.map((c) => ({
+              value: c.slug,
+              label: c.name,
+            })),
+          },
+          {
+            key: "avaliacao",
+            placeholder: "Avaliação",
+            options: [
+              { value: "4.5", label: "4,5+ estrelas" },
+              { value: "4", label: "4,0+ estrelas" },
+              { value: "3", label: "3,0+ estrelas" },
+            ],
+          },
+        ]}
+      />
 
       <p className="mb-3 text-xs text-muted">
         {pluralize(

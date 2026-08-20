@@ -1,6 +1,5 @@
 import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { FilterBar } from "@/components/filter-bar";
 import { JobCard } from "@/components/job-card";
 import { EmptyState, PageShell, PageTitle } from "@/components/layout/page-shell";
@@ -43,33 +42,37 @@ export default async function VagasPage({
         description="Emprego formal em Sinop e região, direto de quem está contratando."
       />
 
-      <Suspense fallback={<div className="mb-5 h-24" />}>
-        <FilterBar
-          accent="vagas"
-          searchPlaceholder="Buscar vaga, cargo ou empresa..."
-          filters={[
-            {
-              key: "cidade",
-              placeholder: "Sinop - MT",
-              locked: true,
-              options: CITIES.filter((c) => c.active).map((c) => ({
-                value: c.name,
-                label: `${c.name} - ${c.state}`,
-              })),
-            },
-            {
-              key: "categoria",
-              placeholder: "Categoria",
-              options: JOB_CATEGORIES.map((c) => ({ value: c, label: c })),
-            },
-            {
-              key: "tipo",
-              placeholder: "Tipo",
-              options: CONTRACT_TYPES.map((c) => ({ value: c, label: c })),
-            },
-          ]}
-        />
-      </Suspense>
+      <FilterBar
+        accent="vagas"
+        searchPlaceholder="Buscar vaga, cargo ou empresa..."
+        values={{
+          cidade: single("cidade"),
+          categoria: single("categoria"),
+          tipo: single("tipo"),
+          q: single("q"),
+        }}
+        filters={[
+          {
+            key: "cidade",
+            placeholder: "Sinop - MT",
+            locked: true,
+            options: CITIES.filter((c) => c.active).map((c) => ({
+              value: c.name,
+              label: `${c.name} - ${c.state}`,
+            })),
+          },
+          {
+            key: "categoria",
+            placeholder: "Categoria",
+            options: JOB_CATEGORIES.map((c) => ({ value: c, label: c })),
+          },
+          {
+            key: "tipo",
+            placeholder: "Tipo",
+            options: CONTRACT_TYPES.map((c) => ({ value: c, label: c })),
+          },
+        ]}
+      />
 
       <p className="mb-3 text-xs text-muted">
         {pluralize(jobs.length, "vaga encontrada", "vagas encontradas")}

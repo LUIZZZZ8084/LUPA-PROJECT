@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "next": true,
+  "entry": [
+    "src/app/**/{page,layout,not-found,loading,error,global-error,template,route,manifest,icon,apple-icon}.{ts,tsx}",
+    "src/app/**/actions.ts",
+    "src/proxy.ts",
+    "src/instrumentation.ts",
+    "src/instrumentation-client.ts",
+    "tests/**/*.{test,spec}.{ts,tsx}",
+    "tests/setup.ts",
+    "playwright.config.ts",
+    "vitest.config.mts"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+  "ignore": ["tests/stubs/**"],
+  "ignoreDependencies": [
+    "@tailwindcss/postcss",
+    "tailwindcss",
+    "@vitest/coverage-v8",
+    "husky"
+  ],
+  "ignoreBinaries": ["stryker"],
+  "ignoreExportsUsedInFile": true
+}

@@ -59,7 +59,7 @@ export function SignUpForm({ role }: { role: Role }) {
         </Field>
 
         {role === "empresa" && (
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field
               label="Nome da empresa"
               required
@@ -78,7 +78,7 @@ export function SignUpForm({ role }: { role: Role }) {
           </div>
         )}
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="E-mail" required error={state.fieldErrors?.email}>
             <Input
               name="email"
@@ -104,7 +104,7 @@ export function SignUpForm({ role }: { role: Role }) {
           </Field>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Cidade">
             <Input value={PILOT_LABEL} disabled readOnly />
           </Field>
@@ -142,7 +142,7 @@ export function SignUpForm({ role }: { role: Role }) {
 
         {role === "prestador_servico" && (
           <>
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Field
                 label="Categoria do serviço"
                 required

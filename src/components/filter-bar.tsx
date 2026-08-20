@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronDown, Search, X } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, Loader2, Search, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 
@@ -15,50 +15,73 @@ export interface FilterDef {
   locked?: boolean;
 }
 
+/** Valores atuais dos filtros, lidos no servidor e repassados como props. */
+export type FilterValues = Record<string, string | undefined>;
+
 /**
  * Barra de busca e filtros das telas de Vagas e Serviços.
  *
- * O estado vive na URL (searchParams), então cada busca é compartilhável e
- * o botão voltar do navegador funciona. É o que o grupo de WhatsApp não tem.
+ * O estado vive na URL, então cada busca é compartilhável e o botão voltar
+ * funciona — é o que o grupo de WhatsApp não tem.
+ *
+ * Os valores atuais chegam por prop, do Server Component que já leu os
+ * searchParams. Usar `useSearchParams()` aqui exigiria um <Suspense> em
+ * volta, e esse boundary ficava pendente para sempre: o conteúdo era
+ * transmitido mas nunca trocado pelo fallback, deixando a busca invisível
+ * e inerte em produção.
  */
 export function FilterBar({
   searchPlaceholder,
   filters,
+  values,
   accent = "vagas",
 }: {
   searchPlaceholder: string;
   filters: FilterDef[];
+  values: FilterValues;
   accent?: "vagas" | "servicos";
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const params = useSearchParams();
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
 
-  const urlQuery = params.get("q") ?? "";
+  const urlQuery = values.q ?? "";
   const [query, setQuery] = useState(urlQuery);
   const [syncedQuery, setSyncedQuery] = useState(urlQuery);
 
-  // Quando a URL muda por fora (botão voltar, "limpar filtros"), o campo
-  // acompanha. Ajuste durante a renderização, não em efeito — evita o
-  // segundo render que o React desaconselha.
+  // Quando a URL muda por fora (voltar, "limpar filtros"), o campo acompanha.
+  // Ajuste durante a renderização, não em efeito — evita o render extra.
   if (urlQuery !== syncedQuery) {
     setSyncedQuery(urlQuery);
     setQuery(urlQuery);
   }
 
-  function apply(next: URLSearchParams) {
+  function navigate(next: URLSearchParams) {
     const qs = next.toString();
     startTransition(() => {
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     });
   }
 
+  function currentParams() {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(values)) {
+      if (v) params.set(k, v);
+    }
+    return params;
+  }
+
   function setParam(key: string, value: string) {
-    const next = new URLSearchParams(params.toString());
+    const next = currentParams();
     if (value) next.set(key, value);
     else next.delete(key);
-    apply(next);
+    navigate(next);
+  }
+
+  function clearFilters() {
+    const next = new URLSearchParams();
+    if (values.q) next.set("q", values.q);
+    navigate(next);
   }
 
   // Busca com atraso curto para não navegar a cada tecla.
@@ -69,29 +92,64 @@ export function FilterBar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, urlQuery]);
 
-  const activeCount = filters.filter(
-    (f) => !f.locked && params.get(f.key),
-  ).length;
+  const activeCount = filters.filter((f) => !f.locked && values[f.key]).length;
 
-  const ring =
-    accent === "vagas" ? "focus-within:border-vagas" : "focus-within:border-servicos";
+  const focusRing =
+    accent === "vagas"
+      ? "focus-within:border-vagas"
+      : "focus-within:border-servicos";
 
   return (
-    <div className="mb-5 space-y-3">
+    /*
+     * Form GET de verdade, não um <div> com JavaScript por cima.
+     *
+     * Antes da hidratação — ou num aparelho antigo em 3G, que é o caso de
+     * boa parte do público — o filtro continua funcionando: o navegador
+     * envia os campos e o servidor devolve a página filtrada. Com JS, o
+     * onSubmit intercepta e a troca fica instantânea, sem recarregar.
+     */
+    <form
+      method="GET"
+      action={pathname}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const next = currentParams();
+        if (query) next.set("q", query);
+        else next.delete("q");
+        navigate(next);
+      }}
+      className="mb-5 space-y-3"
+    >
       <div
         className={cn(
-          "flex h-12 items-center gap-2.5 rounded-xl border border-line bg-panel px-3.5 transition-colors",
-          ring,
+          "flex h-12 items-center gap-2.5 rounded-xl border border-line bg-panel px-3.5",
+          "transition-colors duration-200",
+          focusRing,
         )}
       >
-        <Search size={18} className="flex-none text-muted" />
+        {pending ? (
+          <Loader2
+            size={18}
+            className={cn(
+              "flex-none animate-spin",
+              accent === "vagas" ? "text-vagas" : "text-servicos",
+            )}
+            aria-label="Buscando"
+          />
+        ) : (
+          <Search size={18} className="flex-none text-muted" />
+        )}
+
         <input
+          name="q"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
-          className="h-full min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-faint focus:outline-none"
+          type="search"
+          className="h-full min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-faint focus:outline-none [&::-webkit-search-cancel-button]:hidden"
         />
+
         {query && (
           <button
             type="button"
@@ -109,7 +167,7 @@ export function FilterBar({
           <FilterSelect
             key={filter.key}
             filter={filter}
-            value={params.get(filter.key) ?? ""}
+            value={values[filter.key] ?? ""}
             onChange={(v) => setParam(filter.key, v)}
             accent={accent}
           />
@@ -118,12 +176,7 @@ export function FilterBar({
         {activeCount > 0 && (
           <button
             type="button"
-            onClick={() => {
-              const next = new URLSearchParams();
-              const q = params.get("q");
-              if (q) next.set("q", q);
-              apply(next);
-            }}
+            onClick={clearFilters}
             className="inline-flex h-9 flex-none items-center gap-1.5 rounded-full px-3 text-[13px] text-muted transition-colors hover:text-ink"
           >
             <X size={14} />
@@ -131,7 +184,16 @@ export function FilterBar({
           </button>
         )}
       </div>
-    </div>
+
+      {/*
+       * Sem JavaScript, é isto que faz o Enter no campo de busca e a troca
+       * de filtro chegarem ao servidor. Fica fora da tela, mas é anunciado
+       * por leitor de tela e alcançável pelo teclado.
+       */}
+      <button type="submit" className="sr-only">
+        Aplicar filtros
+      </button>
+    </form>
   );
 }
 
@@ -158,6 +220,7 @@ function FilterSelect({
   return (
     <div className="relative flex-none">
       <select
+        name={filter.key}
         value={value}
         disabled={filter.locked}
         onChange={(e) => onChange(e.target.value)}
@@ -174,6 +237,7 @@ function FilterSelect({
       <span
         className={cn(
           "pointer-events-none inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium",
+          "transition-colors duration-200",
           active ? activeStyle : "border-line bg-panel text-muted",
           filter.locked && "opacity-70",
         )}
