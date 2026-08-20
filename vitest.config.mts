@@ -37,7 +37,11 @@ export default defineConfig({
        * los aqui produziria um número baixo que não diz nada sobre risco e
        * empurraria para escrever teste de fachada só para subir a barra.
        */
-      include: ["src/lib/**/*.ts", "src/components/**/*.tsx"],
+      include: [
+        "src/lib/**/*.ts",
+        "src/server/**/*.ts",
+        "src/components/**/*.tsx",
+      ],
       exclude: [
         "src/**/*.d.ts",
         // Dados de demonstração: conteúdo, não lógica.
