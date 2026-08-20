@@ -3,6 +3,7 @@
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useActionState } from "react";
+import { cadastrarComEstado, type EstadoFormulario } from "@/app/conta/actions";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -13,9 +14,8 @@ import {
   SINOP_NEIGHBORHOODS,
 } from "@/lib/constants";
 import type { Role } from "@/lib/types";
-import { type SignUpState, signUp } from "./actions";
 
-const initial: SignUpState = {};
+const inicial: EstadoFormulario = {};
 
 const ACCENT: Record<Role, "vagas" | "servicos" | "empresas"> = {
   candidato_clt: "vagas",
@@ -24,7 +24,7 @@ const ACCENT: Record<Role, "vagas" | "servicos" | "empresas"> = {
 };
 
 export function SignUpForm({ role }: { role: Role }) {
-  const [state, action, pending] = useActionState(signUp, initial);
+  const [state, action, pending] = useActionState(cadastrarComEstado, inicial);
 
   if (state.ok) {
     return (
@@ -32,9 +32,8 @@ export function SignUpForm({ role }: { role: Role }) {
         <CheckCircle2 size={40} className="mx-auto text-vagas" />
         <h2 className="mt-4 text-lg font-bold">Conta criada</h2>
         <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
-          {state.demo
-            ? "Modo demonstração: nada foi gravado porque o Supabase ainda não está conectado. Com o banco no ar, o próximo passo é a verificação do telefone por SMS."
-            : "Confirme seu e-mail e depois verifique seu telefone. Seu perfil fica com status pendente até a revisão do documento."}
+          Sua conta já está ativa. O próximo passo é verificar o telefone — é o
+          selo que faz as pessoas confiarem no seu perfil.
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <ButtonLink href="/" variant={ACCENT[role]} size="sm">
@@ -53,9 +52,9 @@ export function SignUpForm({ role }: { role: Role }) {
         <Field
           label={role === "empresa" ? "Nome do responsável" : "Nome completo"}
           required
-          error={state.fieldErrors?.full_name}
+          error={state.campos?.nomeCompleto}
         >
-          <Input name="full_name" autoComplete="name" required />
+          <Input name="nomeCompleto" autoComplete="name" required />
         </Field>
 
         {role === "empresa" && (
@@ -63,11 +62,11 @@ export function SignUpForm({ role }: { role: Role }) {
             <Field
               label="Nome da empresa"
               required
-              error={state.fieldErrors?.company_name}
+              error={state.campos?.razaoSocial}
             >
-              <Input name="company_name" required />
+              <Input name="razaoSocial" required />
             </Field>
-            <Field label="CNPJ" required error={state.fieldErrors?.cnpj}>
+            <Field label="CNPJ" required error={state.campos?.cnpj}>
               <Input
                 name="cnpj"
                 inputMode="numeric"
@@ -79,17 +78,17 @@ export function SignUpForm({ role }: { role: Role }) {
         )}
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Field label="E-mail" required error={state.fieldErrors?.email}>
+          <Field label="E-mail" required error={state.campos?.email}>
             <Input name="email" type="email" autoComplete="email" required />
           </Field>
           <Field
             label="WhatsApp"
             required
-            error={state.fieldErrors?.phone}
+            error={state.campos?.telefone}
             hint="É por onde as pessoas vão falar com você."
           >
             <Input
-              name="phone"
+              name="telefone"
               type="tel"
               inputMode="tel"
               autoComplete="tel"
@@ -103,8 +102,8 @@ export function SignUpForm({ role }: { role: Role }) {
           <Field label="Cidade">
             <Input value={PILOT_LABEL} disabled readOnly />
           </Field>
-          <Field label="Bairro" error={state.fieldErrors?.neighborhood}>
-            <Select name="neighborhood" defaultValue="">
+          <Field label="Bairro" error={state.campos?.bairro}>
+            <Select name="bairro" defaultValue="">
               <option value="">Não informar</option>
               {SINOP_NEIGHBORHOODS.map((n) => (
                 <option key={n} value={n}>
@@ -119,10 +118,10 @@ export function SignUpForm({ role }: { role: Role }) {
           <Field
             label="Área desejada"
             required
-            error={state.fieldErrors?.desired_area}
+            error={state.campos?.areaDesejada}
             hint="Usamos para te avisar de vagas novas nessa área."
           >
-            <Select name="desired_area" defaultValue="" required>
+            <Select name="areaDesejada" defaultValue="" required>
               <option value="" disabled>
                 Escolha uma área
               </option>
@@ -141,9 +140,9 @@ export function SignUpForm({ role }: { role: Role }) {
               <Field
                 label="Categoria do serviço"
                 required
-                error={state.fieldErrors?.category_id}
+                error={state.campos?.categoriaId}
               >
-                <Select name="category_id" defaultValue="" required>
+                <Select name="categoriaId" defaultValue="" required>
                   <option value="" disabled>
                     Escolha uma categoria
                   </option>
@@ -156,11 +155,11 @@ export function SignUpForm({ role }: { role: Role }) {
               </Field>
               <Field
                 label="Preço a partir de (R$)"
-                error={state.fieldErrors?.starting_price}
+                error={state.campos?.precoInicial}
                 hint="Opcional, mas perfis com preço recebem mais contato."
               >
                 <Input
-                  name="starting_price"
+                  name="precoInicial"
                   type="number"
                   min={0}
                   step={10}
@@ -173,11 +172,11 @@ export function SignUpForm({ role }: { role: Role }) {
             <Field
               label="Sobre o seu trabalho"
               required
-              error={state.fieldErrors?.description}
+              error={state.campos?.descricao}
               hint="O que você faz, onde atende e o que te diferencia."
             >
               <Textarea
-                name="description"
+                name="descricao"
                 rows={5}
                 required
                 placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo Sinop e região."
@@ -189,20 +188,20 @@ export function SignUpForm({ role }: { role: Role }) {
         <Field
           label="Senha"
           required
-          error={state.fieldErrors?.password}
+          error={state.campos?.senha}
           hint="Mínimo de 8 caracteres."
         >
           <Input
-            name="password"
+            name="senha"
             type="password"
             autoComplete="new-password"
             required
           />
         </Field>
 
-        {state.error && (
+        {state.erro && (
           <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {state.error}
+            {state.erro}
           </p>
         )}
 

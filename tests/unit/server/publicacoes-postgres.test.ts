@@ -30,8 +30,9 @@ function construtor(tabela: string) {
   return builder;
 }
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({ from: (tabela: string) => construtor(tabela) }),
+vi.mock("@/lib/supabase/service", () => ({
+  temChaveDeServico: true,
+  clienteDeServico: () => ({ from: (tabela: string) => construtor(tabela) }),
 }));
 
 import { RepositorioPublicacoesPostgres } from "@/server/publicacoes/postgres";

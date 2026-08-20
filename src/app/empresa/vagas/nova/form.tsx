@@ -12,12 +12,15 @@ import {
   PILOT_LABEL,
   SINOP_NEIGHBORHOODS,
 } from "@/lib/constants";
-import { type PublishState, publishJob } from "./actions";
+import { type EstadoVaga, publicarVagaComEstado } from "./actions";
 
-const initial: PublishState = {};
+const inicial: EstadoVaga = {};
 
 export function NewJobForm() {
-  const [state, action, pending] = useActionState(publishJob, initial);
+  const [state, action, pending] = useActionState(
+    publicarVagaComEstado,
+    inicial,
+  );
 
   if (state.ok) {
     return (
@@ -47,19 +50,19 @@ export function NewJobForm() {
         <Field
           label="Cargo"
           required
-          error={state.fieldErrors?.title}
+          error={state.campos?.titulo}
           hint="Como a pessoa buscaria essa vaga, ex.: Operador de Máquinas Agrícolas."
         >
           <Input
-            name="title"
+            name="titulo"
             placeholder="Ex.: Auxiliar Administrativo"
             required
           />
         </Field>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Field label="Categoria" required error={state.fieldErrors?.category}>
-            <Select name="category" required defaultValue="">
+          <Field label="Categoria" required error={state.campos?.categoria}>
+            <Select name="categoria" required defaultValue="">
               <option value="" disabled>
                 Escolha uma área
               </option>
@@ -74,9 +77,9 @@ export function NewJobForm() {
           <Field
             label="Tipo de contrato"
             required
-            error={state.fieldErrors?.contract_type}
+            error={state.campos?.tipoContrato}
           >
-            <Select name="contract_type" required defaultValue="">
+            <Select name="tipoContrato" required defaultValue="">
               <option value="" disabled>
                 Escolha o tipo
               </option>
@@ -95,7 +98,7 @@ export function NewJobForm() {
           </Field>
 
           <Field label="Bairro" hint="Onde a pessoa vai trabalhar.">
-            <Select name="neighborhood" defaultValue="">
+            <Select name="bairro" defaultValue="">
               <option value="">Não informar</option>
               {SINOP_NEIGHBORHOODS.map((n) => (
                 <option key={n} value={n}>
@@ -110,10 +113,10 @@ export function NewJobForm() {
           <Field
             label="Salário de (R$)"
             hint="Deixe em branco para 'a combinar'."
-            error={state.fieldErrors?.salary_min}
+            error={state.campos?.salarioMin}
           >
             <Input
-              name="salary_min"
+              name="salarioMin"
               type="number"
               min={0}
               step={100}
@@ -122,9 +125,9 @@ export function NewJobForm() {
             />
           </Field>
 
-          <Field label="Salário até (R$)" error={state.fieldErrors?.salary_max}>
+          <Field label="Salário até (R$)" error={state.campos?.salarioMax}>
             <Input
-              name="salary_max"
+              name="salarioMax"
               type="number"
               min={0}
               step={100}
@@ -137,11 +140,11 @@ export function NewJobForm() {
         <Field
           label="Descrição da vaga"
           required
-          error={state.fieldErrors?.description}
+          error={state.campos?.descricao}
           hint="Atividades, requisitos e o que a empresa oferece. Separe em parágrafos."
         >
           <Textarea
-            name="description"
+            name="descricao"
             rows={9}
             required
             placeholder={
@@ -150,9 +153,9 @@ export function NewJobForm() {
           />
         </Field>
 
-        {state.error && (
+        {state.erro && (
           <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {state.error}
+            {state.erro}
           </p>
         )}
 

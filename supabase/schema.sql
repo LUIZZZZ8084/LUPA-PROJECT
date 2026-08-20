@@ -1,87 +1,129 @@
 -- ============================================================================
--- LUPA — schema Postgres (Supabase)
+-- LUPA — schema completo
 --
--- Aplique no SQL Editor do projeto Supabase, ou via CLI:
---   supabase db push
+-- Rode este arquivo UMA VEZ, num banco limpo, no SQL Editor do Supabase.
+-- Ele cria tudo: tipos, tabelas, triggers, views, índices e RLS.
 --
--- Multi-cidade desde o V0: toda entidade relevante tem `city`. A UI abre
--- apenas Sinop, mas abrir outra cidade não exige migração.
+-- Depois, opcionalmente, `seed.sql` para popular Sinop com dados de exemplo.
+--
+-- Este schema é executado por teste automatizado (tests/unit/schema.test.ts)
+-- contra um Postgres real antes de cada entrega. Não é SQL de fé.
+--
+-- ---------------------------------------------------------------------------
+-- Como o acesso funciona, porque muda tudo abaixo
+--
+-- A autenticação é nossa (Argon2id + JWT), não a do Supabase Auth. Existem
+-- duas chaves em jogo:
+--
+--   • chave anônima  — vai para o navegador. Só enxerga o que é público.
+--   • chave de serviço — só no servidor. Ignora RLS e é usada pelos
+--     repositórios em src/server/repositories.
+--
+-- Por isso as políticas abaixo liberam para `anon` apenas leitura do que
+-- qualquer visitante já veria na tela. Tudo que escreve, e tudo que toca em
+-- `usuarios`, passa pelo servidor.
 -- ============================================================================
 
-create extension if not exists "pgcrypto";
-
 -- ============================================================================
--- 1. Perfis
+-- 1. Tipos
 -- ============================================================================
 
-create type user_role as enum ('candidato_clt', 'prestador_servico', 'empresa');
-create type verification_status as enum ('pendente', 'em_analise', 'aprovado', 'reprovado');
-create type job_status as enum ('aberta', 'fechada');
-create type application_status as enum ('enviada', 'visualizada', 'entrevista', 'aprovada', 'rejeitada');
-create type company_plan as enum ('trial', 'mensal');
-
-create table profiles (
-  id                  uuid primary key references auth.users(id) on delete cascade,
-  full_name           text not null,
-  phone               text not null,
-  role                user_role not null,
-  city                text not null default 'Sinop',
-  neighborhood        text,
-  avatar_url          text,
-  phone_verified      boolean not null default false,
-  doc_verified        boolean not null default false,
-  verification_status verification_status not null default 'pendente',
-  created_at          timestamptz not null default now()
+create type papel_usuario as enum (
+  'candidato_clt',
+  'prestador_servico',
+  'empresa',
+  'admin'
 );
 
-create index profiles_city_role_idx on profiles (city, role);
+create type status_verificacao as enum (
+  'pendente',
+  'em_analise',
+  'aprovado',
+  'reprovado'
+);
 
--- Cria o perfil automaticamente a partir dos metadados do signUp.
-create or replace function handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
+create type status_vaga as enum ('aberta', 'fechada');
+
+create type status_candidatura as enum (
+  'enviada',
+  'visualizada',
+  'entrevista',
+  'aprovada',
+  'rejeitada'
+);
+
+create type plano_empresa as enum ('trial', 'mensal');
+
+create type status_publicacao as enum ('ativa', 'arquivada');
+
+-- ============================================================================
+-- 2. Função compartilhada
+-- ============================================================================
+
+create or replace function tocar_atualizado_em()
+returns trigger language plpgsql as $$
 begin
-  insert into public.profiles (id, full_name, phone, role, city, neighborhood)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data ->> 'full_name', 'Sem nome'),
-    coalesce(new.raw_user_meta_data ->> 'phone', ''),
-    coalesce((new.raw_user_meta_data ->> 'role')::user_role, 'candidato_clt'),
-    coalesce(new.raw_user_meta_data ->> 'city', 'Sinop'),
-    new.raw_user_meta_data ->> 'neighborhood'
-  );
+  new.atualizado_em := now();
   return new;
 end;
 $$;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function handle_new_user();
-
 -- ============================================================================
--- 2. Perfis por papel
+-- 3. Identidade
 -- ============================================================================
 
-create table clt_profiles (
-  profile_id   uuid primary key references profiles(id) on delete cascade,
-  desired_area text,
-  experiences  jsonb not null default '[]',
-  education    text,
-  skills       text[] not null default '{}',
-  resume_url   text,
-  availability text
+create table usuarios (
+  id                   uuid primary key default gen_random_uuid(),
+  email                text not null,
+  -- Hash Argon2id. Nunca sai desta tabela para a aplicação: os repositórios
+  -- descartam o campo antes de devolver o usuário.
+  senha_hash           text not null,
+  papel                papel_usuario not null,
+  nome_completo        text not null,
+  telefone             text not null,
+  cidade               text not null default 'Sinop',
+  bairro               text,
+  avatar_url           text,
+  email_verificado     boolean not null default false,
+  telefone_verificado  boolean not null default false,
+  doc_verificado       boolean not null default false,
+  status_verificacao   status_verificacao not null default 'pendente',
+  criado_em            timestamptz not null default now(),
+  atualizado_em        timestamptz not null default now(),
+  ultimo_acesso_em     timestamptz,
+
+  constraint email_com_formato check (position('@' in email) > 1),
+  constraint telefone_so_digitos check (telefone ~ '^[0-9]{10,13}$')
 );
 
-create table service_categories (
+-- E-mail único ignorando maiúsculas: "Joao@" e "joao@" são a mesma pessoa, e
+-- aceitar os dois cria duas contas para quem só errou o teclado.
+create unique index usuarios_email_unico on usuarios (lower(email));
+
+create index usuarios_papel_cidade_idx on usuarios (papel, cidade);
+create index usuarios_criado_em_idx on usuarios (criado_em desc);
+
+create trigger usuarios_atualizado_em
+  before update on usuarios
+  for each row execute function tocar_atualizado_em();
+
+-- Quem pode aprovar verificações. No V0, apenas o fundador.
+create table admins (
+  usuario_id uuid primary key references usuarios(id) on delete cascade,
+  criado_em  timestamptz not null default now()
+);
+
+-- ============================================================================
+-- 4. Categorias de serviço
+-- ============================================================================
+
+create table categorias_servico (
   id   serial primary key,
   slug text not null unique,
-  name text not null unique
+  nome text not null unique
 );
 
-insert into service_categories (id, slug, name) values
+insert into categorias_servico (id, slug, nome) values
   (1, 'eletricista', 'Eletricista'),
   (2, 'diarista',    'Diarista'),
   (3, 'pintor',      'Pintor'),
@@ -90,422 +132,445 @@ insert into service_categories (id, slug, name) values
   (6, 'jardineiro',  'Jardineiro'),
   (7, 'cuidador',    'Cuidador(a)');
 
-select setval('service_categories_id_seq', (select max(id) from service_categories));
+select setval('categorias_servico_id_seq', (select max(id) from categorias_servico));
 
-create table provider_profiles (
-  profile_id       uuid primary key references profiles(id) on delete cascade,
-  category_id      int references service_categories(id),
-  description      text,
-  starting_price   numeric(10,2),
-  years_experience int,
-  service_area     text[] not null default '{}',
-  photo_urls       text[] not null default '{}',
-  -- Denormalizados e mantidos pelo trigger em `reviews`: a busca precisa
-  -- ordenar por nota sem agregar a cada consulta.
-  avg_rating       numeric(2,1) not null default 0,
-  review_count     int not null default 0
+-- ============================================================================
+-- 5. Perfis por papel
+-- ============================================================================
+
+create table perfis_candidato (
+  usuario_id      uuid primary key references usuarios(id) on delete cascade,
+  area_desejada   text,
+  resumo          text,
+  experiencias    jsonb not null default '[]',
+  formacao        text,
+  habilidades     text[] not null default '{}',
+  curriculo_url   text,
+  disponibilidade text
 );
 
-create index provider_profiles_category_idx on provider_profiles (category_id);
-create index provider_profiles_rating_idx on provider_profiles (avg_rating desc);
+create table perfis_prestador (
+  usuario_id        uuid primary key references usuarios(id) on delete cascade,
+  categoria_id      int references categorias_servico(id),
+  descricao         text,
+  preco_inicial     numeric(10,2),
+  anos_experiencia  int,
+  bairros_atendidos text[] not null default '{}',
+  fotos_urls        text[] not null default '{}',
+  -- Denormalizados e mantidos pelo trigger em `avaliacoes`: a busca ordena
+  -- por nota e não pode agregar a cada consulta.
+  nota_media        numeric(2,1) not null default 0,
+  total_avaliacoes  int not null default 0
+);
 
-create table companies (
-  profile_id   uuid primary key references profiles(id) on delete cascade,
-  company_name text not null,
-  cnpj         text unique,
+create index perfis_prestador_categoria_idx on perfis_prestador (categoria_id);
+create index perfis_prestador_nota_idx on perfis_prestador (nota_media desc);
+
+create table perfis_empresa (
+  usuario_id   uuid primary key references usuarios(id) on delete cascade,
+  razao_social text not null,
+  cnpj         text not null unique,
+  setor        text,
+  porte        text,
+  site         text,
+  descricao    text,
   logo_url     text,
-  plan         company_plan not null default 'trial'
+  plano        plano_empresa not null default 'trial'
 );
 
 -- ============================================================================
--- 3. Vagas e candidaturas
+-- 6. Vagas e candidaturas
 -- ============================================================================
 
-create table jobs (
+create table vagas (
   id            uuid primary key default gen_random_uuid(),
-  company_id    uuid not null references companies(profile_id) on delete cascade,
-  title         text not null,
-  description   text not null,
-  category      text,
-  city          text not null default 'Sinop',
-  neighborhood  text,
-  contract_type text,
-  salary_min    numeric(10,2),
-  salary_max    numeric(10,2),
-  status        job_status not null default 'aberta',
-  view_count    int not null default 0,
-  created_at    timestamptz not null default now()
+  empresa_id    uuid not null references perfis_empresa(usuario_id) on delete cascade,
+  titulo        text not null,
+  descricao     text not null,
+  categoria     text,
+  cidade        text not null default 'Sinop',
+  bairro        text,
+  tipo_contrato text,
+  salario_min   numeric(10,2),
+  salario_max   numeric(10,2),
+  status        status_vaga not null default 'aberta',
+  visualizacoes int not null default 0,
+  criado_em     timestamptz not null default now(),
+
+  constraint salario_coerente check (
+    salario_min is null or salario_max is null or salario_max >= salario_min
+  )
 );
 
-create index jobs_city_status_idx on jobs (city, status, created_at desc);
-create index jobs_category_idx on jobs (category);
-create index jobs_company_idx on jobs (company_id);
+create index vagas_cidade_status_idx on vagas (cidade, status, criado_em desc);
+create index vagas_categoria_idx on vagas (categoria);
+create index vagas_empresa_idx on vagas (empresa_id);
 
 -- Busca textual em português, para o campo de busca livre.
-create index jobs_search_idx on jobs
-  using gin (to_tsvector('portuguese', title || ' ' || description));
+create index vagas_busca_idx on vagas
+  using gin (to_tsvector('portuguese', titulo || ' ' || descricao));
 
-create table applications (
+create table candidaturas (
   id           uuid primary key default gen_random_uuid(),
-  job_id       uuid not null references jobs(id) on delete cascade,
-  candidate_id uuid not null references profiles(id) on delete cascade,
-  status       application_status not null default 'enviada',
-  created_at   timestamptz not null default now(),
-  unique (job_id, candidate_id)
+  vaga_id      uuid not null references vagas(id) on delete cascade,
+  candidato_id uuid not null references usuarios(id) on delete cascade,
+  status       status_candidatura not null default 'enviada',
+  criado_em    timestamptz not null default now(),
+
+  -- Uma candidatura por pessoa por vaga.
+  unique (vaga_id, candidato_id)
 );
 
-create index applications_job_idx on applications (job_id);
-create index applications_candidate_idx on applications (candidate_id);
+create index candidaturas_vaga_idx on candidaturas (vaga_id);
+create index candidaturas_candidato_idx on candidaturas (candidato_id);
 
 -- ============================================================================
--- 4. Avaliações
+-- 7. Avaliações
 -- ============================================================================
 
-create table reviews (
-  id            uuid primary key default gen_random_uuid(),
-  provider_id   uuid not null references profiles(id) on delete cascade,
-  reviewer_name text not null,
-  rating        int not null check (rating between 1 and 5),
-  comment       text,
-  created_at    timestamptz not null default now()
+create table avaliacoes (
+  id             uuid primary key default gen_random_uuid(),
+  prestador_id   uuid not null references usuarios(id) on delete cascade,
+  nome_avaliador text not null,
+  nota           int not null check (nota between 1 and 5),
+  comentario     text,
+  criado_em      timestamptz not null default now()
 );
 
-create index reviews_provider_idx on reviews (provider_id, created_at desc);
+create index avaliacoes_prestador_idx on avaliacoes (prestador_id, criado_em desc);
 
--- Mantém avg_rating e review_count sincronizados a cada avaliação.
-create or replace function refresh_provider_rating()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
+-- Mantém nota_media e total_avaliacoes em dia a cada avaliação.
+create or replace function atualizar_nota_prestador()
+returns trigger language plpgsql as $$
 declare
-  target uuid := coalesce(new.provider_id, old.provider_id);
+  alvo uuid := coalesce(new.prestador_id, old.prestador_id);
 begin
-  update provider_profiles p
-  set avg_rating = coalesce(round(agg.avg_rating, 1), 0),
-      review_count = coalesce(agg.total, 0)
+  update perfis_prestador p
+  set nota_media = coalesce(round(agg.media, 1), 0),
+      total_avaliacoes = coalesce(agg.total, 0)
   from (
-    select avg(rating)::numeric as avg_rating, count(*) as total
-    from reviews
-    where provider_id = target
+    select avg(nota)::numeric as media, count(*) as total
+    from avaliacoes
+    where prestador_id = alvo
   ) agg
-  where p.profile_id = target;
+  where p.usuario_id = alvo;
 
   return null;
 end;
 $$;
 
-create trigger reviews_refresh_rating
-  after insert or update or delete on reviews
-  for each row execute function refresh_provider_rating();
+create trigger avaliacoes_atualizam_nota
+  after insert or update or delete on avaliacoes
+  for each row execute function atualizar_nota_prestador();
 
 -- ============================================================================
--- 5. Verificação manual (V0)
+-- 8. Publicações de perfil
 -- ============================================================================
 
-create table verification_requests (
+create table publicacoes (
   id            uuid primary key default gen_random_uuid(),
-  profile_id    uuid not null references profiles(id) on delete cascade,
-  -- Caminhos no bucket privado `verificacao`. Apagados na decisão:
-  -- a política de retenção guarda apenas o status no perfil.
-  document_path text,
-  selfie_path   text,
-  status        verification_status not null default 'em_analise',
-  submitted_at  timestamptz not null default now(),
-  reviewed_at   timestamptz,
-  notes         text
+  autor_id      uuid not null references usuarios(id) on delete cascade,
+  titulo        text not null,
+  corpo         text not null,
+  imagem_url    text,
+  status        status_publicacao not null default 'ativa',
+  criado_em     timestamptz not null default now(),
+  atualizado_em timestamptz not null default now(),
+
+  constraint titulo_com_conteudo check (length(trim(titulo)) between 3 and 120),
+  constraint corpo_com_conteudo  check (length(trim(corpo)) between 10 and 3000)
 );
 
-create index verification_requests_status_idx
-  on verification_requests (status, submitted_at);
+create index publicacoes_autor_idx on publicacoes (autor_id, status, criado_em desc);
 
--- Quem pode aprovar verificações. No V0, apenas o fundador.
-create table admins (
-  profile_id uuid primary key references profiles(id) on delete cascade
-);
+create trigger publicacoes_atualizado_em
+  before update on publicacoes
+  for each row execute function tocar_atualizado_em();
 
-create or replace function is_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (select 1 from admins where profile_id = auth.uid());
+/*
+ * O limite de 10 ativas mora aqui, não só na aplicação.
+ *
+ * A aplicação também confere, para dar mensagem decente antes de tentar
+ * gravar. Mas duas requisições simultâneas passariam pela checagem dela e
+ * criariam a décima primeira. O banco é o único lugar onde essa corrida não
+ * existe.
+ *
+ * O lock consultivo por autor serializa inserções concorrentes do mesmo
+ * perfil. `FOR UPDATE` não serve: o Postgres não aceita trava de linha junto
+ * de função de agregação.
+ */
+create or replace function conferir_limite_publicacoes()
+returns trigger language plpgsql as $$
+declare
+  ativas int;
+  limite constant int := 10;
+begin
+  if new.status <> 'ativa' then
+    return new;
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext(new.autor_id::text));
+
+  select count(*) into ativas
+  from publicacoes
+  where autor_id = new.autor_id
+    and status = 'ativa'
+    and id <> new.id;
+
+  if ativas >= limite then
+    raise exception 'limite de % publicações ativas atingido', limite
+      using errcode = 'check_violation',
+            hint = 'arquive uma publicação antiga para abrir espaço';
+  end if;
+
+  return new;
+end;
 $$;
 
+create trigger publicacoes_limite
+  before insert or update of status on publicacoes
+  for each row execute function conferir_limite_publicacoes();
+
 -- ============================================================================
--- 6. Views usadas pela aplicação
+-- 9. Verificação manual (V0)
 -- ============================================================================
 
-create or replace view job_listings
-with (security_invoker = true) as
-select
-  j.*,
-  jsonb_build_object(
-    'company_name', c.company_name,
-    'logo_url',     c.logo_url,
-    'doc_verified', p.doc_verified
-  ) as company,
-  (select count(*) from applications a where a.job_id = j.id) as applicant_count
-from jobs j
-join companies c on c.profile_id = j.company_id
-join profiles  p on p.id = c.profile_id;
+create table pedidos_verificacao (
+  id             uuid primary key default gen_random_uuid(),
+  usuario_id     uuid not null references usuarios(id) on delete cascade,
+  -- Caminhos no bucket privado `verificacao`. Apagados na decisão: a política
+  -- de retenção guarda apenas o status no perfil.
+  documento_path text,
+  selfie_path    text,
+  status         status_verificacao not null default 'em_analise',
+  enviado_em     timestamptz not null default now(),
+  decidido_em    timestamptz,
+  observacoes    text
+);
 
-create or replace view provider_listings
-with (security_invoker = true) as
-select
-  pp.*,
-  p.full_name,
-  p.phone,
-  p.city,
-  p.neighborhood,
-  p.avatar_url,
-  p.phone_verified,
-  p.doc_verified,
-  sc.slug as category_slug,
-  jsonb_build_object('id', sc.id, 'slug', sc.slug, 'name', sc.name) as category
-from provider_profiles pp
-join profiles p on p.id = pp.profile_id
-join service_categories sc on sc.id = pp.category_id
-where p.role = 'prestador_servico';
+create index pedidos_verificacao_status_idx
+  on pedidos_verificacao (status, enviado_em);
 
-create or replace view company_applications
-with (security_invoker = true) as
-select
-  a.*,
-  j.company_id,
-  j.title as job_title,
-  jsonb_build_object(
-    'full_name',    p.full_name,
-    'avatar_url',   p.avatar_url,
-    'neighborhood', p.neighborhood,
-    'desired_area', cp.desired_area,
-    'resume_url',   cp.resume_url
-  ) as candidate
-from applications a
-join jobs j on j.id = a.job_id
-join profiles p on p.id = a.candidate_id
-left join clt_profiles cp on cp.profile_id = a.candidate_id;
+-- ============================================================================
+-- 10. Views que a aplicação consulta
+--
+-- `security_invoker = false` de propósito: as views rodam com a permissão do
+-- dono e podem ler `usuarios`, que é fechada para `anon`. O que elas expõem
+-- é uma projeção segura — nenhuma delas seleciona `senha_hash`.
+-- ============================================================================
 
-create or replace view verification_queue
-with (security_invoker = true) as
+create view provider_listings
+with (security_invoker = false) as
+select
+  pp.usuario_id                          as profile_id,
+  pp.categoria_id                        as category_id,
+  pp.descricao                           as description,
+  pp.preco_inicial                       as starting_price,
+  pp.anos_experiencia                    as years_experience,
+  pp.bairros_atendidos                   as service_area,
+  pp.fotos_urls                          as photo_urls,
+  pp.nota_media                          as avg_rating,
+  pp.total_avaliacoes                    as review_count,
+  u.nome_completo                        as full_name,
+  u.telefone                             as phone,
+  u.cidade                               as city,
+  u.bairro                               as neighborhood,
+  u.avatar_url                           as avatar_url,
+  u.telefone_verificado                  as phone_verified,
+  u.doc_verificado                       as doc_verified,
+  c.slug                                 as category_slug,
+  jsonb_build_object('id', c.id, 'slug', c.slug, 'name', c.nome) as category
+from perfis_prestador pp
+join usuarios u on u.id = pp.usuario_id
+join categorias_servico c on c.id = pp.categoria_id
+where u.papel = 'prestador_servico';
+
+create view job_listings
+with (security_invoker = false) as
 select
   v.id,
-  v.profile_id,
-  p.full_name,
-  p.role,
-  sc.name as category,
-  p.city,
-  p.phone,
-  v.submitted_at,
-  v.status
-from verification_requests v
-join profiles p on p.id = v.profile_id
-left join provider_profiles pp on pp.profile_id = p.id
-left join service_categories sc on sc.id = pp.category_id;
+  v.empresa_id                as company_id,
+  v.titulo                    as title,
+  v.descricao                 as description,
+  v.categoria                 as category,
+  v.cidade                    as city,
+  v.bairro                    as neighborhood,
+  v.tipo_contrato             as contract_type,
+  v.salario_min               as salary_min,
+  v.salario_max               as salary_max,
+  v.status,
+  v.criado_em                 as created_at,
+  jsonb_build_object(
+    'company_name', e.razao_social,
+    'logo_url',     e.logo_url,
+    'doc_verified', u.doc_verificado
+  ) as company,
+  (select count(*) from candidaturas c where c.vaga_id = v.id) as applicant_count
+from vagas v
+join perfis_empresa e on e.usuario_id = v.empresa_id
+join usuarios u on u.id = e.usuario_id;
+
+create view company_applications
+with (security_invoker = false) as
+select
+  c.id,
+  c.vaga_id       as job_id,
+  c.candidato_id  as candidate_id,
+  c.status,
+  c.criado_em     as created_at,
+  v.empresa_id    as company_id,
+  v.titulo        as job_title,
+  jsonb_build_object(
+    'full_name',    u.nome_completo,
+    'avatar_url',   u.avatar_url,
+    'neighborhood', u.bairro,
+    'desired_area', pc.area_desejada,
+    'resume_url',   pc.curriculo_url
+  ) as candidate
+from candidaturas c
+join vagas v on v.id = c.vaga_id
+join usuarios u on u.id = c.candidato_id
+left join perfis_candidato pc on pc.usuario_id = c.candidato_id;
+
+create view verification_queue
+with (security_invoker = false) as
+select
+  pv.id,
+  pv.usuario_id   as profile_id,
+  u.nome_completo as full_name,
+  u.papel         as role,
+  cs.nome         as category,
+  u.cidade        as city,
+  u.telefone      as phone,
+  pv.enviado_em   as submitted_at,
+  pv.status
+from pedidos_verificacao pv
+join usuarios u on u.id = pv.usuario_id
+left join perfis_prestador pp on pp.usuario_id = u.id
+left join categorias_servico cs on cs.id = pp.categoria_id;
 
 -- ============================================================================
--- 7. Row Level Security
+-- 11. Views de métrica do painel administrativo
 --
--- Regra geral: vagas e prestadores são públicos para leitura; cada pessoa só
--- escreve no próprio registro; candidatura é visível apenas para o candidato
--- dono e para a empresa dona da vaga.
+-- O painel recarrega a cada 15s. Deixar o Postgres agregar é muito mais
+-- barato do que trazer todos os usuários para somar em JavaScript — e
+-- continua barato quando a base crescer.
 -- ============================================================================
 
-alter table profiles              enable row level security;
-alter table clt_profiles          enable row level security;
-alter table provider_profiles     enable row level security;
-alter table companies             enable row level security;
-alter table jobs                  enable row level security;
-alter table applications          enable row level security;
-alter table reviews               enable row level security;
-alter table verification_requests enable row level security;
-alter table service_categories    enable row level security;
-alter table admins                enable row level security;
+create view metricas_totais
+with (security_invoker = false) as
+select
+  (select count(*) from usuarios where papel <> 'admin')            as usuarios,
+  (select count(*) from usuarios where papel = 'candidato_clt')     as candidatos,
+  (select count(*) from usuarios where papel = 'prestador_servico') as prestadores,
+  (select count(*) from usuarios where papel = 'empresa')           as empresas,
+  (select count(*) from vagas where status = 'aberta')              as vagas_abertas;
 
--- profiles ------------------------------------------------------------------
-create policy "perfis sao publicos para leitura"
-  on profiles for select using (true);
+/*
+ * Fuso de Cuiabá, não UTC: um cadastro às 21h em Sinop precisa contar no dia
+ * em que a pessoa se cadastrou, não no seguinte.
+ */
+create view metricas_cadastros_por_dia
+with (security_invoker = false) as
+select
+  (criado_em at time zone 'America/Cuiaba')::date as dia,
+  papel,
+  count(*) as total
+from usuarios
+where papel <> 'admin'
+group by 1, 2;
 
-create policy "cada um edita o proprio perfil"
-  on profiles for update using (auth.uid() = id) with check (auth.uid() = id);
+create view metricas_por_local
+with (security_invoker = false) as
+select cidade, bairro, count(*) as total
+from usuarios
+where papel <> 'admin'
+group by cidade, bairro;
 
-create policy "admin edita qualquer perfil"
-  on profiles for update using (is_admin());
+create view metricas_planos
+with (security_invoker = false) as
+select
+  count(*) filter (where plano = 'mensal') as mensal,
+  count(*) filter (where plano = 'trial')  as trial
+from perfis_empresa;
 
--- clt_profiles --------------------------------------------------------------
--- Currículo não é público: só o dono e a empresa que recebeu a candidatura.
-create policy "candidato le o proprio curriculo"
-  on clt_profiles for select using (auth.uid() = profile_id);
+-- ============================================================================
+-- 12. Row Level Security
+--
+-- Regra geral: `anon` só lê o que qualquer visitante já veria na tela.
+-- Escrita e leitura de dado sensível passam pelo servidor, com a chave de
+-- serviço, que ignora RLS.
+-- ============================================================================
 
-create policy "empresa le curriculo de quem se candidatou"
-  on clt_profiles for select using (
-    exists (
-      select 1
-      from applications a
-      join jobs j on j.id = a.job_id
-      where a.candidate_id = clt_profiles.profile_id
-        and j.company_id = auth.uid()
-    )
-  );
+alter table usuarios            enable row level security;
+alter table admins              enable row level security;
+alter table perfis_candidato    enable row level security;
+alter table perfis_prestador    enable row level security;
+alter table perfis_empresa      enable row level security;
+alter table vagas               enable row level security;
+alter table candidaturas        enable row level security;
+alter table avaliacoes          enable row level security;
+alter table publicacoes         enable row level security;
+alter table pedidos_verificacao enable row level security;
+alter table categorias_servico  enable row level security;
 
-create policy "candidato escreve o proprio curriculo"
-  on clt_profiles for all
-  using (auth.uid() = profile_id)
-  with check (auth.uid() = profile_id);
+/*
+ * `usuarios` e `admins` ficam sem política nenhuma.
+ *
+ * Com RLS ligada e nenhuma policy, o Postgres nega tudo por padrão. É
+ * proposital: a tabela guarda hash de senha, e nenhuma sessão de cliente
+ * pode chegar perto dela. O acesso é exclusivamente pelo servidor.
+ */
 
--- provider_profiles ---------------------------------------------------------
-create policy "prestadores sao publicos"
-  on provider_profiles for select using (true);
-
-create policy "prestador edita o proprio perfil"
-  on provider_profiles for all
-  using (auth.uid() = profile_id)
-  with check (auth.uid() = profile_id);
-
--- companies -----------------------------------------------------------------
-create policy "empresas sao publicas"
-  on companies for select using (true);
-
-create policy "empresa edita o proprio cadastro"
-  on companies for all
-  using (auth.uid() = profile_id)
-  with check (auth.uid() = profile_id);
-
--- service_categories --------------------------------------------------------
 create policy "categorias sao publicas"
-  on service_categories for select using (true);
+  on categorias_servico for select using (true);
 
--- jobs ----------------------------------------------------------------------
 create policy "vagas abertas sao publicas"
-  on jobs for select using (status = 'aberta' or company_id = auth.uid());
+  on vagas for select using (status = 'aberta');
 
-create policy "empresa gerencia as proprias vagas"
-  on jobs for all
-  using (auth.uid() = company_id)
-  with check (auth.uid() = company_id);
+create policy "perfis de prestador sao publicos"
+  on perfis_prestador for select using (true);
 
--- applications --------------------------------------------------------------
-create policy "candidatura visivel ao candidato e a empresa da vaga"
-  on applications for select using (
-    auth.uid() = candidate_id
-    or exists (
-      select 1 from jobs j
-      where j.id = applications.job_id and j.company_id = auth.uid()
-    )
-  );
+create policy "perfis de empresa sao publicos"
+  on perfis_empresa for select using (true);
 
-create policy "candidato cria a propria candidatura"
-  on applications for insert with check (auth.uid() = candidate_id);
-
-create policy "candidato cancela a propria candidatura"
-  on applications for delete using (auth.uid() = candidate_id);
-
-create policy "empresa atualiza status da candidatura"
-  on applications for update using (
-    exists (
-      select 1 from jobs j
-      where j.id = applications.job_id and j.company_id = auth.uid()
-    )
-  );
-
--- reviews -------------------------------------------------------------------
--- No V0 quem avalia não precisa de conta: o formulário é público e vinculado
--- ao perfil do prestador. Moderação é reativa, pelo painel admin.
 create policy "avaliacoes sao publicas"
-  on reviews for select using (true);
+  on avaliacoes for select using (true);
 
-create policy "qualquer pessoa pode avaliar"
-  on reviews for insert with check (
-    rating between 1 and 5
-    and length(trim(reviewer_name)) > 0
-  );
+create policy "publicacoes ativas sao publicas"
+  on publicacoes for select using (status = 'ativa');
 
-create policy "admin remove avaliacao denunciada"
-  on reviews for delete using (is_admin());
-
--- verification_requests -----------------------------------------------------
-create policy "pessoa ve o proprio pedido"
-  on verification_requests for select using (auth.uid() = profile_id);
-
-create policy "pessoa envia o proprio pedido"
-  on verification_requests for insert with check (auth.uid() = profile_id);
-
-create policy "admin ve todos os pedidos"
-  on verification_requests for select using (is_admin());
-
-create policy "admin decide pedidos"
-  on verification_requests for update using (is_admin());
-
--- admins --------------------------------------------------------------------
-create policy "admin ve a propria lista"
-  on admins for select using (is_admin());
+/*
+ * Currículo não é público. Nem todo mundo quer que o patrão atual descubra
+ * que está procurando emprego — e essa informação pode custar o emprego que
+ * a pessoa ainda tem. Sem policy de select, `anon` não lê.
+ *
+ * O mesmo vale para candidaturas e pedidos de verificação.
+ */
 
 -- ============================================================================
--- 8. Storage
+-- 13. Storage
 --
--- Rode no SQL Editor após criar os buckets pelo painel, ou use estes inserts.
--- `verificacao` é PRIVADO — documento e selfie são dados sensíveis (LGPD).
+-- Esta seção só funciona no Supabase — depende do schema `storage`.
+-- Rode-a depois das anteriores, no mesmo SQL Editor.
+--
+-- `verificacao` é PRIVADO: documento e selfie são dados pessoais sensíveis
+-- e a política de retenção manda apagá-los assim que a decisão sai.
 -- ============================================================================
 
-insert into storage.buckets (id, name, public)
-values
-  ('avatares',    'avatares',    true),
-  ('portfolio',   'portfolio',   true),
-  ('curriculos',  'curriculos',  false),
-  ('verificacao', 'verificacao', false)
-on conflict (id) do nothing;
-
-create policy "avatares publicos para leitura"
-  on storage.objects for select
-  using (bucket_id = 'avatares');
-
-create policy "dono envia o proprio avatar"
-  on storage.objects for insert
-  with check (
-    bucket_id = 'avatares' and (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-create policy "portfolio publico para leitura"
-  on storage.objects for select
-  using (bucket_id = 'portfolio');
-
-create policy "prestador envia o proprio portfolio"
-  on storage.objects for insert
-  with check (
-    bucket_id = 'portfolio' and (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-create policy "curriculo so do dono"
-  on storage.objects for select
-  using (
-    bucket_id = 'curriculos'
-    and (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-create policy "candidato envia o proprio curriculo"
-  on storage.objects for insert
-  with check (
-    bucket_id = 'curriculos'
-    and (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-create policy "verificacao so do dono ou admin"
-  on storage.objects for select
-  using (
-    bucket_id = 'verificacao'
-    and ((storage.foldername(name))[1] = auth.uid()::text or is_admin())
-  );
-
-create policy "pessoa envia o proprio documento"
-  on storage.objects for insert
-  with check (
-    bucket_id = 'verificacao'
-    and (storage.foldername(name))[1] = auth.uid()::text
-  );
-
-create policy "admin apaga documento apos decisao"
-  on storage.objects for delete
-  using (bucket_id = 'verificacao' and is_admin());
+-- insert into storage.buckets (id, name, public) values
+--   ('avatares',    'avatares',    true),
+--   ('portfolio',   'portfolio',   true),
+--   ('curriculos',  'curriculos',  false),
+--   ('verificacao', 'verificacao', false)
+-- on conflict (id) do nothing;
+--
+-- create policy "avatares publicos para leitura"
+--   on storage.objects for select using (bucket_id = 'avatares');
+--
+-- create policy "portfolio publico para leitura"
+--   on storage.objects for select using (bucket_id = 'portfolio');
+--
+-- Currículo e verificação não recebem policy: o acesso é feito pelo servidor
+-- com a chave de serviço, que gera URL assinada de curta duração quando
+-- precisa mostrar o arquivo.

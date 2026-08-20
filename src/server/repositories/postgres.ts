@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
 import type {
   DadosNovoUsuario,
@@ -43,10 +43,16 @@ function paraUsuario(linha: Record<string, unknown>): Usuario {
   };
 }
 
+/**
+ * Chave de serviço, não a anônima.
+ *
+ *  guarda hash de senha e fica sem policy de RLS — a chave
+ * anônima não lê nem escreve nada lá, de propósito. Só o servidor alcança.
+ */
 async function cliente() {
-  const supabase = await createClient();
+  const supabase = clienteDeServico();
   if (!supabase) {
-    throw erros.indisponivel("Supabase não configurado");
+    throw erros.indisponivel("chave de serviço do Supabase não configurada");
   }
   return supabase;
 }

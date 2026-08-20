@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
 import type {
   DadosNovaPublicacao,
@@ -22,9 +22,11 @@ function paraPublicacao(linha: Record<string, unknown>): Publicacao {
   };
 }
 
+// Escrita passa pelo servidor: a RLS de publicacoes só libera leitura do
+// que está ativo.
 async function cliente() {
-  const supabase = await createClient();
-  if (!supabase) throw erros.indisponivel("Supabase não configurado");
+  const supabase = clienteDeServico();
+  if (!supabase) throw erros.indisponivel("chave de serviço não configurada");
   return supabase;
 }
 
