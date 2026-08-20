@@ -5,6 +5,23 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      /*
+       * `const { senhaHash, ...resto } = usuario` é a forma idiomática de
+       * omitir um campo. `ignoreRestSiblings` reconhece o padrão em vez de
+       * acusar o campo omitido como variável não usada.
+       */
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          ignoreRestSiblings: true,
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Padrão do eslint-config-next:

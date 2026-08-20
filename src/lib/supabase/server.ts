@@ -33,13 +33,3 @@ export async function createClient() {
     },
   });
 }
-
-/** Usuário autenticado, ou null em modo demonstração / visitante. */
-export async function getCurrentUser() {
-  const supabase = await createClient();
-  if (!supabase) return null;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
-}
