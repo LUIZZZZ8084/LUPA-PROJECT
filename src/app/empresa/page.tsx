@@ -1,7 +1,11 @@
 import { FileText, Inbox, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { EmptyState, PageShell, PageTitle } from "@/components/layout/page-shell";
+import {
+  EmptyState,
+  PageShell,
+  PageTitle,
+} from "@/components/layout/page-shell";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -51,7 +55,11 @@ export default async function EmpresaPage() {
           title="Nenhuma empresa vinculada a esta conta"
           description="Cadastre sua empresa para publicar vagas em Sinop."
           action={
-            <ButtonLink href="/cadastro?tipo=empresa" variant="empresas" size="sm">
+            <ButtonLink
+              href="/cadastro?tipo=empresa"
+              variant="empresas"
+              size="sm"
+            >
               Cadastrar empresa
             </ButtonLink>
           }
@@ -107,7 +115,10 @@ export default async function EmpresaPage() {
             accent="text-empresas"
           />
           <Stat label="Currículos" value={stats.applications} />
-          <Stat label="Visualizações" value={stats.views.toLocaleString("pt-BR")} />
+          <Stat
+            label="Visualizações"
+            value={stats.views.toLocaleString("pt-BR")}
+          />
         </div>
       </Panel>
 
@@ -120,7 +131,11 @@ export default async function EmpresaPage() {
             title="Você ainda não publicou nenhuma vaga"
             description="A primeira publicação é gratuita. Leva menos de dois minutos."
             action={
-              <ButtonLink href="/empresa/vagas/nova" variant="empresas" size="sm">
+              <ButtonLink
+                href="/empresa/vagas/nova"
+                variant="empresas"
+                size="sm"
+              >
                 <Plus size={16} />
                 Publicar vaga
               </ButtonLink>
@@ -135,9 +150,15 @@ export default async function EmpresaPage() {
                   className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{job.title}</p>
+                    <p className="truncate text-sm font-semibold">
+                      {job.title}
+                    </p>
                     <p className="mt-0.5 text-[11px] text-muted">
-                      {pluralize(job.applicant_count, "candidato", "candidatos")}{" "}
+                      {pluralize(
+                        job.applicant_count,
+                        "candidato",
+                        "candidatos",
+                      )}{" "}
                       · {timeAgo(job.created_at)}
                     </p>
                   </div>

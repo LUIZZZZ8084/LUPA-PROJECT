@@ -19,7 +19,7 @@ export function ProviderCard({
     <div
       className={cn(
         "group relative flex min-w-0 gap-3.5 rounded-[var(--radius-card)] border border-line bg-panel p-4",
-        "transition-colors hover:border-servicos/40 hover:bg-panel-2",
+        "transition-[background-color,border-color,transform,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out-soft)] hover:border-servicos/40 hover:bg-panel-2 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 active:translate-y-0 active:scale-[0.995] motion-reduce:hover:translate-y-0",
         className,
       )}
     >

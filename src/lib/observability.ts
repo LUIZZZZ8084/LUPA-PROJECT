@@ -56,12 +56,46 @@ export function scrubSensitiveData<T>(event: T): T {
     if (chave && CAMPOS_SENSIVEIS.test(chave)) return "[removido]";
 
     if (typeof valor === "string") {
-      return valor
-        // Telefone brasileiro com ou sem máscara.
-        .replace(/\b(?:\+?55\s?)?\(?\d{2}\)?\s?9?\d{4}[-\s]?\d{4}\b/g, "[telefone]")
-        // CPF e CNPJ.
-        .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, "[cpf]")
-        .replace(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, "[cnpj]");
+      /*
+       * A ordem importa. CNPJ tem 14 dígitos e contém um CPF válido nos 11
+       * primeiros; CPF tem 11 e é indistinguível de um celular sem máscara.
+       * Por isso vai do padrão mais específico para o mais genérico.
+       *
+       * Em sequências ambíguas o rótulo pode sair trocado — um celular sem
+       * máscara vira "[cpf]". Isso é aceitável: o que não pode acontecer é
+       * o número sair inteiro. Mascarar a mais é seguro; a menos, não.
+       *
+       * Sem \b nas bordas: ele não ancora antes de "(", e o parêntese de um
+       * "(66) 99911-0001" escapava da máscara.
+       */
+      return (
+        valor
+          // CNPJ, com ou sem máscara.
+          .replace(
+            /(?<!\d)\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}(?!\d)/g,
+            "[cnpj]",
+          )
+          // Telefone declaradamente telefone: com DDI, parênteses ou o 9.
+          .replace(
+            /(?<!\d)(?:\+?55[\s.-]?)?\(\d{2}\)[\s.-]?9?\d{4}[\s.-]?\d{4}(?!\d)/g,
+            "[telefone]",
+          )
+          .replace(
+            /(?<!\d)\+?55[\s.-]?\d{2}[\s.-]?9?\d{4}[\s.-]?\d{4}(?!\d)/g,
+            "[telefone]",
+          )
+          // CPF com máscara.
+          .replace(/(?<!\d)\d{3}\.\d{3}\.\d{3}-?\d{2}(?!\d)/g, "[cpf]")
+          /*
+           * Sequência solta de 10 ou 11 dígitos — neste app, quase sempre um
+           * telefone ou um CPF. Os limites (?<!\d) e (?!\d) impedem que um
+           * timestamp de 13 dígitos seja picotado no meio.
+           */
+          .replace(
+            /(?<!\d)\d{2}[\s.-]?\d{4,5}[\s.-]?\d{4}(?!\d)/g,
+            "[telefone]",
+          )
+      );
     }
 
     if (Array.isArray(valor)) return valor.map((v) => limpar(v));

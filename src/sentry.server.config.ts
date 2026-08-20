@@ -4,8 +4,8 @@ import {
   IGNORED_ERRORS,
   RELEASE,
   SENTRY_DSN,
-  TRACES_SAMPLE_RATE,
   scrubSensitiveData,
+  TRACES_SAMPLE_RATE,
 } from "@/lib/observability";
 
 Sentry.init({

@@ -6,10 +6,6 @@ const brl = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 0,
 });
 
-export function formatMoney(value: number): string {
-  return brl.format(value);
-}
-
 /** "R$ 3.200 – R$ 4.200", "A partir de R$ 1.800" ou "A combinar". */
 export function formatSalaryRange(
   min: number | null | undefined,
@@ -56,8 +52,10 @@ export function onlyDigits(value: string): string {
 /** "(66) 99999-1234" a partir de qualquer entrada. */
 export function formatPhone(value: string): string {
   const d = onlyDigits(value).replace(/^55/, "");
-  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  if (d.length === 11)
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10)
+    return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
   return value;
 }
 

@@ -66,11 +66,16 @@ export function RatingInline({
 }) {
   if (count === 0) {
     return (
-      <span className={cn("text-xs text-faint", className)}>Sem avaliações</span>
+      <span className={cn("text-xs text-faint", className)}>
+        Sem avaliações
+      </span>
     );
   }
   return (
     <span
+      // role="img" porque o conjunto estrela + número + contagem é lido
+      // como uma coisa só; sem ele, o aria-label não é anunciado num span.
+      role="img"
       className={cn("inline-flex items-center gap-1 text-xs", className)}
       aria-label={`Nota ${formatRating(rating)}, ${count} avaliações`}
     >

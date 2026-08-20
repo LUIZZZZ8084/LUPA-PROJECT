@@ -84,13 +84,31 @@ export function FilterBar({
     navigate(next);
   }
 
-  // Busca com atraso curto para não navegar a cada tecla.
+  /*
+   * Busca com atraso curto, para não navegar a cada tecla digitada.
+   *
+   * O efeito depende só de `query` e `urlQuery`; a navegação é montada
+   * aqui dentro em vez de chamar setParam, que muda de identidade a cada
+   * render e forçaria uma dependência instável.
+   */
   useEffect(() => {
     if (query === urlQuery) return;
-    const id = setTimeout(() => setParam("q", query), 350);
+
+    const id = setTimeout(() => {
+      const next = new URLSearchParams();
+      for (const [chave, valor] of Object.entries(values)) {
+        if (valor && chave !== "q") next.set(chave, valor);
+      }
+      if (query) next.set("q", query);
+
+      const qs = next.toString();
+      startTransition(() => {
+        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      });
+    }, 350);
+
     return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, urlQuery]);
+  }, [query, urlQuery, values, pathname, router]);
 
   const activeCount = filters.filter((f) => !f.locked && values[f.key]).length;
 
@@ -239,7 +257,10 @@ function FilterSelect({
           "pointer-events-none inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium",
           "transition-colors duration-200",
           active ? activeStyle : "border-line bg-panel text-muted",
-          filter.locked && "opacity-70",
+          // O chip travado se distingue pelo fundo e pela ausência da seta,
+          // não por opacidade: opacidade sobre texto derruba o contraste
+          // abaixo do mínimo legível.
+          filter.locked && "bg-panel-2 border-line/70",
         )}
       >
         {label}

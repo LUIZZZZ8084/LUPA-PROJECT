@@ -1,7 +1,11 @@
 import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import { FilterBar } from "@/components/filter-bar";
-import { EmptyState, PageShell, PageTitle } from "@/components/layout/page-shell";
+import {
+  EmptyState,
+  PageShell,
+  PageTitle,
+} from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
 import { CITIES, SERVICE_CATEGORIES } from "@/lib/constants";
@@ -101,7 +105,7 @@ export default async function ServicosPage({
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="stagger grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {providers.map((provider) => (
             <ProviderCard key={provider.profile_id} provider={provider} />
           ))}
@@ -111,8 +115,8 @@ export default async function ServicosPage({
       <div className="mt-8 rounded-[var(--radius-panel)] border border-servicos/25 bg-gradient-to-br from-servicos/8 to-transparent p-5 text-center">
         <p className="font-semibold">Você presta algum desses serviços?</p>
         <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">
-          Criar perfil na Lupa é gratuito. Apareça para quem está procurando
-          na sua região.
+          Criar perfil na Lupa é gratuito. Apareça para quem está procurando na
+          sua região.
         </p>
         <ButtonLink
           href="/cadastro?tipo=prestador_servico"

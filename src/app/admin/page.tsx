@@ -1,10 +1,14 @@
 import { ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
-import { EmptyState, PageShell, PageTitle } from "@/components/layout/page-shell";
+import {
+  EmptyState,
+  PageShell,
+  PageTitle,
+} from "@/components/layout/page-shell";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
-import { ROLE_LABELS } from "@/lib/constants";
+import { ROLE_LABELS, VERIFICATION_LABELS } from "@/lib/constants";
 import { getVerificationQueue } from "@/lib/data";
 import { formatPhone, timeAgo } from "@/lib/format";
 import { VerificationActions } from "./actions-ui";
@@ -61,10 +65,11 @@ export default async function AdminPage() {
                     {item.category ? ` · ${item.category}` : ""} · {item.city}
                   </p>
                   <p className="mt-0.5 text-[11px] text-faint">
-                    {formatPhone(item.phone)} · enviado {timeAgo(item.submitted_at)}
+                    {formatPhone(item.phone)} · enviado{" "}
+                    {timeAgo(item.submitted_at)}
                   </p>
                 </div>
-                <Badge tone="warn">Em análise</Badge>
+                <Badge tone="warn">{VERIFICATION_LABELS[item.status]}</Badge>
               </div>
 
               <VerificationActions

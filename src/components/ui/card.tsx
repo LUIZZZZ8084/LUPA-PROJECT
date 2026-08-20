@@ -13,15 +13,6 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-export function CardHeader({ className, ...props }: ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("flex items-start justify-between gap-3 p-5", className)}
-      {...props}
-    />
-  );
-}
-
 export function CardTitle({ className, ...props }: ComponentProps<"h3">) {
   return (
     <h3

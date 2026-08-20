@@ -97,14 +97,16 @@ export default async function JobDetailPage({
             <Users size={11} />
             {pluralize(job.applicant_count, "candidato", "candidatos")}
           </Badge>
-          {job.status === "fechada" && <Badge tone="danger">Vaga fechada</Badge>}
+          {job.status === "fechada" && (
+            <Badge tone="danger">Vaga fechada</Badge>
+          )}
         </div>
 
         <div className="mt-6 border-t border-line pt-5">
           <h2 className="mb-3 text-sm font-semibold">Sobre a vaga</h2>
           <div className="space-y-3 text-sm leading-relaxed text-muted">
-            {job.description.split("\n\n").map((paragraph, i) => (
-              <p key={i}>{paragraph}</p>
+            {job.description.split("\n\n").map((paragraph) => (
+              <p key={paragraph.slice(0, 48)}>{paragraph}</p>
             ))}
           </div>
         </div>

@@ -33,10 +33,14 @@ export function Avatar({
       <img
         src={src}
         alt={name}
+        // Cards de busca podem ter dezenas de fotos abaixo da dobra;
+        // baixar todas de uma vez em 3G derruba o carregamento inicial.
+        loading="lazy"
+        decoding="async"
         className={cn(
           sizes[size],
           shape,
-          "flex-none border border-line object-cover",
+          "flex-none border border-line bg-panel-2 object-cover",
           className,
         )}
       />

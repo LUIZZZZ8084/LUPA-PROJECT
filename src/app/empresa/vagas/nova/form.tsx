@@ -12,7 +12,7 @@ import {
   PILOT_LABEL,
   SINOP_NEIGHBORHOODS,
 } from "@/lib/constants";
-import { publishJob, type PublishState } from "./actions";
+import { type PublishState, publishJob } from "./actions";
 
 const initial: PublishState = {};
 

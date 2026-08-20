@@ -8,8 +8,18 @@ import { cn } from "@/lib/utils";
 const ITEMS = [
   { href: "/", label: "Início", icon: Home, accent: "text-ink" },
   { href: "/vagas", label: "Vagas", icon: Briefcase, accent: "text-vagas" },
-  { href: "/servicos", label: "Serviços", icon: Wrench, accent: "text-servicos" },
-  { href: "/empresa", label: "Empresa", icon: Building2, accent: "text-empresas" },
+  {
+    href: "/servicos",
+    label: "Serviços",
+    icon: Wrench,
+    accent: "text-servicos",
+  },
+  {
+    href: "/empresa",
+    label: "Empresa",
+    icon: Building2,
+    accent: "text-empresas",
+  },
   { href: "/perfil", label: "Perfil", icon: User, accent: "text-ink" },
 ] as const;
 

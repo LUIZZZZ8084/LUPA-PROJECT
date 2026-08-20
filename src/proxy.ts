@@ -1,9 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import {
+  isSupabaseConfigured,
   SUPABASE_ANON_KEY,
   SUPABASE_URL,
-  isSupabaseConfigured,
 } from "@/lib/supabase/config";
 
 /**

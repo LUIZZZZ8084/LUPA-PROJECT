@@ -10,7 +10,9 @@ import { cn } from "@/lib/utils";
 const NEW_WINDOW_HOURS = 24;
 
 function isNew(createdAt: string) {
-  return Date.now() - new Date(createdAt).getTime() < NEW_WINDOW_HOURS * 3_600_000;
+  return (
+    Date.now() - new Date(createdAt).getTime() < NEW_WINDOW_HOURS * 3_600_000
+  );
 }
 
 export function JobCard({
@@ -25,11 +27,15 @@ export function JobCard({
       href={`/vagas/${job.id}`}
       className={cn(
         "group flex min-w-0 gap-3.5 rounded-[var(--radius-card)] border border-line bg-panel p-4",
-        "transition-colors hover:border-vagas/40 hover:bg-panel-2",
+        "transition-[background-color,border-color,transform,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out-soft)] hover:border-vagas/40 hover:bg-panel-2 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20 active:translate-y-0 active:scale-[0.995] motion-reduce:hover:translate-y-0",
         className,
       )}
     >
-      <Avatar name={job.company.company_name} src={job.company.logo_url} square />
+      <Avatar
+        name={job.company.company_name}
+        src={job.company.logo_url}
+        square
+      />
 
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-start justify-between gap-2">
@@ -60,32 +66,6 @@ export function JobCard({
           <span>{timeAgo(job.created_at)}</span>
         </div>
       </div>
-    </Link>
-  );
-}
-
-/** Versão compacta usada na home, sem descrição de contrato. */
-export function JobCardCompact({ job }: { job: JobListing }) {
-  return (
-    <Link
-      href={`/vagas/${job.id}`}
-      className="group flex items-center gap-3 border-b border-line px-1 py-3 last:border-b-0"
-    >
-      <Avatar
-        name={job.company.company_name}
-        src={job.company.logo_url}
-        size="sm"
-        square
-      />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold group-hover:text-vagas">
-          {job.title}
-        </p>
-        <p className="truncate text-[11px] text-muted">
-          {job.company.company_name} · {formatSalaryRange(job.salary_min, job.salary_max)}
-        </p>
-      </div>
-      {isNew(job.created_at) && <Badge tone="vagas">Novo</Badge>}
     </Link>
   );
 }

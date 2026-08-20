@@ -2,7 +2,11 @@ import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import { FilterBar } from "@/components/filter-bar";
 import { JobCard } from "@/components/job-card";
-import { EmptyState, PageShell, PageTitle } from "@/components/layout/page-shell";
+import {
+  EmptyState,
+  PageShell,
+  PageTitle,
+} from "@/components/layout/page-shell";
 import { ButtonLink } from "@/components/ui/button";
 import { CITIES, CONTRACT_TYPES, JOB_CATEGORIES } from "@/lib/constants";
 import { getJobs } from "@/lib/data";
@@ -90,7 +94,7 @@ export default async function VagasPage({
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="stagger grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {jobs.map((job) => (
             <JobCard key={job.id} job={job} />
           ))}

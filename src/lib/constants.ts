@@ -89,11 +89,3 @@ export const APPLICATION_LABELS = {
   aprovada: "Aprovada",
   rejeitada: "Não selecionado",
 } as const;
-
-export function categoryBySlug(slug: string): ServiceCategory | undefined {
-  return SERVICE_CATEGORIES.find((c) => c.slug === slug);
-}
-
-export function categoryById(id: number): ServiceCategory | undefined {
-  return SERVICE_CATEGORIES.find((c) => c.id === id);
-}

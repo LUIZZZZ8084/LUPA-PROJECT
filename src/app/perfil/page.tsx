@@ -54,7 +54,10 @@ export default async function PerfilPage() {
 
   return (
     <PageShell width="narrow">
-      <PageTitle title="Perfil" description="Sua conta e seus atalhos na Lupa." />
+      <PageTitle
+        title="Perfil"
+        description="Sua conta e seus atalhos na Lupa."
+      />
 
       {!user && (
         <Panel className="mb-5 text-center">
@@ -102,10 +105,10 @@ export default async function PerfilPage() {
           Seus dados e a LGPD
         </h2>
         <p className="mt-2 text-xs leading-relaxed text-muted">
-          Documento de identidade e selfie são dados pessoais sensíveis. Na
-          Lupa eles ficam em armazenamento privado, são usados só para
-          confirmar sua identidade e são apagados assim que a verificação é
-          concluída — permanece apenas o status aprovado no seu perfil.
+          Documento de identidade e selfie são dados pessoais sensíveis. Na Lupa
+          eles ficam em armazenamento privado, são usados só para confirmar sua
+          identidade e são apagados assim que a verificação é concluída —
+          permanece apenas o status aprovado no seu perfil.
         </p>
       </Panel>
     </PageShell>

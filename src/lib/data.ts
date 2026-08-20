@@ -11,8 +11,8 @@ import {
   MOCK_VERIFICATIONS,
   type VerificationRequest,
 } from "./mock-data";
-import { createClient } from "./supabase/server";
 import { isSupabaseConfigured } from "./supabase/config";
+import { createClient } from "./supabase/server";
 import type {
   ApplicationWithCandidate,
   Company,
@@ -78,15 +78,18 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
     if (
       filters.q &&
       !matches(
-        [job.title, job.description, job.company.company_name, job.category ?? ""],
+        [
+          job.title,
+          job.description,
+          job.company.company_name,
+          job.category ?? "",
+        ],
         filters.q,
       )
     )
       return false;
     return true;
-  }).sort(
-    (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
-  );
+  }).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
 }
 
 export async function getJobById(id: string): Promise<JobListing | null> {
@@ -138,7 +141,8 @@ export async function getProviders(
 
       if (filters.city) query = query.eq("city", filters.city);
       if (filters.category) query = query.eq("category_slug", filters.category);
-      if (filters.min_rating) query = query.gte("avg_rating", filters.min_rating);
+      if (filters.min_rating)
+        query = query.gte("avg_rating", filters.min_rating);
       if (filters.q)
         query = query.or(
           `full_name.ilike.%${filters.q}%,description.ilike.%${filters.q}%`,

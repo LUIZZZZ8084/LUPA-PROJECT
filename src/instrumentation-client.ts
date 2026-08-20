@@ -2,11 +2,11 @@ import * as Sentry from "@sentry/nextjs";
 import {
   ENVIRONMENT,
   IGNORED_ERRORS,
+  isSentryEnabled,
   RELEASE,
   SENTRY_DSN,
-  TRACES_SAMPLE_RATE,
-  isSentryEnabled,
   scrubSensitiveData,
+  TRACES_SAMPLE_RATE,
 } from "@/lib/observability";
 
 /**

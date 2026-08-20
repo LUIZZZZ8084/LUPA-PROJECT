@@ -23,9 +23,7 @@ export async function register() {
 /** Captura erros de Server Component, Server Action e Route Handler. */
 export async function onRequestError(
   ...args: Parameters<
-    NonNullable<
-      Awaited<typeof import("@sentry/nextjs")>["captureRequestError"]
-    >
+    NonNullable<Awaited<typeof import("@sentry/nextjs")>["captureRequestError"]>
   >
 ) {
   const { isSentryEnabled } = await import("@/lib/observability");

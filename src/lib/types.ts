@@ -1,6 +1,11 @@
 /**
  * Tipos do domínio Lupa — espelham o schema em supabase/schema.sql.
  * Mantenha os dois em sincronia ao alterar tabelas.
+ *
+ * Este arquivo está no `ignore` do knip de propósito: ele documenta o
+ * schema inteiro, então alguns tipos ainda não têm consumidor no código —
+ * `CltProfile`, por exemplo, existe porque a tabela `clt_profiles` existe.
+ * Apagá-los deixaria o espelho incompleto.
  */
 
 export type Role = "candidato_clt" | "prestador_servico" | "empresa";

@@ -25,7 +25,11 @@ function WhatsAppIcon({ size = 18 }: { size?: number }) {
  * Em demonstração o destino é o número do fundador, não o do prestador
  * fictício — ver src/lib/demo.ts para o porquê.
  */
-function buildContact(providerPhone: string, providerName: string, context?: string) {
+function buildContact(
+  providerPhone: string,
+  providerName: string,
+  context?: string,
+) {
   const { phone, redirected } = resolveContact(providerPhone);
   const firstName = providerName.split(" ")[0];
 
@@ -71,7 +75,9 @@ export function WhatsAppButton({
         aria-disabled
         className={cn(
           buttonVariants({ variant: "outline", size, block }),
-          "cursor-not-allowed opacity-60",
+          // Cor explícita em vez de opacidade: o texto precisa continuar
+          // legível mesmo desativado, porque explica por que está desativado.
+          "cursor-not-allowed border-line/70 bg-panel-2 text-muted",
           className,
         )}
       >

@@ -7,7 +7,7 @@ import { LupaMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
-import { signIn, type SignInState } from "./actions";
+import { type SignInState, signIn } from "./actions";
 
 const initial: SignInState = {};
 
@@ -50,8 +50,8 @@ export function SignInForm() {
           {state.demo && (
             <p className="rounded-xl border border-warn/30 bg-warn/10 px-4 py-3 text-sm text-warn">
               Modo demonstração: o login entra em funcionamento assim que o
-              Supabase estiver configurado. Navegue livremente pelo app
-              enquanto isso.
+              Supabase estiver configurado. Navegue livremente pelo app enquanto
+              isso.
             </p>
           )}
 

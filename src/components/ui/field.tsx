@@ -1,9 +1,12 @@
-import type { ComponentProps, ReactNode } from "react";
+"use client";
+
+import type { ComponentProps, ReactElement, ReactNode } from "react";
+import { cloneElement, isValidElement, useId } from "react";
 import { cn } from "@/lib/utils";
 
 const control =
   "w-full rounded-xl border border-line bg-panel-2 px-3.5 text-sm text-ink " +
-  "placeholder:text-faint transition-colors " +
+  "placeholder:text-faint transition-colors duration-[var(--duration-fast)] " +
   "hover:border-panel-3 focus:border-vagas focus:outline-none " +
   "disabled:opacity-50";
 
@@ -14,7 +17,11 @@ export function Input({ className, ...props }: ComponentProps<"input">) {
 export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
   return (
     <textarea
-      className={cn(control, "min-h-28 resize-y py-3 leading-relaxed", className)}
+      className={cn(
+        control,
+        "min-h-28 resize-y py-3 leading-relaxed",
+        className,
+      )}
       {...props}
     />
   );
@@ -37,6 +44,15 @@ export function Select({ className, ...props }: ComponentProps<"select">) {
   );
 }
 
+/**
+ * Rótulo, dica e erro de um campo de formulário.
+ *
+ * A associação é explícita, por `id` e `htmlFor`, em vez de embrulhar o
+ * campo no <label>. Assim dá para ligar dica e mensagem de erro ao campo
+ * via aria-describedby: o leitor de tela anuncia "WhatsApp, é por onde as
+ * pessoas vão falar com você" em vez de só "WhatsApp". Quem depende de
+ * leitor de tela não tem como ver o texto cinza embaixo do campo.
+ */
 export function Field({
   label,
   hint,
@@ -52,23 +68,56 @@ export function Field({
   children: ReactNode;
   className?: string;
 }) {
+  const id = useId();
+  const idDica = `${id}-dica`;
+  const idErro = `${id}-erro`;
+
+  const descrito =
+    [error ? idErro : null, hint && !error ? idDica : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
+
+  // Repassa id, estado de erro e descrição ao campo sem exigir que cada
+  // chamada os declare.
+  const campo = isValidElement(children)
+    ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+        id,
+        "aria-describedby": descrito,
+        "aria-invalid": error ? true : undefined,
+        "aria-required": required || undefined,
+      })
+    : children;
+
   return (
-    <label className={cn("block", className)}>
-      <span className="mb-1.5 flex items-center gap-1 text-[13px] font-medium text-ink">
+    <div className={cn("block", className)}>
+      <label
+        htmlFor={id}
+        className="mb-1.5 flex items-center gap-1 text-[13px] font-medium text-ink"
+      >
         {label}
         {required && (
-          <span className="text-danger" aria-label="obrigatório">
+          <span aria-hidden className="text-danger">
             *
           </span>
         )}
-      </span>
-      {children}
+      </label>
+
+      {campo}
+
       {hint && !error && (
-        <span className="mt-1.5 block text-xs text-faint">{hint}</span>
+        <span id={idDica} className="mt-1.5 block text-xs text-faint">
+          {hint}
+        </span>
       )}
       {error && (
-        <span className="mt-1.5 block text-xs text-danger">{error}</span>
+        <span
+          id={idErro}
+          role="alert"
+          className="mt-1.5 block text-xs text-danger"
+        >
+          {error}
+        </span>
       )}
-    </label>
+    </div>
   );
 }

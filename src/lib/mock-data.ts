@@ -9,20 +9,12 @@
  */
 
 import { SERVICE_CATEGORIES } from "./constants";
-import type {
-  ApplicationWithCandidate,
-  Company,
-  JobListing,
-  ProviderListing,
-  Review,
-} from "./types";
+import type { ApplicationWithCandidate, Company, JobListing, ProviderListing, Review } from "./types";
 
-const hoursAgo = (h: number) =>
-  new Date(Date.now() - h * 3_600_000).toISOString();
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
 const daysAgo = (d: number) => hoursAgo(d * 24);
 
-const cat = (slug: string) =>
-  SERVICE_CATEGORIES.find((c) => c.slug === slug)!;
+const cat = (slug: string) => SERVICE_CATEGORIES.find((c) => c.slug === slug)!;
 
 /* ============================================================
    Empresas
@@ -348,9 +340,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     category_id: cat("encanador").id,
     category: cat("encanador"),
     description:
-      "Encanador com atendimento de emergência. Conserto de vazamentos, " +
-      "desentupimento, instalação de caixa d'água, aquecedor e louças " +
-      "sanitárias. Atendo também aos finais de semana.",
+      "Encanador com atendimento de emergência. Conserto de vazamentos, " + "desentupimento, instalação de caixa d'água, aquecedor e louças " + "sanitárias. Atendo também aos finais de semana.",
     starting_price: 120,
     years_experience: 12,
     service_area: ["Centro", "Setor Comercial", "Jardim Itália"],
@@ -369,10 +359,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     doc_verified: true,
     category_id: cat("pintor").id,
     category: cat("pintor"),
-    description:
-      "Pintura residencial e comercial, textura, grafiato e massa corrida. " +
-      "Faço o serviço completo, da preparação da parede à limpeza final. " +
-      "Orçamento por metro quadrado.",
+    description: "Pintura residencial e comercial, textura, grafiato e massa corrida. " + "Faço o serviço completo, da preparação da parede à limpeza final. " + "Orçamento por metro quadrado.",
     starting_price: 200,
     years_experience: 9,
     service_area: ["Jardim das Palmeiras", "Residencial Florença", "Centro"],
@@ -391,10 +378,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     doc_verified: false,
     category_id: cat("pedreiro").id,
     category: cat("pedreiro"),
-    description:
-      "Pedreiro para obras pequenas e médias: alvenaria, reboco, contrapiso, " +
-      "assentamento de piso e azulejo, pequenas reformas. Trabalho com " +
-      "ajudante próprio.",
+    description: "Pedreiro para obras pequenas e médias: alvenaria, reboco, contrapiso, " + "assentamento de piso e azulejo, pequenas reformas. Trabalho com " + "ajudante próprio.",
     starting_price: 180,
     years_experience: 15,
     service_area: ["Jardim Primavera", "Boa Esperança", "Jacarandá"],
@@ -414,9 +398,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     category_id: cat("diarista").id,
     category: cat("diarista"),
     description:
-      "Diarista com referências. Faxina completa, limpeza pesada pós-obra e " +
-      "organização de armários. Levo meu próprio material de limpeza se " +
-      "preferir. Disponível de segunda a sábado.",
+      "Diarista com referências. Faxina completa, limpeza pesada pós-obra e " + "organização de armários. Levo meu próprio material de limpeza se " + "preferir. Disponível de segunda a sábado.",
     starting_price: 140,
     years_experience: 6,
     service_area: ["Jardim Celeste", "Centro", "Aquarela Brasil"],
@@ -457,10 +439,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     doc_verified: false,
     category_id: cat("jardineiro").id,
     category: cat("jardineiro"),
-    description:
-      "Manutenção de jardim, corte de grama, poda de árvores e cerca viva, " +
-      "plantio e adubação. Atendo casas e condomínios, com contrato mensal ou " +
-      "serviço avulso.",
+    description: "Manutenção de jardim, corte de grama, poda de árvores e cerca viva, " + "plantio e adubação. Atendo casas e condomínios, com contrato mensal ou " + "serviço avulso.",
     starting_price: 100,
     years_experience: 5,
     service_area: ["Boa Esperança", "Residencial Florença", "Jardim Itália"],
@@ -479,9 +458,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     doc_verified: true,
     category_id: cat("diarista").id,
     category: cat("diarista"),
-    description:
-      "Faxina residencial e limpeza de escritório. Trabalho por diária ou " +
-      "duas vezes por semana com valor fechado. Passo roupa mediante combinado.",
+    description: "Faxina residencial e limpeza de escritório. Trabalho por diária ou " + "duas vezes por semana com valor fechado. Passo roupa mediante combinado.",
     starting_price: 130,
     years_experience: 4,
     service_area: ["Aquarela Brasil", "Jardim Paraíso", "Setor Comercial"],
@@ -500,10 +477,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     doc_verified: true,
     category_id: cat("eletricista").id,
     category: cat("eletricista"),
-    description:
-      "Eletricista especializado em ar-condicionado split: instalação, " +
-      "limpeza, recarga de gás e manutenção. Também faço rede elétrica para " +
-      "climatização de lojas e escritórios.",
+    description: "Eletricista especializado em ar-condicionado split: instalação, " + "limpeza, recarga de gás e manutenção. Também faço rede elétrica para " + "climatização de lojas e escritórios.",
     starting_price: 220,
     years_experience: 11,
     service_area: ["Setor Comercial", "Centro", "Setor Industrial"],
@@ -522,13 +496,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
  * prestadores são calculados a partir desta lista, logo abaixo. Em produção
  * o mesmo papel é feito pelo trigger `refresh_provider_rating` no Postgres.
  */
-type ReviewSeed = [
-  provider: string,
-  reviewer: string,
-  rating: number,
-  daysBack: number,
-  comment: string,
-];
+type ReviewSeed = [provider: string, reviewer: string, rating: number, daysBack: number, comment: string];
 
 const REVIEW_SEEDS: ReviewSeed[] = [
   // João Silva — eletricista
@@ -592,16 +560,14 @@ const REVIEW_SEEDS: ReviewSeed[] = [
   ["prv-pedro-alves", "Ricardo M.", 4, 57, "Serviço bom e preço honesto."],
 ];
 
-export const MOCK_REVIEWS: Review[] = REVIEW_SEEDS.map(
-  ([provider_id, reviewer_name, rating, back, comment], i) => ({
-    id: `rev-${i + 1}`,
-    provider_id,
-    reviewer_name,
-    rating,
-    comment,
-    created_at: daysAgo(back),
-  }),
-);
+export const MOCK_REVIEWS: Review[] = REVIEW_SEEDS.map(([provider_id, reviewer_name, rating, back, comment], i) => ({
+  id: `rev-${i + 1}`,
+  provider_id,
+  reviewer_name,
+  rating,
+  comment,
+  created_at: daysAgo(back),
+}));
 
 /**
  * Recalcula nota e contagem de cada prestador a partir das avaliações acima,
@@ -610,10 +576,7 @@ export const MOCK_REVIEWS: Review[] = REVIEW_SEEDS.map(
 for (const provider of MOCK_PROVIDERS) {
   const own = MOCK_REVIEWS.filter((r) => r.provider_id === provider.profile_id);
   provider.review_count = own.length;
-  provider.avg_rating = own.length
-    ? Math.round((own.reduce((sum, r) => sum + r.rating, 0) / own.length) * 10) /
-      10
-    : 0;
+  provider.avg_rating = own.length ? Math.round((own.reduce((sum, r) => sum + r.rating, 0) / own.length) * 10) / 10 : 0;
 }
 
 /* ============================================================

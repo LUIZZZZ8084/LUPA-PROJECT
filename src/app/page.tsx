@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { JobCard } from "@/components/job-card";
 import { PageShell } from "@/components/layout/page-shell";
+import { Reveal } from "@/components/motion/reveal";
 import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
@@ -38,9 +39,8 @@ export default async function HomePage() {
           </h1>
 
           <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted sm:text-base">
-            Vagas de emprego, prestação de serviços e profissionais
-            qualificados na sua região — com perfil verificado e contato
-            direto no WhatsApp.
+            Vagas de emprego, prestação de serviços e profissionais qualificados
+            na sua região — com perfil verificado e contato direto no WhatsApp.
           </p>
 
           <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -93,62 +93,66 @@ export default async function HomePage() {
         </div>
 
         {/* Confiança — o que faz alguém contratar um desconhecido */}
-        <Panel className="mt-10">
-          <h2 className="text-lg font-bold">
-            Confiança que <span className="text-vagas">faz a diferença</span>
-          </h2>
-          <p className="mt-1.5 max-w-lg text-sm text-muted">
-            Perfis verificados, avaliações reais e recomendações — para você
-            escolher com segurança quem entra na sua casa ou na sua empresa.
-          </p>
+        <Reveal>
+          <Panel className="mt-10">
+            <h2 className="text-lg font-bold">
+              Confiança que <span className="text-vagas">faz a diferença</span>
+            </h2>
+            <p className="mt-1.5 max-w-lg text-sm text-muted">
+              Perfis verificados, avaliações reais e recomendações — para você
+              escolher com segurança quem entra na sua casa ou na sua empresa.
+            </p>
 
-          <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-4">
-            <TrustItem
-              icon={<MessageCircle size={22} />}
-              title="Telefone verificado"
-              description="Mais segurança nas conversas"
-            />
-            <TrustItem
-              icon={<BadgeCheck size={22} />}
-              title="Documento verificado"
-              description="Identidade confirmada"
-            />
-            <TrustItem
-              icon={<Star size={22} />}
-              title="Avaliações reais"
-              description="A experiência de quem já contratou"
-            />
-            <TrustItem
-              icon={<ShieldCheck size={22} />}
-              title="Profissionais locais"
-              description={`Gente de ${PILOT_LABEL.split(" - ")[0]} e região`}
-            />
-          </div>
-        </Panel>
+            <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-4">
+              <TrustItem
+                icon={<MessageCircle size={22} />}
+                title="Telefone verificado"
+                description="Mais segurança nas conversas"
+              />
+              <TrustItem
+                icon={<BadgeCheck size={22} />}
+                title="Documento verificado"
+                description="Identidade confirmada"
+              />
+              <TrustItem
+                icon={<Star size={22} />}
+                title="Avaliações reais"
+                description="A experiência de quem já contratou"
+              />
+              <TrustItem
+                icon={<ShieldCheck size={22} />}
+                title="Profissionais locais"
+                description={`Gente de ${PILOT_LABEL.split(" - ")[0]} e região`}
+              />
+            </div>
+          </Panel>
+        </Reveal>
 
         {/* Chamada para empresas */}
-        <Panel className="mt-5 border-empresas/25 bg-gradient-to-br from-empresas/8 to-transparent">
-          <div className="flex flex-wrap items-center justify-between gap-5">
-            <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-empresas/15 text-empresas">
-                <Building2 size={22} />
+        <Reveal delay={60}>
+          <Panel className="mt-5 border-empresas/25 bg-gradient-to-br from-empresas/8 to-transparent">
+            <div className="flex flex-wrap items-center justify-between gap-5">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-empresas/15 text-empresas">
+                  <Building2 size={22} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-empresas">
+                    Sua empresa está contratando?
+                  </h2>
+                  <p className="mt-1 max-w-md text-sm text-muted">
+                    Publique vagas, receba currículos organizados e acompanhe
+                    visualizações. A primeira vaga é gratuita.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-empresas">
-                  Sua empresa está contratando?
-                </h2>
-                <p className="mt-1 max-w-md text-sm text-muted">
-                  Publique vagas, receba currículos organizados e acompanhe
-                  visualizações. A primeira vaga é gratuita.
-                </p>
-              </div>
+              <ButtonLink href="/empresa" variant="empresas">
+                Painel da empresa
+                <ArrowRight size={16} />
+              </ButtonLink>
             </div>
-            <ButtonLink href="/empresa" variant="empresas">
-              Painel da empresa
-              <ArrowRight size={16} />
-            </ButtonLink>
-          </div>
-        </Panel>
+          </Panel>
+        </Reveal>
 
         <p className="mt-8 text-center text-xs text-faint">
           Lupa · cidade-piloto {PILOT_LABEL} · em breve em outras cidades do
@@ -231,7 +235,7 @@ function FeedSection({
           <ArrowRight size={13} />
         </Link>
       </div>
-      <div className="space-y-2.5">{children}</div>
+      <div className="stagger space-y-2.5">{children}</div>
     </section>
   );
 }

@@ -1,12 +1,18 @@
 import { Banknote, Briefcase, MapPin } from "lucide-react";
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
-import { RatingInline, Stars } from "@/components/ui/stars";
+import {
+  Skeleton,
+  SkeletonAvatar,
+  SkeletonText,
+} from "@/components/ui/skeleton";
+import { RatingInline } from "@/components/ui/stars";
 import { VerificationRow, VerifiedMark } from "@/components/verified-badge";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import {
@@ -15,7 +21,46 @@ import {
   getReviews,
   ratingBreakdown,
 } from "@/lib/data";
-import { formatRating, formatStartingPrice, timeAgo } from "@/lib/format";
+import { formatStartingPrice } from "@/lib/format";
+
+/**
+ * As avaliações ficam abaixo da dobra e crescem sem limite — um prestador
+ * antigo terá dezenas. Carregar sob demanda tira esse peso do primeiro
+ * carregamento, que é o que decide se a pessoa espera ou desiste no 3G.
+ */
+const ReviewsPanel = dynamic(
+  () => import("@/components/reviews-panel").then((m) => m.ReviewsPanel),
+  {
+    loading: () => (
+      <Panel className="mt-5">
+        <Skeleton className="h-5 w-28" />
+        <div className="mt-4 flex items-center gap-6">
+          <div className="space-y-2 text-center">
+            <Skeleton className="h-10 w-14" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <div className="flex-1 space-y-1.5">
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} className="h-1.5 w-full rounded-full" />
+            ))}
+          </div>
+        </div>
+        <div className="mt-6 space-y-4 border-t border-line pt-4">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="flex gap-3">
+              <SkeletonAvatar size="sm" />
+              <div className="flex-1 space-y-2">
+                <SkeletonText w="w-32" className="h-3" />
+                <SkeletonText />
+                <SkeletonText w="w-2/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+    ),
+  },
+);
 
 export async function generateMetadata({
   params,
@@ -46,7 +91,10 @@ export default async function ProviderPage({
   const breakdown = ratingBreakdown(reviews);
 
   const similar = (
-    await getProviders({ category: provider.category.slug, city: provider.city })
+    await getProviders({
+      category: provider.category.slug,
+      city: provider.city,
+    })
   )
     .filter((p) => p.profile_id !== provider.profile_id)
     .slice(0, 2);
@@ -141,88 +189,19 @@ export default async function ProviderPage({
             block
           />
           <p className="mt-2 text-center text-[11px] text-faint">
-            A conversa acontece direto no seu WhatsApp. A Lupa não cobra nada
-            de quem contrata.
+            A conversa acontece direto no seu WhatsApp. A Lupa não cobra nada de
+            quem contrata.
           </p>
         </div>
       </Panel>
 
-      {/* Avaliações */}
-      <Panel className="mt-5">
-        <h2 className="text-base font-bold">Avaliações</h2>
-
-        {provider.review_count === 0 ? (
-          <p className="mt-3 text-sm text-muted">
-            Este profissional ainda não recebeu avaliações. Foi atendido por
-            ele? Depois do serviço, sua avaliação ajuda a próxima pessoa.
-          </p>
-        ) : (
-          <>
-            <div className="mt-4 flex items-center gap-6">
-              <div className="text-center">
-                <div className="text-4xl font-bold tabular-nums">
-                  {formatRating(provider.avg_rating)}
-                </div>
-                <Stars rating={provider.avg_rating} className="mt-1.5" />
-                <p className="mt-1.5 text-[11px] text-muted">
-                  {provider.review_count} avaliações
-                </p>
-              </div>
-
-              <div className="flex-1 space-y-1">
-                {[5, 4, 3, 2, 1].map((star) => {
-                  const count = breakdown[star] ?? 0;
-                  const pct = reviews.length
-                    ? (count / reviews.length) * 100
-                    : 0;
-                  return (
-                    <div key={star} className="flex items-center gap-2">
-                      <span className="w-2 text-[11px] text-muted tabular-nums">
-                        {star}
-                      </span>
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-panel-3">
-                        <div
-                          className="h-full rounded-full bg-vagas"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="w-5 text-right text-[11px] text-faint tabular-nums">
-                        {count}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <ul className="mt-6 divide-y divide-line border-t border-line">
-              {reviews.map((review) => (
-                <li key={review.id} className="py-4">
-                  <div className="flex items-start gap-3">
-                    <Avatar name={review.reviewer_name} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="text-sm font-semibold">
-                          {review.reviewer_name}
-                        </span>
-                        <Stars rating={review.rating} size={12} />
-                        <span className="text-[11px] text-faint">
-                          {timeAgo(review.created_at)}
-                        </span>
-                      </div>
-                      {review.comment && (
-                        <p className="mt-1.5 text-sm leading-relaxed text-muted">
-                          {review.comment}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </Panel>
+      {/* Avaliações — carregado sob demanda, ver ReviewsPanel */}
+      <ReviewsPanel
+        reviews={reviews}
+        avgRating={provider.avg_rating}
+        reviewCount={provider.review_count}
+        breakdown={breakdown}
+      />
 
       {similar.length > 0 && (
         <section className="mt-8">

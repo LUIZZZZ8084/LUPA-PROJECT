@@ -13,7 +13,7 @@ import {
   SINOP_NEIGHBORHOODS,
 } from "@/lib/constants";
 import type { Role } from "@/lib/types";
-import { signUp, type SignUpState } from "./actions";
+import { type SignUpState, signUp } from "./actions";
 
 const initial: SignUpState = {};
 
@@ -80,12 +80,7 @@ export function SignUpForm({ role }: { role: Role }) {
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="E-mail" required error={state.fieldErrors?.email}>
-            <Input
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-            />
+            <Input name="email" type="email" autoComplete="email" required />
           </Field>
           <Field
             label="WhatsApp"
@@ -212,10 +207,9 @@ export function SignUpForm({ role }: { role: Role }) {
         )}
 
         <p className="text-xs leading-relaxed text-faint">
-          Ao criar a conta você concorda com os termos de uso e com o
-          tratamento dos seus dados conforme a LGPD. Documento e selfie, quando
-          enviados, ficam em armazenamento privado e são apagados após a
-          validação.
+          Ao criar a conta você concorda com os termos de uso e com o tratamento
+          dos seus dados conforme a LGPD. Documento e selfie, quando enviados,
+          ficam em armazenamento privado e são apagados após a validação.
         </p>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
