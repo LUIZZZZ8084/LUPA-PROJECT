@@ -74,3 +74,45 @@ describe("as contas do seed não aceitam login", () => {
     expect(SEED.toLowerCase()).toContain("nenhuma senha abre");
   });
 });
+
+/**
+ * As contas do seed aparecem numa plataforma pública, e o botão de contato
+ * monta um link `wa.me` a partir do telefone do perfil.
+ *
+ * Existe porque aconteceu: o seed foi escrito com números fictícios porém
+ * plausíveis (66 99911-0001) e foi para produção. Enquanto o app estava em
+ * modo demonstração, `resolveContact` redirecionava o contato e ninguém era
+ * incomodado. Ligar o Supabase desarmou essa salvaguarda — ela dependia de
+ * `isDemoMode` — justamente no momento em que ela passou a importar. Quem
+ * tivesse aquele número em Sinop começaria a receber mensagem de estranhos.
+ *
+ * A correção não é reforçar a salvaguarda: é o dado de exemplo não carregar
+ * telefone discável nenhum.
+ */
+describe("os telefones do seed não alcançam ninguém", () => {
+  const TELEFONES = [...new Set(SEED.match(/'\d{10,13}'/g) ?? [])].map((t) =>
+    t.replaceAll("'", ""),
+  );
+
+  it("o seed traz telefones — senão o teste não prova nada", () => {
+    expect(TELEFONES.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * No plano de numeração brasileiro a parte de assinante nunca começa em 0.
+   * Celular é `9XXXXXXXX`; fixo começa entre 2 e 5.
+   */
+  it.each(TELEFONES)("%s não é discável: assinante começa em 0", (tel) => {
+    const assinante = tel.slice(2);
+    expect(assinante.startsWith("0"), `${tel} pode ser de alguém`).toBe(true);
+  });
+
+  it("nenhum parece celular brasileiro de verdade", () => {
+    const plausiveis = TELEFONES.filter((t) => /^\d{2}9\d{8}$/.test(t));
+    expect(plausiveis).toEqual([]);
+  });
+
+  it("ainda passam na restrição do banco", () => {
+    for (const tel of TELEFONES) expect(tel).toMatch(/^[0-9]{10,13}$/);
+  });
+});

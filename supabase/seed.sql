@@ -7,6 +7,17 @@
 -- verdade. NÃO rode em produção depois que existir usuário real: os e-mails
 -- e os CNPJs colidiriam com os índices únicos.
 --
+-- Os telefones são deliberadamente não-discáveis: a parte de assinante começa
+-- em 0, o que não existe no plano de numeração brasileiro. O WhatsApp recusa e
+-- nenhuma pessoa real tem esse número.
+--
+-- O motivo é concreto. Números fictícios "plausíveis" (66 99911-0001) já
+-- foram parar em produção com o Supabase ligado, e o botão de contato monta
+-- `wa.me` com o telefone do perfil. Quem tivesse aquele número de verdade em
+-- Sinop passaria a receber mensagem de desconhecido. A salvaguarda que
+-- existia (`resolveContact`) só valia no modo demonstração — ligar o banco a
+-- desarmava exatamente quando ela passava a importar.
+--
 -- As contas abaixo são de vitrine: aparecem na busca e nos perfis, mas
 -- NENHUMA SENHA ABRE NENHUMA DELAS. O `senha_hash` é uma string fixa que não
 -- corresponde a senha alguma, e `argon2.verify` devolve false para qualquer
@@ -33,22 +44,22 @@ insert into usuarios
   (id, email, senha_hash, papel, nome_completo, telefone, cidade, bairro,
    avatar_url, telefone_verificado, doc_verificado, status_verificacao)
 values
-  ('11111111-1111-4111-8111-000000000001', 'joao@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'João Silva',        '66999110001', 'Sinop', 'Jardim Botânico',      '/avatares/prv-joao-silva.svg',       true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000002', 'carlos@teste.lupa',   '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Carlos Souza',      '66999110002', 'Sinop', 'Centro',               '/avatares/prv-carlos-souza.svg',     true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000003', 'marcos@teste.lupa',   '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Marcos Lima',       '66999110003', 'Sinop', 'Jardim das Palmeiras', '/avatares/prv-marcos-lima.svg',      true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000004', 'jose@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'José Moreira',      '66999110004', 'Sinop', 'Jardim Primavera',     '/avatares/prv-jose-moreira.svg',     true, false, 'em_analise'),
-  ('11111111-1111-4111-8111-000000000005', 'anapaula@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Ana Paula Ribeiro', '66999110005', 'Sinop', 'Jardim Celeste',       '/avatares/prv-ana-paula.svg',        true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000006', 'rosa@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Rosa Mendes',       '66999110006', 'Sinop', 'Menezes',              '/avatares/prv-rosa-mendes.svg',      true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000007', 'pedro@teste.lupa',    '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Pedro Alves',       '66999110007', 'Sinop', 'Boa Esperança',        '/avatares/prv-pedro-alves.svg',      true, false, 'em_analise'),
-  ('11111111-1111-4111-8111-000000000008', 'luciana@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Luciana Costa',     '66999110008', 'Sinop', 'Aquarela Brasil',      '/avatares/prv-luciana-costa.svg',    true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000009', 'antonio@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Antônio Ferreira',  '66999110009', 'Sinop', 'Setor Comercial',      '/avatares/prv-antonio-ferreira.svg', true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000001', 'joao@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'João Silva',        '66000000001', 'Sinop', 'Jardim Botânico',      '/avatares/prv-joao-silva.svg',       true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000002', 'carlos@teste.lupa',   '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Carlos Souza',      '66000000002', 'Sinop', 'Centro',               '/avatares/prv-carlos-souza.svg',     true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000003', 'marcos@teste.lupa',   '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Marcos Lima',       '66000000003', 'Sinop', 'Jardim das Palmeiras', '/avatares/prv-marcos-lima.svg',      true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000004', 'jose@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'José Moreira',      '66000000004', 'Sinop', 'Jardim Primavera',     '/avatares/prv-jose-moreira.svg',     true, false, 'em_analise'),
+  ('11111111-1111-4111-8111-000000000005', 'anapaula@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Ana Paula Ribeiro', '66000000005', 'Sinop', 'Jardim Celeste',       '/avatares/prv-ana-paula.svg',        true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000006', 'rosa@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Rosa Mendes',       '66000000006', 'Sinop', 'Menezes',              '/avatares/prv-rosa-mendes.svg',      true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000007', 'pedro@teste.lupa',    '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Pedro Alves',       '66000000007', 'Sinop', 'Boa Esperança',        '/avatares/prv-pedro-alves.svg',      true, false, 'em_analise'),
+  ('11111111-1111-4111-8111-000000000008', 'luciana@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Luciana Costa',     '66000000008', 'Sinop', 'Aquarela Brasil',      '/avatares/prv-luciana-costa.svg',    true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000009', 'antonio@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Antônio Ferreira',  '66000000009', 'Sinop', 'Setor Comercial',      '/avatares/prv-antonio-ferreira.svg', true, true,  'aprovado'),
 
-  ('22222222-2222-4222-8222-000000000001', 'agronorte@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Luiz Fernando', '6635110001', 'Sinop', 'Setor Industrial', '/avatares/cmp-agro-norte.svg',          true, true, 'aprovado'),
-  ('22222222-2222-4222-8222-000000000002', 'comercial@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Regina Alves',  '6635110002', 'Sinop', 'Centro',           '/avatares/cmp-comercial-sinop.svg',     true, true, 'aprovado'),
-  ('22222222-2222-4222-8222-000000000003', 'construcao@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Mário Becker',  '6635110003', 'Sinop', 'Setor Comercial',  '/avatares/cmp-casa-construcao.svg',     true, true, 'aprovado'),
+  ('22222222-2222-4222-8222-000000000001', 'agronorte@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Luiz Fernando', '6600000011', 'Sinop', 'Setor Industrial', '/avatares/cmp-agro-norte.svg',          true, true, 'aprovado'),
+  ('22222222-2222-4222-8222-000000000002', 'comercial@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Regina Alves',  '6600000012', 'Sinop', 'Centro',           '/avatares/cmp-comercial-sinop.svg',     true, true, 'aprovado'),
+  ('22222222-2222-4222-8222-000000000003', 'construcao@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Mário Becker',  '6600000013', 'Sinop', 'Setor Comercial',  '/avatares/cmp-casa-construcao.svg',     true, true, 'aprovado'),
 
-  ('33333333-3333-4333-8333-000000000001', 'everton@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'candidato_clt', 'Everton Rodrigues', '66999220001', 'Sinop', 'Jardim Primavera', '/avatares/cnd-everton-rodrigues.svg', true, false, 'pendente'),
-  ('33333333-3333-4333-8333-000000000002', 'simone@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'candidato_clt', 'Simone Batista',    '66999220002', 'Sinop', 'Menezes',          '/avatares/cnd-simone-batista.svg',    true, false, 'pendente');
+  ('33333333-3333-4333-8333-000000000001', 'everton@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'candidato_clt', 'Everton Rodrigues', '66000000021', 'Sinop', 'Jardim Primavera', '/avatares/cnd-everton-rodrigues.svg', true, false, 'pendente'),
+  ('33333333-3333-4333-8333-000000000002', 'simone@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'candidato_clt', 'Simone Batista',    '66000000022', 'Sinop', 'Menezes',          '/avatares/cnd-simone-batista.svg',    true, false, 'pendente');
 
 -- ----------------------------------------------------------------------------
 -- Perfis de prestador
