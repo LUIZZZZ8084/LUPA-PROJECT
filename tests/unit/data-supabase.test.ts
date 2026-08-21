@@ -170,24 +170,47 @@ describe("camada de dados com Supabase ligado", () => {
   });
 
   /*
-   * Resiliência: se o Postgres cair ou a consulta falhar, a tela mostra os
-   * dados de exemplo em vez de uma lista vazia. Numa demonstração ao vivo
-   * para um dono de loja em Sinop, isso é a diferença entre um tropeço e um
-   * app aparentemente quebrado.
+   * Estes dois testes exigiam o contrário até a integração com o Supabase
+   * entrar no ar, e a razão original era boa:
+   *
+   *   "se o Postgres cair, a tela mostra os dados de exemplo em vez de uma
+   *    lista vazia. Numa demonstração ao vivo para um dono de loja em
+   *    Sinop, isso é a diferença entre um tropeço e um app aparentemente
+   *    quebrado."
+   *
+   * Valia enquanto a plateia era um dono de loja assistindo a uma demo. Com
+   * o banco ligado, a plateia passou a ser gente de Sinop procurando
+   * emprego — e aí o mesmo comportamento serve vaga que não existe, sem o
+   * aviso de demonstração, para quem vai gastar crédito atrás dela.
+   *
+   * Custou caro antes de ser percebido: `/servicos/prv-joao-silva`, id que
+   * só existe no mock, respondia HTTP 200 em produção com perfil completo e
+   * botão de WhatsApp para um número que podia ser de alguém.
    */
-  it("cai para os dados de exemplo quando a consulta falha", async () => {
+  it("consulta que falha vira exceção, não dado de exemplo", async () => {
     respostaAtual = { data: null, error: { message: "conexão recusada" } };
 
-    const vagas = await getJobs();
-    expect(vagas.length).toBeGreaterThan(0);
-    expect(vagas[0].city).toBe("Sinop");
-
-    const prestadores = await getProviders();
-    expect(prestadores.length).toBeGreaterThan(0);
+    await expect(getJobs()).rejects.toThrow(/job_listings/);
+    await expect(getProviders()).rejects.toThrow(/provider_listings/);
   });
 
-  it("cai para os dados de exemplo quando o registro não existe", async () => {
+  it("a exceção diz o que falhou, para não sumir no log", async () => {
+    respostaAtual = { data: null, error: { message: "conexão recusada" } };
+
+    await expect(getJobs()).rejects.toThrow(/conexão recusada/);
+  });
+
+  /*
+   * Registro ausente é "não encontrado", não motivo para procurar no mock.
+   * Cair no mock aqui é o que ressuscitava ids que não existem no banco.
+   */
+  it("registro inexistente devolve null, sem procurar no mock", async () => {
     respostaAtual = { data: null, error: null };
-    expect(await getJobById("job-operador-maquinas")).not.toBeNull();
+    expect(await getJobById("job-operador-maquinas")).toBeNull();
+  });
+
+  it("lista vazia é lista vazia, não catálogo de exemplo", async () => {
+    respostaAtual = { data: [], error: null };
+    expect(await getJobs()).toEqual([]);
   });
 });
