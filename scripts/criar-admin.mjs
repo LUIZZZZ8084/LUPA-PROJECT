@@ -32,6 +32,30 @@ const PARAMETROS = {
   algorithm: 2,
 };
 
+/**
+ * Papel embutido na chave do Supabase.
+ *
+ * Duplica `src/lib/supabase/papel-da-chave.ts` de propósito: este script
+ * roda em Node puro, sem o pipeline de TypeScript, e importar o módulo da
+ * aplicação faz o Node reprocessar o arquivo e avisar. Seis linhas
+ * repetidas custam menos que um script que depende do build para rodar.
+ */
+function papelDaChave(chave) {
+  const limpa = chave.trim();
+  if (limpa.startsWith("sb_secret_")) return "service_role";
+  if (limpa.startsWith("sb_publishable_")) return "anon";
+
+  const partes = limpa.split(".");
+  if (partes.length !== 3) return "desconhecido";
+
+  try {
+    const payload = Buffer.from(partes[1], "base64url").toString("utf8");
+    return JSON.parse(payload).role ?? "desconhecido";
+  } catch {
+    return "desconhecido";
+  }
+}
+
 function gerarSenha() {
   // 24 bytes em base64url: ~192 bits, sem caractere ambíguo de digitar.
   return randomBytes(24).toString("base64url");
@@ -49,6 +73,19 @@ function exigir(nome) {
 async function principal() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? exigir("SUPABASE_URL");
   const chave = exigir("SUPABASE_SERVICE_ROLE_KEY");
+
+  // Sem esta conferência, a chave anônima só falha depois de tudo pronto,
+  // como "new row violates row-level security policy" — que manda quem lê
+  // procurar defeito no schema em vez de na variável.
+  if (papelDaChave(chave) === "anon") {
+    console.error(
+      "SUPABASE_SERVICE_ROLE_KEY contém a chave anônima, não a de serviço.",
+    );
+    console.error(
+      "No Supabase: Project Settings -> API -> service_role (botão Reveal).",
+    );
+    process.exit(1);
+  }
   const email = exigir("ADMIN_EMAIL").toLowerCase().trim();
 
   const nome = process.env.ADMIN_NOME ?? "Administrador";

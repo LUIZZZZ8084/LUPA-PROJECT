@@ -2,6 +2,7 @@ import "server-only";
 
 import { createClient as criarClienteSupabase } from "@supabase/supabase-js";
 import { isSupabaseConfigured, SUPABASE_URL } from "./config";
+import { erroDeChaveDeServico } from "./papel-da-chave";
 
 /**
  * Cliente com a chave de serviço.
@@ -65,6 +66,11 @@ export function clienteDeServico() {
   if (!temChaveDeServico) return null;
 
   if (!cache) {
+    // A chave anônima aqui só falharia lá no banco, como violação de RLS —
+    // mensagem que aponta para policies e schema, onde não há nada errado.
+    const erro = erroDeChaveDeServico(CHAVE_SERVICO);
+    if (erro) throw new Error(erro);
+
     cache = criarClienteSupabase<SchemaPermissivo>(
       SUPABASE_URL,
       CHAVE_SERVICO,
