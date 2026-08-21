@@ -58,6 +58,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import {
+  getCompany,
   getCompanyApplications,
   getCompanyJobs,
   getJobById,
@@ -212,5 +213,85 @@ describe("camada de dados com Supabase ligado", () => {
   it("lista vazia é lista vazia, não catálogo de exemplo", async () => {
     respostaAtual = { data: [], error: null };
     expect(await getJobs()).toEqual([]);
+  });
+});
+
+/**
+ * As colunas de id são `uuid`. Um id vindo da URL que não tenha essa forma
+ * faz o Postgres recusar a comparação com 22P02 antes de olhar qualquer
+ * linha — nenhum registro poderia corresponder.
+ *
+ * Custou duas respostas erradas seguidas para a mesma URL. Enquanto o
+ * fallback silencioso existia, `/servicos/prv-joao-silva` devolvia um
+ * perfil de mentira; ao removê-lo, passou a devolver página de erro com
+ * HTTP 200, porque a exceção acontece depois de o shell ter sido
+ * transmitido. A resposta certa sempre foi 404.
+ */
+describe("id sem forma de uuid é não-encontrado, não falha", () => {
+  const ERRO_22P02 = {
+    code: "22P02",
+    message: 'invalid input syntax for type uuid: "prv-joao-silva"',
+  };
+
+  it("busca por id devolve null em vez de explodir", async () => {
+    respostaAtual = { data: null, error: ERRO_22P02 };
+
+    expect(await getJobById("prv-joao-silva")).toBeNull();
+    expect(await getProviderById("prv-joao-silva")).toBeNull();
+  });
+
+  it("erro de banco de verdade continua virando exceção", async () => {
+    respostaAtual = {
+      data: null,
+      error: { code: "08006", message: "conexão recusada" },
+    };
+
+    await expect(
+      getProviderById("11111111-1111-4111-8111-000000000001"),
+    ).rejects.toThrow(/conexão recusada/);
+  });
+
+  /** Sem `code`, o erro é desconhecido e não pode ser tratado como 404. */
+  it("erro sem código não é confundido com id inválido", async () => {
+    respostaAtual = { data: null, error: { message: "sem código" } };
+
+    await expect(getJobById("qualquer")).rejects.toThrow(/sem código/);
+  });
+});
+
+/**
+ * Todo caminho que recebe id de fora precisa do mesmo desvio: id sem forma
+ * de uuid é "não existe", não "servidor quebrado". Cada função aqui atende
+ * uma URL onde o id chega da barra de endereços ou de um link antigo.
+ */
+describe("22P02 em cada caminho que recebe id de fora", () => {
+  const ERRO_22P02 = {
+    code: "22P02",
+    message: 'invalid input syntax for type uuid: "nao-e-uuid"',
+  };
+
+  beforeEach(() => {
+    respostaAtual = { data: null, error: ERRO_22P02 };
+  });
+
+  it("empresa inexistente devolve null", async () => {
+    expect(await getCompany("nao-e-uuid")).toBeNull();
+  });
+
+  it("avaliações de id inválido devolvem lista vazia", async () => {
+    expect(await getReviews("nao-e-uuid")).toEqual([]);
+  });
+
+  it("candidaturas de empresa inválida devolvem lista vazia", async () => {
+    expect(await getCompanyApplications("nao-e-uuid")).toEqual([]);
+  });
+
+  /**
+   * Listagem por empresa não desvia: ali o id vem de sessão autenticada,
+   * não da URL. Um uuid malformado nesse ponto é defeito de verdade e deve
+   * aparecer, não virar lista vazia silenciosa.
+   */
+  it("vagas da empresa continuam lançando", async () => {
+    await expect(getCompanyJobs("nao-e-uuid")).rejects.toThrow(/job_listings/);
   });
 });
