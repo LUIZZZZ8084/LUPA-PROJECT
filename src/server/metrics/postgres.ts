@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { clienteDeServico } from "@/lib/supabase/service";
 import type { Papel } from "../auth/rbac";
 import { erros } from "../errors";
 import type {
@@ -19,9 +19,10 @@ import type {
  * trazer todos os usuários para somar em JavaScript.
  */
 
+// As views de métrica leem usuarios, que é fechada para a chave anônima.
 async function cliente() {
-  const supabase = await createClient();
-  if (!supabase) throw erros.indisponivel("Supabase não configurado");
+  const supabase = clienteDeServico();
+  if (!supabase) throw erros.indisponivel("chave de serviço não configurada");
   return supabase;
 }
 

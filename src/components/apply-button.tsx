@@ -2,7 +2,7 @@
 
 import { Check, Loader2, Send } from "lucide-react";
 import { useState, useTransition } from "react";
-import { applyToJob } from "@/app/vagas/[id]/actions";
+import { candidatarSe } from "@/app/vagas/[id]/actions";
 import { Button } from "@/components/ui/button";
 
 export function ApplyButton({ jobId }: { jobId: string }) {
@@ -13,9 +13,9 @@ export function ApplyButton({ jobId }: { jobId: string }) {
   function submit() {
     setError(null);
     startTransition(async () => {
-      const result = await applyToJob(jobId);
+      const result = await candidatarSe({ vagaId: jobId });
       if (result.ok) setApplied(true);
-      else setError(result.error);
+      else setError(result.mensagem);
     });
   }
 

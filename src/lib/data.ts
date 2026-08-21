@@ -196,11 +196,21 @@ export async function getReviews(providerId: string): Promise<Review[]> {
     const supabase = await createClient();
     if (supabase) {
       const { data, error } = await supabase
-        .from("reviews")
-        .select("*")
-        .eq("provider_id", providerId)
-        .order("created_at", { ascending: false });
-      if (!error && data) return data as Review[];
+        .from("avaliacoes")
+        .select("id, prestador_id, nome_avaliador, nota, comentario, criado_em")
+        .eq("prestador_id", providerId)
+        .order("criado_em", { ascending: false });
+      if (!error && data) {
+        // A tabela usa nomes em português; o tipo da aplicação, em inglês.
+        return data.map((linha) => ({
+          id: String(linha.id),
+          provider_id: String(linha.prestador_id),
+          reviewer_name: String(linha.nome_avaliador),
+          rating: Number(linha.nota),
+          comment: (linha.comentario as string | null) ?? null,
+          created_at: String(linha.criado_em),
+        }));
+      }
     }
   }
   return MOCK_REVIEWS.filter((r) => r.provider_id === providerId).sort(
@@ -224,7 +234,7 @@ export async function getCompany(id: string): Promise<Company | null> {
     const supabase = await createClient();
     if (supabase) {
       const { data, error } = await supabase
-        .from("companies")
+        .from("perfis_empresa")
         .select("*")
         .eq("profile_id", id)
         .maybeSingle();

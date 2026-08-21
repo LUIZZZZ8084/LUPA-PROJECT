@@ -23,8 +23,8 @@ export async function decideVerification(
   if (!supabase) return { ok: true, demo: true };
 
   const { data: request, error: loadError } = await supabase
-    .from("verification_requests")
-    .select("id, profile_id, document_path, selfie_path")
+    .from("pedidos_verificacao")
+    .select("id, usuario_id, documento_path, selfie_path")
     .eq("id", requestId)
     .maybeSingle();
 
@@ -33,8 +33,8 @@ export async function decideVerification(
   }
 
   const { error: updateError } = await supabase
-    .from("verification_requests")
-    .update({ status: decision, reviewed_at: new Date().toISOString() })
+    .from("pedidos_verificacao")
+    .update({ status: decision, decidido_em: new Date().toISOString() })
     .eq("id", requestId);
 
   if (updateError) {
@@ -42,15 +42,15 @@ export async function decideVerification(
   }
 
   await supabase
-    .from("profiles")
+    .from("usuarios")
     .update({
-      verification_status: decision,
-      doc_verified: decision === "aprovado",
+      status_verificacao: decision,
+      doc_verificado: decision === "aprovado",
     })
-    .eq("id", request.profile_id);
+    .eq("id", request.usuario_id);
 
   // Retenção: as imagens só existem até a decisão.
-  const paths = [request.document_path, request.selfie_path].filter(
+  const paths = [request.documento_path, request.selfie_path].filter(
     (p): p is string => Boolean(p),
   );
   if (paths.length > 0) {

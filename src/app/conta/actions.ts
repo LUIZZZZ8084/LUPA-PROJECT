@@ -61,3 +61,57 @@ export const sairDaConta = criarAcao({
     return { encerrada: true };
   },
 });
+
+/* ============================================================
+   Adaptadores para useActionState
+   ============================================================ */
+
+export interface EstadoFormulario {
+  ok?: boolean;
+  erro?: string;
+  campos?: Record<string, string>;
+  papel?: string;
+}
+
+/**
+ * `criarAcao` devolve `RespostaAcao`; `useActionState` espera
+ * `(estadoAnterior, formData)`. Estes adaptadores fazem a ponte, sem que a
+ * regra de negócio precise saber que existe um formulário do outro lado.
+ */
+function paraEstado(
+  resposta: Awaited<ReturnType<typeof cadastrarConta>>,
+): EstadoFormulario {
+  if (resposta.ok) {
+    return { ok: true, papel: resposta.dados.papel };
+  }
+
+  return {
+    erro: resposta.mensagem,
+    campos: Object.fromEntries(
+      (resposta.campos ?? []).map((c) => [c.campo, c.mensagem]),
+    ),
+  };
+}
+
+export async function cadastrarComEstado(
+  _anterior: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  return paraEstado(await cadastrarConta(formData));
+}
+
+export async function entrarComEstado(
+  _anterior: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  const resposta = await entrarNaConta(formData);
+
+  if (resposta.ok) return { ok: true, papel: resposta.dados.papel };
+
+  return {
+    erro: resposta.mensagem,
+    campos: Object.fromEntries(
+      (resposta.campos ?? []).map((c) => [c.campo, c.mensagem]),
+    ),
+  };
+}

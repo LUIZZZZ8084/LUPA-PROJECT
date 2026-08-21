@@ -3,16 +3,16 @@
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useActionState } from "react";
+import { type EstadoFormulario, entrarComEstado } from "@/app/conta/actions";
 import { LupaMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
-import { type SignInState, signIn } from "./actions";
 
-const initial: SignInState = {};
+const inicial: EstadoFormulario = {};
 
 export function SignInForm() {
-  const [state, action, pending] = useActionState(signIn, initial);
+  const [state, action, pending] = useActionState(entrarComEstado, inicial);
 
   return (
     <>
@@ -34,24 +34,16 @@ export function SignInForm() {
 
           <Field label="Senha" required>
             <Input
-              name="password"
+              name="senha"
               type="password"
               autoComplete="current-password"
               required
             />
           </Field>
 
-          {state.error && (
+          {state.erro && (
             <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-              {state.error}
-            </p>
-          )}
-
-          {state.demo && (
-            <p className="rounded-xl border border-warn/30 bg-warn/10 px-4 py-3 text-sm text-warn">
-              Modo demonstração: o login entra em funcionamento assim que o
-              Supabase estiver configurado. Navegue livremente pelo app enquanto
-              isso.
+              {state.erro}
             </p>
           )}
 

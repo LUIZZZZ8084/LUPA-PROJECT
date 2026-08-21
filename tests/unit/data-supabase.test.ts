@@ -144,7 +144,7 @@ describe("camada de dados com Supabase ligado", () => {
 
   it("consulta as views certas de cada tela", async () => {
     await getReviews("prv-1");
-    expect(tabelasConsultadas).toContain("reviews");
+    expect(tabelasConsultadas).toContain("avaliacoes");
 
     await getCompanyJobs("empresa-1");
     expect(tabelasConsultadas).toContain("job_listings");
