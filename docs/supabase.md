@@ -65,8 +65,18 @@ Cria prestadores, empresas, vagas e avaliações de exemplo, com os mesmos
 avatares da demonstração. Útil para a plataforma não abrir vazia enquanto
 não houver cadastro de verdade.
 
-Senha de todas as contas de teste: `lupa1234`. **Não rode em produção
-depois que houver usuário real.**
+**As contas do seed não têm senha.** Elas aparecem na busca e nos perfis,
+mas nenhuma senha entra em nenhuma delas — o hash é uma string fixa que não
+corresponde a senha alguma.
+
+É de propósito, não uma pendência. Senha compartilhada e versionada em
+repositório, valendo para catorze contas, é uma porta aberta para qualquer
+um que leia o código. Perfil de exemplo precisa ser visto, não acessado.
+
+Para entrar de verdade, crie a sua conta em `/cadastro`.
+
+**Não rode o seed depois que houver usuário real** — ele assume um banco sem
+esses ids.
 
 ## 4. Copiar as chaves
 

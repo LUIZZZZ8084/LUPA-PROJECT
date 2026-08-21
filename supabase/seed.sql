@@ -7,7 +7,15 @@
 -- verdade. NÃO rode em produção depois que existir usuário real: os e-mails
 -- e os CNPJs colidiriam com os índices únicos.
 --
--- Senha de todas as contas: lupa1234
+-- As contas abaixo são de vitrine: aparecem na busca e nos perfis, mas
+-- NENHUMA SENHA ABRE NENHUMA DELAS. O `senha_hash` é uma string fixa que não
+-- corresponde a senha alguma, e `argon2.verify` devolve false para qualquer
+-- entrada. Há teste que trava isso (`tests/unit/seed-sem-login.test.ts`).
+--
+-- É de propósito. Uma senha compartilhada e versionada em repositório,
+-- valendo para 14 contas — três delas empresas que publicam vaga —, seria
+-- uma porta aberta para quem lesse o código. Perfil de exemplo precisa ser
+-- visto, não acessado.
 --
 -- Os avatares vêm de public/avatares, gerados pelo DiceBear a partir de
 -- coleções em domínio público (CC0) — ver scripts/gerar-avatares.mjs.
