@@ -185,17 +185,36 @@ test.describe("registro que não existe", () => {
    * o Postgres recusa a forma com 22P02. Nenhum registro poderia
    * corresponder, então a camada de dados devolve null.
    *
-   * O status ainda é 200, e deveria ser 404 — mas isso é anterior a esta
-   * correção e vale para todo segmento dinâmico (`/rota-inexistente` e
-   * `/admin/painel` respondem 404 corretamente; `/servicos/:id` não).
-   * Está na Issue própria. Aqui se verifica o que esta mudança resolveu:
-   * a página deixou de servir cadastro de mentira.
+   * O status era 200 e virou 404. A causa não era o segmento dinâmico:
+   * qualquer `notFound()` do app respondia 200, porque um `loading.tsx` na
+   * raiz embrulhava tudo em Suspense e o shell saía antes de a página
+   * decidir. Os esqueletos foram para grupos de rota, que os escopam sem
+   * mudar a URL.
    */
+  /**
+   * Status, não aparência. A versão anterior deste teste media o texto da
+   * página e passava com 200 servindo o corpo do 404 — monitoramento e
+   * buscador leem o status.
+   *
+   * Usa `page` e não `request`: o app é fechado por login e o contexto de
+   * requisição não carrega a sessão, então o que seria medido é o
+   * redirecionamento para `/entrar`. Já me enganou uma vez hoje.
+   */
+  test("id inexistente responde 404 de verdade", async ({ page }) => {
+    for (const rota of [
+      "/servicos/nao-existe-mesmo",
+      "/vagas/nao-existe-mesmo",
+    ]) {
+      const resposta = await page.goto(rota);
+      expect(resposta?.status(), `${rota} deveria responder 404`).toBe(404);
+    }
+  });
+
   test("não serve perfil de mentira para id que não existe", async ({
-    request,
+    page,
   }) => {
-    const resposta = await request.get("/servicos/nao-existe-mesmo");
-    const corpo = await resposta.text();
+    const resposta = await page.goto("/servicos/nao-existe-mesmo");
+    const corpo = (await resposta?.text()) ?? "";
 
     // Os nomes dos dados de exemplo não podem aparecer: era o que a queda
     // silenciosa fazia, servindo um perfil inteiro para um id inventado.

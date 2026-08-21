@@ -9,7 +9,16 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  /*
+   * Dois trabalhadores em todo lugar, não só na CI.
+   *
+   * Com o app fechado por login, cada renderização lê a sessão, e o
+   * servidor de teste é um só. Com paralelismo igual ao número de núcleos,
+   * asserções de navegação começam a estourar por timeout sem que nada
+   * esteja errado — e teste que falha às vezes é pior que teste lento,
+   * porque ensina a ignorar vermelho.
+   */
+  workers: 2,
   reporter: process.env.CI
     ? [["github"], ["html", { open: "never" }]]
     : [["list"], ["html", { open: "never" }]],

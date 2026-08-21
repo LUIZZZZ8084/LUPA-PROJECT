@@ -281,6 +281,13 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   para fora da tela. O truncate vai num `<span>` de texto dentro do flex.
 - **Grade responsiva sem `grid-cols-1` explícito** dimensiona a coluna
   implícita por `min-content`, e o card impõe largura maior que a tela.
+- **`loading.tsx` num segmento faz todo `notFound()` daquele ramo
+  responder 200.** O arquivo cria um limite de Suspense; o shell é
+  transmitido antes de a página decidir, e o status já não pode mudar.
+  Havia um na raiz, então valia para o app inteiro — e um segundo em
+  `/servicos` e `/vagas`, cobrindo os detalhes filhos. Hoje os esqueletos
+  vivem em grupos de rota (`(inicio)`, `(lista)`), que os escopam sem mudar
+  a URL. Rota que chama `notFound()` não pode ter `loading.tsx` acima dela.
 - **Opacidade sobre texto derruba o contraste** abaixo do mínimo legível.
   Para estado desabilitado, use cor explícita.
 
