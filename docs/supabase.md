@@ -107,8 +107,11 @@ SESSION_SECRET
 O `SESSION_SECRET` assina a sessão. Gere com:
 
 ```bash
-openssl rand -base64 48
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 ```
+
+Funciona em qualquer terminal. O `openssl` que a maioria dos tutoriais
+sugere não vem instalado no Windows, onde este projeto é desenvolvido.
 
 Sem ele, a aplicação recusa subir em produção — de propósito. Segredo padrão
 versionado significa sessão de admin forjável por qualquer um que leia o
@@ -119,11 +122,41 @@ vale a partir do próximo build.
 
 ## 6. Criar sua conta de admin
 
-Com as variáveis num `.env.local` local:
+Crie um `.env.local` na raiz do projeto com pelo menos estas duas linhas —
+é o mesmo par da seção anterior, agora do lado de cá:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=cole-aqui
+ADMIN_EMAIL=voce@exemplo.com
+ADMIN_TELEFONE=66999110001
+ADMIN_NOME=Seu Nome
+```
+
+`ADMIN_TELEFONE` é obrigatório: `usuarios.telefone` é `not null` com check
+de 10 a 13 dígitos. Com DDD, sem o `+55`. `ADMIN_NOME` é opcional.
+
+A chave tem que ser a **`service_role`**, não a `anon`. No painel do
+Supabase a `anon` fica visível e a `service_role` atrás de um botão
+*Reveal* — é fácil copiar a errada, e o script avisa se acontecer.
+
+A chave de serviço precisa estar **neste arquivo**, na sua máquina. Tê-la
+configurado na Vercel não basta: o script roda aqui, não lá.
+
+O arquivo é ignorado pelo git (`.gitignore`: `.env*`). Então:
 
 ```bash
-ADMIN_EMAIL=voce@exemplo.com npm run admin:criar
+npm run admin:criar
 ```
+
+O `ADMIN_EMAIL` vai no arquivo de propósito. A forma comum de passá-lo,
+`ADMIN_EMAIL=voce@exemplo.com npm run ...`, é sintaxe de bash: no
+PowerShell ela falha com *"não é reconhecido como nome de cmdlet"*. Com
+tudo no `.env.local`, o comando é o mesmo em qualquer terminal.
+
+O `npm run` carrega o `.env.local` pelo próprio Node. Chamar
+`node scripts/criar-admin.mjs` direto **não** carrega — aí as variáveis
+precisam estar no ambiente.
 
 Gera uma senha forte e **imprime uma vez só** — guarde antes de fechar o
 terminal. Para definir você mesmo, passe `ADMIN_SENHA`.

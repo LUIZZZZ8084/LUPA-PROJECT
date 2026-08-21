@@ -23,7 +23,7 @@
     "verify": "npm run typecheck && npm run lint && npm run knip && npm run arch && npm run test:cov",
     "prepare": "husky",
     "seed:avatares": "node scripts/gerar-avatares.mjs",
-    "admin:criar": "node scripts/criar-admin.mjs"
+    "admin:criar": "node --env-file-if-exists=.env.local scripts/criar-admin.mjs"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.1.0",

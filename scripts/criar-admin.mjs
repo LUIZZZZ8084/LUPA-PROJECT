@@ -2,7 +2,8 @@
 /**
  * Cria a conta de administrador.
  *
- *   ADMIN_EMAIL=voce@exemplo.com ADMIN_SENHA='...' node scripts/criar-admin.mjs
+ *   ADMIN_EMAIL=voce@exemplo.com ADMIN_TELEFONE=66999110001 \
+ *     ADMIN_SENHA='...' node scripts/criar-admin.mjs
  *
  * A senha vem por variável de ambiente e nunca é fixada no código nem
  * gravada em arquivo. Senha de admin versionada no repositório é a forma
@@ -13,6 +14,12 @@
  *
  * Precisa de SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY: a tabela `usuarios`
  * fica fora do alcance do RLS de propósito, porque guarda hash de senha.
+ *
+ * Pelo `npm run admin:criar`, o `.env.local` é carregado pelo próprio Node
+ * (`--env-file-if-exists`). Chamando `node` direto, não é: aí as variáveis
+ * precisam vir do ambiente. A documentação já prometeu que o arquivo era
+ * lido quando não era, e o script morria em "Falta a variável SUPABASE_URL"
+ * com o arquivo ali do lado, preenchido.
  */
 
 import { randomBytes } from "node:crypto";
@@ -25,6 +32,30 @@ const PARAMETROS = {
   parallelism: 1,
   algorithm: 2,
 };
+
+/**
+ * Papel embutido na chave do Supabase.
+ *
+ * Duplica `src/lib/supabase/papel-da-chave.ts` de propósito: este script
+ * roda em Node puro, sem o pipeline de TypeScript, e importar o módulo da
+ * aplicação faz o Node reprocessar o arquivo e avisar. Seis linhas
+ * repetidas custam menos que um script que depende do build para rodar.
+ */
+function papelDaChave(chave) {
+  const limpa = chave.trim();
+  if (limpa.startsWith("sb_secret_")) return "service_role";
+  if (limpa.startsWith("sb_publishable_")) return "anon";
+
+  const partes = limpa.split(".");
+  if (partes.length !== 3) return "desconhecido";
+
+  try {
+    const payload = Buffer.from(partes[1], "base64url").toString("utf8");
+    return JSON.parse(payload).role ?? "desconhecido";
+  } catch {
+    return "desconhecido";
+  }
+}
 
 function gerarSenha() {
   // 24 bytes em base64url: ~192 bits, sem caractere ambíguo de digitar.
@@ -43,10 +74,36 @@ function exigir(nome) {
 async function principal() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? exigir("SUPABASE_URL");
   const chave = exigir("SUPABASE_SERVICE_ROLE_KEY");
+
+  // Sem esta conferência, a chave anônima só falha depois de tudo pronto,
+  // como "new row violates row-level security policy" — que manda quem lê
+  // procurar defeito no schema em vez de na variável.
+  if (papelDaChave(chave) === "anon") {
+    console.error(
+      "SUPABASE_SERVICE_ROLE_KEY contém a chave anônima, não a de serviço.",
+    );
+    console.error(
+      "No Supabase: Project Settings -> API -> service_role (botão Reveal).",
+    );
+    process.exit(1);
+  }
   const email = exigir("ADMIN_EMAIL").toLowerCase().trim();
 
   const nome = process.env.ADMIN_NOME ?? "Administrador";
-  const telefone = (process.env.ADMIN_TELEFONE ?? "").replace(/\D/g, "");
+
+  // `usuarios.telefone` é `not null` com check de 10 a 13 dígitos. Sem
+  // ADMIN_TELEFONE isto virava string vazia e o insert morria em
+  // "violates check constraint telefone_so_digitos" — mensagem que fala da
+  // coluna e não da variável que ninguém sabia que precisava definir.
+  const telefone = exigir("ADMIN_TELEFONE").replace(/\D/g, "");
+
+  if (!/^[0-9]{10,13}$/.test(telefone)) {
+    console.error(
+      `ADMIN_TELEFONE precisa ter de 10 a 13 dígitos; veio com ${telefone.length}.`,
+    );
+    console.error("Com DDD e sem o +55. Ex.: 66999110001");
+    process.exit(1);
+  }
 
   const senhaGerada = !process.env.ADMIN_SENHA;
   const senha = process.env.ADMIN_SENHA ?? gerarSenha();
