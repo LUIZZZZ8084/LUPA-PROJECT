@@ -57,6 +57,22 @@ function papelDaChave(chave) {
   }
 }
 
+/**
+ * Registra o usuário na tabela `admins`, que controla quem pode aprovar
+ * verificações de documento.
+ *
+ * A coluna é `usuario_id`. O script escrevia `profile_id` e não conferia o
+ * retorno, então a linha nunca era criada e ninguém percebia: o painel usa
+ * o `papel` da sessão, então tudo parecia certo até alguém precisar
+ * aprovar uma verificação.
+ */
+async function registrarComoAdmin(supabase, usuarioId) {
+  const { error } = await supabase
+    .from("admins")
+    .upsert({ usuario_id: usuarioId }, { onConflict: "usuario_id" });
+  return error?.message ?? null;
+}
+
 function gerarSenha() {
   // 24 bytes em base64url: ~192 bits, sem caractere ambíguo de digitar.
   return randomBytes(24).toString("base64url");
@@ -138,9 +154,11 @@ async function principal() {
       process.exit(1);
     }
 
-    await supabase
-      .from("admins")
-      .upsert({ profile_id: existente.id }, { onConflict: "profile_id" });
+    const erroAdmin = await registrarComoAdmin(supabase, existente.id);
+    if (erroAdmin) {
+      console.error("Conta promovida, mas não entrou em `admins`:", erroAdmin);
+      process.exit(1);
+    }
 
     console.log(`Conta ${email} promovida a admin e senha redefinida.`);
   } else {
@@ -163,7 +181,11 @@ async function principal() {
       process.exit(1);
     }
 
-    await supabase.from("admins").insert({ profile_id: data.id });
+    const erroAdmin = await registrarComoAdmin(supabase, data.id);
+    if (erroAdmin) {
+      console.error("Conta criada, mas não entrou em `admins`:", erroAdmin);
+      process.exit(1);
+    }
     console.log(`Admin ${email} criado.`);
   }
 

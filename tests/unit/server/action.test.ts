@@ -168,3 +168,74 @@ describe("criarAcao", () => {
     expect(new Set(ids).size).toBeGreaterThan(1);
   });
 });
+
+/**
+ * `redirect()` e `notFound()` do Next sinalizam por exceção. A envelopadora
+ * existe para que exceção nenhuma vire tela de erro — mas estas duas não
+ * são erro, são navegação.
+ *
+ * Sem esta distinção, quem escrevesse `redirect()` numa action veria a
+ * navegação virar mensagem de erro na tela, sem nada de errado no código.
+ * Foi o que impediu o login de redirecionar no servidor.
+ */
+describe("controle de fluxo do Next não é erro", () => {
+  function comDigest(digest: string) {
+    return Object.assign(new Error("controle de fluxo"), { digest });
+  }
+
+  it("deixa o redirect passar em vez de virar resposta de erro", async () => {
+    const acao = criarAcao({
+      nome: "teste.redirect",
+      entrada: z.object({}),
+      executar: async () => {
+        throw comDigest("NEXT_REDIRECT;replace;/admin/painel;307;");
+      },
+    });
+
+    await expect(acao(new FormData())).rejects.toMatchObject({
+      digest: expect.stringContaining("NEXT_REDIRECT"),
+    });
+  });
+
+  it("deixa o notFound passar", async () => {
+    const acao = criarAcao({
+      nome: "teste.notfound",
+      entrada: z.object({}),
+      executar: async () => {
+        throw comDigest("NEXT_NOT_FOUND");
+      },
+    });
+
+    await expect(acao(new FormData())).rejects.toMatchObject({
+      digest: "NEXT_NOT_FOUND",
+    });
+  });
+
+  /** Erro de verdade continua sendo capturado — é a razão da envelopadora. */
+  it("erro comum continua virando resposta, não exceção", async () => {
+    const acao = criarAcao({
+      nome: "teste.erro",
+      entrada: z.object({}),
+      executar: async () => {
+        throw new Error("banco fora do ar");
+      },
+    });
+
+    const r = await acao(new FormData());
+    expect(r.ok).toBe(false);
+  });
+
+  /** `digest` que não é do Next não pode escapar. */
+  it("digest de outra origem não escapa", async () => {
+    const acao = criarAcao({
+      nome: "teste.digest-alheio",
+      entrada: z.object({}),
+      executar: async () => {
+        throw comDigest("ALGUMA_OUTRA_COISA");
+      },
+    });
+
+    const r = await acao(new FormData());
+    expect(r.ok).toBe(false);
+  });
+});
