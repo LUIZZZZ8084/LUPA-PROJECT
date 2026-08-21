@@ -62,6 +62,24 @@ function falhaDeConsulta(origem: string, erro: { message: string }): Error {
   return new Error(`Consulta a "${origem}" falhou: ${erro.message}`);
 }
 
+/**
+ * Id que não tem forma de uuid é "não encontrado", não falha de servidor.
+ *
+ * As colunas de id são `uuid`. Um id vindo da URL como `prv-joao-silva`
+ * faz o Postgres recusar a comparação com 22P02 — "invalid text
+ * representation" — antes de olhar qualquer linha. Nenhum registro poderia
+ * corresponder, então a resposta certa é 404.
+ *
+ * Tratar isso como erro tem custo concreto: enquanto o fallback silencioso
+ * existia, `/servicos/prv-joao-silva` respondia com um perfil de mentira;
+ * ao removê-lo, passou a responder com página de erro e HTTP 200, porque a
+ * exceção acontece depois de o shell já ter sido transmitido. Nenhum dos
+ * dois é o que um id inexistente merece.
+ */
+function ehIdSemFormaDeUuid(erro: { code?: string }): boolean {
+  return erro.code === "22P02";
+}
+
 /* ============================================================
    Vagas
    ============================================================ */
@@ -123,7 +141,10 @@ export async function getJobById(id: string): Promise<JobListing | null> {
         .select("*")
         .eq("id", id)
         .maybeSingle();
-      if (error) throw falhaDeConsulta("job_listings", error);
+      if (error) {
+        if (ehIdSemFormaDeUuid(error)) return null;
+        throw falhaDeConsulta("job_listings", error);
+      }
       return (data as unknown as JobListing) ?? null;
     }
   }
@@ -209,7 +230,10 @@ export async function getProviderById(
         .select("*")
         .eq("profile_id", id)
         .maybeSingle();
-      if (error) throw falhaDeConsulta("provider_listings", error);
+      if (error) {
+        if (ehIdSemFormaDeUuid(error)) return null;
+        throw falhaDeConsulta("provider_listings", error);
+      }
       return (data as unknown as ProviderListing) ?? null;
     }
   }
@@ -225,7 +249,10 @@ export async function getReviews(providerId: string): Promise<Review[]> {
         .select("id, prestador_id, nome_avaliador, nota, comentario, criado_em")
         .eq("prestador_id", providerId)
         .order("criado_em", { ascending: false });
-      if (error) throw falhaDeConsulta("avaliacoes", error);
+      if (error) {
+        if (ehIdSemFormaDeUuid(error)) return [];
+        throw falhaDeConsulta("avaliacoes", error);
+      }
 
       // A tabela usa nomes em português; o tipo da aplicação, em inglês.
       return (data ?? []).map((linha) => ({
@@ -263,7 +290,10 @@ export async function getCompany(id: string): Promise<Company | null> {
         .select("*")
         .eq("profile_id", id)
         .maybeSingle();
-      if (error) throw falhaDeConsulta("perfis_empresa", error);
+      if (error) {
+        if (ehIdSemFormaDeUuid(error)) return null;
+        throw falhaDeConsulta("perfis_empresa", error);
+      }
       return (data as Company) ?? null;
     }
   }
@@ -299,7 +329,10 @@ export async function getCompanyApplications(
         .select("*")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
-      if (error) throw falhaDeConsulta("company_applications", error);
+      if (error) {
+        if (ehIdSemFormaDeUuid(error)) return [];
+        throw falhaDeConsulta("company_applications", error);
+      }
       return (data ?? []) as unknown as ApplicationWithCandidate[];
     }
   }

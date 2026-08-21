@@ -37,12 +37,22 @@ describe("data.ts não engole erro do banco", () => {
 
   it("toda consulta que desestrutura `error` o trata", () => {
     const consultas = (DATA.match(/const \{ data, error \}/g) ?? []).length;
-    const tratamentos = (
-      DATA.match(/if \(error\) throw falhaDeConsulta/g) ?? []
-    ).length;
+    const tratamentos = (DATA.match(/if \(error\)/g) ?? []).length;
 
     expect(consultas).toBeGreaterThan(0);
     expect(tratamentos, "consulta sem tratamento de erro").toBe(consultas);
+  });
+
+  /**
+   * O invariante é "todo erro é olhado e termina em exceção". A forma exata
+   * não é literal: buscas por id desviam 22P02 — id sem forma de uuid —
+   * para não-encontrado antes de lançar.
+   */
+  it("nenhum erro é apenas ignorado", () => {
+    const lancamentos = (DATA.match(/throw falhaDeConsulta/g) ?? []).length;
+    const consultas = (DATA.match(/const \{ data, error \}/g) ?? []).length;
+
+    expect(lancamentos).toBe(consultas);
   });
 
   it("a exceção diz qual origem falhou", () => {

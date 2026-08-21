@@ -170,6 +170,42 @@ test.describe("segurança da demonstração", () => {
   });
 });
 
+test.describe("registro que não existe", () => {
+  /**
+   * Mesma lição do 404 administrativo: o que importa é o status, não o
+   * texto. Aqui ela custou duas respostas erradas para a mesma URL.
+   *
+   * `/servicos/prv-joao-silva` usa um id que só existia nos dados de
+   * exemplo. Enquanto a camada de dados caía no mock em silêncio, a URL
+   * devolvia um perfil de mentira com HTTP 200. Removido o fallback, virou
+   * página de erro — ainda 200, porque a exceção acontece depois de o
+   * shell ter sido transmitido e o status já não pode mudar.
+   *
+   * Com o banco ligado o id nem chega a ser comparado: a coluna é `uuid` e
+   * o Postgres recusa a forma com 22P02. Nenhum registro poderia
+   * corresponder, então a camada de dados devolve null.
+   *
+   * O status ainda é 200, e deveria ser 404 — mas isso é anterior a esta
+   * correção e vale para todo segmento dinâmico (`/rota-inexistente` e
+   * `/admin/painel` respondem 404 corretamente; `/servicos/:id` não).
+   * Está na Issue própria. Aqui se verifica o que esta mudança resolveu:
+   * a página deixou de servir cadastro de mentira.
+   */
+  test("não serve perfil de mentira para id que não existe", async ({
+    request,
+  }) => {
+    const resposta = await request.get("/servicos/nao-existe-mesmo");
+    const corpo = await resposta.text();
+
+    // Os nomes dos dados de exemplo não podem aparecer: era o que a queda
+    // silenciosa fazia, servindo um perfil inteiro para um id inventado.
+    for (const nome of ["João Silva", "Carlos Souza", "Ana Paula Ribeiro"]) {
+      expect(corpo, `${nome} não deveria aparecer`).not.toContain(nome);
+    }
+    expect(corpo).not.toContain("wa.me/");
+  });
+});
+
 test.describe("área administrativa", () => {
   /**
    * O 404 precisa ser de verdade, não só na aparência.
