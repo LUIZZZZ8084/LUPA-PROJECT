@@ -13,6 +13,12 @@
  *
  * Precisa de SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY: a tabela `usuarios`
  * fica fora do alcance do RLS de propósito, porque guarda hash de senha.
+ *
+ * Pelo `npm run admin:criar`, o `.env.local` é carregado pelo próprio Node
+ * (`--env-file-if-exists`). Chamando `node` direto, não é: aí as variáveis
+ * precisam vir do ambiente. A documentação já prometeu que o arquivo era
+ * lido quando não era, e o script morria em "Falta a variável SUPABASE_URL"
+ * com o arquivo ali do lado, preenchido.
  */
 
 import { randomBytes } from "node:crypto";

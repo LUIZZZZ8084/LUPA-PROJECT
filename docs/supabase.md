@@ -119,11 +119,23 @@ vale a partir do próximo build.
 
 ## 6. Criar sua conta de admin
 
-Com as variáveis num `.env.local` local:
+Crie um `.env.local` na raiz do projeto com pelo menos estas duas linhas —
+é o mesmo par da seção anterior, agora do lado de cá:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=cole-aqui
+```
+
+O arquivo é ignorado pelo git (`.gitignore`: `.env*`). Então:
 
 ```bash
 ADMIN_EMAIL=voce@exemplo.com npm run admin:criar
 ```
+
+O `npm run` carrega o `.env.local` pelo próprio Node. Chamar
+`node scripts/criar-admin.mjs` direto **não** carrega — aí as variáveis
+precisam estar no ambiente.
 
 Gera uma senha forte e **imprime uma vez só** — guarde antes de fechar o
 terminal. Para definir você mesmo, passe `ADMIN_SENHA`.
