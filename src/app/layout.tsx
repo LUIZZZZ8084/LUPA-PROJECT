@@ -4,6 +4,8 @@ import { DemoBanner } from "@/components/demo-banner";
 import { AppHeader } from "@/components/layout/app-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { RouteProgress } from "@/components/motion/route-progress";
+import { sessaoAtual } from "@/server/auth/cookies";
+import { usuarioDaSessao } from "@/server/auth/servico";
 import "./globals.css";
 
 const geist = Geist({
@@ -45,19 +47,38 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+/**
+ * O layout lê a sessão e desce por prop.
+ *
+ * O cabeçalho é componente de cliente: precisa do `usePathname` para marcar
+ * a seção ativa. Ler cookie lá dentro não é possível, e um `useSearchParams`
+ * ou um provider de sessão traria de volta o problema de boundary que já
+ * deixou a barra de filtros invisível neste projeto.
+ */
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const sessao = await sessaoAtual();
+  const usuario = sessao ? await usuarioDaSessao(sessao.usuarioId) : null;
+
   return (
     <html lang="pt-BR" className={`${geist.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-bg text-ink">
         <RouteProgress />
         <DemoBanner />
-        <AppHeader />
+        <AppHeader
+          usuario={
+            usuario && {
+              nome: usuario.nomeCompleto,
+              papel: usuario.papel,
+              avatarUrl: usuario.avatarUrl ?? null,
+            }
+          }
+        />
         <div className="flex-1">{children}</div>
-        <BottomNav />
+        <BottomNav autenticado={Boolean(usuario)} />
       </body>
     </html>
   );

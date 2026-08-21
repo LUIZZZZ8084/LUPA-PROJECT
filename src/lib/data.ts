@@ -287,14 +287,26 @@ export async function getCompany(id: string): Promise<Company | null> {
     if (supabase) {
       const { data, error } = await supabase
         .from("perfis_empresa")
-        .select("*")
-        .eq("profile_id", id)
+        .select("usuario_id, razao_social, cnpj, logo_url, plano")
+        .eq("usuario_id", id)
         .maybeSingle();
       if (error) {
         if (ehIdSemFormaDeUuid(error)) return null;
         throw falhaDeConsulta("perfis_empresa", error);
       }
-      return (data as Company) ?? null;
+      if (!data) return null;
+
+      // A tabela usa nomes em português; o tipo da aplicação, em inglês.
+      // O cast direto que existia aqui devolvia um objeto com as chaves
+      // erradas: a tela lia `company_name` de um objeto que só tinha
+      // `razao_social`, e mostrava vazio sem erro nenhum.
+      return {
+        profile_id: String(data.usuario_id),
+        company_name: String(data.razao_social),
+        cnpj: (data.cnpj as string | null) ?? null,
+        logo_url: (data.logo_url as string | null) ?? null,
+        plan: data.plano as Company["plan"],
+      };
     }
   }
   return MOCK_COMPANIES.find((c) => c.profile_id === id) ?? null;
@@ -309,7 +321,10 @@ export async function getCompanyJobs(companyId: string): Promise<JobListing[]> {
         .select("*")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
-      if (error) throw falhaDeConsulta("job_listings", error);
+      if (error) {
+        if (ehIdSemFormaDeUuid(error)) return [];
+        throw falhaDeConsulta("job_listings", error);
+      }
       return (data ?? []) as unknown as JobListing[];
     }
   }
@@ -354,8 +369,22 @@ export async function getCompanyStats(companyId: string) {
   };
 }
 
-/** Empresa usada no painel enquanto não há autenticação real. */
-export function getDemoCompanyId(): string {
+/**
+ * De qual empresa o painel fala.
+ *
+ * Com o banco ligado, é sempre a da sessão: `perfis_empresa.usuario_id` é
+ * a chave, então o id de quem entrou já é o id da empresa. O painel estava
+ * preso a `DEMO_COMPANY_ID` — "cmp-agro-norte" — e por isso mostrava a
+ * mesma empresa fictícia para todo mundo. Com o Supabase ligado esse id
+ * nem tem forma de uuid, e a página inteira caía.
+ *
+ * Em demonstração o id continua sendo o fixo: a conta criada em memória
+ * não corresponde a nenhuma empresa de exemplo, e usar o id da sessão
+ * deixaria o painel vazio justamente quando ele serve para mostrar o
+ * produto.
+ */
+export function empresaDoPainel(usuarioId: string | null): string {
+  if (isSupabaseConfigured && usuarioId) return usuarioId;
   return DEMO_COMPANY_ID;
 }
 

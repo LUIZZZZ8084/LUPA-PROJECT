@@ -287,11 +287,15 @@ describe("22P02 em cada caminho que recebe id de fora", () => {
   });
 
   /**
-   * Listagem por empresa não desvia: ali o id vem de sessão autenticada,
-   * não da URL. Um uuid malformado nesse ponto é defeito de verdade e deve
-   * aparecer, não virar lista vazia silenciosa.
+   * Eu tinha deixado esta de fora achando que o id vinha de sessão
+   * autenticada. Não vinha: `/empresa` chamava `getDemoCompanyId()`, que
+   * devolve "cmp-agro-norte". Com o banco ligado, a página inteira caía —
+   * era o erro que o Luiz via ao abrir "Para empresas".
+   *
+   * A lição é sobre a suposição, não sobre a linha: presumi a origem do id
+   * em vez de seguir a chamada até quem passa.
    */
-  it("vagas da empresa continuam lançando", async () => {
-    await expect(getCompanyJobs("nao-e-uuid")).rejects.toThrow(/job_listings/);
+  it("vagas da empresa também devolvem lista vazia", async () => {
+    expect(await getCompanyJobs("nao-e-uuid")).toEqual([]);
   });
 });

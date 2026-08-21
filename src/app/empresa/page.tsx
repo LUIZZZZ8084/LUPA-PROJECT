@@ -13,14 +13,15 @@ import { Panel, Stat } from "@/components/ui/card";
 import { VerifiedMark } from "@/components/verified-badge";
 import { APPLICATION_LABELS } from "@/lib/constants";
 import {
+  empresaDoPainel,
   getCompany,
   getCompanyApplications,
   getCompanyJobs,
   getCompanyStats,
-  getDemoCompanyId,
 } from "@/lib/data";
 import { pluralize, timeAgo } from "@/lib/format";
 import type { ApplicationStatus } from "@/lib/types";
+import { sessaoAtual } from "@/server/auth/cookies";
 
 export const metadata: Metadata = {
   title: "Minha Empresa",
@@ -39,7 +40,8 @@ const STATUS_TONE: Record<
 };
 
 export default async function EmpresaPage() {
-  const companyId = getDemoCompanyId();
+  const sessao = await sessaoAtual();
+  const companyId = empresaDoPainel(sessao?.usuarioId ?? null);
   const [company, jobs, applications, stats] = await Promise.all([
     getCompany(companyId),
     getCompanyJobs(companyId),

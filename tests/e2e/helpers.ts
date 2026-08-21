@@ -1,4 +1,12 @@
+import { join } from "node:path";
 import type { Page } from "@playwright/test";
+
+/** Onde a sessão compartilhada dos testes fica guardada. */
+export const ARQUIVO_SESSAO = join(
+  process.cwd(),
+  "test-results",
+  "sessao.json",
+);
 
 /**
  * Espera o React assumir o controle da página.
@@ -19,4 +27,34 @@ export async function aguardarHidratacao(page: Page, seletor = "select") {
     seletor,
     { timeout: 15_000 },
   );
+}
+
+/**
+ * Cria uma conta e entra.
+ *
+ * O app é fechado: sem sessão, toda rota redireciona para `/entrar`. As
+ * varreduras de layout e acessibilidade mediriam a tela de login enquanto
+ * dizem que medem a busca de vagas — o mesmo erro que já aconteceu aqui
+ * quando `/admin` entrou na varredura e o que era medido era o 404.
+ *
+ * Cadastra em vez de logar porque em demonstração o repositório é de
+ * memória: não há conta pré-existente, e o e-mail único evita colisão
+ * entre testes que rodam em paralelo contra o mesmo servidor.
+ */
+export async function entrarComoTeste(page: Page): Promise<void> {
+  const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@teste.lupa`;
+
+  await page.goto("/cadastro?tipo=candidato_clt", { waitUntil: "networkidle" });
+
+  await page.getByLabel("Nome completo").fill("Pessoa de Teste");
+  await page.getByLabel("E-mail").fill(email);
+  // `celularValido` exige 11 dígitos com o terceiro em 9. Os números
+  // neutralizados do seed não passam aqui de propósito: aquilo é dado de
+  // vitrine inserido por SQL, isto é cadastro passando pela validação real.
+  await page.getByLabel("WhatsApp").fill("66999999999");
+  await page.getByLabel("Área desejada").selectOption({ index: 1 });
+  await page.getByLabel("Senha").fill("senha-de-teste-123");
+
+  await page.getByRole("button", { name: /criar conta/i }).click();
+  await page.getByText(/Conta criada/i).waitFor({ timeout: 15_000 });
 }

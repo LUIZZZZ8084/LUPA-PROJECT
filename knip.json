@@ -4,7 +4,8 @@
   "entry": [
     "src/app/**/{page,layout,not-found,loading,error,global-error,template,route,manifest,icon,apple-icon}.{ts,tsx}",
     "src/app/**/actions.ts",
-    "src/sentry.*.config.ts"
+    "src/sentry.*.config.ts",
+    "tests/e2e/*.setup.ts"
   ],
   "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
   "ignore": ["src/lib/types.ts"],

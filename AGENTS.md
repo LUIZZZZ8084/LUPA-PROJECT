@@ -64,10 +64,15 @@ descritor curto em português com hífens.
 - **Next.js 16 (App Router) + TypeScript + Tailwind v4.** Sem
   `tailwind.config` — os tokens de design vivem em `@theme` dentro de
   `src/app/globals.css`.
+- **App fechado por login.** Sem sessão, toda rota redireciona para
+  `/entrar`. Só `/entrar` e `/cadastro` ficam abertas, e a lista mora em
+  `src/proxy.ts` — o padrão é fechado, abrir é explícito.
 - **Modo demonstração.** Sem as variáveis do Supabase no ambiente, a camada
   de dados cai para dados de Sinop e o app roda completo, inclusive criar
   conta e entrar. É o que permite demonstrar antes de existir
-  infraestrutura, e é requisito de negócio, não atalho técnico.
+  infraestrutura, e é requisito de negócio, não atalho técnico. O login
+  continua obrigatório aqui: o que muda é de onde vêm os dados, não quem
+  entra.
 - **Banco.** `supabase/schema.sql` é a fonte da verdade e roda de uma vez num
   banco limpo. Ele é **executado por teste** contra um Postgres real
   (`tests/unit/schema.test.ts`, via PGlite) — schema não executado é schema
@@ -151,6 +156,24 @@ total.
 (`exigirCapacidade`) e este registro é desta pessoa (`exigirDono`). Só a
 primeira deixaria qualquer empresa autenticada alcançar a vaga de outra
 trocando o id na URL.
+
+### Navegação pública, revertida
+
+O V0 nasceu com vagas e prestadores abertos a qualquer visitante. A razão
+era boa: buscador indexando "vaga de operador em Sinop" traz gente que
+nunca ouviu falar da Lupa, de graça e sem esforço de divulgação.
+
+Em 21/08/2026 isso foi revertido a pedido do Luiz. O raciocínio: só quem
+tem perfil se candidata, vê dado de empresa ou entra em contato — e é o
+cadastro que vira lead. Vitrine aberta gera visita; visita não é lead.
+
+**O preço, aceito de olhos abertos:** o app sai da busca do Google. Não
+existe mais quem chegue sozinho; todo mundo entra por link recebido. Se um
+dia a origem do tráfego virar problema, é aqui que se olha primeiro.
+
+O que sobreviveu: o modo demonstração. Ele responde por *de onde vêm os
+dados*, não por *quem pode entrar*, e continua sendo o que permite mostrar
+o produto sem infraestrutura.
 
 ### 404 em vez de 403 quando faz sentido
 
@@ -263,6 +286,13 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
 
 Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, que
 varre o código-fonte.
+
+- **Suíte e2e não pode falar com banco de verdade.** `npm start` carrega o
+  `.env.local`, e quem tem credenciais reais ali roda o e2e contra
+  produção sem aviso. Aconteceu: o ajudante de login criou 213 contas na
+  base real antes de alguém notar. O `playwright.config.ts` agora zera as
+  variáveis do Supabase à força, e `tests/e2e/demo-obrigatorio.spec.ts`
+  falha barulhento se o modo demonstração não estiver ativo.
 
 ### Sobre verificação
 

@@ -27,8 +27,16 @@ const ITEMS = [
  * Navegação inferior no mobile — o padrão que o público já conhece de
  * iFood e afins. Some no desktop, onde o header assume a navegação.
  */
-export function BottomNav() {
+/**
+ * A barra inferior é o caminho de navegação no celular, que é onde o
+ * público de Sinop está. Sem sessão ela não aparece: as rotas que ela
+ * oferece exigem login, e mostrar atalho que devolve a tela de entrada faz
+ * a pessoa concluir que o app está quebrado.
+ */
+export function BottomNav({ autenticado }: { autenticado?: boolean }) {
   const pathname = usePathname();
+
+  if (!autenticado) return null;
 
   return (
     <nav
