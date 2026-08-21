@@ -129,7 +129,16 @@ Crie um `.env.local` na raiz do projeto com pelo menos estas duas linhas —
 NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=cole-aqui
 ADMIN_EMAIL=voce@exemplo.com
+ADMIN_TELEFONE=66999110001
+ADMIN_NOME=Seu Nome
 ```
+
+`ADMIN_TELEFONE` é obrigatório: `usuarios.telefone` é `not null` com check
+de 10 a 13 dígitos. Com DDD, sem o `+55`. `ADMIN_NOME` é opcional.
+
+A chave tem que ser a **`service_role`**, não a `anon`. No painel do
+Supabase a `anon` fica visível e a `service_role` atrás de um botão
+*Reveal* — é fácil copiar a errada, e o script avisa se acontecer.
 
 A chave de serviço precisa estar **neste arquivo**, na sua máquina. Tê-la
 configurado na Vercel não basta: o script roda aqui, não lá.

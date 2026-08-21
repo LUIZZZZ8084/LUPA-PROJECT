@@ -2,7 +2,8 @@
 /**
  * Cria a conta de administrador.
  *
- *   ADMIN_EMAIL=voce@exemplo.com ADMIN_SENHA='...' node scripts/criar-admin.mjs
+ *   ADMIN_EMAIL=voce@exemplo.com ADMIN_TELEFONE=66999110001 \
+ *     ADMIN_SENHA='...' node scripts/criar-admin.mjs
  *
  * A senha vem por variável de ambiente e nunca é fixada no código nem
  * gravada em arquivo. Senha de admin versionada no repositório é a forma
@@ -89,7 +90,20 @@ async function principal() {
   const email = exigir("ADMIN_EMAIL").toLowerCase().trim();
 
   const nome = process.env.ADMIN_NOME ?? "Administrador";
-  const telefone = (process.env.ADMIN_TELEFONE ?? "").replace(/\D/g, "");
+
+  // `usuarios.telefone` é `not null` com check de 10 a 13 dígitos. Sem
+  // ADMIN_TELEFONE isto virava string vazia e o insert morria em
+  // "violates check constraint telefone_so_digitos" — mensagem que fala da
+  // coluna e não da variável que ninguém sabia que precisava definir.
+  const telefone = exigir("ADMIN_TELEFONE").replace(/\D/g, "");
+
+  if (!/^[0-9]{10,13}$/.test(telefone)) {
+    console.error(
+      `ADMIN_TELEFONE precisa ter de 10 a 13 dígitos; veio com ${telefone.length}.`,
+    );
+    console.error("Com DDD e sem o +55. Ex.: 66999110001");
+    process.exit(1);
+  }
 
   const senhaGerada = !process.env.ADMIN_SENHA;
   const senha = process.env.ADMIN_SENHA ?? gerarSenha();
