@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LupaLogo, LupaMark } from "@/components/brand/logo";
@@ -184,5 +186,38 @@ describe("WhatsAppButton", () => {
       <WhatsAppIconButton phone="66999110001" providerName="João Silva" />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+/**
+ * O login gravava a sessão e a tela não saía do lugar.
+ *
+ * A action fazia tudo certo: `criarSessao` gravava o cookie,
+ * `revalidatePath` atualizava o layout, e devolvia `{ ok: true, papel }`.
+ * O formulário só lia `state.erro` — o `ok` não tinha consumidor. Para
+ * quem estava do outro lado, "a caixa de login recarregou". A pessoa
+ * estava logada e não sabia.
+ *
+ * O `papel` era devolvido justamente para escolher o destino, e ficou anos
+ * sem uso. Este contrato varre a fonte para que o consumidor não suma de
+ * novo numa refatoração.
+ */
+describe("o formulário de login navega depois de entrar", () => {
+  const FONTE = readFileSync(
+    join(process.cwd(), "src/app/entrar/form.tsx"),
+    "utf8",
+  );
+
+  it("consome o state.ok, não só o state.erro", () => {
+    expect(FONTE).toContain("state.ok");
+  });
+
+  it("navega de fato", () => {
+    expect(FONTE).toMatch(/router\.(replace|push)\(/);
+  });
+
+  it("usa o papel para escolher o destino", () => {
+    expect(FONTE).toContain("state.papel");
+    expect(FONTE).toContain("/admin/painel");
   });
 });

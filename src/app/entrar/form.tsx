@@ -2,7 +2,8 @@
 
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect } from "react";
 import { type EstadoFormulario, entrarComEstado } from "@/app/conta/actions";
 import { LupaMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,40 @@ import { Field, Input } from "@/components/ui/field";
 
 const inicial: EstadoFormulario = {};
 
+/**
+ * Para onde a pessoa vai depois de entrar.
+ *
+ * O papel já vinha na resposta da action — devolvido justamente para isto e
+ * nunca consumido. Sem destino, quem administra caía na home e tinha que
+ * descobrir sozinho o caminho do painel.
+ */
+function destino(papel: string | undefined): string {
+  if (papel === "admin") return "/admin/painel";
+  if (papel === "empresa") return "/empresa";
+  return "/";
+}
+
 export function SignInForm() {
   const [state, action, pending] = useActionState(entrarComEstado, inicial);
+  const router = useRouter();
+
+  /**
+   * O login gravava a sessão e a tela não saía do lugar.
+   *
+   * A action fazia tudo certo — `criarSessao` grava o cookie e
+   * `revalidatePath` atualiza o layout — e devolvia `{ ok: true, papel }`.
+   * Este componente só lia `state.erro`. O `ok` não tinha consumidor, então
+   * o formulário se redesenhava idêntico: para quem estava do outro lado,
+   * "a caixa de login recarregou". A pessoa estava logada e não sabia.
+   *
+   * A navegação é aqui, e não um `redirect()` na action, porque
+   * `criarAcao` captura toda exceção — inclusive o NEXT_REDIRECT, que é
+   * como o `redirect()` do Next funciona. Lá ele viraria mensagem de erro.
+   */
+  useEffect(() => {
+    if (!state.ok) return;
+    router.replace(destino(state.papel));
+  }, [state.ok, state.papel, router]);
 
   return (
     <>
