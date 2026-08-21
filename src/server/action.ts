@@ -96,11 +96,33 @@ export function criarAcao<TEntrada, TSaida>(
 
       return { ok: true, dados };
     } catch (e) {
+      // `redirect()` e `notFound()` do Next são implementados como exceção.
+      // Engoli-los aqui transformaria navegação em mensagem de erro, e o
+      // sintoma seria incompreensível: a action "falha" sem nada errado.
+      if (ehControleDeFluxoDoNext(e)) throw e;
+
       const erro = comoAppError(e);
       log.erro(erro, { requestId, acao: definicao.nome, ms: medir() });
       return respostaDeErro(erro);
     }
   };
+}
+
+/**
+ * Distingue exceção de verdade do controle de fluxo do Next.
+ *
+ * `redirect()` e `notFound()` sinalizam por exceção, marcada em `digest`.
+ * Esta envelopadora existe para que exceção nenhuma chegue à interface como
+ * tela de erro — mas estas duas não são erro, são navegação.
+ */
+function ehControleDeFluxoDoNext(e: unknown): boolean {
+  if (typeof e !== "object" || e === null) return false;
+
+  const digest = (e as { digest?: unknown }).digest;
+  return (
+    typeof digest === "string" &&
+    (digest.startsWith("NEXT_REDIRECT") || digest === "NEXT_NOT_FOUND")
+  );
 }
 
 function respostaDeErro(erro: AppError): RespostaAcao<never> {
