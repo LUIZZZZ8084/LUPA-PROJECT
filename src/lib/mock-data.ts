@@ -305,11 +305,21 @@ export const MOCK_JOBS: JobListing[] = [
    Prestadores de serviço
    ============================================================ */
 
+/**
+ * Telefones não-discáveis de propósito: a parte de assinante começa em 0,
+ * o que não existe no plano de numeração brasileiro.
+ *
+ * Em modo demonstração `resolveContact` já redirecionava o contato, então
+ * estes números não eram usados. Mas o fallback silencioso de `data.ts`
+ * servia este arquivo com o banco ligado — e aí o botão montava `wa.me`
+ * com o número daqui, alcançando quem o tivesse de verdade em Sinop.
+ * O fallback foi corrigido; o número não pode voltar a ser discável.
+ */
 export const MOCK_PROVIDERS: ProviderListing[] = [
   {
     profile_id: "prv-joao-silva",
     full_name: "João Silva",
-    phone: "66999110001",
+    phone: "66000000001",
     city: "Sinop",
     neighborhood: "Jardim Botânico",
     avatar_url: `/avatares/prv-joao-silva.svg`,
@@ -331,7 +341,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
   {
     profile_id: "prv-carlos-souza",
     full_name: "Carlos Souza",
-    phone: "66999110002",
+    phone: "66000000002",
     city: "Sinop",
     neighborhood: "Centro",
     avatar_url: `/avatares/prv-carlos-souza.svg`,
@@ -351,7 +361,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
   {
     profile_id: "prv-marcos-lima",
     full_name: "Marcos Lima",
-    phone: "66999110003",
+    phone: "66000000003",
     city: "Sinop",
     neighborhood: "Jardim das Palmeiras",
     avatar_url: `/avatares/prv-marcos-lima.svg`,
@@ -370,7 +380,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
   {
     profile_id: "prv-jose-moreira",
     full_name: "José Moreira",
-    phone: "66999110004",
+    phone: "66000000004",
     city: "Sinop",
     neighborhood: "Jardim Primavera",
     avatar_url: `/avatares/prv-jose-moreira.svg`,
@@ -389,7 +399,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
   {
     profile_id: "prv-ana-paula",
     full_name: "Ana Paula Ribeiro",
-    phone: "66999110005",
+    phone: "66000000005",
     city: "Sinop",
     neighborhood: "Jardim Celeste",
     avatar_url: `/avatares/prv-ana-paula.svg`,
@@ -409,7 +419,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
   {
     profile_id: "prv-rosa-mendes",
     full_name: "Rosa Mendes",
-    phone: "66999110006",
+    phone: "66000000006",
     city: "Sinop",
     neighborhood: "Menezes",
     avatar_url: `/avatares/prv-rosa-mendes.svg`,
@@ -431,7 +441,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
   {
     profile_id: "prv-pedro-alves",
     full_name: "Pedro Alves",
-    phone: "66999110007",
+    phone: "66000000007",
     city: "Sinop",
     neighborhood: "Boa Esperança",
     avatar_url: `/avatares/prv-pedro-alves.svg`,
@@ -450,7 +460,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
   {
     profile_id: "prv-luciana-costa",
     full_name: "Luciana Costa",
-    phone: "66999110008",
+    phone: "66000000008",
     city: "Sinop",
     neighborhood: "Aquarela Brasil",
     avatar_url: `/avatares/prv-luciana-costa.svg`,
@@ -469,7 +479,7 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
   {
     profile_id: "prv-antonio-ferreira",
     full_name: "Antônio Ferreira",
-    phone: "66999110009",
+    phone: "66000000009",
     city: "Sinop",
     neighborhood: "Setor Comercial",
     avatar_url: `/avatares/prv-antonio-ferreira.svg`,
@@ -700,7 +710,7 @@ export const MOCK_VERIFICATIONS: VerificationRequest[] = [
     role: "prestador_servico",
     category: "Pedreiro",
     city: "Sinop",
-    phone: "66999110004",
+    phone: "66000000004",
     submitted_at: hoursAgo(3),
     status: "em_analise",
   },
@@ -711,7 +721,7 @@ export const MOCK_VERIFICATIONS: VerificationRequest[] = [
     role: "prestador_servico",
     category: "Jardineiro",
     city: "Sinop",
-    phone: "66999110007",
+    phone: "66000000007",
     submitted_at: hoursAgo(20),
     status: "em_analise",
   },
@@ -722,7 +732,7 @@ export const MOCK_VERIFICATIONS: VerificationRequest[] = [
     role: "empresa",
     category: null,
     city: "Sinop",
-    phone: "6635112200",
+    phone: "6600000022",
     submitted_at: daysAgo(2),
     status: "em_analise",
   },

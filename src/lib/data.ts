@@ -41,6 +41,27 @@ const norm = (s: string) =>
 const matches = (haystack: string[], q: string) =>
   haystack.some((h) => norm(h).includes(norm(q)));
 
+/**
+ * Traduz falha de consulta em exceção, em vez de silêncio.
+ *
+ * O padrão antigo era `if (!error && data) return data`, e o que vinha
+ * depois era o dado de exemplo. Com o banco ligado, qualquer erro — chave
+ * errada, rede, view ausente — servia mock como se fosse real, sem log e
+ * sem aviso na tela. Uma integração quebrada ficou invisível por uma hora
+ * exatamente assim: a página parecia funcionar.
+ *
+ * Não é só ruído de depuração. As telas mostram vaga e prestador para quem
+ * está procurando emprego em Sinop; servir cadastro que não existe faz a
+ * pessoa gastar crédito de celular atrás de uma vaga inventada. O aviso de
+ * demonstração existe para esse caso, e o fallback silencioso o contorna.
+ *
+ * Erro em Server Component sobe para a fronteira de erro do Next e é
+ * capturado pelo Sentry. Página de erro é honesta; vaga falsa não é.
+ */
+function falhaDeConsulta(origem: string, erro: { message: string }): Error {
+  return new Error(`Consulta a "${origem}" falhou: ${erro.message}`);
+}
+
 /* ============================================================
    Vagas
    ============================================================ */
@@ -65,7 +86,8 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
         );
 
       const { data, error } = await query;
-      if (!error && data) return data as unknown as JobListing[];
+      if (error) throw falhaDeConsulta("job_listings", error);
+      return (data ?? []) as unknown as JobListing[];
     }
   }
 
@@ -101,7 +123,8 @@ export async function getJobById(id: string): Promise<JobListing | null> {
         .select("*")
         .eq("id", id)
         .maybeSingle();
-      if (!error && data) return data as unknown as JobListing;
+      if (error) throw falhaDeConsulta("job_listings", error);
+      return (data as unknown as JobListing) ?? null;
     }
   }
   return MOCK_JOBS.find((j) => j.id === id) ?? null;
@@ -149,7 +172,8 @@ export async function getProviders(
         );
 
       const { data, error } = await query;
-      if (!error && data) return data as unknown as ProviderListing[];
+      if (error) throw falhaDeConsulta("provider_listings", error);
+      return (data ?? []) as unknown as ProviderListing[];
     }
   }
 
@@ -185,7 +209,8 @@ export async function getProviderById(
         .select("*")
         .eq("profile_id", id)
         .maybeSingle();
-      if (!error && data) return data as unknown as ProviderListing;
+      if (error) throw falhaDeConsulta("provider_listings", error);
+      return (data as unknown as ProviderListing) ?? null;
     }
   }
   return MOCK_PROVIDERS.find((p) => p.profile_id === id) ?? null;
@@ -200,17 +225,17 @@ export async function getReviews(providerId: string): Promise<Review[]> {
         .select("id, prestador_id, nome_avaliador, nota, comentario, criado_em")
         .eq("prestador_id", providerId)
         .order("criado_em", { ascending: false });
-      if (!error && data) {
-        // A tabela usa nomes em português; o tipo da aplicação, em inglês.
-        return data.map((linha) => ({
-          id: String(linha.id),
-          provider_id: String(linha.prestador_id),
-          reviewer_name: String(linha.nome_avaliador),
-          rating: Number(linha.nota),
-          comment: (linha.comentario as string | null) ?? null,
-          created_at: String(linha.criado_em),
-        }));
-      }
+      if (error) throw falhaDeConsulta("avaliacoes", error);
+
+      // A tabela usa nomes em português; o tipo da aplicação, em inglês.
+      return (data ?? []).map((linha) => ({
+        id: String(linha.id),
+        provider_id: String(linha.prestador_id),
+        reviewer_name: String(linha.nome_avaliador),
+        rating: Number(linha.nota),
+        comment: (linha.comentario as string | null) ?? null,
+        created_at: String(linha.criado_em),
+      }));
     }
   }
   return MOCK_REVIEWS.filter((r) => r.provider_id === providerId).sort(
@@ -238,7 +263,8 @@ export async function getCompany(id: string): Promise<Company | null> {
         .select("*")
         .eq("profile_id", id)
         .maybeSingle();
-      if (!error && data) return data as Company;
+      if (error) throw falhaDeConsulta("perfis_empresa", error);
+      return (data as Company) ?? null;
     }
   }
   return MOCK_COMPANIES.find((c) => c.profile_id === id) ?? null;
@@ -253,7 +279,8 @@ export async function getCompanyJobs(companyId: string): Promise<JobListing[]> {
         .select("*")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
-      if (!error && data) return data as unknown as JobListing[];
+      if (error) throw falhaDeConsulta("job_listings", error);
+      return (data ?? []) as unknown as JobListing[];
     }
   }
   return MOCK_JOBS.filter((j) => j.company_id === companyId).sort(
@@ -272,7 +299,8 @@ export async function getCompanyApplications(
         .select("*")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
-      if (!error && data) return data as unknown as ApplicationWithCandidate[];
+      if (error) throw falhaDeConsulta("company_applications", error);
+      return (data ?? []) as unknown as ApplicationWithCandidate[];
     }
   }
   const jobIds = new Set(
@@ -311,7 +339,8 @@ export async function getVerificationQueue(): Promise<VerificationRequest[]> {
         .select("*")
         .eq("status", "em_analise")
         .order("submitted_at", { ascending: true });
-      if (!error && data) return data as unknown as VerificationRequest[];
+      if (error) throw falhaDeConsulta("verification_queue", error);
+      return (data ?? []) as unknown as VerificationRequest[];
     }
   }
   return MOCK_VERIFICATIONS.filter((v) => v.status === "em_analise");
