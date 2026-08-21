@@ -15,6 +15,7 @@ import { isSupabaseConfigured } from "./supabase/config";
 import { createClient } from "./supabase/server";
 import type {
   ApplicationWithCandidate,
+  CltProfile,
   Company,
   JobFilters,
   JobListing,
@@ -386,6 +387,63 @@ export async function getCompanyStats(companyId: string) {
 export function empresaDoPainel(usuarioId: string | null): string {
   if (isSupabaseConfigured && usuarioId) return usuarioId;
   return DEMO_COMPANY_ID;
+}
+
+/* ============================================================
+   Perfil de quem está logado
+   ============================================================ */
+
+/**
+ * Currículo de um candidato.
+ *
+ * Fica fora de qualquer view pública de propósito: nem todo mundo quer que
+ * o patrão atual descubra que está procurando emprego, e essa informação
+ * pode custar o emprego que a pessoa ainda tem. Só o próprio dono lê, pela
+ * chave de serviço, na tela do perfil.
+ */
+export async function getCandidateProfile(
+  usuarioId: string,
+): Promise<CltProfile | null> {
+  if (isSupabaseConfigured) {
+    const supabase = await createClient();
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("perfis_candidato")
+        .select(
+          "usuario_id, area_desejada, resumo, experiencias, formacao, habilidades, curriculo_url, disponibilidade",
+        )
+        .eq("usuario_id", usuarioId)
+        .maybeSingle();
+      if (error) {
+        if (ehIdSemFormaDeUuid(error)) return null;
+        throw falhaDeConsulta("perfis_candidato", error);
+      }
+      if (!data) return null;
+
+      // A tabela usa nomes em português; o tipo da aplicação, em inglês.
+      return {
+        profile_id: String(data.usuario_id),
+        desired_area: (data.area_desejada as string | null) ?? null,
+        experiences: (data.experiencias as CltProfile["experiences"]) ?? [],
+        education: (data.formacao as string | null) ?? null,
+        skills: (data.habilidades as string[] | null) ?? [],
+        resume_url: (data.curriculo_url as string | null) ?? null,
+        availability: (data.disponibilidade as string | null) ?? null,
+      };
+    }
+  }
+
+  /*
+   * Em demonstração não há currículo para devolver: o repositório de
+   * memória guarda o perfil, mas fora do contrato compartilhado, e
+   * `src/lib` não pode importar de `src/server` — o contrato de
+   * arquitetura barra, e com razão: seria a camada de dados dependendo da
+   * de regra de negócio.
+   *
+   * A tela trata nulo como "ainda não preenchido", que é o mesmo estado de
+   * quem acabou de criar conta com o banco ligado.
+   */
+  return null;
 }
 
 /* ============================================================

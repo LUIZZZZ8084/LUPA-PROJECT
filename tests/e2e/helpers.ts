@@ -44,7 +44,7 @@ export async function aguardarHidratacao(page: Page, seletor = "select") {
 export async function entrarComoTeste(page: Page): Promise<void> {
   const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@teste.lupa`;
 
-  await page.goto("/cadastro?tipo=candidato_clt", { waitUntil: "networkidle" });
+  await page.goto("/cadastro?tipo=candidato_clt");
 
   await page.getByLabel("Nome completo").fill("Pessoa de Teste");
   await page.getByLabel("E-mail").fill(email);
@@ -57,4 +57,25 @@ export async function entrarComoTeste(page: Page): Promise<void> {
 
   await page.getByRole("button", { name: /criar conta/i }).click();
   await page.getByText(/Conta criada/i).waitFor({ timeout: 15_000 });
+}
+
+/**
+ * Espera as animações de entrada terminarem.
+ *
+ * O app anima a entrada dos elementos com opacidade, e opacidade sobre
+ * texto derruba o contraste abaixo do mínimo legível — armadilha já
+ * conhecida aqui. Medir acessibilidade no meio da transição acusa
+ * violação em elemento que, parado, passa folgado.
+ *
+ * `networkidle` mascarava isso por acidente, esperando tempo suficiente
+ * para a animação acabar. Esperar pela coisa certa é mais rápido e não
+ * depende de a rede ficar quieta — o que, com o app fechado por login,
+ * às vezes não acontece.
+ */
+export async function aguardarAnimacoes(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => document.getAnimations().every((a) => a.playState !== "running"),
+    undefined,
+    { timeout: 10_000 },
+  );
 }
