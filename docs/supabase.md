@@ -36,6 +36,27 @@ depois de criar os buckets pelo painel, se for usar upload de arquivo.
 > de cada entrega (`tests/unit/schema.test.ts`). Se ele falhar aqui, é
 > porque o banco não estava limpo.
 
+### Se der `already exists`
+
+```
+ERROR: 42710: type "papel_usuario" already exists
+```
+
+O arquivo já rodou, inteiro ou pela metade. Ele é feito para banco limpo e
+para no primeiro objeto que encontra pela frente.
+
+O caminho de volta é [`supabase/reset.sql`](../supabase/reset.sql): cole,
+rode, e em seguida rode o `schema.sql` de novo. O reset serve tanto para
+execução parcial quanto para execução repetida — nos dois casos o banco
+termina limpo.
+
+**O reset apaga todos os dados.** Enquanto o banco é só schema, não há o
+que perder. Depois que houver conta de verdade, não rode.
+
+O ciclo schema → reset → schema é exercitado por teste contra um Postgres
+real, incluindo o detalhe que engana: funções de trigger e tipos enum
+sobrevivem a `drop table cascade` e precisam ser removidos à mão.
+
 ## 3. Popular com dados de Sinop (opcional)
 
 **SQL Editor** → cole [`supabase/seed.sql`](../supabase/seed.sql) → **Run**.

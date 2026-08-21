@@ -516,3 +516,91 @@ describe("seed.sql popula Sinop sem erro", () => {
     expect(Number(r.rows[0].total)).toBe(0);
   });
 });
+
+/**
+ * O `schema.sql` é feito para rodar em banco limpo. Rodado duas vezes, ele
+ * para em `type "papel_usuario" already exists` — o que aconteceu de
+ * verdade na primeira tentativa de ligar o Supabase.
+ *
+ * O `reset.sql` é o caminho de volta. O que este bloco prova não é que ele
+ * roda sem erro, e sim que ele apaga o suficiente: depois dele, o schema
+ * sobe outra vez como se o banco nunca tivesse sido tocado. O jeito de
+ * errar aqui é esquecer um objeto que não pertence a nenhuma tabela — as
+ * funções de trigger e os tipos enum sobrevivem a `drop table cascade`.
+ */
+describe("reset.sql devolve o banco ao estado limpo", () => {
+  const RESET = readFileSync(join(process.cwd(), "supabase/reset.sql"), "utf8");
+
+  let banco: PGlite;
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  it("o schema recusa a segunda execução — é o problema que o reset resolve", async () => {
+    await banco.exec(SCHEMA);
+    await expect(banco.exec(SCHEMA)).rejects.toThrow(/already exists/);
+  });
+
+  it("depois do reset, o schema sobe de novo inteiro", async () => {
+    await banco.exec(RESET);
+    await banco.exec(SCHEMA);
+
+    const tabelas = await banco.query<{ table_name: string }>(
+      `select table_name from information_schema.tables
+       where table_schema = 'public' and table_type = 'BASE TABLE'
+       order by table_name`,
+    );
+    expect(tabelas.rows).toHaveLength(11);
+
+    const views = await banco.query<{ total: string }>(
+      `select count(*) as total from information_schema.views
+       where table_schema = 'public'`,
+    );
+    expect(Number(views.rows[0].total)).toBe(8);
+  });
+
+  it("não sobra tipo, função nem view órfã", async () => {
+    await banco.exec(RESET);
+
+    const tipos = await banco.query<{ typname: string }>(
+      `select typname from pg_type
+       where typnamespace = 'public'::regnamespace and typtype = 'e'`,
+    );
+    expect(tipos.rows.map((t) => t.typname)).toEqual([]);
+
+    const funcoes = await banco.query<{ proname: string }>(
+      `select proname from pg_proc
+       where pronamespace = 'public'::regnamespace`,
+    );
+    expect(funcoes.rows.map((f) => f.proname)).toEqual([]);
+
+    const views = await banco.query<{ table_name: string }>(
+      `select table_name from information_schema.views
+       where table_schema = 'public'`,
+    );
+    expect(views.rows).toEqual([]);
+  });
+
+  /** Rodar o reset num banco que já está limpo não pode explodir. */
+  it("o reset é seguro de rodar duas vezes", async () => {
+    await banco.exec(RESET);
+    await expect(banco.exec(RESET)).resolves.toBeDefined();
+  });
+
+  it("o seed volta a rodar depois do ciclo completo", async () => {
+    await banco.exec(SCHEMA);
+    await banco.exec(
+      readFileSync(join(process.cwd(), "supabase/seed.sql"), "utf8"),
+    );
+
+    const r = await banco.query<{ total: string }>(
+      "select count(*) as total from usuarios",
+    );
+    expect(Number(r.rows[0].total)).toBe(14);
+  });
+});
