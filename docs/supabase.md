@@ -107,8 +107,11 @@ SESSION_SECRET
 O `SESSION_SECRET` assina a sessão. Gere com:
 
 ```bash
-openssl rand -base64 48
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 ```
+
+Funciona em qualquer terminal. O `openssl` que a maioria dos tutoriais
+sugere não vem instalado no Windows, onde este projeto é desenvolvido.
 
 Sem ele, a aplicação recusa subir em produção — de propósito. Segredo padrão
 versionado significa sessão de admin forjável por qualquer um que leia o
@@ -125,13 +128,22 @@ Crie um `.env.local` na raiz do projeto com pelo menos estas duas linhas —
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=cole-aqui
+ADMIN_EMAIL=voce@exemplo.com
 ```
+
+A chave de serviço precisa estar **neste arquivo**, na sua máquina. Tê-la
+configurado na Vercel não basta: o script roda aqui, não lá.
 
 O arquivo é ignorado pelo git (`.gitignore`: `.env*`). Então:
 
 ```bash
-ADMIN_EMAIL=voce@exemplo.com npm run admin:criar
+npm run admin:criar
 ```
+
+O `ADMIN_EMAIL` vai no arquivo de propósito. A forma comum de passá-lo,
+`ADMIN_EMAIL=voce@exemplo.com npm run ...`, é sintaxe de bash: no
+PowerShell ela falha com *"não é reconhecido como nome de cmdlet"*. Com
+tudo no `.env.local`, o comando é o mesmo em qualquer terminal.
 
 O `npm run` carrega o `.env.local` pelo próprio Node. Chamar
 `node scripts/criar-admin.mjs` direto **não** carrega — aí as variáveis
