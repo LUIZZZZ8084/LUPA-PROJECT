@@ -162,7 +162,15 @@ export function objetoDoFormData(formData: FormData): Record<string, unknown> {
   const saida: Record<string, unknown> = {};
 
   for (const [chave, valor] of formData.entries()) {
-    if (typeof valor !== "string") continue;
+    /*
+     * Texto e arquivo passam; qualquer outra coisa é descartada.
+     *
+     * O envelope de action nunca registra os valores da entrada — só nomes
+     * de campo em erro de validação —, então carregar um `File` aqui não
+     * derrama conteúdo de arquivo no log. Se um dia a entrada passar a ser
+     * registrada, este é o ponto que precisa mudar junto.
+     */
+    if (typeof valor !== "string" && !(valor instanceof File)) continue;
 
     if (chave in saida) {
       const atual = saida[chave];

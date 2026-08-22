@@ -362,4 +362,46 @@ export class RepositorioPostgres implements RepositorioUsuarios {
 
     if (error) throw erros.indisponivel(`perfil de empresa: ${error.message}`);
   }
+
+  /* ---------- Arquivos ---------- */
+
+  async definirAvatar(usuarioId: string, url: string | null): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({ avatar_url: url })
+      .eq("id", usuarioId);
+
+    if (error) throw erros.indisponivel(`avatar: ${error.message}`);
+  }
+
+  async definirCurriculo(
+    usuarioId: string,
+    caminho: string | null,
+  ): Promise<void> {
+    const supabase = await cliente();
+    /*
+     * `upsert`: quem nunca preencheu o currículo em texto não tem linha, e
+     * um `update` não afetaria nada — a tela diria "enviado" sem ter
+     * guardado a referência, e o arquivo ficaria órfão no bucket.
+     */
+    const { error } = await supabase
+      .from("perfis_candidato")
+      .upsert(
+        { usuario_id: usuarioId, curriculo_url: caminho },
+        { onConflict: "usuario_id" },
+      );
+
+    if (error) throw erros.indisponivel(`currículo: ${error.message}`);
+  }
+
+  async definirLogo(usuarioId: string, url: string | null): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("perfis_empresa")
+      .update({ logo_url: url })
+      .eq("usuario_id", usuarioId);
+
+    if (error) throw erros.indisponivel(`logo: ${error.message}`);
+  }
 }

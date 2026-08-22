@@ -163,4 +163,18 @@ export interface RepositorioUsuarios {
     dados: EdicaoPrestador,
   ): Promise<void>;
   salvarPerfilEmpresa(usuarioId: string, dados: EdicaoEmpresa): Promise<void>;
+
+  /* ---------- Arquivos ---------- */
+
+  /**
+   * Guarda a referência do arquivo; o arquivo em si vive no Storage.
+   *
+   * `null` apaga a referência — é como a remoção chega aqui. O objeto no
+   * bucket é apagado à parte, pelo serviço de arquivos: banco e Storage são
+   * dois sistemas, e fingir que a gravação é atômica esconderia o caso em
+   * que um dos dois falha.
+   */
+  definirAvatar(usuarioId: string, url: string | null): Promise<void>;
+  definirCurriculo(usuarioId: string, caminho: string | null): Promise<void>;
+  definirLogo(usuarioId: string, url: string | null): Promise<void>;
 }

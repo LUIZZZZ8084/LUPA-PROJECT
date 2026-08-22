@@ -13,11 +13,18 @@ import {
 import type { PerfilCompleto } from "@/server/perfil/servico";
 import {
   type EstadoEdicao,
+  enviarCurriculoComEstado,
+  enviarFotoComEstado,
+  enviarLogoComEstado,
+  removerCurriculo,
+  removerFoto,
+  removerLogo,
   salvarAnuncioComEstado,
   salvarContaComEstado,
   salvarCurriculoComEstado,
   salvarEmpresaComEstado,
 } from "./actions";
+import { CampoDeArquivo, PreviaDeCurriculo, PreviaDeImagem } from "./arquivo";
 
 const inicial: EstadoEdicao = {};
 
@@ -386,15 +393,77 @@ function Empresa({ perfil }: { perfil: PerfilCompleto }) {
  * outros papéis a quem não precisa dele, e faria a tela parecer três vezes
  * maior do que o trabalho que ela pede.
  */
-export function FormularioDePerfil({ perfil }: { perfil: PerfilCompleto }) {
+export function FormularioDePerfil({
+  perfil,
+  linkCurriculo,
+  temArmazenamento,
+}: {
+  perfil: PerfilCompleto;
+  linkCurriculo: string | null;
+  temArmazenamento: boolean;
+}) {
   const papel = perfil.usuario.papel;
+  const u = perfil.usuario;
 
   return (
     <>
+      {/*
+       * A foto vem primeiro: é o que a pessoa reconhece primeiro no
+       * próprio perfil, e é o campo que mais muda a impressão de quem
+       * está do outro lado decidindo se contrata.
+       */}
+      <CampoDeArquivo
+        titulo="Foto de perfil"
+        descricao="Aparece na busca e ao lado do seu nome. Perfil com foto passa mais confiança para quem vai contratar."
+        formatos="JPG, PNG ou WEBP, até 2 MB"
+        accept="image/jpeg,image/png,image/webp"
+        enviar={enviarFotoComEstado}
+        remover={() => removerFoto({})}
+        disponivel={temArmazenamento}
+      >
+        <PreviaDeImagem url={u.avatarUrl} nome={u.nomeCompleto} />
+      </CampoDeArquivo>
+
       <Conta perfil={perfil} />
-      {papel === "candidato_clt" && <Curriculo perfil={perfil} />}
+
+      {papel === "candidato_clt" && (
+        <>
+          <Curriculo perfil={perfil} />
+          <CampoDeArquivo
+            titulo="Currículo em PDF"
+            descricao="Vai junto com a candidatura. Só a empresa da vaga vê — não aparece em busca pública."
+            formatos="PDF, até 5 MB"
+            accept="application/pdf"
+            enviar={enviarCurriculoComEstado}
+            remover={() => removerCurriculo({})}
+            disponivel={temArmazenamento}
+          >
+            <PreviaDeCurriculo link={linkCurriculo} />
+          </CampoDeArquivo>
+        </>
+      )}
+
       {papel === "prestador_servico" && <Anuncio perfil={perfil} />}
-      {papel === "empresa" && <Empresa perfil={perfil} />}
+
+      {papel === "empresa" && (
+        <>
+          <Empresa perfil={perfil} />
+          <CampoDeArquivo
+            titulo="Logo da empresa"
+            descricao="Aparece em cada vaga que você publica. É o que faz a vaga parecer de empresa de verdade."
+            formatos="JPG, PNG ou WEBP, até 2 MB"
+            accept="image/jpeg,image/png,image/webp"
+            enviar={enviarLogoComEstado}
+            remover={() => removerLogo({})}
+            disponivel={temArmazenamento}
+          >
+            <PreviaDeImagem
+              url={perfil.empresa?.logoUrl ?? null}
+              nome={perfil.empresa?.razaoSocial ?? u.nomeCompleto}
+            />
+          </CampoDeArquivo>
+        </>
+      )}
     </>
   );
 }

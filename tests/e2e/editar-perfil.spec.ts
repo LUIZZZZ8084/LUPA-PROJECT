@@ -86,3 +86,45 @@ test.describe("edição de perfil", () => {
     await expect(page).toHaveURL(/\/perfil$/);
   });
 });
+
+/**
+ * Envio de arquivo em modo demonstração.
+ *
+ * A suíte roda sem Supabase — de propósito, e há teste que falha barulhento
+ * se isso mudar. Sem Supabase não há Storage, e o que se verifica aqui é o
+ * comportamento nessa situação: a tela precisa dizer que não dá, em vez de
+ * aceitar o envio e perder o arquivo. Aceitar em silêncio faria a pessoa
+ * achar que salvou.
+ */
+test.describe("envio de arquivo sem armazenamento", () => {
+  test("a tela explica em vez de oferecer um seletor que não funciona", async ({
+    page,
+  }) => {
+    await page.goto("/perfil/editar");
+
+    await expect(page.getByText("Foto de perfil")).toBeVisible();
+    await expect(
+      page.getByText(/precisa do banco configurado/i).first(),
+    ).toBeVisible();
+
+    // Nenhum seletor de arquivo: o que não funciona não é oferecido.
+    await expect(page.locator('input[type="file"]')).toHaveCount(0);
+  });
+
+  /** A prévia continua: saber o que existe independe de poder trocar. */
+  test("ainda diz o que está gravado hoje", async ({ page }) => {
+    await page.goto("/perfil/editar");
+    await expect(page.getByText(/Nenhuma imagem enviada/)).toBeVisible();
+  });
+
+  test("candidato vê o campo de currículo; a foto todos veem", async ({
+    page,
+  }) => {
+    await page.goto("/perfil/editar");
+
+    await expect(page.getByText("Currículo em PDF")).toBeVisible();
+    await expect(page.getByText(/Nenhum currículo enviado/)).toBeVisible();
+    // Logo é de empresa; a sessão compartilhada é de candidato.
+    await expect(page.getByText("Logo da empresa")).toHaveCount(0);
+  });
+});

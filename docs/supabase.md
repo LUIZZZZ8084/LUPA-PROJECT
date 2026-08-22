@@ -57,7 +57,31 @@ O ciclo schema → reset → schema é exercitado por teste contra um Postgres
 real, incluindo o detalhe que engana: funções de trigger e tipos enum
 sobrevivem a `drop table cascade` e precisam ser removidos à mão.
 
-## 3. Popular com dados de Sinop (opcional)
+## 3. Criar os buckets de arquivo
+
+**SQL Editor** → cole [`supabase/storage.sql`](../supabase/storage.sql) → **Run**.
+
+Cria os quatro buckets e as políticas de leitura. É um arquivo à parte
+porque depende do schema `storage`, que só existe no Supabase — o
+`schema.sql` roda em qualquer Postgres, e é o que permite executá-lo por
+teste antes de cada entrega.
+
+| Bucket | Público | Para quê |
+|---|---|---|
+| `avatares` | sim | foto de perfil e logo — aparecem na busca |
+| `portfolio` | sim | fotos de trabalho do prestador |
+| `curriculos` | **não** | currículo em PDF |
+| `verificacao` | **não** | documento e selfie |
+
+Currículo e verificação não recebem policy nenhuma. Com RLS ligada e zero
+policies, o Postgres nega tudo — é assim que eles ficam fora do alcance da
+chave anônima. O servidor alcança pela chave de serviço e gera URL assinada
+de curta duração quando precisa mostrar o arquivo.
+
+Sem esta seção, o app funciona: o envio de arquivos aparece desativado, com
+o motivo na tela, e o resto do perfil continua editável.
+
+## 4. Popular com dados de Sinop (opcional)
 
 **SQL Editor** → cole [`supabase/seed.sql`](../supabase/seed.sql) → **Run**.
 
@@ -78,7 +102,7 @@ Para entrar de verdade, crie a sua conta em `/cadastro`.
 **Não rode o seed depois que houver usuário real** — ele assume um banco sem
 esses ids.
 
-## 4. Copiar as chaves
+## 5. Copiar as chaves
 
 **Project Settings** → **API**. Três valores:
 
@@ -93,7 +117,7 @@ nunca leva o prefixo `NEXT_PUBLIC_` — com o prefixo, o Next a embute no
 JavaScript que vai para o navegador, e quem abrir o código-fonte da página
 tem acesso irrestrito ao banco. Há um teste que trava isso.
 
-## 5. Configurar na Vercel
+## 6. Configurar na Vercel
 
 **Settings** → **Environment Variables** → ambiente **Production**:
 
@@ -120,7 +144,7 @@ repositório.
 Depois de salvar, **Deployments** → o último → **Redeploy**. Variável nova só
 vale a partir do próximo build.
 
-## 6. Criar sua conta de admin
+## 7. Criar sua conta de admin
 
 Crie um `.env.local` na raiz do projeto com pelo menos estas duas linhas —
 é o mesmo par da seção anterior, agora do lado de cá:
