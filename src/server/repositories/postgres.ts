@@ -4,6 +4,10 @@ import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
 import type {
   DadosNovoUsuario,
+  EdicaoBasica,
+  EdicaoCandidato,
+  EdicaoEmpresa,
+  EdicaoPrestador,
   PerfilCandidato,
   PerfilEmpresa,
   PerfilPrestador,
@@ -193,5 +197,169 @@ export class RepositorioPostgres implements RepositorioUsuarios {
 
     if (error) throw erros.indisponivel(`consulta de CNPJ: ${error.message}`);
     return Boolean(data);
+  }
+
+  /* ---------- Leitura de perfil, para a tela de edição ---------- */
+
+  async perfilEmpresa(usuarioId: string): Promise<PerfilEmpresa | null> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("perfis_empresa")
+      .select("*")
+      .eq("usuario_id", usuarioId)
+      .maybeSingle();
+
+    if (error) throw erros.indisponivel(`perfil de empresa: ${error.message}`);
+    if (!data) return null;
+
+    return {
+      usuarioId: String(data.usuario_id),
+      razaoSocial: String(data.razao_social),
+      cnpj: String(data.cnpj),
+      setor: (data.setor as string | null) ?? null,
+      porte: (data.porte as string | null) ?? null,
+      site: (data.site as string | null) ?? null,
+      descricao: (data.descricao as string | null) ?? null,
+      logoUrl: (data.logo_url as string | null) ?? null,
+      plano: data.plano as PerfilEmpresa["plano"],
+    };
+  }
+
+  async perfilPrestador(usuarioId: string): Promise<PerfilPrestador | null> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("perfis_prestador")
+      .select("*")
+      .eq("usuario_id", usuarioId)
+      .maybeSingle();
+
+    if (error)
+      throw erros.indisponivel(`perfil de prestador: ${error.message}`);
+    if (!data) return null;
+
+    return {
+      usuarioId: String(data.usuario_id),
+      categoriaId: Number(data.categoria_id),
+      descricao: (data.descricao as string | null) ?? null,
+      precoInicial:
+        data.preco_inicial === null ? null : Number(data.preco_inicial),
+      anosExperiencia:
+        data.anos_experiencia === null ? null : Number(data.anos_experiencia),
+      bairrosAtendidos: (data.bairros_atendidos as string[] | null) ?? [],
+    };
+  }
+
+  async perfilCandidato(usuarioId: string): Promise<PerfilCandidato | null> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("perfis_candidato")
+      .select("*")
+      .eq("usuario_id", usuarioId)
+      .maybeSingle();
+
+    if (error)
+      throw erros.indisponivel(`perfil de candidato: ${error.message}`);
+    if (!data) return null;
+
+    return {
+      usuarioId: String(data.usuario_id),
+      areaDesejada: (data.area_desejada as string | null) ?? null,
+      resumo: (data.resumo as string | null) ?? null,
+      curriculoUrl: (data.curriculo_url as string | null) ?? null,
+      disponibilidade: (data.disponibilidade as string | null) ?? null,
+      formacao: (data.formacao as string | null) ?? null,
+      habilidades: (data.habilidades as string[] | null) ?? [],
+    };
+  }
+
+  /* ---------- Edição ---------- */
+
+  async atualizarBasicos(
+    usuarioId: string,
+    dados: EdicaoBasica,
+  ): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({
+        nome_completo: dados.nomeCompleto,
+        telefone: dados.telefone,
+        bairro: dados.bairro,
+      })
+      .eq("id", usuarioId);
+
+    if (error) throw erros.indisponivel(`edição de conta: ${error.message}`);
+  }
+
+  /*
+   * `upsert` e não `update`: conta criada antes de o campo existir, ou
+   * cadastro que não pedia aquele dado, chega aqui sem linha na tabela de
+   * perfil. Um `update` não afetaria nada e a tela diria "salvo" sem ter
+   * salvo — o pior dos dois mundos.
+   */
+  async salvarPerfilCandidato(
+    usuarioId: string,
+    dados: EdicaoCandidato,
+  ): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase.from("perfis_candidato").upsert(
+      {
+        usuario_id: usuarioId,
+        area_desejada: dados.areaDesejada,
+        resumo: dados.resumo,
+        formacao: dados.formacao,
+        habilidades: dados.habilidades,
+        disponibilidade: dados.disponibilidade,
+      },
+      { onConflict: "usuario_id" },
+    );
+
+    if (error)
+      throw erros.indisponivel(`perfil de candidato: ${error.message}`);
+  }
+
+  async salvarPerfilPrestador(
+    usuarioId: string,
+    dados: EdicaoPrestador,
+  ): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase.from("perfis_prestador").upsert(
+      {
+        usuario_id: usuarioId,
+        categoria_id: dados.categoriaId,
+        descricao: dados.descricao,
+        preco_inicial: dados.precoInicial,
+        anos_experiencia: dados.anosExperiencia,
+        bairros_atendidos: dados.bairrosAtendidos,
+      },
+      { onConflict: "usuario_id" },
+    );
+
+    if (error)
+      throw erros.indisponivel(`perfil de prestador: ${error.message}`);
+  }
+
+  /*
+   * `update` e não `upsert`: a linha da empresa carrega o CNPJ, que não é
+   * editável. Criar aqui exigiria inventar um, e uma empresa sem CNPJ é
+   * exatamente o que a plataforma não pode ter.
+   */
+  async salvarPerfilEmpresa(
+    usuarioId: string,
+    dados: EdicaoEmpresa,
+  ): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("perfis_empresa")
+      .update({
+        razao_social: dados.razaoSocial,
+        setor: dados.setor,
+        porte: dados.porte,
+        site: dados.site,
+        descricao: dados.descricao,
+      })
+      .eq("usuario_id", usuarioId);
+
+    if (error) throw erros.indisponivel(`perfil de empresa: ${error.message}`);
   }
 }

@@ -65,6 +65,8 @@ export async function cadastrar(dados: DadosCadastro): Promise<UsuarioPublico> {
       resumo: null,
       curriculoUrl: null,
       disponibilidade: null,
+      formacao: null,
+      habilidades: [],
     });
   } else if (dados.papel === "prestador_servico") {
     await repo.criarPerfilPrestador({

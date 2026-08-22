@@ -13,44 +13,45 @@ import {
   PerfilEmpresa,
   PerfilPrestador,
 } from "@/components/perfil-profissional";
-import type { CltProfile, Company, ProviderListing } from "@/lib/types";
+import type { ProviderListing } from "@/lib/types";
+import type {
+  PerfilCandidato as DadosCandidato,
+  PerfilEmpresa as DadosEmpresa,
+  PerfilPrestador as DadosPrestador,
+} from "@/server/repositories/tipos";
 
-const CURRICULO: CltProfile = {
-  profile_id: "u1",
-  desired_area: "Agronegócio",
-  experiences: [],
-  education: "Ensino médio completo",
-  skills: ["CNH categoria C", "Colheitadeira"],
-  resume_url: null,
-  availability: "Imediata",
+const CURRICULO: DadosCandidato = {
+  usuarioId: "u1",
+  areaDesejada: "Agronegócio",
+  resumo: null,
+  curriculoUrl: null,
+  disponibilidade: "Imediata",
+  formacao: "Ensino médio completo",
+  habilidades: ["CNH categoria C", "Colheitadeira"],
 };
 
-const ANUNCIO: ProviderListing = {
-  profile_id: "u2",
-  category_id: 1,
-  description: "Instalações elétricas residenciais.",
-  starting_price: 150,
-  years_experience: 7,
-  service_area: ["Centro", "Menezes"],
-  photo_urls: [],
-  avg_rating: 4.7,
-  review_count: 3,
-  full_name: "João Silva",
-  phone: "66000000001",
-  city: "Sinop",
-  neighborhood: "Centro",
-  avatar_url: null,
-  phone_verified: true,
-  doc_verified: true,
-  category: { id: 1, slug: "eletricista", name: "Eletricista" },
-} as ProviderListing;
+const ANUNCIO: DadosPrestador = {
+  usuarioId: "u2",
+  categoriaId: 1,
+  descricao: "Instalações elétricas residenciais.",
+  precoInicial: 150,
+  anosExperiencia: 7,
+  bairrosAtendidos: ["Centro", "Menezes"],
+};
 
-const EMPRESA: Company = {
-  profile_id: "u3",
-  company_name: "Agro Norte Ltda.",
+/** Só nota e contagem: o resto do anúncio vem do perfil. */
+const LISTAGEM = { avg_rating: 4.7, review_count: 3 } as ProviderListing;
+
+const EMPRESA: DadosEmpresa = {
+  usuarioId: "u3",
+  razaoSocial: "Agro Norte Ltda.",
   cnpj: "11222333000181",
-  logo_url: null,
-  plan: "mensal",
+  setor: null,
+  porte: null,
+  site: null,
+  descricao: null,
+  logoUrl: null,
+  plano: "mensal",
 };
 
 describe("candidato", () => {
@@ -82,9 +83,9 @@ describe("candidato", () => {
       <PerfilCandidato
         perfil={{
           ...CURRICULO,
-          education: null,
-          availability: null,
-          skills: [],
+          formacao: null,
+          disponibilidade: null,
+          habilidades: [],
         }}
       />,
     );
@@ -96,18 +97,18 @@ describe("candidato", () => {
 
 describe("prestador", () => {
   it("sem anúncio, explica que não aparece na busca", () => {
-    render(<PerfilPrestador perfil={null} />);
+    render(<PerfilPrestador perfil={null} listagem={null} />);
     expect(screen.getByText(/anúncio ainda não está no ar/i)).toBeTruthy();
   });
 
   it("mostra a nota com vírgula, como o público brasileiro lê", () => {
-    render(<PerfilPrestador perfil={ANUNCIO} />);
+    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} />);
     expect(screen.getByText("4,7")).toBeTruthy();
     expect(screen.getByText("(3)")).toBeTruthy();
   });
 
   it("mostra categoria, descrição, experiência e bairros", () => {
-    render(<PerfilPrestador perfil={ANUNCIO} />);
+    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} />);
     expect(screen.getByText("Eletricista")).toBeTruthy();
     expect(screen.getByText(/Instalações elétricas/)).toBeTruthy();
     expect(screen.getByText("7 anos")).toBeTruthy();
@@ -116,7 +117,7 @@ describe("prestador", () => {
 
   /** Ver o próprio anúncio como o cliente vê é o que revela o que falta. */
   it("leva ao próprio perfil público", () => {
-    render(<PerfilPrestador perfil={ANUNCIO} />);
+    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} />);
     expect(
       screen.getByRole("link", { name: /como o cliente vê/i }),
     ).toHaveAttribute("href", "/servicos/u2");
@@ -125,7 +126,8 @@ describe("prestador", () => {
   it("sem preço e sem experiência, não inventa valor", () => {
     render(
       <PerfilPrestador
-        perfil={{ ...ANUNCIO, starting_price: null, years_experience: null }}
+        perfil={{ ...ANUNCIO, precoInicial: null, anosExperiencia: null }}
+        listagem={LISTAGEM}
       />,
     );
     expect(screen.queryByText("Experiência")).toBeNull();
@@ -147,7 +149,7 @@ describe("empresa", () => {
   });
 
   it("plano de teste aparece como período de teste", () => {
-    render(<PerfilEmpresa empresa={{ ...EMPRESA, plan: "trial" }} />);
+    render(<PerfilEmpresa empresa={{ ...EMPRESA, plano: "trial" }} />);
     expect(screen.getByText("Período de teste")).toBeTruthy();
   });
 });
