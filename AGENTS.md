@@ -64,6 +64,11 @@ descritor curto em português com hífens.
 - **Next.js 16 (App Router) + TypeScript + Tailwind v4.** Sem
   `tailwind.config` — os tokens de design vivem em `@theme` dentro de
   `src/app/globals.css`.
+- **Dois layouts, por grupo de rota.** `(app)` tem cabeçalho e barra
+  inferior; `(auth)` — entrar e cadastro — não tem nenhum dos dois. A
+  separação é por pasta e não por `if` no cabeçalho, para que "tela de
+  autenticação não tem menu" seja fato do arranjo: quem criar a próxima
+  herda o comportamento sem precisar saber disso.
 - **App fechado por login.** Sem sessão, toda rota redireciona para
   `/entrar`. Só `/entrar` e `/cadastro` ficam abertas, e a lista mora em
   `src/proxy.ts` — o padrão é fechado, abrir é explícito.

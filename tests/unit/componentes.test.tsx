@@ -204,7 +204,7 @@ describe("WhatsAppButton", () => {
  */
 describe("o formulário de login navega depois de entrar", () => {
   const FONTE = readFileSync(
-    join(process.cwd(), "src/app/entrar/form.tsx"),
+    join(process.cwd(), "src/app/(auth)/entrar/form.tsx"),
     "utf8",
   );
 

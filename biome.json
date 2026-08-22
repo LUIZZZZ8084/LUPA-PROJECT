@@ -96,7 +96,7 @@
       "includes": [
         "src/app/**/loading.tsx",
         "src/components/ui/skeleton.tsx",
-        "src/app/servicos/**/page.tsx"
+        "src/app/**/servicos/**/page.tsx"
       ],
       "linter": {
         "rules": {
