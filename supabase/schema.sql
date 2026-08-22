@@ -547,30 +547,3 @@ create policy "publicacoes ativas sao publicas"
  *
  * O mesmo vale para candidaturas e pedidos de verificação.
  */
-
--- ============================================================================
--- 13. Storage
---
--- Esta seção só funciona no Supabase — depende do schema `storage`.
--- Rode-a depois das anteriores, no mesmo SQL Editor.
---
--- `verificacao` é PRIVADO: documento e selfie são dados pessoais sensíveis
--- e a política de retenção manda apagá-los assim que a decisão sai.
--- ============================================================================
-
--- insert into storage.buckets (id, name, public) values
---   ('avatares',    'avatares',    true),
---   ('portfolio',   'portfolio',   true),
---   ('curriculos',  'curriculos',  false),
---   ('verificacao', 'verificacao', false)
--- on conflict (id) do nothing;
---
--- create policy "avatares publicos para leitura"
---   on storage.objects for select using (bucket_id = 'avatares');
---
--- create policy "portfolio publico para leitura"
---   on storage.objects for select using (bucket_id = 'portfolio');
---
--- Currículo e verificação não recebem policy: o acesso é feito pelo servidor
--- com a chave de serviço, que gera URL assinada de curta duração quando
--- precisa mostrar o arquivo.

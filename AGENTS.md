@@ -162,6 +162,31 @@ total.
 primeira deixaria qualquer empresa autenticada alcançar a vaga de outra
 trocando o id na URL.
 
+### Arquivos: o caminho vem da sessão, nunca do nome enviado
+
+Foto, currículo e logo passam pelo servidor com a chave de serviço; o
+navegador nunca fala com o Storage direto. Fosse assim, quem pode enviar e
+para onde viraria responsabilidade de uma policy — e policy errada é
+silenciosa até alguém sobrescrever o arquivo de outra pessoa.
+
+O caminho é derivado do id de quem envia e de uma tabela fechada de
+extensões. Nome vindo do cliente permitiria `../` para escapar da pasta, ou
+o id de outra pessoa. Caminho fixo por pessoa também faz a troca substituir
+o anterior, em vez de o bucket virar depósito de versões pagas.
+
+**Currículo é privado**, pela mesma razão do currículo em texto. O banco
+guarda o caminho, não a URL; o link nasce a cada visita e expira em um
+minuto.
+
+**Ordem entre bucket e banco.** No envio, arquivo primeiro: se o banco
+falhar depois, sobra um objeto órfão — invisível e substituído no próximo
+envio. Na ordem inversa, o banco apontaria para arquivo inexistente e a
+tela mostraria imagem quebrada. Na remoção a ordem se inverte, pelo mesmo
+raciocínio.
+
+**Sem Supabase não há Storage.** A tela diz isso em vez de aceitar o envio
+e perder o arquivo — aceitar em silêncio faria a pessoa achar que salvou.
+
 ### O que se edita depois, e o que nunca
 
 O cadastro pede o mínimo para a conta existir e a pessoa ser encontrada;

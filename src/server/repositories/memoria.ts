@@ -159,6 +159,29 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.empresas.set(usuarioId, { ...atual, ...dados });
   }
 
+  /* ---------- Arquivos ---------- */
+
+  async definirAvatar(usuarioId: string, url: string | null): Promise<void> {
+    const usuario = this.usuarios.get(usuarioId);
+    if (!usuario) return;
+    this.usuarios.set(usuarioId, { ...usuario, avatarUrl: url });
+  }
+
+  async definirCurriculo(
+    usuarioId: string,
+    caminho: string | null,
+  ): Promise<void> {
+    const atual = this.candidatos.get(usuarioId);
+    if (!atual) return;
+    this.candidatos.set(usuarioId, { ...atual, curriculoUrl: caminho });
+  }
+
+  async definirLogo(usuarioId: string, url: string | null): Promise<void> {
+    const atual = this.empresas.get(usuarioId);
+    if (!atual) return;
+    this.empresas.set(usuarioId, { ...atual, logoUrl: url });
+  }
+
   /** Todos os usuários. Usado pelas métricas do painel administrativo. */
   todos(): Usuario[] {
     return [...this.usuarios.values()];

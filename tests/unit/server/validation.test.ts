@@ -190,10 +190,41 @@ describe("objetoDoFormData", () => {
     expect(objetoDoFormData(fd).bairros).toEqual(["Centro", "Menezes"]);
   });
 
-  it("descarta arquivo — upload passa por outro caminho", () => {
+  /**
+   * Arquivo passa junto com o texto.
+   *
+   * Antes era descartado, porque não havia envio de arquivo no app. Passou
+   * a ser necessário com a foto de perfil, o currículo em PDF e a logo — o
+   * envelope de action recebe o formulário inteiro e precisa entregar o
+   * `File` ao schema.
+   *
+   * É seguro porque o envelope nunca registra os valores da entrada, só
+   * nomes de campo em erro de validação. Se um dia passar a registrar,
+   * este é o ponto que muda junto.
+   */
+  it("deixa arquivo passar, junto com o texto", () => {
     const fd = new FormData();
     fd.set("nome", "João");
-    fd.set("documento", new File(["conteudo"], "rg.png"));
-    expect(objetoDoFormData(fd)).toEqual({ nome: "João" });
+    const arquivo = new File(["conteudo"], "rg.png", { type: "image/png" });
+    fd.set("documento", arquivo);
+
+    const saida = objetoDoFormData(fd);
+    expect(saida.nome).toBe("João");
+    expect(saida.documento).toBeInstanceOf(File);
+  });
+
+  /**
+   * `FormData` normaliza `Blob` em `File` por especificação, então não
+   * existe terceiro caso a filtrar: o que entra é texto ou arquivo.
+   *
+   * Vale registrar porque a leitura ingênua do código sugere que há um
+   * `else` inalcançável — e alguém poderia "limpar" a checagem sem
+   * perceber que ela é o que impede um valor futuro de passar direto.
+   */
+  it("Blob vira File, então tudo que passa é texto ou arquivo", () => {
+    const fd = new FormData();
+    fd.set("bloco", new Blob(["x"]));
+
+    expect(objetoDoFormData(fd).bloco).toBeInstanceOf(File);
   });
 });
