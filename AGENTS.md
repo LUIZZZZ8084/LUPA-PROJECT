@@ -64,6 +64,11 @@ descritor curto em português com hífens.
 - **Next.js 16 (App Router) + TypeScript + Tailwind v4.** Sem
   `tailwind.config` — os tokens de design vivem em `@theme` dentro de
   `src/app/globals.css`.
+- **Dois layouts, por grupo de rota.** `(app)` tem cabeçalho e barra
+  inferior; `(auth)` — entrar e cadastro — não tem nenhum dos dois. A
+  separação é por pasta e não por `if` no cabeçalho, para que "tela de
+  autenticação não tem menu" seja fato do arranjo: quem criar a próxima
+  herda o comportamento sem precisar saber disso.
 - **App fechado por login.** Sem sessão, toda rota redireciona para
   `/entrar`. Só `/entrar` e `/cadastro` ficam abertas, e a lista mora em
   `src/proxy.ts` — o padrão é fechado, abrir é explícito.
@@ -156,6 +161,32 @@ total.
 (`exigirCapacidade`) e este registro é desta pessoa (`exigirDono`). Só a
 primeira deixaria qualquer empresa autenticada alcançar a vaga de outra
 trocando o id na URL.
+
+### O que se edita depois, e o que nunca
+
+O cadastro pede o mínimo para a conta existir e a pessoa ser encontrada;
+o resto vive em `/perfil/editar`, preenchido quando ela já viu que a
+plataforma tem gente de verdade.
+
+**O CNPJ não é editável.** É a âncora de identidade da empresa e o que
+separa vaga real de anúncio falso. Poder trocar depois permitiria
+cadastrar com um CNPJ válido, passar pela verificação e então virar outra
+empresa. Correção é caso de suporte, com gente olhando.
+
+**Um formulário por assunto, cada um com o próprio botão.** Um formulário
+só obrigaria a reenviar o currículo inteiro para corrigir o telefone, e um
+erro em qualquer campo bloquearia todos. Em conexão ruim isso é a
+diferença entre corrigir e desistir.
+
+**O papel vem da sessão, nunca do formulário.** Um formulário é palpite do
+cliente sobre o que existe. Aceitar o papel dali deixaria um candidato
+postar campos de prestador e ganhar um anúncio na busca sem nunca ter
+passado pelo cadastro de prestador.
+
+**A tela de perfil lê pelo serviço, não por `src/lib/data.ts`.** A camada
+de dados serve o que é público, e o currículo fica fora de qualquer view
+por decisão de privacidade — lendo por lá, a pessoa salvava e a tela
+continuava dizendo que estava vazio.
 
 ### Navegação pública, revertida
 

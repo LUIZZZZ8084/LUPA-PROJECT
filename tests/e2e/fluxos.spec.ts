@@ -258,3 +258,41 @@ test.describe("área administrativa", () => {
     expect(resposta.headers()["content-type"]).toContain("application/json");
   });
 });
+
+test.describe("telas de autenticação", () => {
+  /**
+   * A tela de login tinha o menu do app e um botão "Entrar" no topo, ao
+   * lado do formulário de entrar. Além de redundante, o botão sugere que
+   * o login está em outro lugar — e os links levariam de volta ao muro,
+   * já que sem sessão toda rota redireciona para cá.
+   *
+   * A separação é por pasta (`(auth)` não tem o layout do app), então o
+   * que este teste protege é a estrutura, não um `if` que alguém pode
+   * esquecer de repetir na próxima tela de auth.
+   */
+  test("login não traz o menu do app nem botão de entrar no topo", async ({
+    page,
+  }) => {
+    await page.goto("/entrar");
+
+    for (const secao of ["Vagas", "Serviços", "Para empresas"]) {
+      await expect(
+        page.getByRole("link", { name: secao, exact: true }),
+        `"${secao}" não deveria aparecer na tela de login`,
+      ).toHaveCount(0);
+    }
+
+    // Sobram o título e o botão do formulário — nenhum link para /entrar.
+    await expect(page.locator('a[href="/entrar"]')).toHaveCount(0);
+
+    // A marca continua sendo o caminho de volta.
+    await expect(page.getByLabel("Lupa — início")).toBeVisible();
+  });
+
+  test("cadastro também fica sem o menu", async ({ page }) => {
+    await page.goto("/cadastro");
+    await expect(
+      page.getByRole("link", { name: "Vagas", exact: true }),
+    ).toHaveCount(0);
+  });
+});

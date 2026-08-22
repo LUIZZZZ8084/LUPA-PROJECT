@@ -74,6 +74,52 @@ export interface PerfilCandidato {
   resumo: string | null;
   curriculoUrl: string | null;
   disponibilidade: string | null;
+  formacao: string | null;
+  habilidades: string[];
+}
+
+/* ============================================================
+   Edição de perfil
+   ============================================================ */
+
+/** Campos que todo papel edita, guardados em `usuarios`. */
+export interface EdicaoBasica {
+  nomeCompleto: string;
+  telefone: string;
+  bairro: string | null;
+}
+
+export interface EdicaoCandidato {
+  areaDesejada: string | null;
+  resumo: string | null;
+  formacao: string | null;
+  habilidades: string[];
+  disponibilidade: string | null;
+}
+
+export interface EdicaoPrestador {
+  categoriaId: number;
+  descricao: string;
+  precoInicial: number | null;
+  anosExperiencia: number | null;
+  bairrosAtendidos: string[];
+}
+
+/**
+ * O CNPJ fica de fora de propósito.
+ *
+ * Ele é a âncora de identidade da empresa e o que separa vaga real de
+ * anúncio falso — o risco mais concreto numa plataforma de emprego. Deixar
+ * trocar depois permitiria cadastrar com um CNPJ válido, passar pela
+ * verificação, e então virar outra empresa. Correção de CNPJ é caso de
+ * suporte, com gente olhando.
+ */
+export interface EdicaoEmpresa {
+  razaoSocial: string;
+  setor: string | null;
+  porte: string | null;
+  site: string | null;
+  descricao: string | null;
 }
 
 export interface RepositorioUsuarios {
@@ -89,4 +135,32 @@ export interface RepositorioUsuarios {
 
   /** Para o cadastro de empresa: CNPJ é único na plataforma. */
   cnpjEmUso(cnpj: string): Promise<boolean>;
+
+  /* ---------- Leitura de perfil, para a tela de edição ---------- */
+
+  perfilEmpresa(usuarioId: string): Promise<PerfilEmpresa | null>;
+  perfilPrestador(usuarioId: string): Promise<PerfilPrestador | null>;
+  perfilCandidato(usuarioId: string): Promise<PerfilCandidato | null>;
+
+  /* ---------- Edição ---------- */
+
+  atualizarBasicos(usuarioId: string, dados: EdicaoBasica): Promise<void>;
+
+  /**
+   * Grava mesmo que o perfil ainda não exista.
+   *
+   * Conta criada antes de o campo existir, ou cadastro que não pedia
+   * aquele dado, chega aqui sem linha na tabela de perfil. Falhar nesse
+   * caso obrigaria a pessoa a "criar" antes de "editar" — distinção que só
+   * faz sentido para quem escreveu o banco.
+   */
+  salvarPerfilCandidato(
+    usuarioId: string,
+    dados: EdicaoCandidato,
+  ): Promise<void>;
+  salvarPerfilPrestador(
+    usuarioId: string,
+    dados: EdicaoPrestador,
+  ): Promise<void>;
+  salvarPerfilEmpresa(usuarioId: string, dados: EdicaoEmpresa): Promise<void>;
 }

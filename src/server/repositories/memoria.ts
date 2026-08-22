@@ -1,5 +1,9 @@
 import type {
   DadosNovoUsuario,
+  EdicaoBasica,
+  EdicaoCandidato,
+  EdicaoEmpresa,
+  EdicaoPrestador,
   PerfilCandidato,
   PerfilEmpresa,
   PerfilPrestador,
@@ -102,7 +106,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     return this.cnpjs.has(cnpj);
   }
 
-  /* ---------- Só para teste e para o seed da demonstração ---------- */
+  /* ---------- Leitura de perfil ---------- */
 
   async perfilEmpresa(usuarioId: string): Promise<PerfilEmpresa | null> {
     return this.empresas.get(usuarioId) ?? null;
@@ -114,6 +118,45 @@ export class RepositorioMemoria implements RepositorioUsuarios {
 
   async perfilCandidato(usuarioId: string): Promise<PerfilCandidato | null> {
     return this.candidatos.get(usuarioId) ?? null;
+  }
+
+  /* ---------- Edição de perfil ---------- */
+
+  async atualizarBasicos(
+    usuarioId: string,
+    dados: EdicaoBasica,
+  ): Promise<void> {
+    const usuario = this.usuarios.get(usuarioId);
+    if (!usuario) return;
+    this.usuarios.set(usuarioId, { ...usuario, ...dados });
+  }
+
+  async salvarPerfilCandidato(
+    usuarioId: string,
+    dados: EdicaoCandidato,
+  ): Promise<void> {
+    const atual = this.candidatos.get(usuarioId);
+    this.candidatos.set(usuarioId, {
+      usuarioId,
+      curriculoUrl: atual?.curriculoUrl ?? null,
+      ...dados,
+    });
+  }
+
+  async salvarPerfilPrestador(
+    usuarioId: string,
+    dados: EdicaoPrestador,
+  ): Promise<void> {
+    this.prestadores.set(usuarioId, { usuarioId, ...dados });
+  }
+
+  async salvarPerfilEmpresa(
+    usuarioId: string,
+    dados: EdicaoEmpresa,
+  ): Promise<void> {
+    const atual = this.empresas.get(usuarioId);
+    if (!atual) return;
+    this.empresas.set(usuarioId, { ...atual, ...dados });
   }
 
   /** Todos os usuários. Usado pelas métricas do painel administrativo. */

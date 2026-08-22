@@ -2,7 +2,7 @@
 
 import { Check, Loader2, Send } from "lucide-react";
 import { useState, useTransition } from "react";
-import { candidatarSe } from "@/app/vagas/[id]/actions";
+import { candidatarSe } from "@/app/(app)/vagas/[id]/actions";
 import { Button } from "@/components/ui/button";
 
 export function ApplyButton({ jobId }: { jobId: string }) {

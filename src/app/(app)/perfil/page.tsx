@@ -3,6 +3,7 @@ import {
   Building2,
   FileText,
   LogIn,
+  Pencil,
   ShieldCheck,
   UserRound,
   Wrench,
@@ -22,12 +23,13 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { VerificationRow } from "@/components/verified-badge";
 import { ROLE_LABELS } from "@/lib/constants";
-import { getCandidateProfile, getCompany, getProviderById } from "@/lib/data";
+import { getProviderById } from "@/lib/data";
 import { formatPhone } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import type { Capacidade } from "@/server/auth/rbac";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
+import { perfilParaEditar } from "@/server/perfil/servico";
 
 export const metadata: Metadata = {
   title: "Perfil",
@@ -93,22 +95,41 @@ export default async function PerfilPage() {
    * A identidade profissional vem de tabelas diferentes por papel. Buscar
    * só a do papel de quem entrou evita três consultas para mostrar uma.
    */
-  const id = sessao?.usuarioId ?? null;
-  const [curriculo, anuncio, empresa] = await Promise.all([
-    id && sessao?.papel === "candidato_clt"
-      ? getCandidateProfile(id)
-      : Promise.resolve(null),
-    id && sessao?.papel === "prestador_servico"
-      ? getProviderById(id)
-      : Promise.resolve(null),
-    id && sessao?.papel === "empresa" ? getCompany(id) : Promise.resolve(null),
-  ]);
+  /*
+   * O perfil vem do serviço, não da camada de dados pública.
+   *
+   * `src/lib/data.ts` lê o que é público e, em demonstração, não alcança o
+   * currículo — que fica fora de qualquer view por decisão de privacidade.
+   * Resultado: a pessoa salvava e a tela continuava dizendo que estava
+   * vazio. O serviço fala com o repositório, que é o mesmo caminho onde a
+   * edição grava, e funciona nos dois modos.
+   */
+  const perfil = sessao
+    ? await perfilParaEditar(sessao.usuarioId, sessao.papel)
+    : null;
+
+  /*
+   * A nota vem à parte, da listagem pública: ela é calculada por trigger e
+   * não é campo do perfil. Nula significa "ainda não avaliado".
+   */
+  const listagem =
+    sessao?.papel === "prestador_servico"
+      ? await getProviderById(sessao.usuarioId)
+      : null;
 
   return (
     <PageShell width="narrow">
       <PageTitle
         title="Perfil"
         description="Sua conta e seus atalhos na Lupa."
+        action={
+          usuario ? (
+            <ButtonLink href="/perfil/editar" variant="outline" size="sm">
+              <Pencil size={15} />
+              Editar perfil
+            </ButtonLink>
+          ) : undefined
+        }
       />
 
       {usuario ? (
@@ -174,12 +195,17 @@ export default async function PerfilPage() {
       )}
 
       {sessao?.papel === "candidato_clt" && (
-        <PerfilCandidato perfil={curriculo} />
+        <PerfilCandidato perfil={perfil?.candidato ?? null} />
       )}
       {sessao?.papel === "prestador_servico" && (
-        <PerfilPrestador perfil={anuncio} />
+        <PerfilPrestador
+          perfil={perfil?.prestador ?? null}
+          listagem={listagem}
+        />
       )}
-      {sessao?.papel === "empresa" && <PerfilEmpresa empresa={empresa} />}
+      {sessao?.papel === "empresa" && (
+        <PerfilEmpresa empresa={perfil?.empresa ?? null} />
+      )}
 
       {atalhos.length > 0 && (
         <div className="space-y-2.5">

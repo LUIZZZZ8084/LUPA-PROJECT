@@ -11,7 +11,12 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { formatStartingPrice } from "@/lib/format";
-import type { CltProfile, Company, ProviderListing } from "@/lib/types";
+import type { ProviderListing } from "@/lib/types";
+import type {
+  PerfilCandidato as DadosCandidato,
+  PerfilEmpresa as PerfilEmpresaDados,
+  PerfilPrestador as PerfilPrestadorDados,
+} from "@/server/repositories/tipos";
 
 /**
  * A parte profissional do perfil — o que a pessoa faz, oferece ou procura.
@@ -81,7 +86,7 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
 }
 
 /** Candidato: o que uma empresa veria ao abrir a candidatura. */
-export function PerfilCandidato({ perfil }: { perfil: CltProfile | null }) {
+export function PerfilCandidato({ perfil }: { perfil: DadosCandidato | null }) {
   if (!perfil) {
     return (
       <Vazio
@@ -98,19 +103,19 @@ export function PerfilCandidato({ perfil }: { perfil: CltProfile | null }) {
       icone={<Briefcase size={16} className="text-vagas" />}
       titulo="Currículo"
     >
-      {perfil.desired_area && (
-        <Linha rotulo="Área desejada" valor={perfil.desired_area} />
+      {perfil.areaDesejada && (
+        <Linha rotulo="Área desejada" valor={perfil.areaDesejada} />
       )}
-      {perfil.education && <Linha rotulo="Formação" valor={perfil.education} />}
-      {perfil.availability && (
-        <Linha rotulo="Disponibilidade" valor={perfil.availability} />
+      {perfil.formacao && <Linha rotulo="Formação" valor={perfil.formacao} />}
+      {perfil.disponibilidade && (
+        <Linha rotulo="Disponibilidade" valor={perfil.disponibilidade} />
       )}
 
-      {perfil.skills.length > 0 && (
+      {perfil.habilidades.length > 0 && (
         <div className="mt-3">
           <p className="text-xs text-muted">Habilidades</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {perfil.skills.map((h) => (
+            {perfil.habilidades.map((h) => (
               <Badge key={h} tone="vagas">
                 {h}
               </Badge>
@@ -130,8 +135,15 @@ export function PerfilCandidato({ perfil }: { perfil: CltProfile | null }) {
 /** Prestador: o próprio anúncio, como ele sai na busca. */
 export function PerfilPrestador({
   perfil,
+  listagem,
 }: {
-  perfil: ProviderListing | null;
+  perfil: PerfilPrestadorDados | null;
+  /**
+   * A listagem pública, só para nota e número de avaliações. Elas vivem na
+   * view `provider_listings`, calculadas por trigger — não são campo do
+   * perfil, e mostrar como se fossem sugeriria que dá para editar.
+   */
+  listagem: ProviderListing | null;
 }) {
   if (!perfil) {
     return (
@@ -144,7 +156,7 @@ export function PerfilPrestador({
     );
   }
 
-  const categoria = SERVICE_CATEGORIES.find((c) => c.id === perfil.category_id);
+  const categoria = SERVICE_CATEGORIES.find((c) => c.id === perfil.categoriaId);
 
   return (
     <Secao
@@ -153,39 +165,46 @@ export function PerfilPrestador({
     >
       <div className="flex flex-wrap items-center gap-3">
         {categoria && <Badge tone="servicos">{categoria.name}</Badge>}
-        <span className="inline-flex items-center gap-1 text-sm">
-          <Star size={14} className="text-warn" />
-          <strong>{perfil.avg_rating.toFixed(1).replace(".", ",")}</strong>
-          <span className="text-muted">({perfil.review_count})</span>
-        </span>
-        {perfil.starting_price !== null && (
+        {/*
+         * Sem listagem não há nota: quem acabou de criar o anúncio ainda
+         * não foi avaliado, e mostrar "0,0" faria parecer nota ruim em vez
+         * de ausência de nota.
+         */}
+        {listagem && (
+          <span className="inline-flex items-center gap-1 text-sm">
+            <Star size={14} className="text-warn" />
+            <strong>{listagem.avg_rating.toFixed(1).replace(".", ",")}</strong>
+            <span className="text-muted">({listagem.review_count})</span>
+          </span>
+        )}
+        {perfil.precoInicial !== null && (
           <span className="text-sm text-muted">
-            {formatStartingPrice(perfil.starting_price)}
+            {formatStartingPrice(perfil.precoInicial)}
           </span>
         )}
       </div>
 
-      {perfil.description && (
-        <p className="mt-3 text-sm leading-relaxed">{perfil.description}</p>
+      {perfil.descricao && (
+        <p className="mt-3 text-sm leading-relaxed">{perfil.descricao}</p>
       )}
 
-      {perfil.years_experience !== null && (
+      {perfil.anosExperiencia !== null && (
         <div className="mt-3">
           <Linha
             rotulo="Experiência"
-            valor={`${perfil.years_experience} anos`}
+            valor={`${perfil.anosExperiencia} anos`}
           />
         </div>
       )}
 
-      {perfil.service_area.length > 0 && (
+      {perfil.bairrosAtendidos.length > 0 && (
         <div className="mt-3">
           <p className="flex items-center gap-1.5 text-xs text-muted">
             <MapPin size={13} />
             Bairros atendidos
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {perfil.service_area.map((b) => (
+            {perfil.bairrosAtendidos.map((b) => (
               <Badge key={b} tone="neutral">
                 {b}
               </Badge>
@@ -194,28 +213,34 @@ export function PerfilPrestador({
         </div>
       )}
 
-      <div className="mt-4">
-        <ButtonLink
-          href={`/servicos/${perfil.profile_id}`}
-          variant="outline"
-          size="sm"
-        >
-          Ver como o cliente vê
-        </ButtonLink>
-      </div>
+      {listagem && (
+        <div className="mt-4">
+          <ButtonLink
+            href={`/servicos/${perfil.usuarioId}`}
+            variant="outline"
+            size="sm"
+          >
+            Ver como o cliente vê
+          </ButtonLink>
+        </div>
+      )}
     </Secao>
   );
 }
 
 /** Empresa: o cartão que a candidata lê antes de se candidatar. */
-export function PerfilEmpresa({ empresa }: { empresa: Company | null }) {
+export function PerfilEmpresa({
+  empresa,
+}: {
+  empresa: PerfilEmpresaDados | null;
+}) {
   if (!empresa) {
     return (
       <Vazio
         titulo="Nenhuma empresa vinculada"
         descricao="Cadastre os dados da empresa para publicar vagas. O CNPJ é o que separa uma vaga real de um anúncio falso, e é o que faz alguém confiar o suficiente para se candidatar."
         acao="Cadastrar empresa"
-        href="/cadastro?tipo=empresa"
+        href="/perfil/editar"
       />
     );
   }
@@ -225,12 +250,12 @@ export function PerfilEmpresa({ empresa }: { empresa: Company | null }) {
       icone={<Building2 size={16} className="text-empresas" />}
       titulo="Sua empresa"
     >
-      <Linha rotulo="Razão social" valor={empresa.company_name} />
+      <Linha rotulo="Razão social" valor={empresa.razaoSocial} />
       {empresa.cnpj && <Linha rotulo="CNPJ" valor={empresa.cnpj} />}
       <div className="mt-3 flex items-center gap-2">
         <Award size={14} className="text-empresas" />
-        <Badge tone={empresa.plan === "mensal" ? "empresas" : "neutral"}>
-          {empresa.plan === "mensal" ? "Plano mensal" : "Período de teste"}
+        <Badge tone={empresa.plano === "mensal" ? "empresas" : "neutral"}>
+          {empresa.plano === "mensal" ? "Plano mensal" : "Período de teste"}
         </Badge>
       </div>
 

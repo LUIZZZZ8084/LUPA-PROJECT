@@ -18,7 +18,7 @@ import { describe, expect, it } from "vitest";
 import { schemaCadastro } from "@/server/auth/schemas";
 
 const FORM = readFileSync(
-  join(process.cwd(), "src/app/cadastro/form.tsx"),
+  join(process.cwd(), "src/app/(auth)/cadastro/form.tsx"),
   "utf8",
 );
 

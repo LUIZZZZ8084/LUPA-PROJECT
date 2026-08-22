@@ -1,5 +1,9 @@
 /**
- * Rotas públicas, usadas pelas varreduras de layout e acessibilidade.
+ * Rotas do app, usadas pelas varreduras de layout e acessibilidade.
+ *
+ * O app é fechado por login; a sessão vem do `storageState` criado em
+ * `auth.setup.ts`, senão a varredura mediria a tela de entrada dizendo que
+ * mede outra coisa.
  *
  * As rotas de admin ficam de fora: sem sessão elas respondem 404, e a
  * varredura estaria medindo a página de erro enquanto diz que mede o painel.
@@ -18,6 +22,7 @@ export const ROTAS = [
   { path: "/cadastro?tipo=empresa", nome: "Cadastro de empresa" },
   { path: "/entrar", nome: "Login" },
   { path: "/perfil", nome: "Perfil" },
+  { path: "/perfil/editar", nome: "Editar perfil" },
 ] as const;
 
 /**

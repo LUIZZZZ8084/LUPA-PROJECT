@@ -26,7 +26,7 @@ function construtor(tabela: string) {
       Promise.resolve(resposta).then(resolver),
   };
 
-  for (const metodo of ["select", "eq", "insert", "update"]) {
+  for (const metodo of ["select", "eq", "insert", "update", "upsert"]) {
     builder[metodo] = (...args: unknown[]) => {
       chamadas.push({ tabela, metodo, args });
       return builder;
@@ -192,6 +192,8 @@ describe("RepositorioPostgres", () => {
       resumo: null,
       curriculoUrl: null,
       disponibilidade: null,
+      formacao: null,
+      habilidades: [],
     });
     expect(chamadas.at(-1)?.tabela).toBe("perfis_candidato");
   });
@@ -219,5 +221,233 @@ describe("RepositorioPostgres", () => {
 
     const update = chamadas.find((c) => c.metodo === "update");
     expect(update?.args[0]).toEqual({ senha_hash: "novo-hash" });
+  });
+});
+
+/**
+ * Leitura e escrita de perfil para a tela de edição.
+ *
+ * Aqui o mapeamento importa mais do que em qualquer outro lugar: foi
+ * exatamente uma coluna errada — `profile_id` numa tabela cuja chave é
+ * `usuario_id` — que derrubou o painel da empresa inteiro com o banco
+ * ligado. Não quebrou compilação, não apareceu em revisão de leitura, e só
+ * deu as caras quando alguém abriu a tela.
+ */
+describe("perfis para a edição", () => {
+  const repo = new RepositorioPostgres();
+  const ID = "11111111-1111-4111-8111-000000000001";
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    resposta = { data: null, error: null };
+  });
+
+  it("empresa: traduz as colunas e é buscada por usuario_id", async () => {
+    resposta = {
+      data: {
+        usuario_id: ID,
+        razao_social: "Agro Norte Ltda.",
+        cnpj: "11222333000181",
+        setor: "Agronegócio",
+        porte: "Média",
+        site: null,
+        descricao: null,
+        logo_url: "/avatares/cmp.svg",
+        plano: "mensal",
+      },
+      error: null,
+    };
+
+    const e = await repo.perfilEmpresa(ID);
+    expect(e).toEqual({
+      usuarioId: ID,
+      razaoSocial: "Agro Norte Ltda.",
+      cnpj: "11222333000181",
+      setor: "Agronegócio",
+      porte: "Média",
+      site: null,
+      descricao: null,
+      logoUrl: "/avatares/cmp.svg",
+      plano: "mensal",
+    });
+
+    const filtro = chamadas.find((c) => c.metodo === "eq");
+    expect(filtro?.args[0], "a chave da tabela é usuario_id").toBe(
+      "usuario_id",
+    );
+  });
+
+  it("prestador: números vêm como número, listas nunca vêm nulas", async () => {
+    resposta = {
+      data: {
+        usuario_id: ID,
+        categoria_id: "1",
+        descricao: "Instalações elétricas.",
+        preco_inicial: "150",
+        anos_experiencia: "7",
+        bairros_atendidos: null,
+      },
+      error: null,
+    };
+
+    const p = await repo.perfilPrestador(ID);
+    expect(p?.categoriaId).toBe(1);
+    expect(p?.precoInicial).toBe(150);
+    expect(p?.anosExperiencia).toBe(7);
+    expect(p?.bairrosAtendidos).toEqual([]);
+  });
+
+  /** Zero é valor; nulo é ausência. Confundir os dois some com o preço. */
+  it("prestador: preço zero não vira nulo", async () => {
+    resposta = {
+      data: {
+        usuario_id: ID,
+        categoria_id: 1,
+        descricao: null,
+        preco_inicial: 0,
+        anos_experiencia: 0,
+        bairros_atendidos: [],
+      },
+      error: null,
+    };
+
+    const p = await repo.perfilPrestador(ID);
+    expect(p?.precoInicial).toBe(0);
+    expect(p?.anosExperiencia).toBe(0);
+  });
+
+  it("candidato: traduz formação e habilidades", async () => {
+    resposta = {
+      data: {
+        usuario_id: ID,
+        area_desejada: "Agronegócio",
+        resumo: null,
+        curriculo_url: null,
+        disponibilidade: "Imediata",
+        formacao: "Ensino médio completo",
+        habilidades: ["CNH categoria C"],
+      },
+      error: null,
+    };
+
+    const c = await repo.perfilCandidato(ID);
+    expect(c?.formacao).toBe("Ensino médio completo");
+    expect(c?.habilidades).toEqual(["CNH categoria C"]);
+  });
+
+  it("perfil ausente devolve null, não objeto vazio", async () => {
+    resposta = { data: null, error: null };
+    expect(await repo.perfilEmpresa(ID)).toBeNull();
+    expect(await repo.perfilPrestador(ID)).toBeNull();
+    expect(await repo.perfilCandidato(ID)).toBeNull();
+  });
+
+  it("erro de banco vira indisponível, não silêncio", async () => {
+    resposta = { data: null, error: { message: "conexão recusada" } };
+    await expect(repo.perfilEmpresa(ID)).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
+  });
+});
+
+describe("gravação de perfil", () => {
+  const repo = new RepositorioPostgres();
+  const ID = "11111111-1111-4111-8111-000000000001";
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    resposta = { data: null, error: null };
+  });
+
+  it("conta: escreve nas colunas em português", async () => {
+    await repo.atualizarBasicos(ID, {
+      nomeCompleto: "Ana Paula Ribeiro",
+      telefone: "66999110005",
+      bairro: "Centro",
+    });
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("usuarios");
+    expect(update?.args[0]).toEqual({
+      nome_completo: "Ana Paula Ribeiro",
+      telefone: "66999110005",
+      bairro: "Centro",
+    });
+  });
+
+  /**
+   * `upsert` e não `update`: conta criada antes de o campo existir chega
+   * sem linha de perfil, e um `update` não afetaria nada — a tela diria
+   * "salvo" sem ter salvo.
+   */
+  it("currículo: grava mesmo sem linha anterior", async () => {
+    await repo.salvarPerfilCandidato(ID, {
+      areaDesejada: "Agronegócio",
+      resumo: null,
+      formacao: "Ensino médio",
+      habilidades: ["Trator"],
+      disponibilidade: null,
+    });
+
+    const upsert = chamadas.find((c) => c.metodo === "upsert");
+    expect(upsert?.tabela).toBe("perfis_candidato");
+    expect(upsert?.args[0]).toMatchObject({
+      usuario_id: ID,
+      area_desejada: "Agronegócio",
+      formacao: "Ensino médio",
+      habilidades: ["Trator"],
+    });
+    expect(upsert?.args[1]).toEqual({ onConflict: "usuario_id" });
+  });
+
+  it("anúncio: grava mesmo sem linha anterior", async () => {
+    await repo.salvarPerfilPrestador(ID, {
+      categoriaId: 1,
+      descricao: "Instalações elétricas.",
+      precoInicial: 150,
+      anosExperiencia: 7,
+      bairrosAtendidos: ["Centro"],
+    });
+
+    const upsert = chamadas.find((c) => c.metodo === "upsert");
+    expect(upsert?.tabela).toBe("perfis_prestador");
+    expect(upsert?.args[0]).toMatchObject({
+      categoria_id: 1,
+      preco_inicial: 150,
+      anos_experiencia: 7,
+      bairros_atendidos: ["Centro"],
+    });
+  });
+
+  /**
+   * Empresa usa `update`: a linha carrega o CNPJ, que não é editável, e
+   * criar aqui exigiria inventar um. Empresa sem CNPJ é o que a plataforma
+   * não pode ter.
+   */
+  it("empresa: atualiza sem criar e sem tocar no CNPJ", async () => {
+    await repo.salvarPerfilEmpresa(ID, {
+      razaoSocial: "Agro Norte S.A.",
+      setor: "Agronegócio",
+      porte: "Média",
+      site: null,
+      descricao: null,
+    });
+
+    expect(chamadas.some((c) => c.metodo === "upsert")).toBe(false);
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("perfis_empresa");
+    expect(Object.keys(update?.args[0] as object)).not.toContain("cnpj");
+  });
+
+  it("falha ao gravar não passa em silêncio", async () => {
+    resposta = { data: null, error: { message: "conexão recusada" } };
+    await expect(
+      repo.atualizarBasicos(ID, {
+        nomeCompleto: "X",
+        telefone: "66999110005",
+        bairro: null,
+      }),
+    ).rejects.toMatchObject({ codigo: "indisponivel" });
   });
 });
