@@ -15,6 +15,7 @@ import { isSupabaseConfigured } from "./supabase/config";
 import { createClient } from "./supabase/server";
 import type {
   ApplicationWithCandidate,
+  CltProfile,
   Company,
   JobFilters,
   JobListing,
@@ -287,14 +288,26 @@ export async function getCompany(id: string): Promise<Company | null> {
     if (supabase) {
       const { data, error } = await supabase
         .from("perfis_empresa")
-        .select("*")
-        .eq("profile_id", id)
+        .select("usuario_id, razao_social, cnpj, logo_url, plano")
+        .eq("usuario_id", id)
         .maybeSingle();
       if (error) {
         if (ehIdSemFormaDeUuid(error)) return null;
         throw falhaDeConsulta("perfis_empresa", error);
       }
-      return (data as Company) ?? null;
+      if (!data) return null;
+
+      // A tabela usa nomes em português; o tipo da aplicação, em inglês.
+      // O cast direto que existia aqui devolvia um objeto com as chaves
+      // erradas: a tela lia `company_name` de um objeto que só tinha
+      // `razao_social`, e mostrava vazio sem erro nenhum.
+      return {
+        profile_id: String(data.usuario_id),
+        company_name: String(data.razao_social),
+        cnpj: (data.cnpj as string | null) ?? null,
+        logo_url: (data.logo_url as string | null) ?? null,
+        plan: data.plano as Company["plan"],
+      };
     }
   }
   return MOCK_COMPANIES.find((c) => c.profile_id === id) ?? null;
@@ -309,7 +322,10 @@ export async function getCompanyJobs(companyId: string): Promise<JobListing[]> {
         .select("*")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
-      if (error) throw falhaDeConsulta("job_listings", error);
+      if (error) {
+        if (ehIdSemFormaDeUuid(error)) return [];
+        throw falhaDeConsulta("job_listings", error);
+      }
       return (data ?? []) as unknown as JobListing[];
     }
   }
@@ -354,9 +370,80 @@ export async function getCompanyStats(companyId: string) {
   };
 }
 
-/** Empresa usada no painel enquanto não há autenticação real. */
-export function getDemoCompanyId(): string {
+/**
+ * De qual empresa o painel fala.
+ *
+ * Com o banco ligado, é sempre a da sessão: `perfis_empresa.usuario_id` é
+ * a chave, então o id de quem entrou já é o id da empresa. O painel estava
+ * preso a `DEMO_COMPANY_ID` — "cmp-agro-norte" — e por isso mostrava a
+ * mesma empresa fictícia para todo mundo. Com o Supabase ligado esse id
+ * nem tem forma de uuid, e a página inteira caía.
+ *
+ * Em demonstração o id continua sendo o fixo: a conta criada em memória
+ * não corresponde a nenhuma empresa de exemplo, e usar o id da sessão
+ * deixaria o painel vazio justamente quando ele serve para mostrar o
+ * produto.
+ */
+export function empresaDoPainel(usuarioId: string | null): string {
+  if (isSupabaseConfigured && usuarioId) return usuarioId;
   return DEMO_COMPANY_ID;
+}
+
+/* ============================================================
+   Perfil de quem está logado
+   ============================================================ */
+
+/**
+ * Currículo de um candidato.
+ *
+ * Fica fora de qualquer view pública de propósito: nem todo mundo quer que
+ * o patrão atual descubra que está procurando emprego, e essa informação
+ * pode custar o emprego que a pessoa ainda tem. Só o próprio dono lê, pela
+ * chave de serviço, na tela do perfil.
+ */
+export async function getCandidateProfile(
+  usuarioId: string,
+): Promise<CltProfile | null> {
+  if (isSupabaseConfigured) {
+    const supabase = await createClient();
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("perfis_candidato")
+        .select(
+          "usuario_id, area_desejada, resumo, experiencias, formacao, habilidades, curriculo_url, disponibilidade",
+        )
+        .eq("usuario_id", usuarioId)
+        .maybeSingle();
+      if (error) {
+        if (ehIdSemFormaDeUuid(error)) return null;
+        throw falhaDeConsulta("perfis_candidato", error);
+      }
+      if (!data) return null;
+
+      // A tabela usa nomes em português; o tipo da aplicação, em inglês.
+      return {
+        profile_id: String(data.usuario_id),
+        desired_area: (data.area_desejada as string | null) ?? null,
+        experiences: (data.experiencias as CltProfile["experiences"]) ?? [],
+        education: (data.formacao as string | null) ?? null,
+        skills: (data.habilidades as string[] | null) ?? [],
+        resume_url: (data.curriculo_url as string | null) ?? null,
+        availability: (data.disponibilidade as string | null) ?? null,
+      };
+    }
+  }
+
+  /*
+   * Em demonstração não há currículo para devolver: o repositório de
+   * memória guarda o perfil, mas fora do contrato compartilhado, e
+   * `src/lib` não pode importar de `src/server` — o contrato de
+   * arquitetura barra, e com razão: seria a camada de dados dependendo da
+   * de regra de negócio.
+   *
+   * A tela trata nulo como "ainda não preenchido", que é o mesmo estado de
+   * quem acabou de criar conta com o banco ligado.
+   */
+  return null;
 }
 
 /* ============================================================

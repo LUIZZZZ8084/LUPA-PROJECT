@@ -58,6 +58,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import {
+  getCandidateProfile,
   getCompany,
   getCompanyApplications,
   getCompanyJobs,
@@ -287,11 +288,90 @@ describe("22P02 em cada caminho que recebe id de fora", () => {
   });
 
   /**
-   * Listagem por empresa não desvia: ali o id vem de sessão autenticada,
-   * não da URL. Um uuid malformado nesse ponto é defeito de verdade e deve
-   * aparecer, não virar lista vazia silenciosa.
+   * Eu tinha deixado esta de fora achando que o id vinha de sessão
+   * autenticada. Não vinha: `/empresa` chamava `getDemoCompanyId()`, que
+   * devolve "cmp-agro-norte". Com o banco ligado, a página inteira caía —
+   * era o erro que o Luiz via ao abrir "Para empresas".
+   *
+   * A lição é sobre a suposição, não sobre a linha: presumi a origem do id
+   * em vez de seguir a chamada até quem passa.
    */
-  it("vagas da empresa continuam lançando", async () => {
-    await expect(getCompanyJobs("nao-e-uuid")).rejects.toThrow(/job_listings/);
+  it("vagas da empresa também devolvem lista vazia", async () => {
+    expect(await getCompanyJobs("nao-e-uuid")).toEqual([]);
+  });
+});
+
+/**
+ * O currículo mora em `perfis_candidato`, com nomes em português, e é lido
+ * só pelo próprio dono. Fica fora de qualquer view pública de propósito:
+ * nem todo mundo quer que o patrão atual descubra que está procurando
+ * emprego, e isso pode custar o emprego que a pessoa ainda tem.
+ */
+describe("currículo do candidato", () => {
+  it("traduz as colunas para o tipo da aplicação", async () => {
+    respostaAtual = {
+      data: {
+        usuario_id: "u1",
+        area_desejada: "Agronegócio",
+        resumo: null,
+        experiencias: [],
+        formacao: "Ensino médio completo",
+        habilidades: ["CNH categoria C"],
+        curriculo_url: null,
+        disponibilidade: "Imediata",
+      },
+      error: null,
+    };
+
+    expect(await getCandidateProfile("u1")).toEqual({
+      profile_id: "u1",
+      desired_area: "Agronegócio",
+      experiences: [],
+      education: "Ensino médio completo",
+      skills: ["CNH categoria C"],
+      resume_url: null,
+      availability: "Imediata",
+    });
+  });
+
+  /** Conta recém-criada ainda não tem currículo, e isso não é erro. */
+  it("sem currículo devolve null", async () => {
+    respostaAtual = { data: null, error: null };
+    expect(await getCandidateProfile("u1")).toBeNull();
+  });
+
+  it("colunas nulas viram listas vazias, não undefined", async () => {
+    respostaAtual = {
+      data: {
+        usuario_id: "u1",
+        area_desejada: null,
+        experiencias: null,
+        formacao: null,
+        habilidades: null,
+        curriculo_url: null,
+        disponibilidade: null,
+      },
+      error: null,
+    };
+
+    const p = await getCandidateProfile("u1");
+    expect(p?.skills).toEqual([]);
+    expect(p?.experiences).toEqual([]);
+  });
+
+  it("id sem forma de uuid é não-encontrado", async () => {
+    respostaAtual = {
+      data: null,
+      error: { code: "22P02", message: "invalid input syntax for type uuid" },
+    };
+    expect(await getCandidateProfile("nao-e-uuid")).toBeNull();
+  });
+
+  it("erro de banco continua lançando", async () => {
+    respostaAtual = {
+      data: null,
+      error: { code: "08006", message: "conexão recusada" },
+    };
+    await expect(getCandidateProfile("u1")).rejects.toThrow(/perfis_candidato/);
   });
 });

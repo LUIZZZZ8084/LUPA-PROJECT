@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { ARQUIVO_SESSAO } from "./tests/e2e/helpers";
 
 const PORT = Number(process.env.PORT ?? 3100);
 const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
@@ -8,7 +9,16 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  /*
+   * Dois trabalhadores em todo lugar, não só na CI.
+   *
+   * Com o app fechado por login, cada renderização lê a sessão, e o
+   * servidor de teste é um só. Com paralelismo igual ao número de núcleos,
+   * asserções de navegação começam a estourar por timeout sem que nada
+   * esteja errado — e teste que falha às vezes é pior que teste lento,
+   * porque ensina a ignorar vermelho.
+   */
+  workers: 2,
   reporter: process.env.CI
     ? [["github"], ["html", { open: "never" }]]
     : [["list"], ["html", { open: "never" }]],
@@ -22,14 +32,22 @@ export default defineConfig({
   },
 
   projects: [
+    /*
+     * Cria a conta uma vez e guarda a sessão. O app é fechado por login, e
+     * cadastrar em cada teste custaria um Argon2id de 19 MiB por vez — o
+     * servidor passaria mais tempo derivando hash do que respondendo.
+     */
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
     {
       name: "desktop",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], storageState: ARQUIVO_SESSAO },
+      dependencies: ["setup"],
     },
     {
       // O público de Sinop chega pelo celular; é o caso principal.
       name: "mobile",
-      use: { ...devices["Pixel 7"] },
+      use: { ...devices["Pixel 7"], storageState: ARQUIVO_SESSAO },
+      dependencies: ["setup"],
     },
   ],
 
@@ -42,5 +60,36 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         timeout: 240_000,
         stdout: "pipe",
+        env: {
+          /*
+           * Modo demonstração à força.
+           *
+           * `npm start` carrega o `.env.local`, e quem tiver credenciais
+           * reais ali passa a rodar a suíte contra o banco de produção sem
+           * perceber. Aconteceu: o ajudante de login criou 213 contas na
+           * base real antes de alguém notar que as asserções falhavam por
+           * estarem medindo dados de verdade.
+           *
+           * Variável já presente no ambiente vence o arquivo, então vazio
+           * aqui garante `isSupabaseConfigured === false`. A suíte precisa
+           * medir sempre a mesma coisa, e isso não pode depender de qual
+           * arquivo existe na máquina de quem roda.
+           */
+          NEXT_PUBLIC_SUPABASE_URL: "",
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+          SUPABASE_SERVICE_ROLE_KEY: "",
+          /*
+           * O app é fechado por login, então a suíte precisa criar conta e
+           * entrar — e em produção a aplicação recusa subir sem segredo de
+           * sessão, de propósito.
+           *
+           * Este valor é de teste e serve só ao servidor efêmero do
+           * Playwright. Não vai para lugar nenhum: produção tem o seu, na
+           * Vercel, e sem ele o deploy falha. Se um dia este literal for
+           * copiado para um ambiente real, o problema é a cópia, não o
+           * arquivo de teste.
+           */
+          SESSION_SECRET: "segredo-de-teste-do-playwright-com-mais-de-32-chars",
+        },
       },
 });

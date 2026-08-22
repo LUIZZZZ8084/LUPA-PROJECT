@@ -18,7 +18,17 @@ for (const { w, h, nome: larguraNome } of LARGURAS) {
     for (const { path, nome } of ROTAS) {
       test(`${nome} não rola horizontalmente`, async ({ page }) => {
         await page.setViewportSize({ width: w, height: h });
-        await page.goto(path, { waitUntil: "networkidle" });
+        /*
+         * `load`, não `networkidle`.
+         *
+         * `networkidle` espera 500 ms sem requisição nenhuma, e com o app fechado
+         * por login cada renderização passou a ler sessão: sob paralelismo, a rede
+         * às vezes nunca fica quieta pelo tempo exigido e o teste estoura sem que
+         * haja defeito. A própria documentação do Playwright desaconselha a
+         * espera. Estes testes medem layout do DOM já montado — `load` basta, e a
+         * medição que interessa vem do `page.evaluate` logo depois.
+         */
+        await page.goto(path);
 
         const medida = await page.evaluate(() => {
           const doc = document.documentElement;
@@ -60,7 +70,7 @@ test.describe("elementos de largura fixa", () => {
     await page.setViewportSize({ width: 320, height: 640 });
 
     for (const { path, nome } of ROTAS) {
-      await page.goto(path, { waitUntil: "networkidle" });
+      await page.goto(path);
 
       const largos = await page.evaluate(() => {
         const vw = document.documentElement.clientWidth;

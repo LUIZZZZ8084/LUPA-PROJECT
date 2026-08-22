@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { aguardarAnimacoes } from "./helpers";
 import { ROTAS } from "./rotas";
 
 /**
@@ -9,7 +10,18 @@ import { ROTAS } from "./rotas";
  */
 for (const { path, nome } of ROTAS) {
   test(`${nome} sem violações de acessibilidade`, async ({ page }) => {
-    await page.goto(path, { waitUntil: "networkidle" });
+    /*
+     * `load`, não `networkidle`.
+     *
+     * `networkidle` espera 500 ms sem requisição nenhuma, e com o app fechado
+     * por login cada renderização passou a ler sessão: sob paralelismo, a rede
+     * às vezes nunca fica quieta pelo tempo exigido e o teste estoura sem que
+     * haja defeito. A própria documentação do Playwright desaconselha a
+     * espera. Estes testes medem layout do DOM já montado — `load` basta, e a
+     * medição que interessa vem do `page.evaluate` logo depois.
+     */
+    await page.goto(path);
+    await aguardarAnimacoes(page);
 
     const resultado = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])

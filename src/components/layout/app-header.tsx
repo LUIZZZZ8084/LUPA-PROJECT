@@ -4,6 +4,7 @@ import { MapPin } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LupaLogo } from "@/components/brand/logo";
+import { Avatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
 import { PILOT_LABEL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -14,7 +15,26 @@ const LINKS = [
   { href: "/empresa", label: "Para empresas", accent: "text-empresas" },
 ] as const;
 
-export function AppHeader() {
+export interface UsuarioDoCabecalho {
+  nome: string;
+  papel: string;
+  avatarUrl: string | null;
+}
+
+/**
+ * O cabeçalho recebe a sessão por prop, resolvida no layout.
+ *
+ * Este componente é de cliente por causa do `usePathname`, e componente de
+ * cliente não lê cookie. Trazer a sessão por contexto ou `useSearchParams`
+ * reintroduziria o boundary que já deixou a barra de filtros invisível
+ * neste projeto — o conteúdo era transmitido e ficava preso num
+ * `<template>`.
+ */
+export function AppHeader({
+  usuario,
+}: {
+  usuario?: UsuarioDoCabecalho | null;
+}) {
   const pathname = usePathname();
 
   return (
@@ -50,9 +70,38 @@ export function AppHeader() {
             <MapPin size={14} className="text-vagas" />
             {PILOT_LABEL}
           </span>
-          <ButtonLink href="/entrar" variant="outline" size="sm">
-            Entrar
-          </ButtonLink>
+          {usuario ? (
+            /*
+             * Quem já entrou não pode ver "Entrar": o botão sugere que a
+             * sessão não pegou, e a pessoa clica achando que precisa entrar
+             * de novo.
+             */
+            <Link
+              href="/perfil"
+              /*
+               * O nome fica oculto abaixo de `sm`, e o avatar sozinho não
+               * dá nome ao link — no celular, que é onde a maior parte do
+               * público está, o leitor de tela anunciaria só "link".
+               */
+              aria-label={`Perfil de ${usuario.nome}`}
+              aria-current={pathname.startsWith("/perfil") ? "page" : undefined}
+              className={cn(
+                "flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors",
+                pathname.startsWith("/perfil")
+                  ? "bg-panel-2"
+                  : "hover:bg-panel-2",
+              )}
+            >
+              <Avatar src={usuario.avatarUrl} name={usuario.nome} size="sm" />
+              <span className="hidden max-w-[9rem] truncate text-sm font-medium sm:inline">
+                {usuario.nome.split(" ")[0]}
+              </span>
+            </Link>
+          ) : (
+            <ButtonLink href="/entrar" variant="outline" size="sm">
+              Entrar
+            </ButtonLink>
+          )}
         </div>
       </div>
     </header>

@@ -10,6 +10,11 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
+import {
+  PerfilCandidato,
+  PerfilEmpresa,
+  PerfilPrestador,
+} from "@/components/perfil-profissional";
 import { SairButton } from "@/components/sair-button";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +22,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { VerificationRow } from "@/components/verified-badge";
 import { ROLE_LABELS } from "@/lib/constants";
+import { getCandidateProfile, getCompany, getProviderById } from "@/lib/data";
 import { formatPhone } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import type { Capacidade } from "@/server/auth/rbac";
@@ -82,6 +88,21 @@ export default async function PerfilPage() {
   const atalhos = sessao
     ? ATALHOS.filter((a) => pode(sessao.papel, a.exige))
     : [];
+
+  /*
+   * A identidade profissional vem de tabelas diferentes por papel. Buscar
+   * só a do papel de quem entrou evita três consultas para mostrar uma.
+   */
+  const id = sessao?.usuarioId ?? null;
+  const [curriculo, anuncio, empresa] = await Promise.all([
+    id && sessao?.papel === "candidato_clt"
+      ? getCandidateProfile(id)
+      : Promise.resolve(null),
+    id && sessao?.papel === "prestador_servico"
+      ? getProviderById(id)
+      : Promise.resolve(null),
+    id && sessao?.papel === "empresa" ? getCompany(id) : Promise.resolve(null),
+  ]);
 
   return (
     <PageShell width="narrow">
@@ -151,6 +172,14 @@ export default async function PerfilPage() {
           </div>
         </Panel>
       )}
+
+      {sessao?.papel === "candidato_clt" && (
+        <PerfilCandidato perfil={curriculo} />
+      )}
+      {sessao?.papel === "prestador_servico" && (
+        <PerfilPrestador perfil={anuncio} />
+      )}
+      {sessao?.papel === "empresa" && <PerfilEmpresa empresa={empresa} />}
 
       {atalhos.length > 0 && (
         <div className="space-y-2.5">

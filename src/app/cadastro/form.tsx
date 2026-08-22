@@ -46,7 +46,14 @@ export function SignUpForm({ role }: { role: Role }) {
 
   return (
     <form action={action}>
-      <input type="hidden" name="role" value={role} />
+      {/*
+        O nome é `papel`, não `role`: o schema é uma união discriminada em
+        `papel`, e um campo com outro nome faz o Zod recusar sem descobrir
+        qual variante aplicar. O formulário devolvia "Revise os campos
+        destacados" sem destacar campo nenhum, porque o que faltava era
+        invisível.
+      */}
+      <input type="hidden" name="papel" value={role} />
 
       <Panel className="space-y-5">
         <Field

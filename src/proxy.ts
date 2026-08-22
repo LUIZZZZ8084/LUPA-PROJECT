@@ -22,6 +22,30 @@ import { CONFIG_SESSAO, lerSessao } from "@/server/auth/session";
 const PREFIXOS_ADMIN = ["/admin", "/api/admin"];
 
 /**
+ * O que continua aberto sem sessão.
+ *
+ * O app é fechado: sem conta não se navega. A razão é de produto — só quem
+ * tem perfil se candidata, vê dados de empresa ou entra em contato, e é o
+ * cadastro que vira lead.
+ *
+ * Isto reverte, de propósito, a navegação pública que o AGENTS.md
+ * registrava como requisito. O custo aceito é sair da busca do Google:
+ * deixa de existir quem chega sozinho.
+ *
+ * A lista é curta por segurança: o padrão é fechado, e abrir é explícito.
+ */
+const ABERTAS = ["/entrar", "/cadastro"];
+
+/** Para onde mandar quem não tem sessão. */
+const ENTRADA = "/entrar";
+
+function ehRotaAberta(pathname: string): boolean {
+  return ABERTAS.some(
+    (rota) => pathname === rota || pathname.startsWith(`${rota}/`),
+  );
+}
+
+/**
  * Caminho inexistente de propósito.
  *
  * Reescrever para cá faz o Next renderizar `not-found.tsx` com status 404 e
@@ -39,10 +63,35 @@ function ehRotaDeAdmin(pathname: string): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (!ehRotaDeAdmin(pathname)) return NextResponse.next();
-
   const token = request.cookies.get(CONFIG_SESSAO.NOME_COOKIE)?.value;
   const sessao = token ? await lerSessao(token) : null;
+
+  if (!ehRotaDeAdmin(pathname)) {
+    if (sessao || ehRotaAberta(pathname)) return NextResponse.next();
+
+    /*
+     * Rota de dados sem sessão responde 401, não redirecionamento: um
+     * cliente que esperava JSON não sabe o que fazer com uma página HTML
+     * de login, e o erro apareceria como parse quebrado.
+     */
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ erro: "não autenticado" }, { status: 401 });
+    }
+
+    /*
+     * O destino pretendido vai junto, para a pessoa terminar onde queria
+     * chegar. Sem isso, quem abre o link de uma vaga entra e cai na home,
+     * tendo que procurar de novo o que já tinha achado.
+     */
+    const login = request.nextUrl.clone();
+    login.pathname = ENTRADA;
+    login.search = "";
+    if (pathname !== "/") {
+      login.searchParams.set("destino", pathname + request.nextUrl.search);
+    }
+
+    return NextResponse.redirect(login);
+  }
 
   if (sessao && pode(sessao.papel, "admin:painel")) {
     return NextResponse.next();
@@ -66,10 +115,15 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Só as rotas administrativas. Rodar em tudo custaria uma verificação de
-     * JWT em cada imagem e cada página pública, sem nada a proteger.
+     * Tudo, menos o que não é página: estáticos, imagens geradas e o
+     * favicon. Verificar JWT em cada arquivo custaria latência sem nada a
+     * proteger — e o `_next/static` é servido pela CDN, sem passar por aqui
+     * de qualquer forma.
+     *
+     * Antes o matcher cobria só `/admin`. O app passou a ser fechado, então
+     * a borda precisa ver toda navegação; a lista de rotas abertas fica no
+     * código, onde dá para explicar cada uma.
      */
-    "/admin/:path*",
-    "/api/admin/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };
