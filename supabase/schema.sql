@@ -547,3 +547,58 @@ create policy "publicacoes ativas sao publicas"
  *
  * O mesmo vale para candidaturas e pedidos de verificação.
  */
+
+-- ============================================================================
+-- 13. Grants explícitos — o schema para de depender de fé
+--
+-- `with (security_invoker = false)`, usado pelas views acima porque
+-- precisam juntar `usuarios` (sem nenhuma policy), faz o Postgres avaliar
+-- RLS como quem *criou* a view, não como quem está consultando. Isso
+-- contorna, em toda view marcada assim, o "sem policy de select, anon não
+-- lê" das tabelas de baixo — e GRANT é independente de RLS: um projeto
+-- Supabase concede `select` a `anon`/`authenticated` em todo objeto do
+-- schema `public` por padrão, fora deste arquivo. A combinação das duas
+-- coisas é o que deixava currículo, telefone e nome de quem pediu
+-- verificação de fato públicos pela API REST, mesmo com RLS "correta" nas
+-- tabelas e o código da aplicação já lendo `metricas_*` pela chave de
+-- serviço — código correto em cima de um banco permissivo não protege
+-- quem consulta a API direto.
+--
+-- Em vez de confiar no que o Supabase concede por fora, este arquivo
+-- passa a declarar os dois lados: o que é público, de propósito, ganha
+-- `select` aqui; o resto é revogado, para valer também num projeto onde o
+-- padrão da plataforma já tinha concedido tudo antes deste arquivo rodar.
+--
+-- As roles só existem de verdade num projeto Supabase; criadas aqui como
+-- no-op para que este arquivo continue rodando de uma vez num Postgres
+-- limpo (é o que os testes fazem).
+-- ============================================================================
+
+do $$
+begin
+  if not exists (select from pg_roles where rolname = 'anon') then
+    create role anon;
+  end if;
+  if not exists (select from pg_roles where rolname = 'authenticated') then
+    create role authenticated;
+  end if;
+end $$;
+
+grant usage on schema public to anon, authenticated;
+
+-- Público de propósito — mesma lista das policies "using (true)" ou
+-- filtradas por status, acima.
+grant select on categorias_servico, perfis_prestador, perfis_empresa,
+  avaliacoes, vagas, publicacoes                to anon, authenticated;
+grant select on job_listings, provider_listings to anon, authenticated;
+
+-- Nunca público — currículo, candidatura, pedido de verificação e
+-- métrica administrativa. Revogado de propósito, mesmo que a plataforma
+-- já tenha concedido por fora: aqui é onde qualquer um lendo este
+-- arquivo confirma que não vaza.
+revoke select on company_applications          from anon, authenticated;
+revoke select on verification_queue            from anon, authenticated;
+revoke select on metricas_totais               from anon, authenticated;
+revoke select on metricas_cadastros_por_dia    from anon, authenticated;
+revoke select on metricas_por_local            from anon, authenticated;
+revoke select on metricas_planos               from anon, authenticated;

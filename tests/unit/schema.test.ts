@@ -414,6 +414,71 @@ describe("views devolvem o formato que a aplicação espera", () => {
 });
 
 /**
+ * `company_applications`, `verification_queue` e as views `metricas_*`
+ * juntam tabelas sem policy de select para `anon` (`usuarios`,
+ * `candidaturas`, `pedidos_verificacao`). Como são criadas com
+ * `security_invoker = false`, o Postgres avalia RLS como quem criou a
+ * view — sem a revogação explícita, `anon` leria currículo, telefone e
+ * nome de quem pediu verificação direto pela API REST do Supabase, mesmo
+ * sem nenhuma policy de select nas tabelas de baixo. GRANT é independente
+ * de RLS, e o schema agora declara os dois lados em vez de confiar no que
+ * a plataforma concede por fora.
+ */
+describe("grants de anon e authenticated", () => {
+  const NUNCA_PUBLICAS = [
+    "usuarios",
+    "admins",
+    "perfis_candidato",
+    "candidaturas",
+    "pedidos_verificacao",
+    "company_applications",
+    "verification_queue",
+    "metricas_totais",
+    "metricas_cadastros_por_dia",
+    "metricas_por_local",
+    "metricas_planos",
+  ];
+
+  const PUBLICAS_DE_PROPOSITO = [
+    "categorias_servico",
+    "perfis_prestador",
+    "perfis_empresa",
+    "avaliacoes",
+    "vagas",
+    "publicacoes",
+    "job_listings",
+    "provider_listings",
+  ];
+
+  it.each(NUNCA_PUBLICAS)("anon não lê %s", async (tabela) => {
+    const r = await db.query<{ tem_acesso: boolean }>(
+      `select has_table_privilege('anon', $1, 'SELECT') as tem_acesso`,
+      [tabela],
+    );
+    expect(r.rows[0].tem_acesso).toBe(false);
+  });
+
+  it.each(NUNCA_PUBLICAS)("authenticated não lê %s", async (tabela) => {
+    const r = await db.query<{ tem_acesso: boolean }>(
+      `select has_table_privilege('authenticated', $1, 'SELECT') as tem_acesso`,
+      [tabela],
+    );
+    expect(r.rows[0].tem_acesso).toBe(false);
+  });
+
+  it.each(PUBLICAS_DE_PROPOSITO)(
+    "anon continua lendo %s — a revogação não é geral demais",
+    async (tabela) => {
+      const r = await db.query<{ tem_acesso: boolean }>(
+        `select has_table_privilege('anon', $1, 'SELECT') as tem_acesso`,
+        [tabela],
+      );
+      expect(r.rows[0].tem_acesso).toBe(true);
+    },
+  );
+});
+
+/**
  * O seed roda contra o mesmo Postgres, num banco separado.
  *
  * Seed que não executa é seed que falha na primeira vez que alguém precisa

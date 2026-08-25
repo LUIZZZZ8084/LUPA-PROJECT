@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Exercita o caminho do Supabase da camada de dados.
@@ -57,6 +57,32 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser: async () => null,
 }));
 
+/**
+ * `company_applications` e `verification_queue` carregam currículo,
+ * telefone e nome — leem pela chave de serviço, não pela anônima (o
+ * schema revoga `select` de `anon` nessas duas). Mesmo builder falso do
+ * mock acima, para as asserções de `tabelasConsultadas` continuarem
+ * valendo sem duplicar a simulação.
+ *
+ * `temServico` alternável simula banco configurado mas sem
+ * `SUPABASE_SERVICE_ROLE_KEY` — caso em que `clienteDeServico()` devolve
+ * `null` mesmo com `isSupabaseConfigured` true.
+ */
+const servico = vi.hoisted(() => ({ temServico: true }));
+
+vi.mock("@/lib/supabase/service", () => ({
+  clienteDeServico: () =>
+    servico.temServico
+      ? {
+          from: (tabela: string) => {
+            tabelasConsultadas.push(tabela);
+            ultimoBuilder = criarQueryBuilder(respostaAtual);
+            return ultimoBuilder;
+          },
+        }
+      : null,
+}));
+
 import {
   getCandidateProfile,
   getCompany,
@@ -69,6 +95,11 @@ import {
   getReviews,
   getVerificationQueue,
 } from "@/lib/data";
+
+// Nenhum describe além do que testa a chave ausente deve rodar sem ela.
+afterEach(() => {
+  servico.temServico = true;
+});
 
 const VAGA_DO_BANCO = {
   id: "vaga-do-banco",
@@ -91,6 +122,7 @@ describe("camada de dados com Supabase ligado", () => {
   beforeEach(() => {
     tabelasConsultadas.length = 0;
     respostaAtual = { data: [], error: null };
+    servico.temServico = true;
   });
 
   it("lê vagas da view job_listings, não dos dados de exemplo", async () => {
@@ -214,6 +246,29 @@ describe("camada de dados com Supabase ligado", () => {
   it("lista vazia é lista vazia, não catálogo de exemplo", async () => {
     respostaAtual = { data: [], error: null };
     expect(await getJobs()).toEqual([]);
+  });
+});
+
+/**
+ * Banco configurado sem `SUPABASE_SERVICE_ROLE_KEY` é configuração
+ * quebrada, não motivo para mostrar currículo de exemplo como se fosse
+ * real. `company_applications` e `verification_queue` leem pela chave de
+ * serviço porque `anon` perde `select` nelas no schema — sem a chave,
+ * a consulta precisa falhar, não cair no mock em silêncio.
+ */
+describe("chave de serviço ausente falha, não cai no mock", () => {
+  beforeEach(() => {
+    servico.temServico = false;
+  });
+
+  it("candidaturas da empresa falham sem a chave de serviço", async () => {
+    await expect(getCompanyApplications("empresa-1")).rejects.toThrow(
+      /chave de serviço/,
+    );
+  });
+
+  it("fila de verificação falha sem a chave de serviço", async () => {
+    await expect(getVerificationQueue()).rejects.toThrow(/chave de serviço/);
   });
 });
 
