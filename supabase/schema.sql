@@ -672,3 +672,18 @@ revoke select on metricas_totais               from anon, authenticated;
 revoke select on metricas_cadastros_por_dia    from anon, authenticated;
 revoke select on metricas_por_local            from anon, authenticated;
 revoke select on metricas_planos               from anon, authenticated;
+
+/*
+ * E as tabelas que guardam o mesmo dado por baixo das views.
+ *
+ * A RLS já barra tudo nelas — a chave anônima lê zero linha onde o banco
+ * tem dezessete. O `revoke` é a segunda camada: policy criada por engano,
+ * ou um `disable row level security` que alguém deixa ligado depois de
+ * depurar, abriria a tabela inteira. `usuarios` guarda hash de senha, e
+ * `perfis_candidato` guarda currículo — que é o registro de quem está
+ * procurando emprego, a informação que pode custar o emprego atual.
+ */
+revoke select on usuarios         from anon, authenticated;
+revoke select on admins           from anon, authenticated;
+revoke select on perfis_candidato from anon, authenticated;
+revoke select on candidaturas     from anon, authenticated;

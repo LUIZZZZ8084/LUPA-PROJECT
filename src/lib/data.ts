@@ -643,7 +643,18 @@ export async function getCandidateProfile(
   usuarioId: string,
 ): Promise<CltProfile | null> {
   if (isSupabaseConfigured) {
-    const supabase = await createClient();
+    /*
+     * Chave de serviço, não a anônima.
+     *
+     * `perfis_candidato` é fechada para `anon` — é o que mantém o currículo
+     * fora do alcance de quem tem só a chave do navegador. Lendo pela
+     * anônima, esta função devolvia `null` em produção para todo mundo,
+     * inclusive para o próprio dono. Não quebrou ninguém porque nenhuma
+     * tela a chama ainda; quebraria a primeira que chamasse, e o erro
+     * apareceria como "o perfil salvou mas continua vazio" — exatamente o
+     * defeito que já custou caro aqui uma vez.
+     */
+    const supabase = clienteDeServico();
     if (supabase) {
       const { data, error } = await supabase
         .from("perfis_candidato")
