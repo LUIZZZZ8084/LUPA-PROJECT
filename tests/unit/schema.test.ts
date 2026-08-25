@@ -85,6 +85,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "job_listings",
       "provider_listings",
       "company_applications",
+      "candidate_applications",
       "verification_queue",
       "metricas_totais",
       "metricas_cadastros_por_dia",
@@ -432,6 +433,7 @@ describe("grants de anon e authenticated", () => {
     "candidaturas",
     "pedidos_verificacao",
     "company_applications",
+    "candidate_applications",
     "verification_queue",
     "metricas_totais",
     "metricas_cadastros_por_dia",
@@ -626,7 +628,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
       `select count(*) as total from information_schema.views
        where table_schema = 'public'`,
     );
-    expect(Number(views.rows[0].total)).toBe(8);
+    expect(Number(views.rows[0].total)).toBe(9);
   });
 
   it("não sobra tipo, função nem view órfã", async () => {

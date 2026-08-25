@@ -1,0 +1,215 @@
+/**
+ * @vitest-environment node
+ */
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+interface Resposta {
+  data: unknown;
+  error: { message: string; code?: string } | null;
+}
+
+const chamadas: { tabela: string; metodo: string; args: unknown[] }[] = [];
+let resposta: Resposta = { data: null, error: null };
+
+function construtor(tabela: string) {
+  const builder: Record<string, unknown> = {
+    maybeSingle: async () => resposta,
+    single: async () => resposta,
+    then: (resolver: (v: Resposta) => unknown) =>
+      Promise.resolve(resposta).then(resolver),
+  };
+
+  for (const metodo of ["select", "eq", "insert", "update", "order"]) {
+    builder[metodo] = (...args: unknown[]) => {
+      chamadas.push({ tabela, metodo, args });
+      return builder;
+    };
+  }
+
+  return builder;
+}
+
+vi.mock("@/lib/supabase/service", () => ({
+  temChaveDeServico: true,
+  clienteDeServico: () => ({ from: (tabela: string) => construtor(tabela) }),
+}));
+
+import { RepositorioCandidaturasPostgres } from "@/server/candidaturas/postgres";
+
+const LINHA = {
+  id: "33333333-3333-4333-8333-000000000001",
+  vaga_id: "22222222-2222-4222-8222-000000000001",
+  candidato_id: "11111111-1111-4111-8111-000000000001",
+  status: "enviada",
+  criado_em: "2026-08-20T00:00:00.000Z",
+};
+
+describe("RepositorioCandidaturasPostgres", () => {
+  const repo = new RepositorioCandidaturasPostgres();
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    resposta = { data: [], error: null };
+  });
+
+  it("traduz as colunas para os campos da aplicação", async () => {
+    resposta = { data: LINHA, error: null };
+    const candidatura = await repo.porId(LINHA.id);
+
+    expect(candidatura).toEqual({
+      id: LINHA.id,
+      vagaId: LINHA.vaga_id,
+      candidatoId: LINHA.candidato_id,
+      status: "enviada",
+      criadoEm: LINHA.criado_em,
+    });
+  });
+
+  it("id sem forma de uuid é 'não encontrado'", async () => {
+    resposta = { data: null, error: { message: "invalid", code: "22P02" } };
+    expect(await repo.porId("nao-e-uuid")).toBeNull();
+  });
+
+  it("criar grava vaga_id e candidato_id", async () => {
+    resposta = { data: LINHA, error: null };
+    await repo.criar({
+      vagaId: LINHA.vaga_id,
+      candidatoId: LINHA.candidato_id,
+    });
+
+    const insercao = chamadas.find((c) => c.metodo === "insert");
+    expect(insercao?.args[0]).toEqual({
+      vaga_id: LINHA.vaga_id,
+      candidato_id: LINHA.candidato_id,
+    });
+  });
+
+  it("candidatura duplicada vira conflito, não erro genérico", async () => {
+    resposta = {
+      data: null,
+      error: { message: "unique violation", code: "23505" },
+    };
+    await expect(
+      repo.criar({ vagaId: LINHA.vaga_id, candidatoId: LINHA.candidato_id }),
+    ).rejects.toMatchObject({ codigo: "conflito" });
+  });
+
+  it("moverEstagio grava o novo status", async () => {
+    resposta = { data: { ...LINHA, status: "entrevista" }, error: null };
+    const candidatura = await repo.moverEstagio(LINHA.id, "entrevista");
+
+    expect(candidatura.status).toBe("entrevista");
+    const atualizacao = chamadas.find((c) => c.metodo === "update");
+    expect(atualizacao?.args[0]).toEqual({ status: "entrevista" });
+  });
+
+  it("mover estágio de candidatura inexistente é 'não encontrado'", async () => {
+    resposta = { data: null, error: { message: "no rows", code: "PGRST116" } };
+    await expect(
+      repo.moverEstagio("nao-existe", "entrevista"),
+    ).rejects.toMatchObject({ codigo: "nao_encontrado" });
+  });
+
+  it("porVaga lista as candidaturas da vaga", async () => {
+    resposta = { data: [LINHA], error: null };
+    const candidaturas = await repo.porVaga(LINHA.vaga_id);
+
+    expect(candidaturas).toHaveLength(1);
+    expect(candidaturas[0].vagaId).toBe(LINHA.vaga_id);
+  });
+
+  it("porCandidato lista as candidaturas do candidato", async () => {
+    resposta = { data: [LINHA], error: null };
+    const candidaturas = await repo.porCandidato(LINHA.candidato_id);
+
+    expect(candidaturas).toHaveLength(1);
+    expect(candidaturas[0].candidatoId).toBe(LINHA.candidato_id);
+  });
+
+  it("listar devolve todas as candidaturas", async () => {
+    resposta = { data: [LINHA], error: null };
+    expect(await repo.listar()).toHaveLength(1);
+  });
+});
+
+/**
+ * Caminhos de erro.
+ *
+ * São a metade que ninguém exercita à mão e a que decide o que a pessoa vê
+ * quando algo dá errado: mensagem trocada manda depurar o lugar errado, e
+ * erro cru vazado entrega detalhe interno de banco para quem estiver
+ * olhando.
+ */
+describe("quando o banco recusa", () => {
+  const repo = new RepositorioCandidaturasPostgres();
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    resposta = { data: null, error: null };
+  });
+
+  const QUEDA = { message: "conexão recusada", code: "08006" };
+  const ID_TORTO = {
+    message: 'invalid input syntax for type uuid: "abc"',
+    code: "22P02",
+  };
+
+  /**
+   * Id que não tem forma de uuid não pode corresponder a registro nenhum:
+   * é "não encontrado", não "servidor quebrado". A distinção importa além
+   * da semântica — erro aciona alerta, 404 não, e link velho de crawler
+   * não pode acordar ninguém de madrugada.
+   */
+  it.each([
+    ["porVaga", () => repo.porVaga("abc")],
+    ["porCandidato", () => repo.porCandidato("abc")],
+  ])("%s com id torto devolve lista vazia", async (_nome, chamar) => {
+    resposta = { data: null, error: ID_TORTO };
+    expect(await chamar()).toEqual([]);
+  });
+
+  it.each([
+    ["porId", () => repo.porId("11111111-1111-4111-8111-000000000001")],
+    ["porVaga", () => repo.porVaga("11111111-1111-4111-8111-000000000001")],
+    [
+      "porCandidato",
+      () => repo.porCandidato("11111111-1111-4111-8111-000000000001"),
+    ],
+    ["listar", () => repo.listar()],
+  ])("%s com banco fora do ar vira indisponível", async (_nome, chamar) => {
+    resposta = { data: null, error: QUEDA };
+
+    await expect(chamar()).rejects.toMatchObject({ codigo: "indisponivel" });
+  });
+
+  it("criar com falha de banco não vira conflito", async () => {
+    resposta = { data: null, error: QUEDA };
+
+    await expect(
+      repo.criar({ vagaId: "v", candidatoId: "c" }),
+    ).rejects.toMatchObject({ codigo: "indisponivel" });
+  });
+
+  it("mover estágio com falha de banco não vira não-encontrado", async () => {
+    resposta = { data: null, error: QUEDA };
+
+    await expect(repo.moverEstagio("id", "entrevista")).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
+  });
+
+  /** Sem linha e sem erro é ausência, não falha. */
+  it("porId sem resultado devolve null", async () => {
+    resposta = { data: null, error: null };
+    expect(await repo.porId("11111111-1111-4111-8111-000000000001")).toBeNull();
+  });
+
+  it.each([
+    ["porVaga", () => repo.porVaga("v")],
+    ["porCandidato", () => repo.porCandidato("c")],
+    ["listar", () => repo.listar()],
+  ])("%s sem linhas devolve lista vazia, não null", async (_nome, chamar) => {
+    resposta = { data: null, error: null };
+    expect(await chamar()).toEqual([]);
+  });
+});

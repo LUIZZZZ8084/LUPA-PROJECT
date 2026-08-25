@@ -191,8 +191,77 @@ describe("RepositorioVagasPostgres", () => {
 
   it("sem chave de serviço configurada, recusa com 'indisponível'", async () => {
     estado.temChave = false;
-    await expect(repo.listar()).rejects.toMatchObject({
-      codigo: "indisponivel",
-    });
+    try {
+      await expect(repo.listar()).rejects.toMatchObject({
+        codigo: "indisponivel",
+      });
+    } finally {
+      /*
+       * Restaura mesmo se a asserção falhar. Sem isto, todo teste que
+       * rodasse depois herdava "sem chave" e falhava por um motivo que não
+       * era o dele — o tipo de rastro que faz procurar defeito no lugar
+       * errado.
+       */
+      estado.temChave = true;
+    }
+  });
+});
+
+/**
+ * Caminhos de queda.
+ *
+ * Cada leitura tem dois desvios antes de virar exceção: id sem forma de
+ * uuid, que é ausência, e falha de banco, que é incidente. Trocar um pelo
+ * outro tem custo dos dois lados — link velho de crawler acordando alguém
+ * de madrugada, ou banco fora do ar aparecendo como "não encontrado" e
+ * ninguém sendo avisado.
+ */
+describe("quando a consulta falha", () => {
+  const repo = new RepositorioVagasPostgres();
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    resposta = { data: null, error: null };
+  });
+
+  const QUEDA = { message: "conexão recusada", code: "08006" };
+  const ID_TORTO = {
+    message: "invalid input syntax for type uuid",
+    code: "22P02",
+  };
+
+  it.each([
+    ["porId", () => repo.porId("x")],
+    ["porEmpresa", () => repo.porEmpresa("x")],
+    ["listar", () => repo.listar()],
+  ])("%s com banco fora do ar vira indisponível", async (_n, chamar) => {
+    resposta = { data: null, error: QUEDA };
+    await expect(chamar()).rejects.toMatchObject({ codigo: "indisponivel" });
+  });
+
+  it.each([
+    ["atualizar", () => repo.atualizar("x", { titulo: "Novo" })],
+    ["encerrar", () => repo.encerrar("x")],
+  ])("%s com banco fora do ar não vira não-encontrado", async (_n, chamar) => {
+    resposta = { data: null, error: QUEDA };
+    await expect(chamar()).rejects.toMatchObject({ codigo: "indisponivel" });
+  });
+
+  it.each([
+    ["atualizar", () => repo.atualizar("abc", { titulo: "Novo" })],
+    ["encerrar", () => repo.encerrar("abc")],
+  ])("%s com id torto é não-encontrado", async (_n, chamar) => {
+    resposta = { data: null, error: ID_TORTO };
+    await expect(chamar()).rejects.toMatchObject({ codigo: "nao_encontrado" });
+  });
+
+  it("porEmpresa sem linhas devolve lista vazia, não null", async () => {
+    resposta = { data: null, error: null };
+    expect(await repo.porEmpresa("x")).toEqual([]);
+  });
+
+  it("porId sem resultado devolve null", async () => {
+    resposta = { data: null, error: null };
+    expect(await repo.porId("x")).toBeNull();
   });
 });

@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel, Stat } from "@/components/ui/card";
 import { VerifiedMark } from "@/components/verified-badge";
-import { APPLICATION_LABELS } from "@/lib/constants";
 import {
   empresaDoPainel,
   getCompany,
@@ -20,24 +19,13 @@ import {
   getCompanyStats,
 } from "@/lib/data";
 import { pluralize, timeAgo } from "@/lib/format";
-import type { ApplicationStatus } from "@/lib/types";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { EncerrarVagaButton } from "./encerrar-vaga-button";
+import { MoverCandidaturaSelect } from "./mover-candidatura-select";
 
 export const metadata: Metadata = {
   title: "Minha Empresa",
   description: "Publique vagas, receba currículos e acompanhe visualizações.",
-};
-
-const STATUS_TONE: Record<
-  ApplicationStatus,
-  "vagas" | "servicos" | "empresas" | "warn" | "danger" | "neutral"
-> = {
-  enviada: "servicos",
-  visualizada: "neutral",
-  entrevista: "warn",
-  aprovada: "vagas",
-  rejeitada: "danger",
 };
 
 export default async function EmpresaPage() {
@@ -215,9 +203,7 @@ export default async function EmpresaPage() {
                     {` · ${timeAgo(app.created_at)}`}
                   </p>
                 </div>
-                <Badge tone={STATUS_TONE[app.status]}>
-                  {APPLICATION_LABELS[app.status]}
-                </Badge>
+                <MoverCandidaturaSelect id={app.id} statusAtual={app.status} />
               </li>
             ))}
           </ul>

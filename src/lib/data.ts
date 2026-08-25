@@ -1,5 +1,11 @@
 import "server-only";
 
+import {
+  RepositorioCandidaturasMemoria,
+  repositorioCandidaturas,
+} from "@/server/candidaturas";
+import type { Candidatura } from "@/server/candidaturas/tipos";
+import { repositorioUsuarios } from "@/server/repositories";
 import { RepositorioVagasMemoria, repositorioVagas } from "@/server/vagas";
 import type { Vaga } from "@/server/vagas/tipos";
 import {
@@ -22,6 +28,7 @@ import type {
   Company,
   JobFilters,
   JobListing,
+  MyApplication,
   ProviderFilters,
   ProviderListing,
   Review,
@@ -435,6 +442,91 @@ export async function getCompanyJobs(companyId: string): Promise<JobListing[]> {
     .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
 }
 
+/* ============================================================
+   Candidaturas
+   ============================================================ */
+
+/**
+ * Converte candidatura + informação de candidato para o formato interno
+ * do repositório, e vice-versa — mesmo motivo do par em vagas: o
+ * repositório em memória é a fonte da verdade do modo demonstração, para
+ * que mover de estágio pelo painel valha tanto ali quanto no perfil de
+ * quem se candidatou.
+ */
+function candidaturaDoMock(app: ApplicationWithCandidate): Candidatura {
+  return {
+    id: app.id,
+    vagaId: app.job_id,
+    candidatoId: app.candidate_id,
+    status: app.status,
+    criadoEm: app.created_at,
+  };
+}
+
+/**
+ * O candidato de uma candidatura de exemplo não existe em nenhum
+ * repositório — é só o objeto embutido em `mock-data.ts`. Já quem se
+ * candidatou de verdade na demonstração é uma conta criada em memória,
+ * com perfil próprio. Tenta o repositório de usuários primeiro; sem
+ * achar, cai para o candidato de exemplo com o mesmo id.
+ */
+async function candidatoParaDemo(
+  candidatoId: string,
+): Promise<ApplicationWithCandidate["candidate"] | null> {
+  const usuarios = repositorioUsuarios();
+  const usuario = await usuarios.porId(candidatoId);
+  if (usuario) {
+    const perfil = await usuarios.perfilCandidato(candidatoId);
+    return {
+      full_name: usuario.nomeCompleto,
+      avatar_url: usuario.avatarUrl,
+      neighborhood: usuario.bairro,
+      desired_area: perfil?.areaDesejada ?? null,
+      resume_url: perfil?.curriculoUrl ?? null,
+    };
+  }
+  return (
+    MOCK_APPLICATIONS.find((a) => a.candidate_id === candidatoId)?.candidate ??
+    null
+  );
+}
+
+async function applicationsEmDemonstracao(): Promise<
+  ApplicationWithCandidate[]
+> {
+  const repo = repositorioCandidaturas();
+  if (repo instanceof RepositorioCandidaturasMemoria) {
+    repo.semear(MOCK_APPLICATIONS.map(candidaturaDoMock));
+  }
+
+  const [candidaturas, jobs] = await Promise.all([
+    repo.listar(),
+    jobsEmDemonstracao(),
+  ]);
+  const jobsPorId = new Map(jobs.map((j) => [j.id, j]));
+
+  const resultado: ApplicationWithCandidate[] = [];
+  for (const c of candidaturas) {
+    const job = jobsPorId.get(c.vagaId);
+    if (!job) continue;
+    const candidate = await candidatoParaDemo(c.candidatoId);
+    if (!candidate) continue;
+
+    resultado.push({
+      id: c.id,
+      job_id: c.vagaId,
+      candidate_id: c.candidatoId,
+      status: c.status,
+      created_at: c.criadoEm,
+      job_title: job.title,
+      candidate,
+    });
+  }
+  return resultado.sort(
+    (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
+  );
+}
+
 export async function getCompanyApplications(
   companyId: string,
 ): Promise<ApplicationWithCandidate[]> {
@@ -458,13 +550,54 @@ export async function getCompanyApplications(
     }
     return (data ?? []) as unknown as ApplicationWithCandidate[];
   }
-  const jobs = await jobsEmDemonstracao();
+  const [jobs, applications] = await Promise.all([
+    jobsEmDemonstracao(),
+    applicationsEmDemonstracao(),
+  ]);
   const jobIds = new Set(
     jobs.filter((j) => j.company_id === companyId).map((j) => j.id),
   );
-  return MOCK_APPLICATIONS.filter((a) => jobIds.has(a.job_id)).sort(
-    (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
-  );
+  return applications.filter((a) => jobIds.has(a.job_id));
+}
+
+/** Candidaturas de quem se candidatou — para "Minhas candidaturas" no perfil. */
+export async function getMyApplications(
+  candidateId: string,
+): Promise<MyApplication[]> {
+  if (isSupabaseConfigured) {
+    // Mesma razão de company_applications: candidate_applications também
+    // não é pública, e anon perde select nela no schema.
+    const supabase = clienteDeServico();
+    if (!supabase) throw falhaDeChaveDeServico("candidate_applications");
+    const { data, error } = await supabase
+      .from("candidate_applications")
+      .select("*")
+      .eq("candidate_id", candidateId)
+      .order("created_at", { ascending: false });
+    if (error) {
+      if (ehIdSemFormaDeUuid(error)) return [];
+      throw falhaDeConsulta("candidate_applications", error);
+    }
+    return (data ?? []) as unknown as MyApplication[];
+  }
+
+  const [jobs, applications] = await Promise.all([
+    jobsEmDemonstracao(),
+    applicationsEmDemonstracao(),
+  ]);
+  const jobsPorId = new Map(jobs.map((j) => [j.id, j]));
+
+  return applications
+    .filter((a) => a.candidate_id === candidateId)
+    .map((a) => ({
+      id: a.id,
+      job_id: a.job_id,
+      candidate_id: a.candidate_id,
+      status: a.status,
+      created_at: a.created_at,
+      job_title: a.job_title,
+      company_name: jobsPorId.get(a.job_id)?.company.company_name ?? "Empresa",
+    }));
 }
 
 export async function getCompanyStats(companyId: string) {

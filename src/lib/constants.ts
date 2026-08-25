@@ -89,3 +89,12 @@ export const APPLICATION_LABELS = {
   aprovada: "Aprovada",
   rejeitada: "Não selecionado",
 } as const;
+
+/** Cor do selo de estágio, no painel da empresa e em "Minhas candidaturas". */
+export const APPLICATION_TONE = {
+  enviada: "servicos",
+  visualizada: "neutral",
+  entrevista: "warn",
+  aprovada: "vagas",
+  rejeitada: "danger",
+} as const;

@@ -432,6 +432,23 @@ join vagas v on v.id = c.vaga_id
 join usuarios u on u.id = c.candidato_id
 left join perfis_candidato pc on pc.usuario_id = c.candidato_id;
 
+-- Mesma candidatura, do lado de quem se candidatou: sem currículo nem
+-- dado de outra pessoa, só o que ela já sabe sobre si — o estágio e a
+-- vaga a que se refere.
+create view candidate_applications
+with (security_invoker = false) as
+select
+  c.id,
+  c.vaga_id      as job_id,
+  c.candidato_id as candidate_id,
+  c.status,
+  c.criado_em    as created_at,
+  v.titulo       as job_title,
+  e.razao_social as company_name
+from candidaturas c
+join vagas v on v.id = c.vaga_id
+join perfis_empresa e on e.usuario_id = v.empresa_id;
+
 create view verification_queue
 with (security_invoker = false) as
 select
@@ -597,6 +614,7 @@ grant select on job_listings, provider_listings to anon, authenticated;
 -- já tenha concedido por fora: aqui é onde qualquer um lendo este
 -- arquivo confirma que não vaza.
 revoke select on company_applications          from anon, authenticated;
+revoke select on candidate_applications        from anon, authenticated;
 revoke select on verification_queue            from anon, authenticated;
 revoke select on metricas_totais               from anon, authenticated;
 revoke select on metricas_cadastros_por_dia    from anon, authenticated;
