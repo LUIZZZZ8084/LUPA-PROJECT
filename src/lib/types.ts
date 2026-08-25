@@ -154,6 +154,12 @@ export interface ApplicationWithCandidate extends Application {
   job_title: string;
 }
 
+/** A mesma candidatura, vista por quem se candidatou — sem currículo alheio. */
+export interface MyApplication extends Application {
+  job_title: string;
+  company_name: string;
+}
+
 /* ---------- Filtros de busca ---------- */
 
 export interface JobFilters {

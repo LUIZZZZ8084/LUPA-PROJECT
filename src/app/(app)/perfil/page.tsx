@@ -50,7 +50,7 @@ const ATALHOS: {
   exige: Capacidade;
 }[] = [
   {
-    href: "/vagas",
+    href: "/perfil/candidaturas",
     icon: Briefcase,
     titulo: "Minhas candidaturas",
     descricao: "Acompanhe o status das vagas em que você se candidatou.",

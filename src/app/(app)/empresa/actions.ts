@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { schemaMoverCandidatura } from "@/server/candidaturas/schemas";
+import { moverCandidatura as moverCandidaturaServico } from "@/server/candidaturas/servico";
 import { schemaIdVaga } from "@/server/vagas/schemas";
 import { encerrarVaga as encerrarVagaServico } from "@/server/vagas/servico";
 
@@ -20,6 +22,20 @@ export const encerrarVaga = criarAcao({
     revalidatePath("/empresa");
     revalidatePath("/vagas");
     revalidatePath(`/vagas/${id}`);
+    return {};
+  },
+});
+
+/** Mudar o estágio de uma candidatura — vai para o perfil de quem se candidatou. */
+export const moverCandidatura = criarAcao({
+  nome: "candidatura.mover_estagio",
+  entrada: schemaMoverCandidatura,
+  executar: async ({ id, status }) => {
+    const sessao = await sessaoAtual();
+    await moverCandidaturaServico(sessao, id, status);
+
+    revalidatePath("/empresa");
+    revalidatePath("/perfil");
     return {};
   },
 });
