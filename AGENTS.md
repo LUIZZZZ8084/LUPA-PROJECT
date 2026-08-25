@@ -18,6 +18,10 @@ npm run e2e      # Playwright (sobe um build de produção)
 `npm run verify` é o mesmo conjunto que roda na CI. Detalhes de cada
 ferramenta em `docs/qualidade.md`.
 
+O desenho do sistema — o que roda onde, os limites de confiança, por onde
+passa dado sensível e o que cai quando cada peça cai — está em
+`docs/arquitetura.md`, com diagramas.
+
 Scripts operacionais:
 
 ```bash

@@ -67,6 +67,7 @@ e repetível, ao lado do `schema.sql`:
 | Arquivo | Quando rodar |
 |---|---|
 | [`supabase/aplica-visualizacoes.sql`](../supabase/aplica-visualizacoes.sql) | Uma vez, em banco criado antes da Issue #45 |
+| [`supabase/aplica-correcao-de-acesso.sql`](../supabase/aplica-correcao-de-acesso.sql) | Uma vez, em banco criado antes da Issue #64 |
 | [`supabase/corrige-telefones.sql`](../supabase/corrige-telefones.sql) | Uma vez, em banco que recebeu o seed antes da Issue #24 |
 
 Banco novo não precisa de nenhum deles: o `schema.sql` já traz tudo.
