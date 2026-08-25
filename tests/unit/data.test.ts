@@ -13,13 +13,19 @@ import {
   getHomeFeed,
   getJobById,
   getJobs,
+  getMyApplications,
   getProviderById,
   getProviders,
   getRelatedJobs,
   getReviews,
   ratingBreakdown,
 } from "@/lib/data";
-import { MOCK_PROVIDERS, MOCK_REVIEWS } from "@/lib/mock-data";
+import {
+  MOCK_APPLICATIONS,
+  MOCK_JOBS,
+  MOCK_PROVIDERS,
+  MOCK_REVIEWS,
+} from "@/lib/mock-data";
 
 describe("getJobs", () => {
   it("devolve apenas vagas abertas", async () => {
@@ -90,6 +96,47 @@ describe("getJobs", () => {
         (j) => j.category === "Agronegócio" && j.contract_type === "Estágio",
       ),
     ).toBe(true);
+  });
+});
+
+/**
+ * A tradução entre o mock e o repositório, ida e volta.
+ *
+ * Em demonstração a vaga sai de `MOCK_JOBS`, vira `Vaga` para entrar no
+ * repositório e volta a `JobListing` para a tela. São dois mapas de campo
+ * a campo, e campo trocado ali aparece como salário no lugar do bairro sem
+ * quebrar nada — o tipo é o mesmo dos dois lados.
+ */
+describe("ida e volta pelo repositório de demonstração", () => {
+  it("nenhum campo se perde nem troca de lugar", async () => {
+    const original = MOCK_JOBS.find((j) => j.id === "job-operador-maquinas");
+    const jobs = await getJobs();
+    const depois = jobs.find((j) => j.id === "job-operador-maquinas");
+
+    expect(original, "a vaga de referência sumiu do mock").toBeDefined();
+
+    /*
+     * `applicant_count` fica de fora: o mock declara um número de vitrine
+     * e a volta recalcula a partir das candidaturas que existem de
+     * verdade. Ver "15 candidatos" numa vaga com três currículos na tela
+     * ao lado é o tipo de incoerência que quem está sendo apresentado ao
+     * produto nota na hora.
+     */
+    const { applicant_count: _ignorado, ...esperado } = original as NonNullable<
+      typeof original
+    >;
+    expect(depois).toMatchObject(esperado);
+  });
+
+  it("a contagem de candidatos vem das candidaturas, não do mock da vaga", async () => {
+    const jobs = await getJobs();
+
+    for (const job of jobs) {
+      const esperado = MOCK_APPLICATIONS.filter(
+        (a) => a.job_id === job.id,
+      ).length;
+      expect(job.applicant_count, job.id).toBe(esperado);
+    }
   });
 });
 
@@ -238,6 +285,140 @@ describe("painel da empresa", () => {
     expect(stats.active_jobs).toBe(
       jobs.filter((j) => j.status === "aberta").length,
     );
+  });
+});
+
+/**
+ * O que ordena as vagas relacionadas.
+ *
+ * A pontuação é 2 para mesma empresa e 1 para mesma categoria. Os números
+ * não são decorativos: uma vaga da mesma empresa tem que vir na frente de
+ * uma vaga só da mesma categoria, porque quem está lendo uma vaga da Agro
+ * Norte tende a querer as outras da Agro Norte. Com pesos iguais, a ordem
+ * passaria a depender da ordem de chegada da lista.
+ */
+describe("pontuação das vagas relacionadas", () => {
+  it("mesma empresa pesa mais que mesma categoria", async () => {
+    const jobs = await getJobs();
+    const real = jobs.find((j) => j.id === "job-operador-maquinas");
+    if (!real) throw new Error("vaga de referência sumiu do mock");
+
+    /*
+     * Base montada à mão, e não uma vaga do mock: para separar os pesos é
+     * preciso que exista, ao mesmo tempo, vaga da mesma empresa com outra
+     * categoria e vaga de outra empresa com a mesma categoria. A Agro
+     * Norte com categoria "Administrativo" produz exatamente esse par —
+     * e não depende de o mock continuar tendo essa combinação por acaso.
+     */
+    const base = { ...real, category: "Administrativo" };
+
+    const relacionadas = await getRelatedJobs(base, 20);
+
+    const pontos = (j: (typeof relacionadas)[number]) =>
+      (j.company_id === base.company_id ? 2 : 0) +
+      (j.category === base.category ? 1 : 0);
+
+    // A lista tem que estar em ordem não crescente de pontos.
+    const sequencia = relacionadas.map(pontos);
+    expect(sequencia).toEqual([...sequencia].sort((a, b) => b - a));
+
+    // E precisa existir um par que distingue os pesos, senão o teste
+    // passaria mesmo com 1 e 1.
+    expect(sequencia).toContain(2);
+    expect(sequencia).toContain(1);
+    expect(sequencia.indexOf(2)).toBeLessThan(sequencia.indexOf(1));
+  });
+
+  it("só traz vagas da mesma cidade", async () => {
+    const jobs = await getJobs();
+    const base = jobs[0];
+    for (const j of await getRelatedJobs(base, 20)) {
+      expect(j.city).toBe(base.city);
+    }
+  });
+
+  it("sem limite pedido, traz três", async () => {
+    const jobs = await getJobs();
+    const relacionadas = await getRelatedJobs(jobs[0]);
+    expect(relacionadas).toHaveLength(3);
+  });
+});
+
+describe("candidaturas em demonstração", () => {
+  it("da mais recente para a mais antiga", async () => {
+    const apps = await getCompanyApplications("cmp-agro-norte");
+    const datas = apps.map((a) => +new Date(a.created_at));
+    expect(datas).toEqual([...datas].sort((a, b) => b - a));
+  });
+
+  it("cada candidatura carrega o título da vaga a que se refere", async () => {
+    const jobs = await getJobs();
+    const porId = new Map(jobs.map((j) => [j.id, j.title]));
+
+    for (const app of await getCompanyApplications("cmp-agro-norte")) {
+      expect(app.job_title, app.id).toBe(porId.get(app.job_id));
+    }
+  });
+
+  it("traz o candidato junto, senão o painel mostra linha sem nome", async () => {
+    for (const app of await getCompanyApplications("cmp-agro-norte")) {
+      expect(app.candidate.full_name, app.id).toBeTruthy();
+    }
+  });
+});
+
+describe("minhas candidaturas", () => {
+  it("traz só as da própria pessoa, com a vaga e a empresa", async () => {
+    const todas = await getCompanyApplications("cmp-agro-norte");
+    const alguem = todas[0];
+
+    const minhas = await getMyApplications(alguem.candidate_id);
+
+    expect(minhas.length).toBeGreaterThan(0);
+    expect(minhas.every((a) => a.candidate_id === alguem.candidate_id)).toBe(
+      true,
+    );
+
+    const uma = minhas.find((a) => a.id === alguem.id);
+    expect(uma?.job_title).toBe(alguem.job_title);
+    // Sem o nome da empresa a tela diria só "Auxiliar de Produção", sem
+    // dizer onde a pessoa se candidatou.
+    expect(uma?.company_name).toBeTruthy();
+    expect(uma?.company_name).not.toBe("Empresa");
+  });
+
+  it("quem não se candidatou a nada recebe lista vazia", async () => {
+    expect(await getMyApplications("ninguem-com-esse-id")).toEqual([]);
+  });
+});
+
+describe("estatísticas do painel", () => {
+  it("conta só as vagas abertas como ativas", async () => {
+    const jobs = await getCompanyJobs("cmp-agro-norte");
+    const stats = await getCompanyStats("cmp-agro-norte");
+
+    const abertas = jobs.filter((j) => j.status === "aberta").length;
+    expect(stats.active_jobs).toBe(abertas);
+    // Se contasse todas, a empresa acharia que tem mais vaga no ar do que
+    // tem — e pararia de publicar achando que atingiu o limite do plano.
+    expect(stats.active_jobs).toBeLessThanOrEqual(jobs.length);
+  });
+
+  it("soma os currículos de todas as vagas, abertas ou não", async () => {
+    const jobs = await getCompanyJobs("cmp-agro-norte");
+    const stats = await getCompanyStats("cmp-agro-norte");
+
+    expect(stats.applications).toBe(
+      jobs.reduce((soma, j) => soma + j.applicant_count, 0),
+    );
+    expect(stats.applications).toBeGreaterThan(0);
+  });
+
+  it("empresa sem vaga tem tudo zerado, e não quebra", async () => {
+    expect(await getCompanyStats("cmp-que-nao-existe")).toEqual({
+      active_jobs: 0,
+      applications: 0,
+    });
   });
 });
 

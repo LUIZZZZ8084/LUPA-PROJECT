@@ -84,6 +84,7 @@ vi.mock("@/lib/supabase/service", () => ({
 }));
 
 import {
+  empresaDoPainel,
   getCandidateProfile,
   getCompany,
   getCompanyApplications,
@@ -159,6 +160,103 @@ describe("camada de dados com Supabase ligado", () => {
     // Só vagas abertas chegam à busca pública.
     expect(eqs).toContain("aberta");
     expect(chamadas.some((c) => c.metodo === "or")).toBe(true);
+  });
+
+  /*
+   * O teste acima confere que os valores chegaram; este confere em qual
+   * coluna, e que nada é filtrado quando o filtro não veio.
+   *
+   * A diferença importa: `eq("", "Sinop")` e `eq("city", undefined)` passam
+   * na conferência por valor e devolvem a base inteira em produção. Foi
+   * assim que o `or()` com termo cru vazou a base — filtro que parece
+   * aplicado e não está.
+   */
+  it("cada filtro vai na coluna certa", async () => {
+    respostaAtual = { data: [], error: null };
+
+    await getJobs({
+      city: "Sinop",
+      category: "Agronegócio",
+      contract_type: "CLT",
+    });
+
+    const pares = (
+      ultimoBuilder.chamadas as { metodo: string; args: unknown[] }[]
+    )
+      .filter((c) => c.metodo === "eq")
+      .map((c) => c.args);
+
+    expect(pares).toEqual([
+      ["status", "aberta"],
+      ["city", "Sinop"],
+      ["category", "Agronegócio"],
+      ["contract_type", "CLT"],
+    ]);
+  });
+
+  it("busca sem filtro não inventa cláusula", async () => {
+    respostaAtual = { data: [], error: null };
+
+    await getJobs();
+
+    const chamadas = ultimoBuilder.chamadas as {
+      metodo: string;
+      args: unknown[];
+    }[];
+
+    // Sobra só o recorte que é da regra, não do usuário.
+    expect(
+      chamadas.filter((c) => c.metodo === "eq").map((c) => c.args),
+    ).toEqual([["status", "aberta"]]);
+    expect(chamadas.some((c) => c.metodo === "or")).toBe(false);
+  });
+
+  it("a lista de vagas vem da mais recente para a mais antiga", async () => {
+    respostaAtual = { data: [], error: null };
+
+    await getJobs();
+
+    const ordem = (
+      ultimoBuilder.chamadas as { metodo: string; args: unknown[] }[]
+    ).find((c) => c.metodo === "order");
+
+    // Invertido, a primeira tela mostraria as vagas mais velhas da base.
+    expect(ordem?.args).toEqual(["created_at", { ascending: false }]);
+  });
+
+  it("prestador vem da melhor nota para a pior", async () => {
+    respostaAtual = { data: [], error: null };
+
+    await getProviders();
+
+    const chamadas = ultimoBuilder.chamadas as {
+      metodo: string;
+      args: unknown[];
+    }[];
+
+    expect(chamadas.find((c) => c.metodo === "order")?.args).toEqual([
+      "avg_rating",
+      { ascending: false },
+    ]);
+    expect(chamadas.some((c) => c.metodo === "gte")).toBe(false);
+    expect(chamadas.some((c) => c.metodo === "eq")).toBe(false);
+  });
+
+  it("categoria de prestador filtra por slug, não pelo nome", async () => {
+    respostaAtual = { data: [], error: null };
+
+    await getProviders({ category: "eletricista", city: "Sinop" });
+
+    const pares = (
+      ultimoBuilder.chamadas as { metodo: string; args: unknown[] }[]
+    )
+      .filter((c) => c.metodo === "eq")
+      .map((c) => c.args);
+
+    expect(pares).toEqual([
+      ["city", "Sinop"],
+      ["category_slug", "eletricista"],
+    ]);
   });
 
   it("aplica nota mínima como gte na busca de prestadores", async () => {
@@ -256,6 +354,28 @@ describe("camada de dados com Supabase ligado", () => {
  * serviço porque `anon` perde `select` nelas no schema — sem a chave,
  * a consulta precisa falhar, não cair no mock em silêncio.
  */
+/**
+ * De qual empresa o painel fala.
+ *
+ * Com banco ligado é sempre a da sessão. Em demonstração é a empresa
+ * fictícia, sempre — a conta criada em memória não corresponde a nenhuma
+ * empresa de exemplo, e usar o id da sessão deixaria o painel vazio na
+ * tela que existe justamente para mostrar o produto.
+ */
+describe("empresaDoPainel com banco ligado", () => {
+  it("é a empresa da sessão, não a de demonstração", () => {
+    expect(empresaDoPainel("11111111-1111-4111-8111-000000000001")).toBe(
+      "11111111-1111-4111-8111-000000000001",
+    );
+  });
+
+  it("sem sessão cai na de demonstração, em vez de consultar id vazio", () => {
+    const semSessao = empresaDoPainel(null);
+    expect(semSessao).toBeTruthy();
+    expect(semSessao).not.toBe("");
+  });
+});
+
 describe("chave de serviço ausente falha, não cai no mock", () => {
   beforeEach(() => {
     servico.temServico = false;
