@@ -90,29 +90,25 @@ export function SerieGrafico({ serie }: { serie: PontoDaSerie[] }) {
 
       {/*
        * O gráfico é decorativo para quem usa leitor de tela; o dado está
-       * aqui. Uma tabela de trinta linhas lida em voz é longa, mas é
-       * navegável célula a célula — bem melhor que um `aria-label` com o
-       * mês inteiro numa frase só.
+       * aqui, um dia por item.
+       *
+       * Já foi uma `<table>`, que lê melhor célula a célula — mas elemento
+       * `display: table` não encolhe abaixo da largura mínima do conteúdo,
+       * e a tabela escondida empurrava a página para fora da tela em
+       * 320px. Legibilidade em leitor de tela não vale rolagem horizontal
+       * para todo mundo.
        */}
-      <table className="sr-only">
-        <caption>Movimento diário das suas vagas nos últimos 30 dias</caption>
-        <thead>
-          <tr>
-            <th scope="col">Dia</th>
-            <th scope="col">Visualizações</th>
-            <th scope="col">Candidaturas</th>
-          </tr>
-        </thead>
-        <tbody>
-          {serie.map((p) => (
-            <tr key={p.dia}>
-              <th scope="row">{rotuloDoDia(p.dia)}</th>
-              <td>{p.visualizacoes}</td>
-              <td>{p.candidaturas}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ul className="sr-only">
+        <li>Movimento diário das suas vagas nos últimos 30 dias.</li>
+        {serie.map((p) => (
+          <li key={p.dia}>
+            {rotuloDoDia(p.dia)}: {p.visualizacoes}{" "}
+            {p.visualizacoes === 1 ? "visualização" : "visualizações"},{" "}
+            {p.candidaturas}{" "}
+            {p.candidaturas === 1 ? "candidatura" : "candidaturas"}.
+          </li>
+        ))}
+      </ul>
 
       <p className="text-[11px] leading-relaxed text-muted">
         Visualização conta cada abertura da vaga, inclusive quando a mesma

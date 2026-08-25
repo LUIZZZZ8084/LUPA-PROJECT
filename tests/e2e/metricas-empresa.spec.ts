@@ -36,12 +36,12 @@ test.describe("métricas do painel da empresa", () => {
   }) => {
     await page.goto("/empresa");
 
-    const tabela = page.getByRole("table", {
-      name: /movimento diário das suas vagas/i,
+    const lista = page.locator("ul.sr-only", {
+      hasText: /movimento diário das suas vagas/i,
     });
 
-    // 30 dias + a linha de cabeçalho.
-    await expect(tabela.locator("tr")).toHaveCount(31);
+    // 30 dias + o item que apresenta a lista.
+    await expect(lista.locator("li")).toHaveCount(31);
   });
 
   /**
@@ -54,21 +54,21 @@ test.describe("métricas do painel da empresa", () => {
   }) => {
     await page.goto("/empresa");
 
-    const somaDaTabela = await page.evaluate(() => {
-      const linhas = [...document.querySelectorAll("table tbody tr")];
-      return linhas.reduce((total, linha) => {
-        const celula = linha.querySelectorAll("td")[0];
-        return total + Number(celula?.textContent ?? 0);
+    const somaDaLista = await page.evaluate(() => {
+      const itens = [...document.querySelectorAll("ul.sr-only li")];
+      return itens.reduce((total, item) => {
+        const n = /: (\d+) visualiza/.exec(item.textContent ?? "");
+        return total + (n ? Number(n[1]) : 0);
       }, 0);
     });
 
-    expect(somaDaTabela).toBeGreaterThan(0);
-    expect(somaDaTabela).not.toBe(1245);
+    expect(somaDaLista).toBeGreaterThan(0);
+    expect(somaDaLista).not.toBe(1245);
 
     const cartao = page
       .getByText("Visualizações (30 dias)")
       .locator("xpath=preceding-sibling::div[1]");
 
-    await expect(cartao).toHaveText(somaDaTabela.toLocaleString("pt-BR"));
+    await expect(cartao).toHaveText(somaDaLista.toLocaleString("pt-BR"));
   });
 });
