@@ -1,0 +1,31 @@
+name: Correção (bug)
+description: Algo que deveria funcionar e não funciona.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema
+      description: O que está acontecendo? Em que tela ou fluxo?
+      placeholder: |
+        Ex.: Ao candidatar-se a uma vaga pelo celular, o botão fica
+        desabilitado mesmo depois de preencher tudo.
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Como reproduzir
+      description: Passo a passo, se souber.
+    validations:
+      required: false
+  - type: textarea
+    id: aceite
+    attributes:
+      label: Critério de aceite
+      description: Como saber que está corrigido?
+      placeholder: |
+        Ex.: O botão habilita assim que os campos obrigatórios estão
+        preenchidos, testado no Chrome mobile.
+    validations:
+      required: true
