@@ -88,8 +88,13 @@ docs/
 Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Supabase
 (Postgres + Auth + Storage) · Vercel
 
-## O que falta para o V1
+## O que falta
 
-Gerador de currículo pago, notificação push por bairro e categoria, cobrança
-de assinatura via Mercado Pago, upload de currículo e portfólio ligados ao
-Storage, e a segunda cidade.
+Veja o [ROADMAP.md](ROADMAP.md) — é mantido atualizado a cada mudança
+relevante, em vez de duplicado aqui.
+
+## Contribuindo
+
+Duas pessoas trabalham neste projeto. O fluxo de trabalho (Issue → branch
+→ PR) está em [CONTRIBUTING.md](CONTRIBUTING.md), com o porquê de cada
+regra em [AGENTS.md](AGENTS.md).
