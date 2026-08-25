@@ -1,0 +1,39 @@
+name: Melhoria ou funcionalidade nova
+description: Algo que ainda não existe, ou que existe e podia ser melhor.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema
+      description: Qual necessidade isso atende? Para quem?
+      placeholder: |
+        Ex.: A empresa não consegue encerrar uma vaga publicada — ela
+        continua aparecendo na busca mesmo depois de preenchida.
+    validations:
+      required: true
+  - type: textarea
+    id: aceite
+    attributes:
+      label: Critério de aceite
+      description: O que precisa ser verdade para considerar isso pronto?
+      placeholder: |
+        Ex.: A empresa consegue encerrar a vaga pelo painel; a vaga some
+        da busca pública; candidaturas já enviadas continuam visíveis.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - vagas
+        - servicos
+        - empresas
+        - auth
+        - admin
+        - backend
+        - frontend
+        - infra
+    validations:
+      required: false

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Fluxo de trabalho do projeto
+    url: https://github.com/LUIZZZZ8084/LUPA-PROJECT/blob/main/AGENTS.md#fluxo-de-trabalho-obrigatório
+    about: Antes de abrir a issue, dá uma olhada em como o trabalho é organizado aqui.
