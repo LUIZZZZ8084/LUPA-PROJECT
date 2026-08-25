@@ -21,8 +21,28 @@ import type { DadosCadastro, DadosLogin } from "./schemas";
  * bloqueio por tentativas — sem subir um servidor.
  */
 
-export async function cadastrar(dados: DadosCadastro): Promise<UsuarioPublico> {
+/**
+ * Cria a conta.
+ *
+ * `origem` identifica de onde veio a tentativa — o IP, quando a camada de
+ * cima consegue lê-lo. O serviço não conhece requisição de propósito, então
+ * recebe a string pronta em vez de ir buscá-la; é o que mantém o cadastro
+ * inteiro testável sem subir servidor.
+ *
+ * O limite é por origem, e não por e-mail como no login: quem cria conta em
+ * massa troca de e-mail a cada tentativa, e limitar por e-mail não conteria
+ * nada. Neste produto o abuso dói exatamente aqui — é o cadastro que vira
+ * lead, e conta falsa em massa envenena a única métrica que importa.
+ */
+export async function cadastrar(
+  dados: DadosCadastro,
+  origem = "desconhecida",
+): Promise<UsuarioPublico> {
   const repo = repositorioUsuarios();
+  const chave = `cadastro:${origem}`;
+
+  // Antes de qualquer trabalho: bloqueado não gasta Argon2 nem consulta.
+  conferirLimite(chave);
 
   const jaExiste = await repo.porEmail(dados.email);
   if (jaExiste) {
@@ -96,6 +116,14 @@ export async function cadastrar(dados: DadosCadastro): Promise<UsuarioPublico> {
     papel: dados.papel,
     cidade: usuario.cidade,
   });
+
+  /*
+   * Conta o sucesso, não só a falha. No login o que se contém é adivinhação
+   * de senha, então sucesso zera o contador; aqui o que se contém é a
+   * criação em si, e zerar a cada conta criada deixaria o limite inútil
+   * justamente contra quem consegue criar.
+   */
+  registrarFalha(chave);
 
   return semSenha(usuario);
 }
