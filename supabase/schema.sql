@@ -352,6 +352,54 @@ create index pedidos_verificacao_status_idx
   on pedidos_verificacao (status, enviado_em);
 
 -- ============================================================================
+-- 9b. Visualizações de vaga
+--
+-- Uma linha por vaga e por dia, incrementada — não uma linha por
+-- visualização. Uma vaga vista mil vezes viraria mil linhas para uma
+-- informação que só é usada agregada por dia, e a tabela cresceria com o
+-- tráfego em vez de com o número de vagas.
+--
+-- Não guarda quem viu, de propósito. Deduplicar por pessoa exigiria
+-- registrar qual candidato olhou qual vaga — histórico de quem está
+-- procurando trabalho, a mesma informação que mantém o currículo fora de
+-- qualquer view pública, porque pode custar o emprego que a pessoa ainda
+-- tem.
+--
+-- O preço, aceito: recarregar a página infla o número. A métrica é de
+-- tendência, não de audiência, e a tela diz isso.
+-- ============================================================================
+
+create table visualizacoes_vaga (
+  vaga_id uuid not null references vagas(id) on delete cascade,
+  dia     date not null default current_date,
+  total   integer not null default 0,
+
+  primary key (vaga_id, dia),
+  constraint total_nao_negativo check (total >= 0)
+);
+
+-- A consulta do painel é sempre "as vagas desta empresa, últimos N dias".
+create index visualizacoes_vaga_dia_idx on visualizacoes_vaga (dia);
+
+/*
+ * Incremento atômico.
+ *
+ * Duas visitas simultâneas fariam duas leituras iguais e duas escritas do
+ * mesmo valor pelo caminho ler-somar-gravar — uma delas se perderia. O
+ * `on conflict do update` resolve no banco, que é o único lugar onde essa
+ * corrida não existe.
+ */
+create or replace function registrar_visualizacao(p_vaga_id uuid)
+returns void
+language sql
+as $$
+  insert into visualizacoes_vaga (vaga_id, dia, total)
+  values (p_vaga_id, current_date, 1)
+  on conflict (vaga_id, dia)
+  do update set total = visualizacoes_vaga.total + 1;
+$$;
+
+-- ============================================================================
 -- 10. Views que a aplicação consulta
 --
 -- `security_invoker = false` de propósito: as views rodam com a permissão do
@@ -530,6 +578,9 @@ alter table avaliacoes          enable row level security;
 alter table publicacoes         enable row level security;
 alter table pedidos_verificacao enable row level security;
 alter table categorias_servico  enable row level security;
+-- Sem política: ninguém lê nem escreve pela chave anônima. O incremento
+-- passa pela função, e a leitura do painel, pela chave de serviço.
+alter table visualizacoes_vaga  enable row level security;
 
 /*
  * `usuarios` e `admins` ficam sem política nenhuma.
@@ -613,6 +664,7 @@ grant select on job_listings, provider_listings to anon, authenticated;
 -- métrica administrativa. Revogado de propósito, mesmo que a plataforma
 -- já tenha concedido por fora: aqui é onde qualquer um lendo este
 -- arquivo confirma que não vaza.
+revoke select on visualizacoes_vaga            from anon, authenticated;
 revoke select on company_applications          from anon, authenticated;
 revoke select on candidate_applications        from anon, authenticated;
 revoke select on verification_queue            from anon, authenticated;

@@ -71,6 +71,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "publicacoes",
       "usuarios",
       "vagas",
+      "visualizacoes_vaga",
     ]);
   });
 
@@ -622,7 +623,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(11);
+    expect(tabelas.rows).toHaveLength(12);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -669,5 +670,110 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
       "select count(*) as total from usuarios",
     );
     expect(Number(r.rows[0].total)).toBe(14);
+  });
+});
+
+/**
+ * Visualizações de vaga.
+ *
+ * Uma linha por vaga e por dia, incrementada. O que pode dar errado em
+ * silêncio é a corrida: duas visitas ao mesmo tempo lendo o mesmo valor e
+ * gravando o mesmo número, perdendo uma contagem. É por isso que o
+ * incremento mora numa função com `on conflict do update` — no banco, que
+ * é o único lugar onde essa corrida não existe.
+ */
+describe("contagem de visualizações", () => {
+  let banco: PGlite;
+  let vagaId: string;
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+
+    const empresa = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
+       values ('vis@teste.lupa', 'h', 'empresa', 'Empresa', '66000000001')
+       returning id`,
+    );
+    await banco.query(
+      `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+       values ($1, 'Empresa', '11222333000181')`,
+      [empresa.rows[0].id],
+    );
+    const vaga = await banco.query<{ id: string }>(
+      `insert into vagas (empresa_id, titulo, descricao)
+       values ($1, 'Cargo', 'Descrição') returning id`,
+      [empresa.rows[0].id],
+    );
+    vagaId = vaga.rows[0].id;
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  it("a primeira visualização cria a linha do dia", async () => {
+    await banco.query("select registrar_visualizacao($1)", [vagaId]);
+
+    const r = await banco.query<{ total: number }>(
+      "select total from visualizacoes_vaga where vaga_id = $1",
+      [vagaId],
+    );
+    expect(r.rows[0].total).toBe(1);
+  });
+
+  it("as seguintes somam na mesma linha, sem criar outra", async () => {
+    for (let i = 0; i < 4; i++) {
+      await banco.query("select registrar_visualizacao($1)", [vagaId]);
+    }
+
+    const r = await banco.query<{ total: number; linhas: string }>(
+      `select total, count(*) over () as linhas
+         from visualizacoes_vaga where vaga_id = $1`,
+      [vagaId],
+    );
+    expect(r.rows[0].total).toBe(5);
+    expect(Number(r.rows[0].linhas), "criou linha a mais").toBe(1);
+  });
+
+  /** Incrementos simultâneos não podem perder contagem. */
+  it("dez visualizações ao mesmo tempo contam dez", async () => {
+    const antes = await banco.query<{ total: number }>(
+      "select total from visualizacoes_vaga where vaga_id = $1",
+      [vagaId],
+    );
+
+    await Promise.all(
+      Array.from({ length: 10 }, () =>
+        banco.query("select registrar_visualizacao($1)", [vagaId]),
+      ),
+    );
+
+    const depois = await banco.query<{ total: number }>(
+      "select total from visualizacoes_vaga where vaga_id = $1",
+      [vagaId],
+    );
+    expect(depois.rows[0].total).toBe(antes.rows[0].total + 10);
+  });
+
+  /** A vaga apagada leva as contagens junto: não sobra órfã. */
+  it("apagar a vaga apaga as visualizações", async () => {
+    await banco.query("delete from vagas where id = $1", [vagaId]);
+
+    const r = await banco.query<{ total: string }>(
+      "select count(*) as total from visualizacoes_vaga where vaga_id = $1",
+      [vagaId],
+    );
+    expect(Number(r.rows[0].total)).toBe(0);
+  });
+
+  /** Total negativo seria erro de programa; o banco recusa. */
+  it("o banco recusa total negativo", async () => {
+    await expect(
+      banco.query(
+        `insert into visualizacoes_vaga (vaga_id, dia, total)
+         values (gen_random_uuid(), current_date, -1)`,
+      ),
+    ).rejects.toThrow();
   });
 });

@@ -12,7 +12,6 @@ import {
   DEMO_COMPANY_ID,
   MOCK_APPLICATIONS,
   MOCK_COMPANIES,
-  MOCK_COMPANY_STATS,
   MOCK_JOBS,
   MOCK_PROVIDERS,
   MOCK_REVIEWS,
@@ -606,7 +605,6 @@ export async function getCompanyStats(companyId: string) {
   return {
     active_jobs: open.length,
     applications: jobs.reduce((sum, j) => sum + j.applicant_count, 0),
-    views: MOCK_COMPANY_STATS.views,
   };
 }
 

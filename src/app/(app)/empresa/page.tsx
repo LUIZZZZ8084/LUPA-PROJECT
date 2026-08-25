@@ -20,8 +20,14 @@ import {
 } from "@/lib/data";
 import { pluralize, timeAgo } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
+import {
+  serieDoPainel,
+  temPainelDeEmpresa,
+  totaisDaSerie,
+} from "@/server/visualizacoes/servico";
 import { EncerrarVagaButton } from "./encerrar-vaga-button";
 import { MoverCandidaturaSelect } from "./mover-candidatura-select";
+import { SerieGrafico } from "./serie-grafico";
 
 export const metadata: Metadata = {
   title: "Minha Empresa",
@@ -31,12 +37,16 @@ export const metadata: Metadata = {
 export default async function EmpresaPage() {
   const sessao = await sessaoAtual();
   const companyId = empresaDoPainel(sessao?.usuarioId ?? null);
-  const [company, jobs, applications, stats] = await Promise.all([
+  const [company, jobs, applications, stats, serie] = await Promise.all([
     getCompany(companyId),
     getCompanyJobs(companyId),
     getCompanyApplications(companyId),
     getCompanyStats(companyId),
+    // Quem não é empresa cai no estado vazio logo abaixo; pedir a série
+    // antes disso trocaria a explicação por uma tela de erro.
+    temPainelDeEmpresa(sessao) ? serieDoPainel(sessao) : [],
   ]);
+  const totais = totaisDaSerie(serie);
 
   if (!company) {
     return (
@@ -107,10 +117,12 @@ export default async function EmpresaPage() {
           />
           <Stat label="Currículos" value={stats.applications} />
           <Stat
-            label="Visualizações"
-            value={stats.views.toLocaleString("pt-BR")}
+            label="Visualizações (30 dias)"
+            value={totais.visualizacoes.toLocaleString("pt-BR")}
           />
         </div>
+
+        <SerieGrafico serie={serie} />
       </Panel>
 
       {/* Vagas publicadas */}
