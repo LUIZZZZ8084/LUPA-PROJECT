@@ -1,4 +1,4 @@
-import { PILOT_CITY } from "@/lib/constants";
+import { CIDADE_INICIAL } from "@/lib/constants";
 import { AppError, erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
@@ -72,7 +72,7 @@ export async function cadastrar(
     papel: dados.papel,
     nomeCompleto: dados.nomeCompleto,
     telefone: dados.telefone,
-    cidade: dados.cidade ?? PILOT_CITY,
+    cidade: dados.cidade ?? CIDADE_INICIAL,
     bairro: dados.bairro ?? null,
   });
 

@@ -3,24 +3,25 @@
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useActionState } from "react";
+import {
+  CampoBairro,
+  CampoCidade,
+  useCidade,
+} from "@/components/cidade-e-bairro";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import {
-  CONTRACT_TYPES,
-  JOB_CATEGORIES,
-  PILOT_LABEL,
-  SINOP_NEIGHBORHOODS,
-} from "@/lib/constants";
+import { CONTRACT_TYPES, JOB_CATEGORIES } from "@/lib/constants";
 import { type EstadoVaga, publicarVagaComEstado } from "./actions";
 
 const inicial: EstadoVaga = {};
 
-export function NewJobForm() {
+export function NewJobForm({ cidadeDaEmpresa }: { cidadeDaEmpresa: string }) {
   const [state, action, pending] = useActionState(
     publicarVagaComEstado,
     inicial,
   );
+  const [cidade, setCidade] = useCidade(cidadeDaEmpresa);
 
   if (state.ok) {
     return (
@@ -91,20 +92,17 @@ export function NewJobForm() {
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Field label="Cidade">
-            <Input value={PILOT_LABEL} disabled readOnly />
-          </Field>
-
-          <Field label="Bairro" hint="Onde a pessoa vai trabalhar.">
-            <Select name="bairro" defaultValue="">
-              <option value="">Não informar</option>
-              {SINOP_NEIGHBORHOODS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          <CampoCidade
+            value={cidade}
+            onChange={setCidade}
+            error={state.campos?.cidade}
+            label="Cidade da vaga"
+          />
+          <CampoBairro
+            key={cidade}
+            cidade={cidade}
+            error={state.campos?.bairro}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

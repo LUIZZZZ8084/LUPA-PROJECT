@@ -1,11 +1,21 @@
 import { z } from "zod";
 import {
+  CIDADE_INICIAL,
   JOB_CATEGORIES,
-  PILOT_CITY,
+  MAX_BAIRROS_ATENDIDOS,
   SERVICE_CATEGORIES,
-  SINOP_NEIGHBORHOODS,
 } from "@/lib/constants";
-import { zCelular, zCnpj, zEmail, zNome, zSenha, zTexto } from "../validation";
+import {
+  zBairro,
+  zCelular,
+  zCidade,
+  zCnpj,
+  zEmail,
+  zNome,
+  zNomeDeBairro,
+  zSenha,
+  zTexto,
+} from "../validation";
 
 /**
  * Schemas de cadastro, um por papel.
@@ -16,17 +26,12 @@ import { zCelular, zCnpj, zEmail, zNome, zSenha, zTexto } from "../validation";
  * vai para a edição de perfil, depois.
  */
 
-const zBairro = z
-  .enum(SINOP_NEIGHBORHOODS)
-  .optional()
-  .or(z.literal("").transform(() => undefined));
-
 const base = {
   nomeCompleto: zNome,
   email: zEmail,
   senha: zSenha,
   telefone: zCelular,
-  cidade: z.literal(PILOT_CITY).default(PILOT_CITY),
+  cidade: zCidade.default(CIDADE_INICIAL),
   bairro: zBairro,
 };
 
@@ -76,8 +81,10 @@ export const schemaPrestador = z.object({
     .optional(),
   bairrosAtendidos: z
     .union([z.string(), z.array(z.string())])
-    .transform((v) => (Array.isArray(v) ? v : [v]))
-    .pipe(z.array(z.enum(SINOP_NEIGHBORHOODS)).max(14))
+    .transform((v) =>
+      (Array.isArray(v) ? v : [v]).map((b) => b.trim()).filter(Boolean),
+    )
+    .pipe(z.array(zNomeDeBairro).max(MAX_BAIRROS_ATENDIDOS))
     .optional(),
 });
 

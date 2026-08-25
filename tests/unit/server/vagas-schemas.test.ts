@@ -12,6 +12,7 @@ const DADOS = {
   titulo: "Auxiliar Administrativo",
   descricao: "Rotina de recepção, arquivo e atendimento telefônico.",
   categoria: "Administrativo",
+  cidade: "Sinop",
   tipoContrato: "CLT",
 };
 
@@ -27,12 +28,38 @@ describe("schemaNovaVaga", () => {
     expect(r.success && r.data.bairro).toBeUndefined();
   });
 
-  it("recusa bairro fora de Sinop", () => {
+  /*
+   * O bairro deixou de ser enum quando o app abriu para Mato Grosso
+   * inteiro: não existe lista de bairros de 142 municípios, e enum
+   * recusaria bairro novo até em Sinop. O que o servidor ainda garante é
+   * tamanho — bairro de uma letra é engano de digitação, não bairro.
+   */
+  it("aceita bairro fora da lista curada", () => {
     const r = schemaNovaVaga.safeParse({
       ...DADOS,
-      bairro: "Bairro Inventado",
+      cidade: "Sorriso",
+      bairro: "Jardim Itália",
     });
+    expect(r.success).toBe(true);
+  });
+
+  it("recusa bairro curto demais", () => {
+    const r = schemaNovaVaga.safeParse({ ...DADOS, bairro: "X" });
     expect(r.success).toBe(false);
+  });
+
+  it("recusa cidade fora de Mato Grosso", () => {
+    for (const cidade of ["Curitiba", "sinop", "Sinop - MT", ""]) {
+      const r = schemaNovaVaga.safeParse({ ...DADOS, cidade });
+      expect(r.success, cidade || "(vazio)").toBe(false);
+    }
+  });
+
+  it("aceita qualquer município de MT, não só o inicial", () => {
+    for (const cidade of ["Cuiabá", "Sorriso", "Alta Floresta", "Vera"]) {
+      const r = schemaNovaVaga.safeParse({ ...DADOS, cidade });
+      expect(r.success, cidade).toBe(true);
+    }
   });
 
   it("recusa cargo curto demais", () => {

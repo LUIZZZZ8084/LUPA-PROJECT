@@ -1,11 +1,5 @@
 import { z } from "zod";
-import { SINOP_NEIGHBORHOODS } from "@/lib/constants";
-import { zTexto } from "../validation";
-
-const zBairro = z
-  .enum(SINOP_NEIGHBORHOODS)
-  .optional()
-  .or(z.literal("").transform(() => undefined));
+import { zBairro, zCidade, zTexto } from "../validation";
 
 const zSalario = z.coerce.number().nonnegative().optional();
 
@@ -14,6 +8,15 @@ export const camposVaga = {
   titulo: zTexto(4, 120, "O cargo"),
   descricao: zTexto(30, 5000, "A descrição"),
   categoria: z.string().trim().min(1, "Escolha uma categoria."),
+  /*
+   * A cidade é da vaga, não da empresa.
+   *
+   * Uma transportadora sediada em Sinop contrata motorista em Sorriso, e
+   * quem procura emprego em Sorriso precisa achar essa vaga lá. Herdar a
+   * cidade da empresa esconderia a vaga de quem ela interessa e a mostraria
+   * para quem não pode ir.
+   */
+  cidade: zCidade,
   tipoContrato: z.string().trim().min(1, "Escolha o tipo de contrato."),
   bairro: zBairro,
   salarioMin: zSalario,

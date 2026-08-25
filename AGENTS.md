@@ -23,6 +23,7 @@ Scripts operacionais:
 ```bash
 node scripts/criar-admin.mjs      # cria ou promove a conta de admin
 node scripts/gerar-avatares.mjs   # regenera os avatares de demonstração
+node scripts/gerar-cidades.mjs    # baixa a lista de municípios de MT (IBGE)
 ```
 
 ---
@@ -260,6 +261,38 @@ exatamente o público deste produto: aparelho antigo, dado móvel contado,
 pouca familiaridade digital. A hora de reavaliar é quando aparecer abuso
 real, não antes.
 
+### Mato Grosso inteiro, começando por Sinop
+
+Os 142 municípios do estado são aceitos no cadastro, na publicação de vaga
+e nos filtros. `CIDADE_INICIAL` é Sinop e significa só uma coisa: é o valor
+que já vem escolhido. Atender Sinop primeiro é estratégia de divulgação;
+*recusar* quem é de Sorriso era um formulário dizendo que o app não é dele.
+
+**A lista vem do IBGE, por script.** 142 nomes com acento e com "do/da/de"
+no meio, digitados à mão, dão um "Vila Bela da Santíssima Trindade" errado
+que ninguém revisa — e alguém de lá não acha a própria cidade. O arquivo
+gerado é versionado: em execução o app não fala com o IBGE, porque
+cadastro não pode depender de API de terceiro estar no ar.
+
+**Bairro deixou de ser enum.** Era `z.enum` dos 14 bairros de Sinop, usado
+no cadastro, no perfil e na vaga. Não existe lista de bairros de 142
+municípios pronta em lugar nenhum, e enum recusaria loteamento novo até em
+Sinop, onde a cidade cresce todo ano. A curadoria ficou na tela — lista
+onde existe, texto onde não existe —, e o servidor garante só o que evita
+lixo: tamanho mínimo e máximo.
+
+O preço, aceito: sem enum, "Jd. Botânico" e "Jardim Botânico" podem
+coexistir onde não há lista. Vale menos que travar o cadastro.
+
+**A cidade da vaga é da vaga, não da empresa.** Transportadora de Sinop
+contrata motorista em Sorriso; herdar a cidade da empresa esconderia a
+vaga de quem ela interessa. O formulário já vem com a cidade da empresa
+preenchida, e ela pode trocar.
+
+**A cidade não se edita no perfil.** Mudar de cidade muda quem encontra a
+pessoa e onde os anúncios dela aparecem — é troca de contexto inteiro, não
+correção de campo. Por ora é caso de suporte, como o CNPJ.
+
 ### 404 em vez de 403 quando faz sentido
 
 Registro de outro dono e área administrativa respondem "não encontrado". Um
@@ -362,8 +395,11 @@ pedindo ainda.
 - **Contraste:** todo par de cor e fundo precisa passar em WCAG AA (4,5:1).
   Há teste de acessibilidade cobrindo todas as rotas. Boa parte do público
   abre o app na rua, sob sol forte e em tela barata.
-- **Multi-cidade:** toda entidade tem `city`. A UI trava em Sinop por
-  `PILOT_CITY`; abrir outra cidade não deve exigir migração de schema.
+- **Multi-cidade:** toda entidade tem `city`, e o app aceita os 142
+  municípios de Mato Grosso — lista gerada do IBGE por
+  `scripts/gerar-cidades.mjs`. `CIDADE_INICIAL` é Sinop, e é só isso: o
+  valor que já vem escolhido. Bairro tem lista curada onde alguém conferiu
+  (`BAIRROS_POR_CIDADE`) e é texto livre no resto.
 - **Dados sensíveis:** documento e selfie vão para o bucket privado
   `verificacao` e são apagados na decisão do admin. Erros enviados ao Sentry
   passam por `scrubSensitiveData`. Senha nunca é logada. São obrigações de

@@ -8,7 +8,7 @@ import {
 } from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
-import { CITIES, SERVICE_CATEGORIES } from "@/lib/constants";
+import { CIDADES, ESTADO, SERVICE_CATEGORIES } from "@/lib/constants";
 import { getProviders } from "@/lib/data";
 import { pluralize } from "@/lib/format";
 
@@ -58,11 +58,10 @@ export default async function ServicosPage({
         filters={[
           {
             key: "cidade",
-            placeholder: "Sinop - MT",
-            locked: true,
-            options: CITIES.filter((c) => c.active).map((c) => ({
-              value: c.name,
-              label: `${c.name} - ${c.state}`,
+            placeholder: "Todo o MT",
+            options: CIDADES.map((c) => ({
+              value: c,
+              label: `${c} - ${ESTADO}`,
             })),
           },
           {

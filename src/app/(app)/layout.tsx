@@ -28,6 +28,7 @@ export default async function AppLayout({
             nome: usuario.nomeCompleto,
             papel: usuario.papel,
             avatarUrl: usuario.avatarUrl ?? null,
+            cidade: usuario.cidade,
           }
         }
       />
