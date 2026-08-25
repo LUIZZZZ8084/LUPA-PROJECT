@@ -37,11 +37,25 @@ describe("dados da conta", () => {
     expect(r.success).toBe(false);
   });
 
-  it("recusa bairro fora de Sinop", () => {
+  /*
+   * Bairro virou texto quando o app abriu para Mato Grosso inteiro. Enum
+   * exigiria a lista dos 142 municípios, que não existe pronta — e
+   * recusaria loteamento novo até em Sinop, onde a cidade cresce todo ano.
+   */
+  it("aceita bairro que não está em nenhuma lista curada", () => {
     const r = schemaBasico.safeParse({
       nomeCompleto: "Ana Paula",
       telefone: "66999110005",
-      bairro: "Bairro Inventado",
+      bairro: "Residencial Nova Fronteira",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("recusa bairro de uma letra — isso é engano de digitação", () => {
+    const r = schemaBasico.safeParse({
+      nomeCompleto: "Ana Paula",
+      telefone: "66999110005",
+      bairro: "X",
     });
     expect(r.success).toBe(false);
   });

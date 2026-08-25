@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ehCidadeAtendida } from "@/lib/constants";
 import { onlyDigits } from "@/lib/format";
 import { type ErroCampo, erros } from "./errors";
 import { falha, ok, type Resultado } from "./result";
@@ -113,6 +114,42 @@ export const zCnpj = z
   .string()
   .transform(onlyDigits)
   .refine(cnpjValido, "CNPJ inválido.");
+
+/**
+ * Cidade. Só município de Mato Grosso.
+ *
+ * A checagem é contra a lista do IBGE, e não um `z.string()` qualquer:
+ * cidade digitada livre viraria "Sinop", "sinop" e "Sinop-MT" na mesma
+ * base, e o filtro de cidade deixaria de agrupar — que é justamente o que
+ * faz o app ser hiperlocal em vez de mais um mural de anúncios.
+ */
+export const zCidade = z
+  .string()
+  .trim()
+  .refine(ehCidadeAtendida, "Escolha uma cidade de Mato Grosso.");
+
+/**
+ * Bairro.
+ *
+ * Onde a cidade tem lista curada (Sinop), a interface oferece a lista; o
+ * servidor não exige que o valor esteja nela. Exigir travaria o cadastro
+ * de quem mora num bairro novo, e bairro novo aparece antes de qualquer
+ * lista ser atualizada — em cidade que cresce como as do agro, aparece
+ * todo ano.
+ *
+ * O que o servidor garante é o que importa para o dado não apodrecer:
+ * tamanho com limite e nada de string vazia disfarçada de bairro.
+ */
+export const zNomeDeBairro = z
+  .string()
+  .trim()
+  .min(2, "Bairro curto demais.")
+  .max(60, "Bairro longo demais.");
+
+export const zBairro = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  zNomeDeBairro.optional(),
+);
 
 /** Texto livre com limite, para descrição e publicação. */
 export const zTexto = (min: number, max: number, oQue: string) =>

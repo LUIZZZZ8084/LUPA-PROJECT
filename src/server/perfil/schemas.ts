@@ -1,10 +1,10 @@
 import { z } from "zod";
 import {
   JOB_CATEGORIES,
+  MAX_BAIRROS_ATENDIDOS,
   SERVICE_CATEGORIES,
-  SINOP_NEIGHBORHOODS,
 } from "@/lib/constants";
-import { zCelular, zNome, zTexto } from "../validation";
+import { zCelular, zNome, zNomeDeBairro, zTexto } from "../validation";
 
 /**
  * O que se pode editar depois que a conta existe.
@@ -26,10 +26,17 @@ const zOpcional = (max: number, oQue: string) =>
     z.string().trim().max(max, `${oQue} longo demais.`).nullable(),
   );
 
-const zBairro = z.preprocess(
-  vazioViraNulo,
-  z.enum(SINOP_NEIGHBORHOODS).nullable(),
-);
+/*
+ * Bairro é texto, não enum.
+ *
+ * Era um `z.enum` dos 14 bairros de Sinop. Com o app aberto a Mato Grosso
+ * inteiro, enum recusaria o cadastro de quem mora em qualquer outra cidade
+ * — e continuaria recusando um bairro novo de Sinop, que em cidade do agro
+ * aparece todo ano. A curadoria existe na tela, que oferece a lista onde
+ * ela existe; o servidor garante o que importa para o dado não apodrecer:
+ * tamanho e nada de string vazia disfarçada de bairro.
+ */
+const zBairro = z.preprocess(vazioViraNulo, zNomeDeBairro.nullable());
 
 /** Comum a todos os papéis: mora em `usuarios`. */
 export const schemaBasico = z.object({
@@ -101,8 +108,16 @@ export const schemaPrestador = z.object({
       .nullable(),
   ),
   bairrosAtendidos: z.preprocess(
-    (v) => (Array.isArray(v) ? v : v ? [v] : []),
-    z.array(z.enum(SINOP_NEIGHBORHOODS)).max(14, "Escolha até 14 bairros."),
+    (v) =>
+      (Array.isArray(v) ? v : v ? [v] : [])
+        .map((b) => String(b).trim())
+        .filter(Boolean),
+    z
+      .array(zNomeDeBairro)
+      .max(
+        MAX_BAIRROS_ATENDIDOS,
+        `Escolha até ${MAX_BAIRROS_ATENDIDOS} bairros.`,
+      ),
   ),
 });
 

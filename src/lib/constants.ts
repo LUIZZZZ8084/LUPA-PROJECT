@@ -1,39 +1,82 @@
+import { CIDADES_MT } from "./cidades-mt";
 import type { ContractType, ServiceCategory } from "./types";
 
 /**
- * Cidade-piloto. A arquitetura é multi-cidade desde o V0 (campo `city` em
- * todas as entidades), mas a UI só abre Sinop até validar o modelo.
+ * Onde o app começa, e até onde ele vai.
+ *
+ * `CIDADE_INICIAL` é Sinop: é lá que estão os dados, o contato e o esforço
+ * de divulgação. Mas atender só Sinop é diferente de *aceitar* só Sinop —
+ * quem é de Sorriso e esbarra num formulário que não tem a cidade dele
+ * conclui que o app não serve para ele, e não volta.
+ *
+ * O estado inteiro está aberto desde o cadastro. A lista dos municípios é
+ * gerada do IBGE por `scripts/gerar-cidades.mjs`.
  */
-export const PILOT_CITY = "Sinop";
-export const PILOT_STATE = "MT";
-export const PILOT_LABEL = `${PILOT_CITY} - ${PILOT_STATE}`;
+export const CIDADE_INICIAL = "Sinop";
+export const ESTADO = "MT";
+export const ESTADO_NOME = "Mato Grosso";
 
-/** Cidades já previstas no schema; só a piloto está ativa na UI do V0. */
-export const CITIES = [
-  { name: "Sinop", state: "MT", active: true },
-  { name: "Sorriso", state: "MT", active: false },
-  { name: "Lucas do Rio Verde", state: "MT", active: false },
-  { name: "Nova Mutum", state: "MT", active: false },
-  { name: "Cuiabá", state: "MT", active: false },
-] as const;
+export const CIDADES = CIDADES_MT;
 
-/** Bairros de Sinop usados nos filtros e no cadastro. */
-export const SINOP_NEIGHBORHOODS = [
-  "Centro",
-  "Jardim Botânico",
-  "Jardim Paraíso",
-  "Jardim das Palmeiras",
-  "Setor Comercial",
-  "Setor Industrial",
-  "Residencial Florença",
-  "Jardim Primavera",
-  "Jardim Itália",
-  "Menezes",
-  "Boa Esperança",
-  "Jacarandá",
-  "Jardim Celeste",
-  "Aquarela Brasil",
-] as const;
+export function ehCidadeAtendida(valor: string): boolean {
+  return (CIDADES as readonly string[]).includes(valor);
+}
+
+/** "Sinop - MT", para onde a cidade aparece sozinha na tela. */
+export function rotuloDaCidade(cidade: string): string {
+  return `${cidade} - ${ESTADO}`;
+}
+
+/**
+ * Bairros conhecidos, por cidade.
+ *
+ * Só entra cidade cuja lista alguém conferiu. O resto usa texto livre —
+ * ver `bairroLivre()` abaixo.
+ *
+ * A lista existe porque é ela que mantém o filtro de bairro utilizável:
+ * digitado à mão, "Jd. Botânico", "Jardim Botanico" e "JARDIM BOTÂNICO"
+ * viram três bairros diferentes e o filtro deixa de agrupar. O preço de
+ * exigir lista para todo mundo seria manter os bairros de 142 municípios,
+ * o que não existe pronto em lugar nenhum e envelheceria sozinho.
+ */
+export const BAIRROS_POR_CIDADE: Record<string, readonly string[]> = {
+  Sinop: [
+    "Centro",
+    "Jardim Botânico",
+    "Jardim Paraíso",
+    "Jardim das Palmeiras",
+    "Setor Comercial",
+    "Setor Industrial",
+    "Residencial Florença",
+    "Jardim Primavera",
+    "Jardim Itália",
+    "Menezes",
+    "Boa Esperança",
+    "Jacarandá",
+    "Jardim Celeste",
+    "Aquarela Brasil",
+  ],
+};
+
+/**
+ * Os bairros que a cidade oferece numa lista. Vazio significa texto livre —
+ * é assim que a tela decide entre `select` e `input`.
+ */
+export function bairrosDe(
+  cidade: string | null | undefined,
+): readonly string[] {
+  if (!cidade) return [];
+  return BAIRROS_POR_CIDADE[cidade] ?? [];
+}
+
+/**
+ * Quantos bairros um prestador pode marcar como atendidos.
+ *
+ * Era 14 — o número de bairros de Sinop — e por isso quebrava em qualquer
+ * outra cidade. Vinte é folga suficiente para o prestador dizer onde
+ * atende sem que a lista vire "a cidade inteira", que não informa nada.
+ */
+export const MAX_BAIRROS_ATENDIDOS = 20;
 
 /** Lista fixa inicial do V0 — expansível sem migração de schema. */
 export const SERVICE_CATEGORIES: ServiceCategory[] = [

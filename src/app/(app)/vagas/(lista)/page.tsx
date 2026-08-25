@@ -8,7 +8,12 @@ import {
   PageTitle,
 } from "@/components/layout/page-shell";
 import { ButtonLink } from "@/components/ui/button";
-import { CITIES, CONTRACT_TYPES, JOB_CATEGORIES } from "@/lib/constants";
+import {
+  CIDADES,
+  CONTRACT_TYPES,
+  ESTADO,
+  JOB_CATEGORIES,
+} from "@/lib/constants";
 import { getJobs } from "@/lib/data";
 import { pluralize } from "@/lib/format";
 
@@ -58,11 +63,10 @@ export default async function VagasPage({
         filters={[
           {
             key: "cidade",
-            placeholder: "Sinop - MT",
-            locked: true,
-            options: CITIES.filter((c) => c.active).map((c) => ({
-              value: c.name,
-              label: `${c.name} - ${c.state}`,
+            placeholder: "Todo o MT",
+            options: CIDADES.map((c) => ({
+              value: c,
+              label: `${c} - ${ESTADO}`,
             })),
           },
           {

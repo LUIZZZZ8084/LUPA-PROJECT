@@ -77,9 +77,10 @@ docs/
 - **Verificação é manual no V0.** O fundador aprova em `/admin`. A imagem do
   documento é apagada do storage na decisão — fica só o status no perfil,
   conforme a política de retenção da LGPD.
-- **Multi-cidade desde o começo.** Toda entidade tem `city`; a UI trava em
-  Sinop via `PILOT_CITY`. Abrir Sorriso ou Lucas do Rio Verde é mudar uma
-  flag, não migrar banco.
+- **Mato Grosso inteiro, começando por Sinop.** Os 142 municípios do estado
+  são aceitos no cadastro, na vaga e nos filtros — a lista vem do IBGE por
+  `scripts/gerar-cidades.mjs`. Sinop é onde o esforço de divulgação começa,
+  não o limite de quem pode entrar.
 - **PWA, não app de loja.** Manifest e ícones gerados em build; "adicionar à
   tela inicial" sem revisão da Apple ou do Google.
 

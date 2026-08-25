@@ -17,7 +17,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
-import { PILOT_LABEL, PILOT_STATE } from "@/lib/constants";
+import { CIDADE_INICIAL, ESTADO_NOME } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
 
 export default async function HomePage() {
@@ -29,7 +29,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-4xl px-4 pt-10 pb-12 sm:px-6 sm:pt-16">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
             <MapPin size={12} className="text-vagas" />
-            {PILOT_LABEL} · cidade-piloto
+            {ESTADO_NOME} · começando por {CIDADE_INICIAL}
           </span>
 
           <h1 className="mt-5 text-[2rem] leading-[1.1] font-bold tracking-tight sm:text-5xl">
@@ -122,7 +122,7 @@ export default async function HomePage() {
               <TrustItem
                 icon={<ShieldCheck size={22} />}
                 title="Profissionais locais"
-                description={`Gente de ${PILOT_LABEL.split(" - ")[0]} e região`}
+                description="Gente da sua cidade e da região"
               />
             </div>
           </Panel>
@@ -155,8 +155,7 @@ export default async function HomePage() {
         </Reveal>
 
         <p className="mt-8 text-center text-xs text-faint">
-          Lupa · cidade-piloto {PILOT_LABEL} · em breve em outras cidades do
-          interior de {PILOT_STATE}
+          Lupa · aberto a todo o {ESTADO_NOME} · começamos por {CIDADE_INICIAL}
         </p>
       </PageShell>
     </>

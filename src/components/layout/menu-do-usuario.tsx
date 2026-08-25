@@ -13,6 +13,7 @@ export interface UsuarioDoMenu {
   nome: string;
   papel: string;
   avatarUrl: string | null;
+  cidade: string;
 }
 
 /** Atalhos que só fazem sentido para alguns papéis. */

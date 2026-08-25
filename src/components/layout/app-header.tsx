@@ -9,7 +9,7 @@ import {
   type UsuarioDoMenu,
 } from "@/components/layout/menu-do-usuario";
 import { ButtonLink } from "@/components/ui/button";
-import { PILOT_LABEL } from "@/lib/constants";
+import { ESTADO_NOME, rotuloDaCidade } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -59,9 +59,14 @@ export function AppHeader({ usuario }: { usuario?: UsuarioDoMenu | null }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
+          {/*
+            A cidade da pessoa, não a do produto. Antes era "Sinop - MT"
+            fixo para todo mundo; para quem é de Sorriso, era o cabeçalho
+            dizendo que aquele app não é dele.
+          */}
           <span className="hidden items-center gap-1.5 text-xs text-muted sm:inline-flex">
             <MapPin size={14} className="text-vagas" />
-            {PILOT_LABEL}
+            {usuario ? rotuloDaCidade(usuario.cidade) : ESTADO_NOME}
           </span>
           {usuario ? (
             <MenuDoUsuario usuario={usuario} />

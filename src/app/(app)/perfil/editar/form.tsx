@@ -2,14 +2,14 @@
 
 import { Check, Loader2 } from "lucide-react";
 import { useActionState } from "react";
+import {
+  CampoBairro,
+  CampoBairrosAtendidos,
+} from "@/components/cidade-e-bairro";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import {
-  JOB_CATEGORIES,
-  SERVICE_CATEGORIES,
-  SINOP_NEIGHBORHOODS,
-} from "@/lib/constants";
+import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
 import type { PerfilCompleto } from "@/server/perfil/servico";
 import {
   type EstadoEdicao,
@@ -122,16 +122,17 @@ function Conta({ perfil }: { perfil: PerfilCompleto }) {
           />
         </Field>
 
-        <Field label="Bairro" error={estado.campos?.bairro}>
-          <Select name="bairro" defaultValue={u.bairro ?? ""}>
-            <option value="">Não informar</option>
-            {SINOP_NEIGHBORHOODS.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        {/*
+          A cidade não se edita aqui, de propósito. Mudar de cidade muda
+          quem encontra a pessoa e onde os anúncios dela aparecem — é
+          mudança de contexto inteiro, não correção de campo. Enquanto não
+          houver essa tela, é caso de suporte, com gente olhando.
+        */}
+        <CampoBairro
+          cidade={u.cidade}
+          defaultValue={u.bairro}
+          error={estado.campos?.bairro}
+        />
       </Secao>
     </form>
   );
@@ -273,37 +274,11 @@ function Anuncio({ perfil }: { perfil: PerfilCompleto }) {
           </Field>
         </div>
 
-        {/*
-         * Caixas de seleção, não um `select` múltiplo: no celular o
-         * múltiplo exige segurar uma tecla que não existe ali.
-         */}
-        <fieldset>
-          <legend className="mb-2 font-medium text-sm">
-            Bairros atendidos
-          </legend>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-            {SINOP_NEIGHBORHOODS.map((b) => (
-              <label
-                key={b}
-                className="flex items-center gap-2 text-muted text-sm"
-              >
-                <input
-                  type="checkbox"
-                  name="bairrosAtendidos"
-                  value={b}
-                  defaultChecked={p?.bairrosAtendidos.includes(b)}
-                  className="h-4 w-4 flex-none rounded border-line bg-panel-2 accent-servicos"
-                />
-                <span className="truncate">{b}</span>
-              </label>
-            ))}
-          </div>
-          {estado.campos?.bairrosAtendidos && (
-            <p className="mt-2 text-danger text-xs">
-              {estado.campos.bairrosAtendidos}
-            </p>
-          )}
-        </fieldset>
+        <CampoBairrosAtendidos
+          cidade={perfil.usuario.cidade}
+          selecionados={p?.bairrosAtendidos ?? []}
+          error={estado.campos?.bairrosAtendidos}
+        />
       </Secao>
     </form>
   );

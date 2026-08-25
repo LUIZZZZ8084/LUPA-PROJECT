@@ -4,15 +4,15 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useActionState } from "react";
 import { cadastrarComEstado, type EstadoFormulario } from "@/app/conta/actions";
+import {
+  CampoBairro,
+  CampoCidade,
+  useCidade,
+} from "@/components/cidade-e-bairro";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import {
-  JOB_CATEGORIES,
-  PILOT_LABEL,
-  SERVICE_CATEGORIES,
-  SINOP_NEIGHBORHOODS,
-} from "@/lib/constants";
+import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
 import type { Role } from "@/lib/types";
 
 const inicial: EstadoFormulario = {};
@@ -25,6 +25,7 @@ const ACCENT: Record<Role, "vagas" | "servicos" | "empresas"> = {
 
 export function SignUpForm({ role }: { role: Role }) {
   const [state, action, pending] = useActionState(cadastrarComEstado, inicial);
+  const [cidade, setCidade] = useCidade();
 
   if (state.ok) {
     return (
@@ -106,19 +107,16 @@ export function SignUpForm({ role }: { role: Role }) {
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Field label="Cidade">
-            <Input value={PILOT_LABEL} disabled readOnly />
-          </Field>
-          <Field label="Bairro" error={state.campos?.bairro}>
-            <Select name="bairro" defaultValue="">
-              <option value="">Não informar</option>
-              {SINOP_NEIGHBORHOODS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          <CampoCidade
+            value={cidade}
+            onChange={setCidade}
+            error={state.campos?.cidade}
+          />
+          <CampoBairro
+            key={cidade}
+            cidade={cidade}
+            error={state.campos?.bairro}
+          />
         </div>
 
         {role === "candidato_clt" && (

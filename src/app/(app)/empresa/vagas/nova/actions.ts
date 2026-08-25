@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { PILOT_CITY } from "@/lib/constants";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { schemaNovaVaga } from "@/server/vagas/schemas";
@@ -19,7 +18,7 @@ export const publicarVaga = criarAcao({
   entrada: schemaNovaVaga,
   executar: async (dados) => {
     const sessao = await sessaoAtual();
-    await publicarVagaServico(sessao, { ...dados, cidade: PILOT_CITY });
+    await publicarVagaServico(sessao, dados);
 
     revalidatePath("/empresa");
     revalidatePath("/vagas");

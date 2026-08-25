@@ -17,6 +17,7 @@ const CANDIDATO = {
   nome: "Ana Paula Ribeiro",
   papel: "candidato_clt",
   avatarUrl: null,
+  cidade: "Sinop",
 };
 
 function abrir(usuario = CANDIDATO) {

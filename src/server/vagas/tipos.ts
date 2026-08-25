@@ -42,6 +42,7 @@ export type EdicaoVaga = Partial<
     | "titulo"
     | "descricao"
     | "categoria"
+    | "cidade"
     | "bairro"
     | "tipoContrato"
     | "salarioMin"

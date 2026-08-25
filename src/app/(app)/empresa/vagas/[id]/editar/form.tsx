@@ -2,15 +2,15 @@
 
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useActionState } from "react";
+import {
+  CampoBairro,
+  CampoCidade,
+  useCidade,
+} from "@/components/cidade-e-bairro";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import {
-  CONTRACT_TYPES,
-  JOB_CATEGORIES,
-  PILOT_LABEL,
-  SINOP_NEIGHBORHOODS,
-} from "@/lib/constants";
+import { CONTRACT_TYPES, JOB_CATEGORIES } from "@/lib/constants";
 import type { Vaga } from "@/server/vagas/tipos";
 import { type EstadoEdicaoVaga, editarVagaComEstado } from "./actions";
 
@@ -18,6 +18,7 @@ const inicial: EstadoEdicaoVaga = {};
 
 export function EditJobForm({ vaga }: { vaga: Vaga }) {
   const [state, action, pending] = useActionState(editarVagaComEstado, inicial);
+  const [cidade, setCidade] = useCidade(vaga.cidade);
 
   if (state.ok) {
     return (
@@ -98,20 +99,18 @@ export function EditJobForm({ vaga }: { vaga: Vaga }) {
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Field label="Cidade">
-            <Input value={PILOT_LABEL} disabled readOnly />
-          </Field>
-
-          <Field label="Bairro" hint="Onde a pessoa vai trabalhar.">
-            <Select name="bairro" defaultValue={vaga.bairro ?? ""}>
-              <option value="">Não informar</option>
-              {SINOP_NEIGHBORHOODS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          <CampoCidade
+            value={cidade}
+            onChange={setCidade}
+            error={state.campos?.cidade}
+            label="Cidade da vaga"
+          />
+          <CampoBairro
+            key={cidade}
+            cidade={cidade}
+            defaultValue={vaga.bairro}
+            error={state.campos?.bairro}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
