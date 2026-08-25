@@ -1,6 +1,37 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
+/**
+ * Content-Security-Policy.
+ *
+ * É a última linha: se alguma entrada escapar do escape em qualquer lugar,
+ * é ela que impede o script injetado de rodar ou de mandar o que roubou
+ * para fora.
+ *
+ * `'unsafe-inline'` em `script-src` existe porque o Next injeta o script de
+ * hidratação inline, sem nonce, no App Router. Tirá-lo hoje quebra o app;
+ * a saída é migrar para nonce quando o Next facilitar, e até lá a política
+ * vale pelo resto — nenhum script de terceiro carrega, e `connect-src`
+ * limita para onde os dados podem ir.
+ *
+ * `img-src` aceita `https:` porque avatar e logo vêm do Storage do
+ * Supabase, cujo domínio muda por projeto; `data:` é para o SVG inline dos
+ * ícones. `frame-ancestors 'none'` repete o X-Frame-Options para
+ * navegador que já ignora o cabeçalho antigo.
+ */
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.supabase.co https://*.ingest.sentry.io",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "object-src 'none'",
+].join("; ");
+
 const nextConfig: NextConfig = {
   // Falhar o build em erro de tipo é proposital: é mais barato corrigir
   // aqui do que descobrir com um usuário em Sinop. O lint roda separado,
@@ -19,6 +50,12 @@ const nextConfig: NextConfig = {
    */
   serverExternalPackages: ["@node-rs/argon2"],
 
+  /*
+   * `X-Powered-By: Next.js` entrega o framework e a versão de superfície a
+   * quem estiver procurando alvo, sem nenhum ganho para quem usa o site.
+   */
+  poweredByHeader: false,
+
   async headers() {
     return [
       {
@@ -31,6 +68,7 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(self)",
           },
+          { key: "Content-Security-Policy", value: CSP },
         ],
       },
     ];

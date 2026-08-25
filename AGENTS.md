@@ -231,6 +231,35 @@ O que sobreviveu: o modo demonstração. Ele responde por *de onde vêm os
 dados*, não por *quem pode entrar*, e continua sendo o que permite mostrar
 o produto sem infraestrutura.
 
+### Segurança: o que já vale, e o que se decidiu não fazer
+
+Auditoria completa dos vinte pontos está na Issue #55, com o estado de
+cada um. Três coisas que vale ter na cabeça ao mexer:
+
+**Nada de entrada de usuário concatenada em filtro do PostgREST.** O
+`or()` recebe uma string numa linguagem onde a vírgula separa condições:
+interpolar termo de busca ali é injeção, num dialeto diferente do SQL.
+Use `termoParaFiltro()` em `src/lib/data.ts`, que envolve o valor em
+aspas. Já vazou: `zzzznaoexiste,full_name.ilike.*a*` devolvia a base
+inteira.
+
+**A CSP é a última linha.** Se algum escape falhar em qualquer lugar, é
+ela que impede o script injetado de rodar ou de exfiltrar. `script-src`
+ainda precisa de `'unsafe-inline'` porque o Next injeta hidratação inline
+sem nonce no App Router; o resto da política vale, e `connect-src`
+limita para onde os dados podem sair. Há teste e2e conferindo a resposta
+HTTP de verdade, não o `next.config`.
+
+**Limite de tentativa no cadastro é por origem, não por e-mail.** Quem
+cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
+para o limite — no login sucesso zera o contador, porque lá o que se
+contém é adivinhação de senha; aqui o que se contém é a criação em si.
+
+**Proteção contra bot ficou de fora de propósito.** Captcha atrapalha
+exatamente o público deste produto: aparelho antigo, dado móvel contado,
+pouca familiaridade digital. A hora de reavaliar é quando aparecer abuso
+real, não antes.
+
 ### 404 em vez de 403 quando faz sentido
 
 Registro de outro dono e área administrativa respondem "não encontrado". Um

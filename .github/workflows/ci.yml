@@ -15,6 +15,28 @@ env:
   NODE_VERSION: "24"
 
 jobs:
+  # Vulnerabilidade conhecida em dependência de produção reprova a entrega.
+  #
+  # Só `--omit=dev` e só `high` para cima: alerta que dispara por
+  # dependência de ferramenta, ou por severidade baixa que ninguém vai
+  # tratar hoje, ensina o time a ignorar vermelho — e aí o alerta que
+  # importa passa junto.
+  dependencias:
+    name: Dependências vulneráveis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Auditoria de produção
+        run: npm audit --omit=dev --audit-level=high
+
   qualidade:
     name: Tipos, lint e arquitetura
     runs-on: ubuntu-latest

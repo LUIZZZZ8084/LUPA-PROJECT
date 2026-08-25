@@ -351,3 +351,69 @@ async function capturarErro(fn: () => Promise<unknown>) {
     return e;
   }
 }
+
+/**
+ * O cadastro é onde o abuso dói neste produto: é ele que vira lead, e conta
+ * falsa em massa envenena a única métrica que importa.
+ *
+ * O limite é por origem, e não por e-mail como no login — quem cria conta
+ * em massa troca de e-mail a cada tentativa, e limitar por e-mail não
+ * conteria nada.
+ */
+describe("limite de tentativas no cadastro", () => {
+  let restaurarCadastro: () => void;
+
+  /*
+   * Preparo próprio: o repositório em memória e o contador de tentativas
+   * são de módulo, então sem zerar entre um teste e outro o segundo herda
+   * as contas e o bloqueio do primeiro.
+   */
+  beforeEach(() => {
+    restaurarCadastro = usarRepositorio(new RepositorioMemoria());
+    limparLimites();
+  });
+
+  afterEach(() => restaurarCadastro());
+
+  function conta(n: number) {
+    return { ...candidato, email: `pessoa${n}@teste.lupa` };
+  }
+
+  it("contas seguidas da mesma origem acabam bloqueadas", async () => {
+    for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS; i++) {
+      await cadastrar(conta(i), "203.0.113.7");
+    }
+
+    await expect(cadastrar(conta(99), "203.0.113.7")).rejects.toSatisfy(
+      (e) => ehAppError(e) && e.codigo === "muitas_tentativas",
+    );
+  });
+
+  /** Bloquear uma origem não pode derrubar o cadastro de todo mundo. */
+  it("outra origem continua livre", async () => {
+    for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS; i++) {
+      await cadastrar(conta(i), "203.0.113.7");
+    }
+
+    const outro = await cadastrar(conta(50), "198.51.100.4");
+    expect(outro.email).toBe("pessoa50@teste.lupa");
+  });
+
+  /**
+   * Sucesso conta. No login, sucesso zera o contador porque o que se contém
+   * é adivinhação de senha; aqui o que se contém é a criação em si.
+   */
+  it("o sucesso conta para o limite, senão ele não conteria nada", async () => {
+    for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS; i++) {
+      await cadastrar(conta(i), "203.0.113.9");
+    }
+
+    await expect(cadastrar(conta(98), "203.0.113.9")).rejects.toThrow();
+  });
+
+  /** Sem cabeçalho de origem o app não pode parar de aceitar cadastro. */
+  it("origem desconhecida ainda cadastra", async () => {
+    const u = await cadastrar(conta(1));
+    expect(u.email).toBe("pessoa1@teste.lupa");
+  });
+});
