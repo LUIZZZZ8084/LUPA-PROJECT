@@ -13,6 +13,7 @@ import {
 } from "./mock-data";
 import { isSupabaseConfigured } from "./supabase/config";
 import { createClient } from "./supabase/server";
+import { clienteDeServico } from "./supabase/service";
 import type {
   ApplicationWithCandidate,
   CltProfile,
@@ -61,6 +62,19 @@ const matches = (haystack: string[], q: string) =>
  */
 function falhaDeConsulta(origem: string, erro: { message: string }): Error {
   return new Error(`Consulta a "${origem}" falhou: ${erro.message}`);
+}
+
+/**
+ * Banco ligado sem `SUPABASE_SERVICE_ROLE_KEY` é configuração quebrada,
+ * não motivo para mostrar dado de exemplo como se fosse real. Usada pelas
+ * consultas que só podem ler pela chave de serviço — `anon` perde
+ * `select` nessas views no schema, por carregarem currículo, telefone ou
+ * métrica administrativa.
+ */
+function falhaDeChaveDeServico(origem: string): Error {
+  return new Error(
+    `Consulta a "${origem}" falhou: chave de serviço não configurada.`,
+  );
 }
 
 /**
@@ -338,19 +352,24 @@ export async function getCompanyApplications(
   companyId: string,
 ): Promise<ApplicationWithCandidate[]> {
   if (isSupabaseConfigured) {
-    const supabase = await createClient();
-    if (supabase) {
-      const { data, error } = await supabase
-        .from("company_applications")
-        .select("*")
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: false });
-      if (error) {
-        if (ehIdSemFormaDeUuid(error)) return [];
-        throw falhaDeConsulta("company_applications", error);
-      }
-      return (data ?? []) as unknown as ApplicationWithCandidate[];
+    /*
+     * Chave de serviço, não a anônima: `company_applications` carrega
+     * currículo e telefone de candidato. `anon` perde o `select` nessa
+     * view no schema — ler com ela aqui devolveria "sem permissão" em
+     * vez de dado de verdade.
+     */
+    const supabase = clienteDeServico();
+    if (!supabase) throw falhaDeChaveDeServico("company_applications");
+    const { data, error } = await supabase
+      .from("company_applications")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false });
+    if (error) {
+      if (ehIdSemFormaDeUuid(error)) return [];
+      throw falhaDeConsulta("company_applications", error);
     }
+    return (data ?? []) as unknown as ApplicationWithCandidate[];
   }
   const jobIds = new Set(
     MOCK_JOBS.filter((j) => j.company_id === companyId).map((j) => j.id),
@@ -452,16 +471,17 @@ export async function getCandidateProfile(
 
 export async function getVerificationQueue(): Promise<VerificationRequest[]> {
   if (isSupabaseConfigured) {
-    const supabase = await createClient();
-    if (supabase) {
-      const { data, error } = await supabase
-        .from("verification_queue")
-        .select("*")
-        .eq("status", "em_analise")
-        .order("submitted_at", { ascending: true });
-      if (error) throw falhaDeConsulta("verification_queue", error);
-      return (data ?? []) as unknown as VerificationRequest[];
-    }
+    // Chave de serviço: `verification_queue` traz nome e telefone de quem
+    // pediu verificação. `anon` perde o `select` nessa view no schema.
+    const supabase = clienteDeServico();
+    if (!supabase) throw falhaDeChaveDeServico("verification_queue");
+    const { data, error } = await supabase
+      .from("verification_queue")
+      .select("*")
+      .eq("status", "em_analise")
+      .order("submitted_at", { ascending: true });
+    if (error) throw falhaDeConsulta("verification_queue", error);
+    return (data ?? []) as unknown as VerificationRequest[];
   }
   return MOCK_VERIFICATIONS.filter((v) => v.status === "em_analise");
 }
