@@ -131,3 +131,85 @@ describe("RepositorioCandidaturasPostgres", () => {
     expect(await repo.listar()).toHaveLength(1);
   });
 });
+
+/**
+ * Caminhos de erro.
+ *
+ * São a metade que ninguém exercita à mão e a que decide o que a pessoa vê
+ * quando algo dá errado: mensagem trocada manda depurar o lugar errado, e
+ * erro cru vazado entrega detalhe interno de banco para quem estiver
+ * olhando.
+ */
+describe("quando o banco recusa", () => {
+  const repo = new RepositorioCandidaturasPostgres();
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    resposta = { data: null, error: null };
+  });
+
+  const QUEDA = { message: "conexão recusada", code: "08006" };
+  const ID_TORTO = {
+    message: 'invalid input syntax for type uuid: "abc"',
+    code: "22P02",
+  };
+
+  /**
+   * Id que não tem forma de uuid não pode corresponder a registro nenhum:
+   * é "não encontrado", não "servidor quebrado". A distinção importa além
+   * da semântica — erro aciona alerta, 404 não, e link velho de crawler
+   * não pode acordar ninguém de madrugada.
+   */
+  it.each([
+    ["porVaga", () => repo.porVaga("abc")],
+    ["porCandidato", () => repo.porCandidato("abc")],
+  ])("%s com id torto devolve lista vazia", async (_nome, chamar) => {
+    resposta = { data: null, error: ID_TORTO };
+    expect(await chamar()).toEqual([]);
+  });
+
+  it.each([
+    ["porId", () => repo.porId("11111111-1111-4111-8111-000000000001")],
+    ["porVaga", () => repo.porVaga("11111111-1111-4111-8111-000000000001")],
+    [
+      "porCandidato",
+      () => repo.porCandidato("11111111-1111-4111-8111-000000000001"),
+    ],
+    ["listar", () => repo.listar()],
+  ])("%s com banco fora do ar vira indisponível", async (_nome, chamar) => {
+    resposta = { data: null, error: QUEDA };
+
+    await expect(chamar()).rejects.toMatchObject({ codigo: "indisponivel" });
+  });
+
+  it("criar com falha de banco não vira conflito", async () => {
+    resposta = { data: null, error: QUEDA };
+
+    await expect(
+      repo.criar({ vagaId: "v", candidatoId: "c" }),
+    ).rejects.toMatchObject({ codigo: "indisponivel" });
+  });
+
+  it("mover estágio com falha de banco não vira não-encontrado", async () => {
+    resposta = { data: null, error: QUEDA };
+
+    await expect(repo.moverEstagio("id", "entrevista")).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
+  });
+
+  /** Sem linha e sem erro é ausência, não falha. */
+  it("porId sem resultado devolve null", async () => {
+    resposta = { data: null, error: null };
+    expect(await repo.porId("11111111-1111-4111-8111-000000000001")).toBeNull();
+  });
+
+  it.each([
+    ["porVaga", () => repo.porVaga("v")],
+    ["porCandidato", () => repo.porCandidato("c")],
+    ["listar", () => repo.listar()],
+  ])("%s sem linhas devolve lista vazia, não null", async (_nome, chamar) => {
+    resposta = { data: null, error: null };
+    expect(await chamar()).toEqual([]);
+  });
+});
