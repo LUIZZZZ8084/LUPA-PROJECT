@@ -287,6 +287,26 @@ confere, para dar mensagem decente antes de gravar — mas duas requisições
 simultâneas passariam pela checagem e criariam a décima primeira. O banco é
 o único lugar onde essa corrida não existe.
 
+### Visualização de vaga é contagem, não histórico
+
+`visualizacoes_vaga` guarda uma linha por vaga por dia, e o incremento
+passa por `registrar_visualizacao()` — `on conflict do update` no banco,
+porque ler-somar-gravar na aplicação perde contagem quando duas pessoas
+abrem a vaga ao mesmo tempo.
+
+**Não se guarda quem viu.** Deduplicar por pessoa daria um número melhor,
+mas ao preço de armazenar qual candidato olhou qual vaga: histórico de quem
+está procurando trabalho, a mesma informação que mantém o currículo fora de
+qualquer view pública. O preço aceito é que recarga infla o número, e por
+isso a tela diz, com todas as letras, que a métrica serve para comparar
+dias e vagas entre si — não para contar pessoas.
+
+A empresa não conta as próprias aberturas: ela abre a vaga para conferir o
+texto, e métrica que sobe quando o dono recarrega mede o dono.
+
+O registro sai por `after()`, depois da resposta. Quem abriu a vaga quer
+ler a vaga; se a contagem falhar, vai para o log e a página segue.
+
 ---
 
 ## Decisões de produto por papel
@@ -318,7 +338,7 @@ tão importante quanto o que entrou:
 | Publicar, editar e encerrar vaga | Tela existe; ações no servidor pendentes |
 | Ver candidaturas por estágio | Tela existe; mover estágio pendente |
 | Publicações no perfil, até 10 ativas | Pronto |
-| Métricas próprias: visualizações, candidaturas | Parcial (contagem, não série) |
+| Métricas próprias: visualizações e candidaturas por dia, 30 dias | Pronto |
 | Plano e cobrança | `trial`/`mensal` no schema; sem integração |
 
 **Fora do escopo por decisão, não por esquecimento:** banco de talentos com
@@ -388,13 +408,21 @@ varre o código-fonte.
 
 ### Sobre verificação
 
-**Verifique o que você diz que verificou.** Dois episódios reais aqui:
+**Verifique o que você diz que verificou.** Três episódios reais aqui:
 
 1. Declarei "filtro funcionando" tendo conferido só a contagem de resultados
    via URL, sem nunca ter clicado no filtro.
 2. Declarei "a busca nunca funcionou em produção" com base num inspetor de
    navegador que removia comentários HTML — e os comentários são justamente
    como o React marca os limites de Suspense. A conclusão estava errada.
+3. Declarei o painel da empresa "preso no esqueleto de carregamento" lendo o
+   DOM de uma aba oculta. O React 19 revela o conteúdo do Suspense num
+   quadro de animação, e aba escondida não pinta quadro: o conteúdo fica
+   num `<div hidden>` para sempre. Cheguei a mexer na CSP atrás de um
+   defeito que não existia.
 
-A lição das duas: confirme num navegador de verdade, pelo caminho que o
-usuário percorre. O Playwright existe para isso.
+A lição das três: confirme num navegador de verdade, pelo caminho que o
+usuário percorre. O Playwright existe para isso. Antes de concluir que a
+tela está quebrada, verifique se o ambiente de medição está inteiro —
+`requestAnimationFrame` que nunca dispara é sinal de que quem está errado é
+a medição.

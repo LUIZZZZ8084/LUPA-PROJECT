@@ -19,9 +19,21 @@ import type { NextConfig } from "next";
  * ícones. `frame-ancestors 'none'` repete o X-Frame-Options para
  * navegador que já ignora o cabeçalho antigo.
  */
+/*
+ * O React em modo de desenvolvimento usa `eval` para reconstruir a pilha de
+ * chamada de erro vinda do servidor. Sem `'unsafe-eval'`, todo `npm run
+ * dev` abre com um erro vermelho no console que não tem nada a ver com o
+ * código — ruído que treina a equipe a ignorar o console.
+ *
+ * Vale só no `dev`. O bundle de produção não usa `eval`, e é ele que vai
+ * para a Vercel.
+ */
+const EVAL_NO_DEV =
+  process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${EVAL_NO_DEV}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",

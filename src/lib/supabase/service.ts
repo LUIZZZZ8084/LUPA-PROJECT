@@ -49,7 +49,8 @@ interface SchemaPermissivo {
       }
     >;
     Views: Record<string, { Row: LinhaGenerica; Relationships: [] }>;
-    Functions: Record<string, never>;
+    // Sem assinatura, toda chamada de rpc() vira erro de tipo.
+    Functions: Record<string, { Args: LinhaGenerica; Returns: unknown }>;
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

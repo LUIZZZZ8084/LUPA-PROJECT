@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { ApplyButton } from "@/components/apply-button";
 import { JobCard } from "@/components/job-card";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
@@ -17,6 +18,8 @@ import { Panel } from "@/components/ui/card";
 import { VerifiedMark } from "@/components/verified-badge";
 import { getJobById, getRelatedJobs } from "@/lib/data";
 import { formatSalaryRange, pluralize, timeAgo } from "@/lib/format";
+import { sessaoAtual } from "@/server/auth/cookies";
+import { contarVisualizacao } from "@/server/visualizacoes";
 
 export async function generateMetadata({
   params,
@@ -40,6 +43,21 @@ export default async function JobDetailPage({
   const { id } = await params;
   const job = await getJobById(id);
   if (!job) notFound();
+
+  /*
+   * A contagem sai por `after()`, depois da resposta: quem abriu a vaga
+   * quer ler a vaga, e o número é do outro lado do balcão. Sem isso, o
+   * insert entraria no caminho crítico de uma página que muita gente abre
+   * em 3G.
+   *
+   * A própria empresa não conta. Ela abre a vaga para conferir o texto, e
+   * uma métrica que sobe quando o dono recarrega mede o dono, não o
+   * público.
+   */
+  const sessao = await sessaoAtual();
+  if (sessao?.usuarioId !== job.company_id) {
+    after(() => contarVisualizacao(job.id));
+  }
 
   const related = await getRelatedJobs(job);
 

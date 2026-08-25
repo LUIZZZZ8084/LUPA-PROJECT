@@ -32,6 +32,7 @@ drop view if exists job_listings cascade;
 drop view if exists provider_listings cascade;
 
 -- As tabelas. O `cascade` leva junto índices, constraints e triggers.
+drop table if exists visualizacoes_vaga cascade;
 drop table if exists pedidos_verificacao cascade;
 drop table if exists publicacoes cascade;
 drop table if exists avaliacoes cascade;
@@ -47,6 +48,7 @@ drop table if exists usuarios cascade;
 -- As funções dos triggers. Sobrevivem ao `drop table`, porque a função é
 -- do schema e não da tabela — é justamente o tipo de objeto órfão que faz
 -- a segunda execução do schema falhar de um jeito difícil de entender.
+drop function if exists registrar_visualizacao(uuid) cascade;
 drop function if exists conferir_limite_publicacoes() cascade;
 drop function if exists atualizar_nota_prestador() cascade;
 drop function if exists tocar_atualizado_em() cascade;

@@ -737,13 +737,3 @@ export const MOCK_VERIFICATIONS: VerificationRequest[] = [
     status: "em_analise",
   },
 ];
-
-/* ============================================================
-   Estatísticas do painel Minha Empresa
-   ============================================================ */
-
-export const MOCK_COMPANY_STATS = {
-  active_jobs: 4,
-  applications: 57,
-  views: 1245,
-};

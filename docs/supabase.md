@@ -57,6 +57,20 @@ O ciclo schema → reset → schema é exercitado por teste contra um Postgres
 real, incluindo o detalhe que engana: funções de trigger e tipos enum
 sobrevivem a `drop table cascade` e precisam ser removidos à mão.
 
+### Banco que já tem dado: aplique só a diferença
+
+Depois que existe conta de verdade, o reset está fora de questão e o
+`schema.sql` inteiro para no primeiro objeto que já existe. Cada mudança de
+schema que precisa alcançar um banco vivo ganha um arquivo próprio, aditivo
+e repetível, ao lado do `schema.sql`:
+
+| Arquivo | Quando rodar |
+|---|---|
+| [`supabase/aplica-visualizacoes.sql`](../supabase/aplica-visualizacoes.sql) | Uma vez, em banco criado antes da Issue #45 |
+| [`supabase/corrige-telefones.sql`](../supabase/corrige-telefones.sql) | Uma vez, em banco que recebeu o seed antes da Issue #24 |
+
+Banco novo não precisa de nenhum deles: o `schema.sql` já traz tudo.
+
 ## 3. Criar os buckets de arquivo
 
 **SQL Editor** → cole [`supabase/storage.sql`](../supabase/storage.sql) → **Run**.
