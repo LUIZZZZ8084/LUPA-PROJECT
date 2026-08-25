@@ -1,7 +1,6 @@
 "use client";
 
 import { CheckCircle2, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { useActionState } from "react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
@@ -12,30 +11,28 @@ import {
   PILOT_LABEL,
   SINOP_NEIGHBORHOODS,
 } from "@/lib/constants";
-import { type EstadoVaga, publicarVagaComEstado } from "./actions";
+import type { Vaga } from "@/server/vagas/tipos";
+import { type EstadoEdicaoVaga, editarVagaComEstado } from "./actions";
 
-const inicial: EstadoVaga = {};
+const inicial: EstadoEdicaoVaga = {};
 
-export function NewJobForm() {
-  const [state, action, pending] = useActionState(
-    publicarVagaComEstado,
-    inicial,
-  );
+export function EditJobForm({ vaga }: { vaga: Vaga }) {
+  const [state, action, pending] = useActionState(editarVagaComEstado, inicial);
 
   if (state.ok) {
     return (
       <Panel className="text-center">
         <CheckCircle2 size={40} className="mx-auto text-vagas" />
-        <h2 className="mt-4 text-lg font-bold">Vaga publicada</h2>
+        <h2 className="mt-4 text-lg font-bold">Vaga atualizada</h2>
         <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-          Sua vaga já aparece na busca de quem está procurando emprego em Sinop.
+          As mudanças já valem para quem está vendo a vaga agora.
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <ButtonLink href="/empresa" variant="empresas" size="sm">
-            Ir para o painel
+            Voltar para o painel
           </ButtonLink>
-          <ButtonLink href="/vagas" variant="outline" size="sm">
-            Ver na busca
+          <ButtonLink href={`/vagas/${vaga.id}`} variant="outline" size="sm">
+            Ver vaga
           </ButtonLink>
         </div>
       </Panel>
@@ -44,6 +41,7 @@ export function NewJobForm() {
 
   return (
     <form action={action}>
+      <input type="hidden" name="id" value={vaga.id} />
       <Panel className="space-y-5">
         <Field
           label="Cargo"
@@ -53,6 +51,7 @@ export function NewJobForm() {
         >
           <Input
             name="titulo"
+            defaultValue={vaga.titulo}
             placeholder="Ex.: Auxiliar Administrativo"
             required
           />
@@ -60,7 +59,11 @@ export function NewJobForm() {
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Categoria" required error={state.campos?.categoria}>
-            <Select name="categoria" required defaultValue="">
+            <Select
+              name="categoria"
+              required
+              defaultValue={vaga.categoria ?? ""}
+            >
               <option value="" disabled>
                 Escolha uma área
               </option>
@@ -77,7 +80,11 @@ export function NewJobForm() {
             required
             error={state.campos?.tipoContrato}
           >
-            <Select name="tipoContrato" required defaultValue="">
+            <Select
+              name="tipoContrato"
+              required
+              defaultValue={vaga.tipoContrato ?? ""}
+            >
               <option value="" disabled>
                 Escolha o tipo
               </option>
@@ -96,7 +103,7 @@ export function NewJobForm() {
           </Field>
 
           <Field label="Bairro" hint="Onde a pessoa vai trabalhar.">
-            <Select name="bairro" defaultValue="">
+            <Select name="bairro" defaultValue={vaga.bairro ?? ""}>
               <option value="">Não informar</option>
               {SINOP_NEIGHBORHOODS.map((n) => (
                 <option key={n} value={n}>
@@ -119,6 +126,7 @@ export function NewJobForm() {
               min={0}
               step={100}
               inputMode="numeric"
+              defaultValue={vaga.salarioMin ?? undefined}
               placeholder="1800"
             />
           </Field>
@@ -130,6 +138,7 @@ export function NewJobForm() {
               min={0}
               step={100}
               inputMode="numeric"
+              defaultValue={vaga.salarioMax ?? undefined}
               placeholder="2200"
             />
           </Field>
@@ -145,6 +154,7 @@ export function NewJobForm() {
             name="descricao"
             rows={9}
             required
+            defaultValue={vaga.descricao}
             placeholder={
               "Atividades do dia a dia...\n\nRequisitos: ...\n\nOferecemos: vale-transporte, vale-refeição..."
             }
@@ -157,16 +167,13 @@ export function NewJobForm() {
           </p>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
-          <p className="text-xs text-faint">
-            A primeira vaga é gratuita.{" "}
-            <Link href="/empresa" className="underline hover:text-muted">
-              Ver meu plano
-            </Link>
-          </p>
+        <div className="flex items-center justify-end gap-3 border-t border-line pt-5">
+          <ButtonLink href="/empresa" variant="outline" size="sm">
+            Cancelar
+          </ButtonLink>
           <Button type="submit" variant="empresas" disabled={pending}>
             {pending && <Loader2 size={16} className="animate-spin" />}
-            Publicar vaga
+            Salvar alterações
           </Button>
         </div>
       </Panel>

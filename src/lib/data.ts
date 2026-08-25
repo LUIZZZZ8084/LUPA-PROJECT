@@ -1,5 +1,7 @@
 import "server-only";
 
+import { RepositorioVagasMemoria, repositorioVagas } from "@/server/vagas";
+import type { Vaga } from "@/server/vagas/tipos";
 import {
   DEMO_COMPANY_ID,
   MOCK_APPLICATIONS,
@@ -99,6 +101,65 @@ function ehIdSemFormaDeUuid(erro: { code?: string }): boolean {
    Vagas
    ============================================================ */
 
+/**
+ * Converte o dado de exemplo para o formato interno do repositório de
+ * vagas, e vice-versa.
+ *
+ * O repositório de vagas em memória é a fonte da verdade do modo
+ * demonstração: sem isto, uma vaga publicada, editada ou encerrada pelo
+ * painel nunca apareceria na busca pública nem no próprio painel, porque
+ * os dois liam o array estático de `mock-data.ts` direto.
+ */
+function vagaDoMock(job: JobListing): Vaga {
+  return {
+    id: job.id,
+    empresaId: job.company_id,
+    titulo: job.title,
+    descricao: job.description,
+    categoria: job.category,
+    cidade: job.city,
+    bairro: job.neighborhood,
+    tipoContrato: job.contract_type,
+    salarioMin: job.salary_min,
+    salarioMax: job.salary_max,
+    status: job.status,
+    criadoEm: job.created_at,
+  };
+}
+
+function jobListingDaVaga(vaga: Vaga): JobListing {
+  const empresa = MOCK_COMPANIES.find((c) => c.profile_id === vaga.empresaId);
+  return {
+    id: vaga.id,
+    company_id: vaga.empresaId,
+    title: vaga.titulo,
+    description: vaga.descricao,
+    category: vaga.categoria,
+    city: vaga.cidade,
+    neighborhood: vaga.bairro,
+    contract_type: vaga.tipoContrato as JobListing["contract_type"],
+    salary_min: vaga.salarioMin,
+    salary_max: vaga.salarioMax,
+    status: vaga.status,
+    created_at: vaga.criadoEm,
+    company: {
+      company_name: empresa?.company_name ?? "Empresa",
+      logo_url: empresa?.logo_url ?? null,
+      doc_verified: empresa?.doc_verified ?? false,
+    },
+    applicant_count: MOCK_APPLICATIONS.filter((a) => a.job_id === vaga.id)
+      .length,
+  };
+}
+
+async function jobsEmDemonstracao(): Promise<JobListing[]> {
+  const repo = repositorioVagas();
+  if (repo instanceof RepositorioVagasMemoria) {
+    repo.semear(MOCK_JOBS.map(vagaDoMock));
+  }
+  return (await repo.listar()).map(jobListingDaVaga);
+}
+
 export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
   if (isSupabaseConfigured) {
     const supabase = await createClient();
@@ -124,27 +185,30 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
     }
   }
 
-  return MOCK_JOBS.filter((job) => {
-    if (job.status !== "aberta") return false;
-    if (filters.city && job.city !== filters.city) return false;
-    if (filters.category && job.category !== filters.category) return false;
-    if (filters.contract_type && job.contract_type !== filters.contract_type)
-      return false;
-    if (
-      filters.q &&
-      !matches(
-        [
-          job.title,
-          job.description,
-          job.company.company_name,
-          job.category ?? "",
-        ],
-        filters.q,
+  const jobs = await jobsEmDemonstracao();
+  return jobs
+    .filter((job) => {
+      if (job.status !== "aberta") return false;
+      if (filters.city && job.city !== filters.city) return false;
+      if (filters.category && job.category !== filters.category) return false;
+      if (filters.contract_type && job.contract_type !== filters.contract_type)
+        return false;
+      if (
+        filters.q &&
+        !matches(
+          [
+            job.title,
+            job.description,
+            job.company.company_name,
+            job.category ?? "",
+          ],
+          filters.q,
+        )
       )
-    )
-      return false;
-    return true;
-  }).sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+        return false;
+      return true;
+    })
+    .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
 }
 
 export async function getJobById(id: string): Promise<JobListing | null> {
@@ -163,7 +227,8 @@ export async function getJobById(id: string): Promise<JobListing | null> {
       return (data as unknown as JobListing) ?? null;
     }
   }
-  return MOCK_JOBS.find((j) => j.id === id) ?? null;
+  const jobs = await jobsEmDemonstracao();
+  return jobs.find((j) => j.id === id) ?? null;
 }
 
 /** Outras vagas abertas da mesma empresa, para o rodapé do detalhe. */
@@ -343,9 +408,10 @@ export async function getCompanyJobs(companyId: string): Promise<JobListing[]> {
       return (data ?? []) as unknown as JobListing[];
     }
   }
-  return MOCK_JOBS.filter((j) => j.company_id === companyId).sort(
-    (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
-  );
+  const jobs = await jobsEmDemonstracao();
+  return jobs
+    .filter((j) => j.company_id === companyId)
+    .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
 }
 
 export async function getCompanyApplications(
@@ -371,8 +437,9 @@ export async function getCompanyApplications(
     }
     return (data ?? []) as unknown as ApplicationWithCandidate[];
   }
+  const jobs = await jobsEmDemonstracao();
   const jobIds = new Set(
-    MOCK_JOBS.filter((j) => j.company_id === companyId).map((j) => j.id),
+    jobs.filter((j) => j.company_id === companyId).map((j) => j.id),
   );
   return MOCK_APPLICATIONS.filter((a) => jobIds.has(a.job_id)).sort(
     (a, b) => +new Date(b.created_at) - +new Date(a.created_at),

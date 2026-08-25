@@ -22,6 +22,7 @@ import {
 import { pluralize, timeAgo } from "@/lib/format";
 import type { ApplicationStatus } from "@/lib/types";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { EncerrarVagaButton } from "./encerrar-vaga-button";
 
 export const metadata: Metadata = {
   title: "Minha Empresa",
@@ -146,10 +147,13 @@ export default async function EmpresaPage() {
         ) : (
           <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
             {jobs.map((job) => (
-              <li key={job.id}>
+              <li
+                key={job.id}
+                className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
+              >
                 <Link
                   href={`/vagas/${job.id}`}
-                  className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
+                  className="flex min-w-0 flex-1 items-center gap-3"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">
@@ -168,6 +172,17 @@ export default async function EmpresaPage() {
                     {job.status === "aberta" ? "Ativa" : "Encerrada"}
                   </Badge>
                 </Link>
+                {job.status === "aberta" && (
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Link
+                      href={`/empresa/vagas/${job.id}/editar`}
+                      className="text-xs font-semibold text-muted underline-offset-2 hover:text-ink hover:underline"
+                    >
+                      Editar
+                    </Link>
+                    <EncerrarVagaButton id={job.id} titulo={job.title} />
+                  </div>
+                )}
               </li>
             ))}
           </ul>
