@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { criarAcao } from "@/server/action";
 import { criarSessao, encerrarSessao } from "@/server/auth/cookies";
@@ -15,11 +16,29 @@ import { cadastrar, entrar } from "@/server/auth/servico";
  * testável sem servidor.
  */
 
+/**
+ * De onde veio a requisição, para o limite de tentativas do cadastro.
+ *
+ * `x-forwarded-for` é a cadeia de proxies; o primeiro item é o cliente. Na
+ * Vercel o cabeçalho é reescrito pela borda, então não dá para forjá-lo de
+ * fora — em outro provedor isso precisaria ser reavaliado.
+ *
+ * Sem cabeçalho, todo mundo cai na mesma chave e passa a dividir o mesmo
+ * limite. É deliberado: um limite compartilhado atrapalha mais do que
+ * limite nenhum protege, e o caso só acontece fora da Vercel.
+ */
+async function origemDaRequisicao(): Promise<string> {
+  const cabecalhos = await headers();
+  const encaminhado = cabecalhos.get("x-forwarded-for");
+  const ip = encaminhado?.split(",")[0]?.trim();
+  return ip || "desconhecida";
+}
+
 export const cadastrarConta = criarAcao({
   nome: "auth.cadastrar",
   entrada: schemaCadastro,
   executar: async (dados) => {
-    const usuario = await cadastrar(dados);
+    const usuario = await cadastrar(dados, await origemDaRequisicao());
 
     // Entra já logado: pedir que a pessoa faça login logo depois de criar a
     // conta é um passo a mais para abandonar.

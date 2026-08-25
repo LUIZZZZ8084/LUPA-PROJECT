@@ -104,6 +104,27 @@ function ehIdSemFormaDeUuid(erro: { code?: string }): boolean {
   return erro.code === "22P02";
 }
 
+/**
+ * Prepara o termo de busca para entrar num filtro do PostgREST.
+ *
+ * `or()` recebe uma string na linguagem de filtro do PostgREST, onde a
+ * vírgula separa condições e o parêntese agrupa. Interpolar o termo cru ali
+ * é o mesmo erro de SQL injection, num dialeto diferente: quem controla o
+ * termo controla a lista de condições.
+ *
+ * Não era teórico. Contra o banco de produção, `zzzznaoexiste` devolvia
+ * zero resultados e `zzzznaoexiste,full_name.ilike.*a*` devolvia a base
+ * inteira — a condição injetada passava a valer.
+ *
+ * A linguagem aceita valor entre aspas duplas, e é isso que se usa aqui:
+ * dentro delas a vírgula é texto. Só `\` e `"` precisam de escape, e nessa
+ * ordem — inverter faria a barra do escape ser escapada de novo.
+ */
+function termoParaFiltro(termo: string): string {
+  const escapado = termo.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  return `"%${escapado}%"`;
+}
+
 /* ============================================================
    Vagas
    ============================================================ */
@@ -181,10 +202,10 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
       if (filters.category) query = query.eq("category", filters.category);
       if (filters.contract_type)
         query = query.eq("contract_type", filters.contract_type);
-      if (filters.q)
-        query = query.or(
-          `title.ilike.%${filters.q}%,description.ilike.%${filters.q}%`,
-        );
+      if (filters.q) {
+        const t = termoParaFiltro(filters.q);
+        query = query.or(`title.ilike.${t},description.ilike.${t}`);
+      }
 
       const { data, error } = await query;
       if (error) throw falhaDeConsulta("job_listings", error);
@@ -274,10 +295,10 @@ export async function getProviders(
       if (filters.category) query = query.eq("category_slug", filters.category);
       if (filters.min_rating)
         query = query.gte("avg_rating", filters.min_rating);
-      if (filters.q)
-        query = query.or(
-          `full_name.ilike.%${filters.q}%,description.ilike.%${filters.q}%`,
-        );
+      if (filters.q) {
+        const t = termoParaFiltro(filters.q);
+        query = query.or(`full_name.ilike.${t},description.ilike.${t}`);
+      }
 
       const { data, error } = await query;
       if (error) throw falhaDeConsulta("provider_listings", error);
