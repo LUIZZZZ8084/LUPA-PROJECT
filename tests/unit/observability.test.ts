@@ -124,3 +124,60 @@ describe("configuração de amostragem", () => {
     expect(comoTexto).toContain("chrome-extension");
   });
 });
+
+/**
+ * As bordas de cada expressão, uma a uma.
+ *
+ * Os testes acima confirmam que o dado não vaza. Estes confirmam *qual*
+ * regra pegou — e é isso que impede uma expressão de ser afrouxada sem
+ * ninguém notar. Uma borda `(?<!\d)` removida por engano continua
+ * mascarando telefone e passa em todos os testes de vazamento, mas começa
+ * a picotar identificador numérico no meio e transforma relatório de erro
+ * em charada.
+ */
+describe("bordas das expressões", () => {
+  const limpar = (m: string) => scrubSensitiveData({ m }).m;
+
+  it("CNPJ é reconhecido antes de CPF — os 11 primeiros dígitos coincidem", () => {
+    // Sem a ordem certa, "12.345.678/0001-90" viraria "[cpf]" + sobra.
+    expect(limpar("12345678000190")).toBe("[cnpj]");
+    expect(limpar("12.345.678/0001-90")).toBe("[cnpj]");
+  });
+
+  it("telefone com DDI e com parênteses sai como telefone", () => {
+    expect(limpar("+55 (66) 99911-0001")).toBe("[telefone]");
+    expect(limpar("(66) 9991-0001")).toBe("[telefone]");
+    expect(limpar("+5566999110001")).toBe("[telefone]");
+  });
+
+  it("CPF com máscara sai como cpf", () => {
+    expect(limpar("123.456.789-00")).toBe("[cpf]");
+  });
+
+  it("não pica número maior no meio", () => {
+    /*
+     * Um timestamp em milissegundos tem 13 dígitos. Sem as bordas, a regra
+     * de 10-11 dígitos comeria um pedaço e deixaria o resto solto —
+     * "1756[telefone]" no lugar de um número que era só um horário.
+     */
+    for (const numero of ["1756132800000", "999999999999999"]) {
+      expect(limpar(numero)).toBe(numero);
+    }
+  });
+
+  it("sequência curta demais não é mascarada", () => {
+    // Nove dígitos não são telefone brasileiro nem CPF; mascarar aqui
+    // apagaria código de pedido e id numérico sem ganho de privacidade.
+    expect(limpar("123456789")).toBe("123456789");
+  });
+
+  it("mascara todas as ocorrências, não só a primeira", () => {
+    expect(limpar("de 66999110001 para 66999110002")).toBe(
+      "de [telefone] para [telefone]",
+    );
+  });
+
+  it("texto sem número atravessa intacto", () => {
+    expect(limpar("falha ao gravar a vaga")).toBe("falha ao gravar a vaga");
+  });
+});
