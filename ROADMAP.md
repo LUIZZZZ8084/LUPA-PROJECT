@@ -60,6 +60,11 @@ Alcance:
   quando a URL não trazia nenhuma —
   [#76](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/76),
   PR [#77](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/77)
+- O mais perto de quem está olhando aparece primeiro, por região do IBGE —
+  [#79](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/79)
+- Título e descrição de `/vagas` e `/servicos` acompanham a cidade
+  filtrada, em vez de dizer Sinop sempre —
+  [#78](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/78)
 
 Segurança (auditoria dos 20 pontos, em duas passadas):
 

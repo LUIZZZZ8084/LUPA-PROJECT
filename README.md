@@ -83,6 +83,13 @@ docs/
   não o limite de quem pode entrar. A busca aberta, sem cidade escolhida,
   mostra o estado inteiro: quem quiser só a sua cidade filtra, e o filtro
   fica na URL.
+- **O mais perto de você aparece primeiro.** A ordem da busca é uma escada
+  de cinco degraus — mesmo bairro, mesma cidade, mesma região imediata,
+  mesma região intermediária, resto do estado. "Perto" vem da divisão
+  regional do IBGE, que agrupa municípios pelo deslocamento real das
+  pessoas, e não de distância em linha reta: em MT quem decide o tempo de
+  viagem é a estrada. Ordenar não é filtrar — nada some da lista por estar
+  longe, e a tela avisa quando a ordem é essa.
 - **PWA, não app de loja.** Manifest e ícones gerados em build; "adicionar à
   tela inicial" sem revisão da Apple ou do Google.
 
