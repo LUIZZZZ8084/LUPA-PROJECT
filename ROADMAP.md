@@ -58,7 +58,8 @@ Alcance:
   PR [#63](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/63)
 - Vaga publicada fora de Sinop sumia da busca: a tela chutava a cidade
   quando a URL não trazia nenhuma —
-  [#76](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/76)
+  [#76](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/76),
+  PR [#77](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/77)
 
 Segurança (auditoria dos 20 pontos, em duas passadas):
 
