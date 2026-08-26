@@ -147,8 +147,24 @@ export interface ProviderListing extends ProviderProfile {
 
 /** Candidatura vista pelo painel da empresa. */
 export interface ApplicationWithCandidate extends Application {
+  /*
+   * O candidato, como a empresa dona da vaga o vê.
+   *
+   * Contato e currículo entram aqui porque candidatura sem contato não
+   * vira entrevista. O que delimita o acesso não é o tipo: é a consulta,
+   * que filtra sempre pela empresa da sessão, mais o `revoke` da view
+   * para a chave anônima. Este objeto nunca chega a uma tela pública.
+   */
   candidate: Pick<Profile, "full_name" | "avatar_url" | "neighborhood"> & {
+    city: string | null;
+    email: string | null;
+    phone: string | null;
     desired_area: string | null;
+    availability: string | null;
+    summary: string | null;
+    experiences: Experience[];
+    education: string | null;
+    skills: string[];
     resume_url: string | null;
   };
   job_title: string;

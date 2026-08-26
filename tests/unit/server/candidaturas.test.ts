@@ -14,8 +14,10 @@ vi.mock("@/lib/supabase/server", () => ({
 import type { Autenticado } from "@/server/auth/rbac";
 import {
   RepositorioCandidaturasMemoria,
+  repositorioCandidaturas,
   usarRepositorioCandidaturas,
 } from "@/server/candidaturas";
+import { marcarComoVisualizada } from "@/server/candidaturas/ficha";
 import { candidatarSe, moverCandidatura } from "@/server/candidaturas/servico";
 import { ehAppError } from "@/server/errors";
 import { RepositorioVagasMemoria, usarRepositorioVagas } from "@/server/vagas";
@@ -203,3 +205,66 @@ async function capturar(fn: () => Promise<unknown>) {
     return e;
   }
 }
+
+/**
+ * A ficha do candidato, no painel da empresa.
+ *
+ * O que estes testes protegem não é a tela: é o limite. A ficha carrega
+ * telefone, e-mail e currículo de alguém que está procurando emprego, e o
+ * que autoriza a empresa a ver isso é uma coisa só — a pessoa se candidatou
+ * à vaga dela.
+ */
+describe("ficha da candidatura", () => {
+  let restaurarVagas: () => void;
+  let restaurarCandidaturas: () => void;
+
+  beforeEach(() => {
+    restaurarVagas = usarRepositorioVagas(new RepositorioVagasMemoria());
+    restaurarCandidaturas = usarRepositorioCandidaturas(
+      new RepositorioCandidaturasMemoria(),
+    );
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    restaurarVagas();
+    restaurarCandidaturas();
+    vi.restoreAllMocks();
+  });
+
+  describe("abrir marca como visualizada", () => {
+    it("sai de 'nova' assim que a empresa abre", async () => {
+      const vaga = await publicarVaga(empresa, DADOS_VAGA);
+      const c = await candidatarSe(candidato, vaga.id);
+      expect(c.status).toBe("enviada");
+
+      await marcarComoVisualizada(c.id);
+
+      const depois = await repositorioCandidaturas().porId(c.id);
+      expect(depois?.status).toBe("visualizada");
+    });
+
+    /*
+     * Reabrir a ficha de quem já está em entrevista não pode jogar a
+     * pessoa de volta para o começo: isso apagaria o trabalho de triagem
+     * de quem estava conduzindo o processo.
+     */
+    it("não puxa de volta quem já avançou", async () => {
+      const vaga = await publicarVaga(empresa, DADOS_VAGA);
+      const c = await candidatarSe(candidato, vaga.id);
+      await moverCandidatura(empresa, c.id, "entrevista");
+
+      await marcarComoVisualizada(c.id);
+
+      const depois = await repositorioCandidaturas().porId(c.id);
+      expect(depois?.status).toBe("entrevista");
+    });
+
+    it("candidatura que não existe não estoura", async () => {
+      await expect(
+        marcarComoVisualizada("nao-existe"),
+      ).resolves.toBeUndefined();
+    });
+  });
+});
