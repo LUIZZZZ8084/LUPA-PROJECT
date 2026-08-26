@@ -1,5 +1,8 @@
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { erros } from "../errors";
 import { log } from "../logger";
+import { RepositorioLimitePostgres } from "./rate-limit-postgres";
+import { CONFIG_LIMITE, type RepositorioLimite } from "./rate-limit-tipos";
 
 /**
  * Limite de tentativas.
@@ -8,22 +11,26 @@ import { log } from "../logger";
  * roda até acertar. Com Argon2 cada tentativa custa ~50ms, o que já atrasa
  * bastante — mas atrasar não é impedir.
  *
- * O contador vive em memória, o que num ambiente serverless significa: vale
- * por instância. Um atacante distribuído contorna. É proteção contra o
- * ataque comum, não contra o determinado — e é honesto dizer isso aqui em
- * vez de deixar parecer mais forte do que é. Quando houver volume, isto vira
- * um contador no Postgres ou num Redis, com a mesma interface.
+ * Com Supabase ligado o contador vive no banco, e é isso que faz o limite
+ * valer de verdade: em memória ele sumia a cada deploy e valia por
+ * instância de função, então quem caísse noutra instância começava do
+ * zero. Com concorrência suficiente, virava sugestão.
+ *
+ * A versão em memória continua existindo para o modo demonstração e para o
+ * teste. Contra um atacante distribuído, nenhuma das duas é suficiente
+ * sozinha — o passo seguinte é rate limit na borda, e vale quando aparecer
+ * abuso medido.
  */
+
+const JANELA_MS = CONFIG_LIMITE.JANELA_MS;
+const MAX_TENTATIVAS = CONFIG_LIMITE.MAX_TENTATIVAS;
+const BLOQUEIO_MS = CONFIG_LIMITE.BLOQUEIO_MS;
 
 interface Janela {
   tentativas: number;
   primeiraEm: number;
   bloqueadoAte: number | null;
 }
-
-const JANELA_MS = 15 * 60 * 1000;
-const MAX_TENTATIVAS = 5;
-const BLOQUEIO_MS = 15 * 60 * 1000;
 
 /** Teto de chaves, para que a memória não cresça sem limite. */
 const MAX_CHAVES = 10_000;
@@ -52,29 +59,73 @@ function limparAntigas(agora: number): void {
 }
 
 /**
+ * A versão em memória, que continua servindo a demonstração e os testes.
+ *
+ * A regra é a mesma da versão em banco; o que muda é o alcance — aqui o
+ * contador vale por processo.
+ */
+class RepositorioLimiteMemoria implements RepositorioLimite {
+  async bloqueadoAte(chave: string): Promise<Date | null> {
+    const agora = Date.now();
+    const janela = janelas.get(chave);
+    if (!janela?.bloqueadoAte) return null;
+
+    if (agora < janela.bloqueadoAte) return new Date(janela.bloqueadoAte);
+
+    // Bloqueio venceu: recomeça.
+    janelas.delete(chave);
+    return null;
+  }
+
+  async registrarFalha(chave: string): Promise<void> {
+    registrarFalhaEmMemoria(chave);
+  }
+
+  async registrarSucesso(chave: string): Promise<void> {
+    janelas.delete(chave);
+  }
+}
+
+const memoria = new RepositorioLimiteMemoria();
+
+let cache: RepositorioLimite | null = null;
+
+function repositorio(): RepositorioLimite {
+  if (!cache) {
+    cache = isSupabaseConfigured ? new RepositorioLimitePostgres() : memoria;
+  }
+  return cache;
+}
+
+/** Só para teste: injeta uma implementação e devolve o restaurador. */
+export function usarRepositorioLimite(repo: RepositorioLimite): () => void {
+  const anterior = cache;
+  cache = repo;
+  return () => {
+    cache = anterior;
+  };
+}
+
+/**
  * Lança `muitas_tentativas` se a chave estiver bloqueada.
  *
  * Chame antes de verificar a senha: o objetivo é justamente não gastar o
  * Argon2 quando já se sabe que a tentativa não vai valer.
  */
-export function conferirLimite(chave: string): void {
-  const agora = Date.now();
-  const janela = janelas.get(chave);
-  if (!janela) return;
+export async function conferirLimite(chave: string): Promise<void> {
+  const ate = await repositorio().bloqueadoAte(chave);
+  if (!ate) return;
 
-  if (janela.bloqueadoAte && agora < janela.bloqueadoAte) {
-    const segundos = Math.ceil((janela.bloqueadoAte - agora) / 1000);
-    throw erros.muitasTentativas(segundos);
-  }
-
-  // Bloqueio venceu ou a janela passou: recomeça.
-  if (janela.bloqueadoAte && agora >= janela.bloqueadoAte) {
-    janelas.delete(chave);
-  }
+  const segundos = Math.ceil((ate.getTime() - Date.now()) / 1000);
+  throw erros.muitasTentativas(segundos);
 }
 
 /** Registra uma tentativa que falhou e bloqueia ao atingir o teto. */
-export function registrarFalha(chave: string): void {
+export async function registrarFalha(chave: string): Promise<void> {
+  await repositorio().registrarFalha(chave);
+}
+
+function registrarFalhaEmMemoria(chave: string): void {
   const agora = Date.now();
   limparAntigas(agora);
 
@@ -101,17 +152,15 @@ export function registrarFalha(chave: string): void {
 }
 
 /** Zera o contador. Chame no login bem-sucedido. */
-export function registrarSucesso(chave: string): void {
-  janelas.delete(chave);
+export async function registrarSucesso(chave: string): Promise<void> {
+  await repositorio().registrarSucesso(chave);
 }
 
 /** Só para teste. */
 export function limparLimites(): void {
   janelas.clear();
+  cache = null;
 }
 
-export const CONFIG_LIMITE = {
-  JANELA_MS,
-  MAX_TENTATIVAS,
-  BLOQUEIO_MS,
-};
+export type { RepositorioLimite };
+export { CONFIG_LIMITE };

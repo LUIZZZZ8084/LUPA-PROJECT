@@ -270,6 +270,16 @@ sem nonce no App Router; o resto da política vale, e `connect-src`
 limita para onde os dados podem sair. Há teste e2e conferindo a resposta
 HTTP de verdade, não o `next.config`.
 
+**O contador do limite mora no banco.** Vivia num `Map` em memória de
+função serverless: sumia a cada deploy — e a Vercel publica a cada merge —
+e valia por instância, então quem caísse noutra começava do zero. O
+registro é uma instrução SQL só, com `on conflict do update`: pelo caminho
+ler-somar-gravar, duas tentativas simultâneas leem "4" e escrevem "5" as
+duas, e a sexta passa.
+
+Contra atacante distribuído continua não bastando. O passo seguinte é rate
+limit na borda, e vale quando aparecer abuso medido — não antes.
+
 **Limite de tentativa no cadastro é por origem, não por e-mail.** Quem
 cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se

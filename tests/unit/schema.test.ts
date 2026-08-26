@@ -70,6 +70,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "perfis_empresa",
       "perfis_prestador",
       "publicacoes",
+      "tentativas_de_acesso",
       "usuarios",
       "vagas",
       "visualizacoes_vaga",
@@ -624,7 +625,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(13);
+    expect(tabelas.rows).toHaveLength(14);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -1043,6 +1044,109 @@ describe("buscas sem resultado", () => {
   it("a chave anônima não lê", async () => {
     const r = await banco.query<{ tem_acesso: boolean }>(
       `select has_table_privilege('anon', 'buscas_sem_resultado', 'SELECT')
+              as tem_acesso`,
+    );
+    expect(r.rows[0].tem_acesso).toBe(false);
+  });
+});
+
+/**
+ * O limite de tentativas, no banco.
+ *
+ * O contador vivia num `Map` em memória de função serverless: sumia a cada
+ * deploy e valia por instância. Com concorrência suficiente, o limite era
+ * sugestão.
+ *
+ * O que estes testes travam é a corrida — que é onde um limite de acesso
+ * falha de verdade. Pelo caminho ler-somar-gravar, duas tentativas
+ * simultâneas leriam "4" e escreveriam "5" as duas, e a sexta passaria.
+ */
+describe("limite de tentativas durável", () => {
+  let banco: PGlite;
+  const JANELA = 900;
+  const MAX = 5;
+  const BLOQUEIO = 900;
+
+  const falhar = (chave: string) =>
+    banco.query<{ registrar_falha_de_acesso: string | null }>(
+      `select registrar_falha_de_acesso($1, $2, $3, $4)`,
+      [chave, JANELA, MAX, BLOQUEIO],
+    );
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  it("soma dentro da janela e bloqueia no teto", async () => {
+    for (let i = 1; i < MAX; i++) {
+      const r = await falhar("login:a@teste.lupa");
+      expect(r.rows[0].registrar_falha_de_acesso, `tentativa ${i}`).toBeNull();
+    }
+
+    const ultima = await falhar("login:a@teste.lupa");
+    expect(ultima.rows[0].registrar_falha_de_acesso).not.toBeNull();
+  });
+
+  it("uma chave não afeta a outra", async () => {
+    const r = await falhar("login:b@teste.lupa");
+    expect(r.rows[0].registrar_falha_de_acesso).toBeNull();
+  });
+
+  /*
+   * O teste que justifica a função existir. Cinco tentativas ao mesmo
+   * tempo têm que somar cinco — se somarem menos, o limite deixa passar
+   * exatamente no cenário em que ele deveria funcionar.
+   */
+  it("tentativas simultâneas somam todas", async () => {
+    await Promise.all(
+      Array.from({ length: MAX }, () => falhar("login:corrida@teste.lupa")),
+    );
+
+    const r = await banco.query<{ tentativas: number }>(
+      `select tentativas from tentativas_de_acesso where chave = $1`,
+      ["login:corrida@teste.lupa"],
+    );
+    expect(Number(r.rows[0].tentativas)).toBe(MAX);
+  });
+
+  it("janela vencida recomeça do primeiro", async () => {
+    await falhar("login:c@teste.lupa");
+    await banco.query(
+      `update tentativas_de_acesso
+          set primeira_em = now() - interval '2 hours', tentativas = 4
+        where chave = 'login:c@teste.lupa'`,
+    );
+
+    await falhar("login:c@teste.lupa");
+    const r = await banco.query<{ tentativas: number }>(
+      `select tentativas from tentativas_de_acesso where chave = 'login:c@teste.lupa'`,
+    );
+    expect(Number(r.rows[0].tentativas)).toBe(1);
+  });
+
+  it("a limpeza apaga o que venceu e poupa o que está bloqueado", async () => {
+    await banco.query(
+      `insert into tentativas_de_acesso (chave, tentativas, primeira_em, bloqueado_ate)
+       values ('velha', 1, now() - interval '10 hours', null),
+              ('presa', 5, now() - interval '10 hours', now() + interval '10 minutes')`,
+    );
+
+    await banco.query(`select limpar_tentativas_vencidas($1)`, [JANELA]);
+
+    const r = await banco.query<{ chave: string }>(
+      `select chave from tentativas_de_acesso where chave in ('velha', 'presa')`,
+    );
+    expect(r.rows.map((x) => x.chave)).toEqual(["presa"]);
+  });
+
+  it("a chave anônima não lê", async () => {
+    const r = await banco.query<{ tem_acesso: boolean }>(
+      `select has_table_privilege('anon', 'tentativas_de_acesso', 'SELECT')
               as tem_acesso`,
     );
     expect(r.rows[0].tem_acesso).toBe(false);

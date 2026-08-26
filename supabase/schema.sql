@@ -382,6 +382,101 @@ create index pedidos_verificacao_status_idx
   on pedidos_verificacao (status, enviado_em);
 
 -- ============================================================================
+-- 9d. Tentativas de acesso, para o limite sobreviver ao deploy
+--
+-- O limite vivia num `Map` em memória da função serverless. Duas
+-- consequências que o código não escondia, mas que ninguém tinha medido:
+-- sumia a cada deploy, e valia por instância — com concorrência
+-- suficiente, o limite virava sugestão.
+--
+-- Aqui ele passa a ser uma linha por chave. O que se contém é diferente em
+-- cada uso, e por isso a chave também é:
+--
+--   • `login:<e-mail>`   — adivinhação de senha. Sucesso zera o contador.
+--   • `cadastro:<origem>` — criação de conta em massa. Sucesso **conta**,
+--     porque quem cria conta em massa troca de e-mail a cada tentativa.
+--
+-- Nada aqui identifica pessoa além do que a própria tentativa já traz, e a
+-- linha morre com a janela.
+-- ============================================================================
+
+create table tentativas_de_acesso (
+  chave         text primary key,
+  tentativas    integer not null default 0,
+  primeira_em   timestamptz not null default now(),
+  bloqueado_ate timestamptz,
+
+  constraint tentativas_nao_negativas check (tentativas >= 0)
+);
+
+-- Para a limpeza do que já venceu encontrar as linhas por índice.
+create index tentativas_de_acesso_primeira_em_idx
+  on tentativas_de_acesso (primeira_em);
+
+/*
+ * Registra uma falha e devolve até quando a chave está bloqueada.
+ *
+ * Tudo numa instrução só, de propósito. Pelo caminho ler-somar-gravar,
+ * duas tentativas simultâneas leriam "4" e escreveriam "5" as duas — e a
+ * sexta passaria. Num limite de acesso, essa corrida é a diferença entre
+ * conter e parecer que contém.
+ */
+create or replace function registrar_falha_de_acesso(
+  p_chave             text,
+  p_janela_segundos   integer,
+  p_max_tentativas    integer,
+  p_bloqueio_segundos integer
+)
+returns timestamptz
+language sql
+as $$
+  insert into tentativas_de_acesso (chave, tentativas, primeira_em)
+  values (p_chave, 1, now())
+  on conflict (chave) do update set
+    -- Janela vencida recomeça do 1; dentro da janela, soma.
+    tentativas = case
+      when now() - tentativas_de_acesso.primeira_em
+             > make_interval(secs => p_janela_segundos)
+      then 1
+      else tentativas_de_acesso.tentativas + 1
+    end,
+    primeira_em = case
+      when now() - tentativas_de_acesso.primeira_em
+             > make_interval(secs => p_janela_segundos)
+      then now()
+      else tentativas_de_acesso.primeira_em
+    end,
+    bloqueado_ate = case
+      when (case
+              when now() - tentativas_de_acesso.primeira_em
+                     > make_interval(secs => p_janela_segundos)
+              then 1
+              else tentativas_de_acesso.tentativas + 1
+            end) >= p_max_tentativas
+      then now() + make_interval(secs => p_bloqueio_segundos)
+      else null
+    end
+  returning bloqueado_ate;
+$$;
+
+/*
+ * Apaga o que já venceu.
+ *
+ * Chamado junto com o registro de falha, não por rotina agendada: sem
+ * cron, a alternativa seria a tabela crescer com toda chave vista uma vez
+ * e nunca mais. Custa um `delete` por índice que quase sempre não apaga
+ * nada.
+ */
+create or replace function limpar_tentativas_vencidas(p_janela_segundos integer)
+returns void
+language sql
+as $$
+  delete from tentativas_de_acesso
+   where primeira_em < now() - make_interval(secs => p_janela_segundos * 4)
+     and (bloqueado_ate is null or bloqueado_ate < now());
+$$;
+
+-- ============================================================================
 -- 9c. Buscas que não acharam nada
 --
 -- Uma linha por termo por dia, incrementada — a mesma forma das
@@ -724,6 +819,7 @@ alter table categorias_servico  enable row level security;
 -- passa pela função, e a leitura do painel, pela chave de serviço.
 alter table visualizacoes_vaga  enable row level security;
 alter table buscas_sem_resultado enable row level security;
+alter table tentativas_de_acesso enable row level security;
 
 /*
  * `usuarios` e `admins` ficam sem política nenhuma.
@@ -809,6 +905,7 @@ grant select on job_listings, provider_listings to anon, authenticated;
 -- arquivo confirma que não vaza.
 revoke select on visualizacoes_vaga            from anon, authenticated;
 revoke select on buscas_sem_resultado         from anon, authenticated;
+revoke select on tentativas_de_acesso         from anon, authenticated;
 revoke select on company_applications          from anon, authenticated;
 revoke select on candidate_applications        from anon, authenticated;
 revoke select on candidatos_disponiveis        from anon, authenticated;

@@ -88,6 +88,9 @@ Segurança (auditoria dos 20 pontos, em duas passadas):
 
 Decisões futuras, com dado em vez de palpite:
 
+- Limite de tentativa durável no Postgres —
+  [#67](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/67),
+  PR [#86](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/86)
 - Registrar busca sem resultado, para decidir sobre busca semântica —
   [#66](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/66),
   PR [#85](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/85)
@@ -105,8 +108,6 @@ Ordem definida pelo Luiz em 25/08/2026: **pagamento é a última etapa.**
 
 Antes disso, e sem depender de decisão nova:
 
-- [ ] Limite de tentativa durável no Postgres —
-      [#67](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/67)
 - [ ] Notificação push por bairro e categoria —
       [#48](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/48)
 

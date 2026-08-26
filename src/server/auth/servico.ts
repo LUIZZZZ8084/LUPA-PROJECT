@@ -42,7 +42,7 @@ export async function cadastrar(
   const chave = `cadastro:${origem}`;
 
   // Antes de qualquer trabalho: bloqueado não gasta Argon2 nem consulta.
-  conferirLimite(chave);
+  await conferirLimite(chave);
 
   const jaExiste = await repo.porEmail(dados.email);
   if (jaExiste) {
@@ -125,7 +125,7 @@ export async function cadastrar(
    * criação em si, e zerar a cada conta criada deixaria o limite inútil
    * justamente contra quem consegue criar.
    */
-  registrarFalha(chave);
+  await registrarFalha(chave);
 
   return semSenha(usuario);
 }
@@ -143,24 +143,24 @@ export async function entrar(dados: DadosLogin): Promise<UsuarioPublico> {
   const chave = `login:${dados.email}`;
 
   // Antes de qualquer trabalho: se está bloqueado, não gasta Argon2.
-  conferirLimite(chave);
+  await conferirLimite(chave);
 
   const usuario = await repo.porEmail(dados.email);
 
   if (!usuario) {
     await gastarTempoDeVerificacao(dados.senha);
-    registrarFalha(chave);
+    await registrarFalha(chave);
     throw credenciaisInvalidas("e-mail não encontrado");
   }
 
   const confere = await conferirSenha(dados.senha, usuario.senhaHash);
 
   if (!confere) {
-    registrarFalha(chave);
+    await registrarFalha(chave);
     throw credenciaisInvalidas("senha incorreta");
   }
 
-  registrarSucesso(chave);
+  await registrarSucesso(chave);
 
   // Hash antigo é regravado com os parâmetros atuais, sem pedir troca de
   // senha. Falha aqui não impede a entrada.
