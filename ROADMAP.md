@@ -33,6 +33,10 @@ Base:
 
 Painel da empresa — completo, menos cobrança:
 
+- "Quero que empresas me encontrem": consentimento do candidato, desligado
+  por padrão, e proximidade no bloco de recomendados —
+  [#83](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/83),
+  PR [#84](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/84)
 - Habilidades viram skills e o painel recomenda candidatos —
   [#73](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/73),
   PR [#74](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/74)

@@ -629,7 +629,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
       `select count(*) as total from information_schema.views
        where table_schema = 'public'`,
     );
-    expect(Number(views.rows[0].total)).toBe(9);
+    expect(Number(views.rows[0].total)).toBe(10);
   });
 
   it("não sobra tipo, função nem view órfã", async () => {
@@ -841,5 +841,108 @@ describe("habilidades da vaga", () => {
     );
 
     expect(r.rows[0].skills).toEqual(["Colheitadeira", "CNH D"]);
+  });
+});
+
+/**
+ * "Quero que empresas me encontrem", travado no banco.
+ *
+ * O `where` da view `candidatos_disponiveis` é a fechadura, e é por isso
+ * que ele mora no banco e não na aplicação: nenhum esquecimento de filtro
+ * numa tela pode revelar alguém que não ligou a opção.
+ *
+ * O que está em jogo é concreto — numa cidade do tamanho de Sinop, quem
+ * está empregado e procurando outra coisa pode ter o patrão atual entre as
+ * empresas cadastradas.
+ */
+describe("candidatos disponíveis", () => {
+  let banco: PGlite;
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+
+    for (const [email, nome, visivel] of [
+      ["opta@teste.lupa", "Quem Optou", true],
+      ["nao@teste.lupa", "Quem Nao Optou", false],
+    ] as const) {
+      const u = await banco.query<{ id: string }>(
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
+         values ($1, 'h', 'candidato_clt', $2, '66000000001') returning id`,
+        [email, nome],
+      );
+      await banco.query(
+        `insert into perfis_candidato (usuario_id, habilidades, visivel_para_empresas)
+         values ($1, array['Excel'], $2)`,
+        [u.rows[0].id, visivel],
+      );
+    }
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  it("nasce desligado — o padrão é o que protege", async () => {
+    const u = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
+       values ('padrao@teste.lupa', 'h', 'candidato_clt', 'Padrao', '66000000002')
+       returning id`,
+    );
+    const r = await banco.query<{ visivel_para_empresas: boolean }>(
+      `insert into perfis_candidato (usuario_id) values ($1)
+       returning visivel_para_empresas`,
+      [u.rows[0].id],
+    );
+
+    expect(r.rows[0].visivel_para_empresas).toBe(false);
+  });
+
+  it("a view mostra só quem ligou a opção", async () => {
+    const r = await banco.query<{ full_name: string }>(
+      `select full_name from candidatos_disponiveis order by full_name`,
+    );
+
+    expect(r.rows.map((x) => x.full_name)).toEqual(["Quem Optou"]);
+  });
+
+  /*
+   * Currículo e resumo ficam de fora: quem se candidata entrega o
+   * currículo junto com a candidatura; quem só está visível entregou
+   * contato. Misturar os dois faria "pode me procurar" significar "leia
+   * meu histórico inteiro".
+   */
+  it("não expõe currículo nem resumo", async () => {
+    const r = await banco.query<{ column_name: string }>(
+      `select column_name from information_schema.columns
+        where table_name = 'candidatos_disponiveis'`,
+    );
+    const colunas = r.rows.map((x) => x.column_name);
+
+    expect(colunas).not.toContain("curriculo_url");
+    expect(colunas).not.toContain("resume_url");
+    expect(colunas).not.toContain("resumo");
+    // Mas traz o que serve para procurar e falar.
+    expect(colunas).toEqual(
+      expect.arrayContaining(["full_name", "city", "skills", "phone"]),
+    );
+  });
+
+  it("desligar tira da view na hora", async () => {
+    await banco.query(
+      `update perfis_candidato set visivel_para_empresas = false
+        where usuario_id in (select id from usuarios where email = 'opta@teste.lupa')`,
+    );
+
+    const r = await banco.query(`select 1 from candidatos_disponiveis`);
+    expect(r.rows).toEqual([]);
+  });
+
+  it("a chave anônima não lê a view", async () => {
+    const r = await banco.query<{ tem_acesso: boolean }>(
+      `select has_table_privilege('anon', 'candidatos_disponiveis', 'SELECT')
+              as tem_acesso`,
+    );
+    expect(r.rows[0].tem_acesso).toBe(false);
   });
 });

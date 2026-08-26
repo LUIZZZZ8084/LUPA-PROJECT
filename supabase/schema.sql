@@ -146,7 +146,25 @@ create table perfis_candidato (
   formacao        text,
   habilidades     text[] not null default '{}',
   curriculo_url   text,
-  disponibilidade text
+  disponibilidade text,
+
+  /*
+   * "Quero que empresas me encontrem."
+   *
+   * Falso por padrão, e é o padrão que importa. Sem se candidatar, a
+   * pessoa não aparece para empresa nenhuma — hoje ela se expõe a uma
+   * empresa no momento em que decide se candidatar a ela, e essa é a
+   * troca que ela entende.
+   *
+   * Ligar isto é ela dizendo o contrário: pode me procurar. Numa cidade
+   * do tamanho de Sinop, quem está empregado e procurando outra coisa
+   * pode ter o patrão atual entre as empresas cadastradas — por isso a
+   * escolha é dela, explícita, e desligável a qualquer momento.
+   *
+   * O que a empresa alcança com isto ligado é contato, não currículo. O
+   * currículo continua sendo entregue por quem se candidata.
+   */
+  visivel_para_empresas boolean not null default false
 );
 
 create table perfis_prestador (
@@ -531,6 +549,39 @@ from candidaturas c
 join vagas v on v.id = c.vaga_id
 join perfis_empresa e on e.usuario_id = v.empresa_id;
 
+/*
+ * Candidatos que pediram para ser encontrados.
+ *
+ * O `where` é a fechadura, e está aqui de propósito em vez de na
+ * aplicação: quem não ligou a opção não existe nesta view, então nenhum
+ * esquecimento de filtro numa tela pode revelar alguém que não consentiu.
+ *
+ * O que a view expõe é o necessário para uma empresa decidir procurar e
+ * conseguir falar: nome, onde mora, área desejada, habilidades e contato.
+ *
+ * **Currículo e resumo ficam de fora.** Quem se candidata entrega o
+ * currículo junto com a candidatura; quem só está visível entregou
+ * contato. São dois consentimentos diferentes, e misturá-los faria "pode
+ * me procurar" significar "leia meu histórico inteiro".
+ */
+create view candidatos_disponiveis
+with (security_invoker = false) as
+select
+  u.id,
+  u.nome_completo  as full_name,
+  u.avatar_url,
+  u.cidade         as city,
+  u.bairro         as neighborhood,
+  u.email,
+  u.telefone       as phone,
+  pc.area_desejada as desired_area,
+  pc.disponibilidade as availability,
+  coalesce(pc.habilidades, '{}'::text[]) as skills
+from perfis_candidato pc
+join usuarios u on u.id = pc.usuario_id
+where pc.visivel_para_empresas
+  and u.papel = 'candidato_clt';
+
 create view verification_queue
 with (security_invoker = false) as
 select
@@ -701,6 +752,7 @@ grant select on job_listings, provider_listings to anon, authenticated;
 revoke select on visualizacoes_vaga            from anon, authenticated;
 revoke select on company_applications          from anon, authenticated;
 revoke select on candidate_applications        from anon, authenticated;
+revoke select on candidatos_disponiveis        from anon, authenticated;
 revoke select on verification_queue            from anon, authenticated;
 revoke select on metricas_totais               from anon, authenticated;
 revoke select on metricas_cadastros_por_dia    from anon, authenticated;

@@ -439,9 +439,27 @@ A vaga declara o que pede em `vagas.habilidades`; vazio, o casamento lê o
 título e a descrição. Sem essa reserva o bloco nasceria vazio para toda
 vaga já publicada, e ninguém preenche campo cujo resultado nunca viu.
 
-**Fora do escopo por decisão, não por esquecimento:** banco de talentos com
-busca ativa de candidatos, testes e triagem automática, e múltiplos usuários
-por empresa. Os três fazem sentido num produto maduro; num piloto de uma
+**Ser encontrado é escolha do candidato, desligada por padrão.**
+`perfis_candidato.visivel_para_empresas` é o que separa "quem se candidatou"
+de "quem pediu para ser procurado", e o bloco de recomendados mostra os dois
+em listas separadas.
+
+A fechadura mora no `where` da view `candidatos_disponiveis`, não na
+aplicação: assim nenhum esquecimento de filtro numa tela revela quem não
+consentiu, e desligar tira a pessoa na mesma consulta.
+
+**São dois consentimentos diferentes, e não se misturam.** Quem se candidata
+entrega o currículo junto com a candidatura; quem só está visível entregou
+contato. Por isso a view não traz currículo nem resumo — "pode me procurar"
+não pode significar "leia meu histórico inteiro".
+
+O padrão desligado é a parte que importa: numa cidade do tamanho de Sinop,
+quem está empregado e procurando outra coisa pode ter o patrão atual entre
+as empresas cadastradas.
+
+**Fora do escopo por decisão, não por esquecimento:** busca livre de
+candidatos (o alcance é sempre por vaga aberta, com casamento de
+habilidade), testes e triagem automática, e múltiplos usuários por empresa. Os três fazem sentido num produto maduro; num piloto de uma
 cidade, cada um deles é uma superfície a mais para manter sem ninguém
 pedindo ainda.
 

@@ -194,6 +194,7 @@ describe("RepositorioPostgres", () => {
       disponibilidade: null,
       formacao: null,
       habilidades: [],
+      visivelParaEmpresas: false,
     });
     expect(chamadas.at(-1)?.tabela).toBe("perfis_candidato");
   });
@@ -387,6 +388,7 @@ describe("gravação de perfil", () => {
       formacao: "Ensino médio",
       habilidades: ["Trator"],
       disponibilidade: null,
+      visivelParaEmpresas: false,
     });
 
     const upsert = chamadas.find((c) => c.metodo === "upsert");

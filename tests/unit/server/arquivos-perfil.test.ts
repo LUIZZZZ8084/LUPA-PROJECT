@@ -149,6 +149,7 @@ describe("currículo", () => {
       formacao: null,
       habilidades: [],
       disponibilidade: null,
+      visivelParaEmpresas: false,
     });
 
     await trocarArquivoDoPerfil(id, "candidato_clt", "curriculo", FOTO);
@@ -215,6 +216,7 @@ describe("cada espécie grava na sua coluna", () => {
       formacao: null,
       habilidades: [],
       disponibilidade: null,
+      visivelParaEmpresas: false,
     });
     await trocarArquivoDoPerfil(id, "candidato_clt", "curriculo", FOTO);
 

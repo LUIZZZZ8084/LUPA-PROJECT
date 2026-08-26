@@ -191,6 +191,32 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
           />
         </Field>
 
+        {/*
+          A opção de ser encontrado, com o que ela significa escrito ao
+          lado. Uma caixa chamada "visível para empresas" sem explicação
+          faz a pessoa marcar sem saber o que entregou — e isto entrega o
+          telefone dela para empresas que ela não escolheu.
+        */}
+        <label className="flex items-start gap-3 rounded-xl border border-line bg-panel-2 p-4">
+          <input
+            type="checkbox"
+            name="visivelParaEmpresas"
+            defaultChecked={c?.visivelParaEmpresas ?? false}
+            className="mt-0.5 h-4 w-4 flex-none rounded border-line bg-panel accent-vagas"
+          />
+          <span className="text-sm">
+            <span className="font-semibold">
+              Quero que empresas me encontrem
+            </span>
+            <span className="mt-1 block text-[11px] leading-relaxed text-muted">
+              Empresas com vaga aberta passam a ver seu nome, sua cidade, suas
+              habilidades e seu contato — mesmo sem você se candidatar. Seu
+              currículo continua privado: só vai para as vagas em que você se
+              candidatar. Pode desmarcar quando quiser.
+            </span>
+          </span>
+        </label>
+
         <Field label="Disponibilidade" error={estado.campos?.disponibilidade}>
           <Input
             name="disponibilidade"

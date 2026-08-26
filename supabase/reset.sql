@@ -26,6 +26,7 @@ drop view if exists metricas_por_local cascade;
 drop view if exists metricas_cadastros_por_dia cascade;
 drop view if exists metricas_totais cascade;
 drop view if exists verification_queue cascade;
+drop view if exists candidatos_disponiveis cascade;
 drop view if exists candidate_applications cascade;
 drop view if exists company_applications cascade;
 drop view if exists job_listings cascade;

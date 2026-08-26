@@ -181,10 +181,22 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       resumo: perfil.resumo,
       curriculo_url: perfil.curriculoUrl,
       disponibilidade: perfil.disponibilidade,
+      visivel_para_empresas: perfil.visivelParaEmpresas,
     });
 
     if (error)
       throw erros.indisponivel(`perfil de candidato: ${error.message}`);
+  }
+
+  /*
+   * Existe só para satisfazer o contrato: com banco, quem lê os candidatos
+   * visíveis é a view `candidatos_disponiveis`, cujo `where` é a fechadura.
+   * Duplicar o filtro aqui daria dois lugares para ele divergir.
+   */
+  async candidatosVisiveis(): Promise<
+    { usuario: Usuario; perfil: PerfilCandidato }[]
+  > {
+    return [];
   }
 
   async cnpjEmUso(cnpj: string): Promise<boolean> {
@@ -269,6 +281,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       disponibilidade: (data.disponibilidade as string | null) ?? null,
       formacao: (data.formacao as string | null) ?? null,
       habilidades: (data.habilidades as string[] | null) ?? [],
+      visivelParaEmpresas: Boolean(data.visivel_para_empresas),
     };
   }
 
@@ -310,6 +323,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         formacao: dados.formacao,
         habilidades: dados.habilidades,
         disponibilidade: dados.disponibilidade,
+        visivel_para_empresas: dados.visivelParaEmpresas,
       },
       { onConflict: "usuario_id" },
     );
