@@ -13,7 +13,14 @@ test.describe("recomendados para você", () => {
     await page.goto("/empresa");
 
     await expect(page.getByText("Recomendados para você")).toBeVisible();
-    await expect(page.getByText(/entre quem já se candidatou/i)).toBeVisible();
+    // O bloco diz de onde vem a lista e por que a ordem é essa.
+    await expect(
+      page.getByText(/do mais perto do local da vaga/i),
+    ).toBeVisible();
+    // Uma por vaga aberta com recomendação; basta a primeira existir.
+    await expect(
+      page.getByRole("heading", { name: /entre quem se candidatou/i }).first(),
+    ).toBeVisible();
   });
 
   test("cada recomendado mostra quais habilidades casaram", async ({

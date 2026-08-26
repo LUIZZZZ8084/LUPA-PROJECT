@@ -102,6 +102,20 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.candidatos.set(perfil.usuarioId, perfil);
   }
 
+  async candidatosVisiveis(): Promise<
+    { usuario: Usuario; perfil: PerfilCandidato }[]
+  > {
+    const saida: { usuario: Usuario; perfil: PerfilCandidato }[] = [];
+
+    for (const [usuarioId, perfil] of this.candidatos) {
+      if (!perfil.visivelParaEmpresas) continue;
+      const usuario = this.usuarios.get(usuarioId);
+      if (usuario?.papel === "candidato_clt") saida.push({ usuario, perfil });
+    }
+
+    return saida;
+  }
+
   async cnpjEmUso(cnpj: string): Promise<boolean> {
     return this.cnpjs.has(cnpj);
   }

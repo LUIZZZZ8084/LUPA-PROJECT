@@ -76,6 +76,8 @@ export interface PerfilCandidato {
   disponibilidade: string | null;
   formacao: string | null;
   habilidades: string[];
+  /** "Quero que empresas me encontrem." Falso por padrão. */
+  visivelParaEmpresas: boolean;
 }
 
 /* ============================================================
@@ -95,6 +97,7 @@ export interface EdicaoCandidato {
   formacao: string | null;
   habilidades: string[];
   disponibilidade: string | null;
+  visivelParaEmpresas: boolean;
 }
 
 export interface EdicaoPrestador {
@@ -135,6 +138,18 @@ export interface RepositorioUsuarios {
 
   /** Para o cadastro de empresa: CNPJ é único na plataforma. */
   cnpjEmUso(cnpj: string): Promise<boolean>;
+
+  /**
+   * Candidatos que ligaram "quero que empresas me encontrem".
+   *
+   * Só existe para o modo demonstração: com banco, a view
+   * `candidatos_disponiveis` já faz o filtro, e fazer o filtro no banco é
+   * o que impede um esquecimento na aplicação de revelar quem não
+   * consentiu.
+   */
+  candidatosVisiveis(): Promise<
+    { usuario: Usuario; perfil: PerfilCandidato }[]
+  >;
 
   /* ---------- Leitura de perfil, para a tela de edição ---------- */
 

@@ -769,6 +769,62 @@ export async function getCandidateProfile(
    Admin
    ============================================================ */
 
+/** Candidato que pediu para ser encontrado, como a empresa o vê. */
+export interface CandidatoDisponivel {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  city: string;
+  neighborhood: string | null;
+  email: string | null;
+  phone: string | null;
+  desired_area: string | null;
+  availability: string | null;
+  skills: string[];
+}
+
+/**
+ * Quem ligou "quero que empresas me encontrem".
+ *
+ * A view já filtra por quem consentiu — o `where` mora no banco de
+ * propósito, para que nenhum esquecimento de filtro numa tela revele
+ * alguém que não pediu para ser encontrado.
+ *
+ * Currículo não vem aqui. Quem se candidata entrega o currículo junto com
+ * a candidatura; quem só está visível entregou contato. São dois
+ * consentimentos diferentes.
+ */
+export async function getCandidatosDisponiveis(): Promise<
+  CandidatoDisponivel[]
+> {
+  if (isSupabaseConfigured) {
+    const supabase = clienteDeServico();
+    if (!supabase) throw falhaDeChaveDeServico("candidatos_disponiveis");
+
+    const { data, error } = await supabase
+      .from("candidatos_disponiveis")
+      .select("*");
+
+    if (error) throw falhaDeConsulta("candidatos_disponiveis", error);
+    return (data ?? []) as unknown as CandidatoDisponivel[];
+  }
+
+  const visiveis = await repositorioUsuarios().candidatosVisiveis();
+
+  return visiveis.map(({ usuario, perfil }) => ({
+    id: usuario.id,
+    full_name: usuario.nomeCompleto,
+    avatar_url: usuario.avatarUrl,
+    city: usuario.cidade,
+    neighborhood: usuario.bairro,
+    email: usuario.email,
+    phone: usuario.telefone,
+    desired_area: perfil.areaDesejada,
+    availability: perfil.disponibilidade,
+    skills: perfil.habilidades,
+  }));
+}
+
 export async function getVerificationQueue(): Promise<VerificationRequest[]> {
   if (isSupabaseConfigured) {
     // Chave de serviço: `verification_queue` traz nome e telefone de quem

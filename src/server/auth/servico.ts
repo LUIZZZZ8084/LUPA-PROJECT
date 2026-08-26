@@ -87,6 +87,8 @@ export async function cadastrar(
       disponibilidade: null,
       formacao: null,
       habilidades: [],
+      // Desligado por padrão: aparecer para empresa é escolha, não default.
+      visivelParaEmpresas: false,
     });
   } else if (dados.papel === "prestador_servico") {
     await repo.criarPerfilPrestador({

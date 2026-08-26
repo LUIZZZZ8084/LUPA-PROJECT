@@ -67,6 +67,7 @@ describe("carregar o perfil para editar", () => {
       formacao: null,
       habilidades: [],
       disponibilidade: null,
+      visivelParaEmpresas: false,
     });
 
     const perfil = await perfilParaEditar(id, "candidato_clt");
@@ -124,6 +125,7 @@ describe("salvar o perfil do papel", () => {
       formacao: "Ensino médio completo",
       habilidades: ["CNH categoria C"],
       disponibilidade: "Imediata",
+      visivelParaEmpresas: false,
     });
 
     const p = await repo.perfilCandidato(id);
@@ -225,6 +227,7 @@ describe("salvar o perfil do papel", () => {
         formacao: null,
         habilidades: [],
         disponibilidade: null,
+        visivelParaEmpresas: false,
       }),
     ).rejects.toSatisfy((e) => ehAppError(e) && e.codigo === "sem_permissao");
   });

@@ -72,6 +72,20 @@ export const schemaCandidato = z.object({
   formacao: zOpcional(200, "A formação"),
   habilidades: zHabilidades,
   disponibilidade: zOpcional(80, "A disponibilidade"),
+
+  /*
+   * Caixa de seleção não enviada no formulário chega ausente, não como
+   * "false" — é assim que HTML funciona. Sem este preprocess, desmarcar a
+   * opção não desligaria nada: o campo simplesmente não chegaria, e o
+   * valor anterior sobreviveria.
+   *
+   * Para uma opção de privacidade, "não consegui desligar" é o pior
+   * defeito possível.
+   */
+  visivelParaEmpresas: z.preprocess(
+    (v) => v === "on" || v === "true" || v === true,
+    z.boolean(),
+  ),
 });
 
 /**
