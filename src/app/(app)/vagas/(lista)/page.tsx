@@ -34,8 +34,20 @@ export default async function VagasPage({
     return Array.isArray(v) ? v[0] : v;
   };
 
+  /*
+   * Sem cidade na URL, a busca é do estado inteiro — não de Sinop.
+   *
+   * O `?? "Sinop"` sobrou de quando Sinop era a única cidade. Depois que os
+   * 142 municípios entraram, ele passou a esconder daqui toda vaga
+   * publicada fora de Sinop: a empresa via a vaga no painel e nos destaques
+   * da home — que consulta sem filtro nenhum — e não via na busca, o que
+   * parece vaga que não foi publicada.
+   *
+   * O chip do filtro já anuncia "Todo o MT" enquanto nada está escolhido.
+   * `undefined` aqui é o que faz a tela entregar o que ela promete.
+   */
   const filters = {
-    city: single("cidade") ?? "Sinop",
+    city: single("cidade"),
     category: single("categoria"),
     contract_type: single("tipo"),
     q: single("q"),

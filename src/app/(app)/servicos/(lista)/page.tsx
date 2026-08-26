@@ -31,8 +31,10 @@ export default async function ServicosPage({
 
   const minRating = single("avaliacao");
 
+  // Mesma sobra que escondia vaga fora de Sinop em /vagas: sem cidade na
+  // URL, a busca é de todo o estado, como o chip "Todo o MT" já promete.
   const providers = await getProviders({
-    city: single("cidade") ?? "Sinop",
+    city: single("cidade"),
     category: single("categoria"),
     min_rating: minRating ? Number(minRating) : undefined,
     q: single("q"),
