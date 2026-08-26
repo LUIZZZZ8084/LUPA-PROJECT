@@ -16,7 +16,11 @@
       "!**/next-env.d.ts",
       "!**/package-lock.json",
       "!docs",
-      "!public/avatares"
+      "!public/avatares",
+      "!**/dist",
+      "!**/.ds-sync",
+      "!**/ds-bundle",
+      "!**/.design-sync"
     ]
   },
   "formatter": {
