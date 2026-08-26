@@ -1,6 +1,34 @@
 import { z } from "zod";
 import { zBairro, zCidade, zTexto } from "../validation";
 
+/**
+ * O que a vaga pede, como texto separado por vírgula.
+ *
+ * Mesmo formato das habilidades do candidato, de propósito: é o que casa
+ * um com o outro, e é o jeito que funciona no celular — a pessoa digita
+ * como fala, em vez de caçar itens numa lista de duzentos.
+ *
+ * Opcional. Vaga sem habilidade declarada casa pelo título e pela
+ * descrição, senão a recomendação só existiria depois de alguém preencher
+ * um campo cujo resultado nunca viu.
+ */
+const zHabilidades = z.preprocess(
+  (v) => {
+    const bruto = Array.isArray(v)
+      ? v.join(",")
+      : typeof v === "string"
+        ? v
+        : "";
+    return bruto
+      .split(",")
+      .map((h) => h.trim())
+      .filter(Boolean);
+  },
+  z
+    .array(z.string().max(40, "Habilidade longa demais."))
+    .max(20, "No máximo 20 habilidades."),
+);
+
 const zSalario = z.coerce.number().nonnegative().optional();
 
 /** Campos comuns a publicar e editar vaga. */
@@ -19,6 +47,7 @@ export const camposVaga = {
   cidade: zCidade,
   tipoContrato: z.string().trim().min(1, "Escolha o tipo de contrato."),
   bairro: zBairro,
+  habilidades: zHabilidades,
   salarioMin: zSalario,
   salarioMax: zSalario,
 };

@@ -20,6 +20,7 @@ export interface Vaga {
   tipoContrato: string | null;
   salarioMin: number | null;
   salarioMax: number | null;
+  habilidades: string[];
   status: StatusVaga;
   criadoEm: string;
 }
@@ -34,6 +35,7 @@ export interface DadosNovaVaga {
   tipoContrato: string;
   salarioMin?: number | null;
   salarioMax?: number | null;
+  habilidades?: string[];
 }
 
 export type EdicaoVaga = Partial<
@@ -44,6 +46,7 @@ export type EdicaoVaga = Partial<
     | "categoria"
     | "cidade"
     | "bairro"
+    | "habilidades"
     | "tipoContrato"
     | "salarioMin"
     | "salarioMax"

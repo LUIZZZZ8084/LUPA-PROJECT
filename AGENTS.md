@@ -392,6 +392,21 @@ tão importante quanto o que entrou:
 | Métricas próprias: visualizações e candidaturas por dia, 30 dias | Pronto |
 | Plano e cobrança | `trial`/`mensal` no schema; sem integração |
 
+**"Recomendados para você" é ordenação, não descoberta.** O painel põe na
+frente, entre **quem já se candidatou**, quem tem as habilidades que a vaga
+pede — e diz quais casaram, porque recomendação sem motivo é adivinhação e
+quem discorda dela em silêncio para de olhar o bloco.
+
+O casamento vive em `src/lib/skills.ts`: normalização mais uma tabela de
+sinônimos do vocabulário daqui ("CNH D" e "carteira D"; "colheitadeira" e
+"colhedora"). Tabela, e não modelo: numa cidade com dezenas de vagas, uma
+lista que qualquer um lê e corrige acerta mais do que algo que ninguém
+depura — e não põe chamada de rede no caminho de uma tela que abre em 3G.
+
+A vaga declara o que pede em `vagas.habilidades`; vazio, o casamento lê o
+título e a descrição. Sem essa reserva o bloco nasceria vazio para toda
+vaga já publicada, e ninguém preenche campo cujo resultado nunca viu.
+
 **Fora do escopo por decisão, não por esquecimento:** banco de talentos com
 busca ativa de candidatos, testes e triagem automática, e múltiplos usuários
 por empresa. Os três fazem sentido num produto maduro; num piloto de uma

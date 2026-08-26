@@ -52,6 +52,7 @@ const LINHA = {
   tipo_contrato: "CLT",
   salario_min: null,
   salario_max: null,
+  habilidades: ["Colheitadeira"],
   status: "aberta",
   criado_em: "2026-08-20T00:00:00.000Z",
 };
@@ -80,6 +81,7 @@ describe("RepositorioVagasPostgres", () => {
       tipoContrato: LINHA.tipo_contrato,
       salarioMin: null,
       salarioMax: null,
+      habilidades: ["Colheitadeira"],
       status: "aberta",
       criadoEm: LINHA.criado_em,
     });
@@ -263,5 +265,65 @@ describe("quando a consulta falha", () => {
   it("porId sem resultado devolve null", async () => {
     resposta = { data: null, error: null };
     expect(await repo.porId("x")).toBeNull();
+  });
+});
+
+/**
+ * Todo campo de `EdicaoVaga` chega ao banco.
+ *
+ * O repositório em memória faz `{ ...atual, ...campos }` e aceita campo
+ * novo sozinho; o de Postgres monta o `update` à mão, campo por campo.
+ * Quem acrescenta um em `EdicaoVaga` e esquece deste lado tem uma edição
+ * que funciona na demonstração e some em silêncio em produção.
+ *
+ * Aconteceu com `cidade`: entrou com a abertura para Mato Grosso, passou
+ * em todos os testes, e nunca chegou ao banco. Este teste é o que impede a
+ * terceira vez.
+ */
+describe("nenhum campo de edição se perde no caminho", () => {
+  const repo = new RepositorioVagasPostgres();
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    estado.temChave = true;
+  });
+
+  const EDICAO_COMPLETA = {
+    titulo: "Título novo",
+    descricao: "Descrição nova, com tamanho suficiente para o schema.",
+    categoria: "Logística e Transporte",
+    cidade: "Sorriso",
+    bairro: "Centro",
+    habilidades: ["Empilhadeira"],
+    tipoContrato: "CLT",
+    salarioMin: 2000,
+    salarioMax: 3000,
+  };
+
+  it("cada campo vira uma coluna no update", async () => {
+    resposta = { data: LINHA, error: null };
+    await repo.atualizar(LINHA.id, { ...EDICAO_COMPLETA });
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    const colunas = Object.keys((update?.args[0] ?? {}) as object);
+
+    /*
+     * A conferência é por contagem, e não por lista fixa: assim ela
+     * continua valendo quando alguém acrescentar um campo, em vez de
+     * precisar ser atualizada junto e virar carimbo.
+     */
+    expect(colunas).toHaveLength(Object.keys(EDICAO_COMPLETA).length);
+
+    // E os dois que já se perderam uma vez, nominalmente.
+    expect(colunas).toContain("cidade");
+    expect(colunas).toContain("habilidades");
+  });
+
+  it("campo não enviado não é sobrescrito com vazio", async () => {
+    resposta = { data: LINHA, error: null };
+    await repo.atualizar(LINHA.id, { titulo: "Só o título" });
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(Object.keys((update?.args[0] ?? {}) as object)).toEqual(["titulo"]);
   });
 });

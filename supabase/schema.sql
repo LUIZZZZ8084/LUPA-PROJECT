@@ -193,6 +193,18 @@ create table vagas (
   tipo_contrato text,
   salario_min   numeric(10,2),
   salario_max   numeric(10,2),
+
+  /*
+   * O que a vaga pede, para casar com as habilidades do candidato.
+   *
+   * Opcional: toda vaga publicada antes deste campo existir chega aqui
+   * vazia, e nesse caso o casamento lê o título e a descrição. Assim o
+   * bloco de recomendados funciona desde o primeiro dia e melhora quando
+   * a empresa preenche — em vez de exigir preenchimento para mostrar
+   * algum valor, que é a ordem que ninguém segue.
+   */
+  habilidades   text[] not null default '{}',
+
   status        status_vaga not null default 'aberta',
   visualizacoes int not null default 0,
   criado_em     timestamptz not null default now(),
@@ -446,6 +458,7 @@ select
   v.tipo_contrato             as contract_type,
   v.salario_min               as salary_min,
   v.salario_max               as salary_max,
+  v.habilidades               as skills,
   v.status,
   v.criado_em                 as created_at,
   jsonb_build_object(

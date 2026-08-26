@@ -113,6 +113,18 @@ export function EditJobForm({ vaga }: { vaga: Vaga }) {
           />
         </div>
 
+        <Field
+          label="Habilidades desejadas"
+          hint="Separe por vírgula. Ex.: colheitadeira, CNH D. É o que o painel usa para recomendar candidatos."
+          error={state.campos?.habilidades}
+        >
+          <Input
+            name="habilidades"
+            placeholder="colheitadeira, CNH D, manutenção básica"
+            defaultValue={vaga.habilidades.join(", ")}
+          />
+        </Field>
+
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field
             label="Salário de (R$)"

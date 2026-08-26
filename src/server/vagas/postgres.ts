@@ -22,6 +22,7 @@ function paraVaga(linha: Record<string, unknown>): Vaga {
     tipoContrato: (linha.tipo_contrato as string | null) ?? null,
     salarioMin: (linha.salario_min as number | null) ?? null,
     salarioMax: (linha.salario_max as number | null) ?? null,
+    habilidades: (linha.habilidades as string[] | null) ?? [],
     status: linha.status as StatusVaga,
     criadoEm: String(linha.criado_em),
   };
@@ -94,6 +95,7 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
         tipo_contrato: dados.tipoContrato,
         salario_min: dados.salarioMin ?? null,
         salario_max: dados.salarioMax ?? null,
+        habilidades: dados.habilidades ?? [],
       })
       .select("*")
       .single();
@@ -110,6 +112,19 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
     return paraVaga(data);
   }
 
+  /**
+   * O mapa de campos é escrito à mão, e é isso que o torna perigoso.
+   *
+   * O repositório em memória faz `{ ...atual, ...campos }` e aceita
+   * qualquer campo novo sozinho; este aqui só grava o que está listado.
+   * Campo novo em `EdicaoVaga` que ninguém acrescente aqui funciona na
+   * demonstração e é ignorado em silêncio em produção — foi o que
+   * aconteceu com `cidade`, que entrou com a abertura para Mato Grosso e
+   * nunca chegou ao banco.
+   *
+   * Ao acrescentar campo em `EdicaoVaga`, acrescente aqui também. Há teste
+   * comparando as duas listas.
+   */
   async atualizar(id: string, campos: EdicaoVaga): Promise<Vaga> {
     const supabase = await cliente();
     const { data, error } = await supabase
@@ -122,7 +137,11 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
         ...(campos.categoria !== undefined
           ? { categoria: campos.categoria }
           : {}),
+        ...(campos.cidade !== undefined ? { cidade: campos.cidade } : {}),
         ...(campos.bairro !== undefined ? { bairro: campos.bairro } : {}),
+        ...(campos.habilidades !== undefined
+          ? { habilidades: campos.habilidades }
+          : {}),
         ...(campos.tipoContrato !== undefined
           ? { tipo_contrato: campos.tipoContrato }
           : {}),

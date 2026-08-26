@@ -777,3 +777,69 @@ describe("contagem de visualizações", () => {
     ).rejects.toThrow();
   });
 });
+
+/**
+ * As habilidades da vaga, que alimentam a recomendação.
+ *
+ * O campo é opcional e tem `default '{}'`: toda vaga publicada antes dele
+ * existir precisa continuar válida, e o casamento cai para o título e a
+ * descrição nesse caso.
+ */
+describe("habilidades da vaga", () => {
+  let banco: PGlite;
+  let empresaId: string;
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+
+    const empresa = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
+       values ('hab@teste.lupa', 'h', 'empresa', 'Empresa', '66000000001')
+       returning id`,
+    );
+    empresaId = empresa.rows[0].id;
+    await banco.query(
+      `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+       values ($1, 'Empresa', '11222333000181')`,
+      [empresaId],
+    );
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  it("nasce como lista vazia, não nula", async () => {
+    const r = await banco.query<{ habilidades: string[] }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       select usuario_id, 'Vaga sem habilidade', 'Descricao.', 'Sinop'
+         from perfis_empresa limit 1
+       returning habilidades`,
+    );
+
+    expect(r.rows[0].habilidades).toEqual([]);
+  });
+
+  it("guarda a lista como veio, sem mexer no texto", async () => {
+    const r = await banco.query<{ habilidades: string[] }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade, habilidades)
+       select usuario_id, 'Operador', 'Descricao.', 'Sinop',
+              array['Colheitadeira', 'CNH D']
+         from perfis_empresa limit 1
+       returning habilidades`,
+    );
+
+    // A normalização é da aplicação; o banco guarda o que a empresa
+    // escreveu, que é o que a tela mostra de volta.
+    expect(r.rows[0].habilidades).toEqual(["Colheitadeira", "CNH D"]);
+  });
+
+  it("a view job_listings expõe como `skills`", async () => {
+    const r = await banco.query<{ skills: string[] }>(
+      `select skills from job_listings where title = 'Operador' limit 1`,
+    );
+
+    expect(r.rows[0].skills).toEqual(["Colheitadeira", "CNH D"]);
+  });
+});

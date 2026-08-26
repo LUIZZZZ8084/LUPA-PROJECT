@@ -102,6 +102,9 @@ export interface Job {
   contract_type: ContractType | null;
   salary_min: number | null;
   salary_max: number | null;
+  /** O que a vaga pede. Vazio quando a empresa não declarou — aí o
+   * casamento com o candidato lê o título e a descrição. */
+  skills: string[];
   status: JobStatus;
   created_at: string;
 }
