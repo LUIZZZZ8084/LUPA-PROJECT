@@ -71,6 +71,8 @@ e repetível, ao lado do `schema.sql`:
 | [`supabase/aplica-contato-do-candidato.sql`](../supabase/aplica-contato-do-candidato.sql) | Uma vez, em banco criado antes da Issue #71 |
 | [`supabase/aplica-habilidades-da-vaga.sql`](../supabase/aplica-habilidades-da-vaga.sql) | Uma vez, em banco criado antes da Issue #73 |
 | [`supabase/aplica-candidato-visivel.sql`](../supabase/aplica-candidato-visivel.sql) | Uma vez, em banco criado antes da Issue #83 |
+| [`supabase/aplica-buscas-sem-resultado.sql`](../supabase/aplica-buscas-sem-resultado.sql) | Uma vez, em banco criado antes da Issue #66 |
+| [`supabase/aplica-limite-duravel.sql`](../supabase/aplica-limite-duravel.sql) | Uma vez, em banco criado antes da Issue #67 |
 | [`supabase/corrige-telefones.sql`](../supabase/corrige-telefones.sql) | Uma vez, em banco que recebeu o seed antes da Issue #24 |
 
 Banco novo não precisa de nenhum deles: o `schema.sql` já traz tudo.

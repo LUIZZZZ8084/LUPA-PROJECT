@@ -18,14 +18,31 @@ import { CIDADES, MAX_BAIRROS_ATENDIDOS } from "@/lib/constants";
  */
 
 describe("campo de cidade", () => {
+  /*
+   * Timeout maior só aqui.
+   *
+   * O `select` tem 142 opções de verdade — é o estado inteiro —, e
+   * `getByRole("option", …)` monta a árvore de acessibilidade das 142 para
+   * achar uma. Sozinho o teste roda em menos de um segundo; junto com a
+   * suíte, em dois trabalhadores, passava dos cinco e o vermelho aparecia
+   * em quem não tinha culpa.
+   *
+   * Não é defeito escondido: o mesmo caso está no e2e, num navegador de
+   * verdade, onde a consulta é nativa.
+   */
   it("oferece o estado inteiro, com o estado no rótulo", () => {
     render(<CampoCidade value="Sinop" onChange={() => {}} />);
 
     const select = screen.getByLabelText(/cidade/i) as HTMLSelectElement;
     expect(select.options).toHaveLength(CIDADES.length);
     expect(select.value).toBe("Sinop");
-    expect(screen.getByRole("option", { name: "Cuiabá - MT" })).toBeTruthy();
-  });
+
+    // Pelo DOM, e não por `getByRole`: a consulta por papel percorre as 142
+    // opções montando a árvore de acessibilidade de cada uma.
+    const textos = [...select.options].map((o) => o.text);
+    expect(textos).toContain("Cuiabá - MT");
+    expect(textos).toContain("Sinop - MT");
+  }, 15_000);
 
   it("avisa quem escolheu, para o bairro poder reagir", () => {
     const escolhas: string[] = [];

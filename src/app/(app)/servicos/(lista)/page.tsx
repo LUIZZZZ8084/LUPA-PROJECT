@@ -1,5 +1,6 @@
 import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { FilterBar } from "@/components/filter-bar";
 import {
   EmptyState,
@@ -13,6 +14,7 @@ import { CIDADES, ESTADO, SERVICE_CATEGORIES } from "@/lib/constants";
 import { getProviders } from "@/lib/data";
 import { pluralize } from "@/lib/format";
 import { origemDoUsuario } from "@/server/auth/origem";
+import { contarBuscaSemResultado } from "@/server/buscas";
 
 /** Mesmo motivo do título de `/vagas`: quem filtra Sorriso não está em Sinop. */
 export async function generateMetadata({
@@ -60,6 +62,12 @@ export default async function ServicosPage({
     q: single("q"),
     perto,
   });
+
+  // Mesma razão do `/vagas`: só o termo, nunca quem digitou, e depois da
+  // resposta.
+  if (providers.length === 0) {
+    after(() => contarBuscaSemResultado(single("q"), "servicos"));
+  }
 
   // A ordem é dita na tela; ver o comentário longo em `/vagas`.
   const ordenadoPorProximidade = Boolean(perto && !cidade);

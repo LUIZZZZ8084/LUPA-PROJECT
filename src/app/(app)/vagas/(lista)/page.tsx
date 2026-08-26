@@ -1,5 +1,6 @@
 import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { FilterBar } from "@/components/filter-bar";
 import { JobCard } from "@/components/job-card";
 import {
@@ -18,6 +19,7 @@ import {
 import { getJobs } from "@/lib/data";
 import { pluralize } from "@/lib/format";
 import { origemDoUsuario } from "@/server/auth/origem";
+import { contarBuscaSemResultado } from "@/server/buscas";
 
 /**
  * O título acompanha a cidade filtrada.
@@ -88,6 +90,22 @@ export default async function VagasPage({
   };
 
   const jobs = await getJobs(filters);
+
+  /*
+   * Busca que não achou nada vira estatística, por `after()`.
+   *
+   * Depois da resposta: quem buscou quer ver a tela, mesmo que a tela diga
+   * "nada encontrado". E só o termo — nunca quem digitou. Histórico de
+   * busca de quem procura emprego é a mesma classe de informação que o
+   * currículo.
+   *
+   * Para que serve: hoje não existe registro do que as pessoas procuram e
+   * não encontram, e sem isso escolher entre ampliar a tabela de sinônimos
+   * e partir para busca semântica é palpite.
+   */
+  if (jobs.length === 0) {
+    after(() => contarBuscaSemResultado(filters.q, "vagas"));
+  }
 
   /*
    * A ordenação é dita na tela, não só sentida.

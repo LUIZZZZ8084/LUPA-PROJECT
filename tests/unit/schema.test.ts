@@ -62,6 +62,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
     expect(tabelas).toEqual([
       "admins",
       "avaliacoes",
+      "buscas_sem_resultado",
       "candidaturas",
       "categorias_servico",
       "pedidos_verificacao",
@@ -69,6 +70,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "perfis_empresa",
       "perfis_prestador",
       "publicacoes",
+      "tentativas_de_acesso",
       "usuarios",
       "vagas",
       "visualizacoes_vaga",
@@ -623,7 +625,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(12);
+    expect(tabelas.rows).toHaveLength(14);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -941,6 +943,210 @@ describe("candidatos disponíveis", () => {
   it("a chave anônima não lê a view", async () => {
     const r = await banco.query<{ tem_acesso: boolean }>(
       `select has_table_privilege('anon', 'candidatos_disponiveis', 'SELECT')
+              as tem_acesso`,
+    );
+    expect(r.rows[0].tem_acesso).toBe(false);
+  });
+});
+
+/**
+ * Buscas que não acharam nada, no banco.
+ *
+ * O que estes testes travam é o que a tabela **não** tem: nenhuma coluna
+ * que ligue o termo a uma pessoa. Histórico de busca de quem procura
+ * emprego é a mesma classe de informação que o currículo — numa cidade do
+ * tamanho de Sinop, saber que alguém pesquisou "vaga de motorista" três
+ * vezes esta semana diz que essa pessoa quer sair do emprego atual.
+ */
+describe("buscas sem resultado", () => {
+  let banco: PGlite;
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  it("não guarda quem buscou", async () => {
+    const r = await banco.query<{ column_name: string }>(
+      `select column_name from information_schema.columns
+        where table_name = 'buscas_sem_resultado'`,
+    );
+    const colunas = r.rows.map((x) => x.column_name).sort();
+
+    expect(colunas).toEqual(["dia", "onde", "termo", "total"]);
+    // Nominalmente, para o dia em que alguém for acrescentar uma coluna.
+    for (const proibida of ["usuario_id", "candidato_id", "sessao", "ip"]) {
+      expect(colunas).not.toContain(proibida);
+    }
+  });
+
+  it("soma o mesmo termo no mesmo dia em vez de criar linha", async () => {
+    for (let i = 0; i < 3; i++) {
+      await banco.query(
+        `select registrar_busca_sem_resultado('soldador', 'vagas')`,
+      );
+    }
+
+    const r = await banco.query<{ total: number; linhas: string }>(
+      `select total, count(*) over () as linhas
+         from buscas_sem_resultado where termo = 'soldador'`,
+    );
+
+    expect(r.rows).toHaveLength(1);
+    expect(Number(r.rows[0].total)).toBe(3);
+  });
+
+  it("a mesma palavra em telas diferentes conta separado", async () => {
+    await banco.query(
+      `select registrar_busca_sem_resultado('pedreiro', 'vagas')`,
+    );
+    await banco.query(
+      `select registrar_busca_sem_resultado('pedreiro', 'servicos')`,
+    );
+
+    const r = await banco.query<{ onde: string }>(
+      `select onde from buscas_sem_resultado where termo = 'pedreiro' order by onde`,
+    );
+    expect(r.rows.map((x) => x.onde)).toEqual(["servicos", "vagas"]);
+  });
+
+  it("dez buscas simultâneas contam dez", async () => {
+    await Promise.all(
+      Array.from({ length: 10 }, () =>
+        banco.query(
+          `select registrar_busca_sem_resultado('concorrente', 'vagas')`,
+        ),
+      ),
+    );
+
+    const r = await banco.query<{ total: number }>(
+      `select total from buscas_sem_resultado where termo = 'concorrente'`,
+    );
+    expect(Number(r.rows[0].total)).toBe(10);
+  });
+
+  it("recusa tela que não existe", async () => {
+    await expect(
+      banco.query(`select registrar_busca_sem_resultado('x', 'inventada')`),
+    ).rejects.toThrow();
+  });
+
+  it("recusa termo curto demais", async () => {
+    await expect(
+      banco.query(`select registrar_busca_sem_resultado('a', 'vagas')`),
+    ).rejects.toThrow();
+  });
+
+  it("a chave anônima não lê", async () => {
+    const r = await banco.query<{ tem_acesso: boolean }>(
+      `select has_table_privilege('anon', 'buscas_sem_resultado', 'SELECT')
+              as tem_acesso`,
+    );
+    expect(r.rows[0].tem_acesso).toBe(false);
+  });
+});
+
+/**
+ * O limite de tentativas, no banco.
+ *
+ * O contador vivia num `Map` em memória de função serverless: sumia a cada
+ * deploy e valia por instância. Com concorrência suficiente, o limite era
+ * sugestão.
+ *
+ * O que estes testes travam é a corrida — que é onde um limite de acesso
+ * falha de verdade. Pelo caminho ler-somar-gravar, duas tentativas
+ * simultâneas leriam "4" e escreveriam "5" as duas, e a sexta passaria.
+ */
+describe("limite de tentativas durável", () => {
+  let banco: PGlite;
+  const JANELA = 900;
+  const MAX = 5;
+  const BLOQUEIO = 900;
+
+  const falhar = (chave: string) =>
+    banco.query<{ registrar_falha_de_acesso: string | null }>(
+      `select registrar_falha_de_acesso($1, $2, $3, $4)`,
+      [chave, JANELA, MAX, BLOQUEIO],
+    );
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  it("soma dentro da janela e bloqueia no teto", async () => {
+    for (let i = 1; i < MAX; i++) {
+      const r = await falhar("login:a@teste.lupa");
+      expect(r.rows[0].registrar_falha_de_acesso, `tentativa ${i}`).toBeNull();
+    }
+
+    const ultima = await falhar("login:a@teste.lupa");
+    expect(ultima.rows[0].registrar_falha_de_acesso).not.toBeNull();
+  });
+
+  it("uma chave não afeta a outra", async () => {
+    const r = await falhar("login:b@teste.lupa");
+    expect(r.rows[0].registrar_falha_de_acesso).toBeNull();
+  });
+
+  /*
+   * O teste que justifica a função existir. Cinco tentativas ao mesmo
+   * tempo têm que somar cinco — se somarem menos, o limite deixa passar
+   * exatamente no cenário em que ele deveria funcionar.
+   */
+  it("tentativas simultâneas somam todas", async () => {
+    await Promise.all(
+      Array.from({ length: MAX }, () => falhar("login:corrida@teste.lupa")),
+    );
+
+    const r = await banco.query<{ tentativas: number }>(
+      `select tentativas from tentativas_de_acesso where chave = $1`,
+      ["login:corrida@teste.lupa"],
+    );
+    expect(Number(r.rows[0].tentativas)).toBe(MAX);
+  });
+
+  it("janela vencida recomeça do primeiro", async () => {
+    await falhar("login:c@teste.lupa");
+    await banco.query(
+      `update tentativas_de_acesso
+          set primeira_em = now() - interval '2 hours', tentativas = 4
+        where chave = 'login:c@teste.lupa'`,
+    );
+
+    await falhar("login:c@teste.lupa");
+    const r = await banco.query<{ tentativas: number }>(
+      `select tentativas from tentativas_de_acesso where chave = 'login:c@teste.lupa'`,
+    );
+    expect(Number(r.rows[0].tentativas)).toBe(1);
+  });
+
+  it("a limpeza apaga o que venceu e poupa o que está bloqueado", async () => {
+    await banco.query(
+      `insert into tentativas_de_acesso (chave, tentativas, primeira_em, bloqueado_ate)
+       values ('velha', 1, now() - interval '10 hours', null),
+              ('presa', 5, now() - interval '10 hours', now() + interval '10 minutes')`,
+    );
+
+    await banco.query(`select limpar_tentativas_vencidas($1)`, [JANELA]);
+
+    const r = await banco.query<{ chave: string }>(
+      `select chave from tentativas_de_acesso where chave in ('velha', 'presa')`,
+    );
+    expect(r.rows.map((x) => x.chave)).toEqual(["presa"]);
+  });
+
+  it("a chave anônima não lê", async () => {
+    const r = await banco.query<{ tem_acesso: boolean }>(
+      `select has_table_privilege('anon', 'tentativas_de_acesso', 'SELECT')
               as tem_acesso`,
     );
     expect(r.rows[0].tem_acesso).toBe(false);

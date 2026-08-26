@@ -382,6 +382,158 @@ create index pedidos_verificacao_status_idx
   on pedidos_verificacao (status, enviado_em);
 
 -- ============================================================================
+-- 9d. Tentativas de acesso, para o limite sobreviver ao deploy
+--
+-- O limite vivia num `Map` em memória da função serverless. Duas
+-- consequências que o código não escondia, mas que ninguém tinha medido:
+-- sumia a cada deploy, e valia por instância — com concorrência
+-- suficiente, o limite virava sugestão.
+--
+-- Aqui ele passa a ser uma linha por chave. O que se contém é diferente em
+-- cada uso, e por isso a chave também é:
+--
+--   • `login:<e-mail>`   — adivinhação de senha. Sucesso zera o contador.
+--   • `cadastro:<origem>` — criação de conta em massa. Sucesso **conta**,
+--     porque quem cria conta em massa troca de e-mail a cada tentativa.
+--
+-- Nada aqui identifica pessoa além do que a própria tentativa já traz, e a
+-- linha morre com a janela.
+-- ============================================================================
+
+create table tentativas_de_acesso (
+  chave         text primary key,
+  tentativas    integer not null default 0,
+  primeira_em   timestamptz not null default now(),
+  bloqueado_ate timestamptz,
+
+  constraint tentativas_nao_negativas check (tentativas >= 0)
+);
+
+-- Para a limpeza do que já venceu encontrar as linhas por índice.
+create index tentativas_de_acesso_primeira_em_idx
+  on tentativas_de_acesso (primeira_em);
+
+/*
+ * Registra uma falha e devolve até quando a chave está bloqueada.
+ *
+ * Tudo numa instrução só, de propósito. Pelo caminho ler-somar-gravar,
+ * duas tentativas simultâneas leriam "4" e escreveriam "5" as duas — e a
+ * sexta passaria. Num limite de acesso, essa corrida é a diferença entre
+ * conter e parecer que contém.
+ */
+create or replace function registrar_falha_de_acesso(
+  p_chave             text,
+  p_janela_segundos   integer,
+  p_max_tentativas    integer,
+  p_bloqueio_segundos integer
+)
+returns timestamptz
+language sql
+as $$
+  insert into tentativas_de_acesso (chave, tentativas, primeira_em)
+  values (p_chave, 1, now())
+  on conflict (chave) do update set
+    -- Janela vencida recomeça do 1; dentro da janela, soma.
+    tentativas = case
+      when now() - tentativas_de_acesso.primeira_em
+             > make_interval(secs => p_janela_segundos)
+      then 1
+      else tentativas_de_acesso.tentativas + 1
+    end,
+    primeira_em = case
+      when now() - tentativas_de_acesso.primeira_em
+             > make_interval(secs => p_janela_segundos)
+      then now()
+      else tentativas_de_acesso.primeira_em
+    end,
+    bloqueado_ate = case
+      when (case
+              when now() - tentativas_de_acesso.primeira_em
+                     > make_interval(secs => p_janela_segundos)
+              then 1
+              else tentativas_de_acesso.tentativas + 1
+            end) >= p_max_tentativas
+      then now() + make_interval(secs => p_bloqueio_segundos)
+      else null
+    end
+  returning bloqueado_ate;
+$$;
+
+/*
+ * Apaga o que já venceu.
+ *
+ * Chamado junto com o registro de falha, não por rotina agendada: sem
+ * cron, a alternativa seria a tabela crescer com toda chave vista uma vez
+ * e nunca mais. Custa um `delete` por índice que quase sempre não apaga
+ * nada.
+ */
+create or replace function limpar_tentativas_vencidas(p_janela_segundos integer)
+returns void
+language sql
+as $$
+  delete from tentativas_de_acesso
+   where primeira_em < now() - make_interval(secs => p_janela_segundos * 4)
+     and (bloqueado_ate is null or bloqueado_ate < now());
+$$;
+
+-- ============================================================================
+-- 9c. Buscas que não acharam nada
+--
+-- Uma linha por termo por dia, incrementada — a mesma forma das
+-- visualizações, pelo mesmo motivo: o que se usa é o agregado, e uma linha
+-- por busca faria a tabela crescer com o tráfego em vez de com o
+-- vocabulário.
+--
+-- **Não guarda quem buscou.** Nem id, nem sessão, nem endereço. Histórico
+-- de busca de quem procura emprego é a mesma classe de informação que o
+-- currículo: numa cidade do tamanho de Sinop, saber que fulano pesquisou
+-- "vaga de motorista" três vezes esta semana diz que ele quer sair do
+-- emprego atual.
+--
+-- O termo é gravado normalizado (minúsculas, sem acento) porque o que
+-- interessa é agrupar: "Eletricista", "eletricista" e "eletrecista" só
+-- viram sinal quando somam.
+--
+-- Para que serve: decidir entre ampliar a tabela de sinônimos e partir para
+-- busca semântica. Hoje essa escolha seria palpite — não existe registro do
+-- que as pessoas procuram e não encontram.
+-- ============================================================================
+
+create table buscas_sem_resultado (
+  termo  text not null,
+  dia    date not null default current_date,
+  onde   text not null,
+  total  integer not null default 0,
+
+  primary key (termo, dia, onde),
+  constraint total_nao_negativo check (total >= 0),
+  constraint onde_conhecido check (onde in ('vagas', 'servicos')),
+  constraint termo_com_tamanho check (length(termo) between 2 and 80)
+);
+
+create index buscas_sem_resultado_dia_idx on buscas_sem_resultado (dia desc);
+
+/*
+ * Incremento atômico, como o das visualizações.
+ *
+ * Duas pessoas buscando o mesmo termo no mesmo segundo pelo caminho
+ * ler-somar-gravar perderiam uma contagem — e num termo raro, que é
+ * justamente o que interessa aqui, perder uma é perder metade do sinal.
+ */
+create or replace function registrar_busca_sem_resultado(
+  p_termo text,
+  p_onde  text
+)
+returns void
+language sql
+as $$
+  insert into buscas_sem_resultado (termo, dia, onde, total)
+  values (p_termo, current_date, p_onde, 1)
+  on conflict (termo, dia, onde)
+  do update set total = buscas_sem_resultado.total + 1;
+$$;
+
+-- ============================================================================
 -- 9b. Visualizações de vaga
 --
 -- Uma linha por vaga e por dia, incrementada — não uma linha por
@@ -666,6 +818,8 @@ alter table categorias_servico  enable row level security;
 -- Sem política: ninguém lê nem escreve pela chave anônima. O incremento
 -- passa pela função, e a leitura do painel, pela chave de serviço.
 alter table visualizacoes_vaga  enable row level security;
+alter table buscas_sem_resultado enable row level security;
+alter table tentativas_de_acesso enable row level security;
 
 /*
  * `usuarios` e `admins` ficam sem política nenhuma.
@@ -750,6 +904,8 @@ grant select on job_listings, provider_listings to anon, authenticated;
 -- já tenha concedido por fora: aqui é onde qualquer um lendo este
 -- arquivo confirma que não vaza.
 revoke select on visualizacoes_vaga            from anon, authenticated;
+revoke select on buscas_sem_resultado         from anon, authenticated;
+revoke select on tentativas_de_acesso         from anon, authenticated;
 revoke select on company_applications          from anon, authenticated;
 revoke select on candidate_applications        from anon, authenticated;
 revoke select on candidatos_disponiveis        from anon, authenticated;
