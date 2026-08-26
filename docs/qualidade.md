@@ -60,7 +60,17 @@ em Pixel 7:
   conta de empresa e confere que ela aparece na busca. Nasceu do bug em que
   a tela de busca chutava "Sinop" quando a URL não trazia cidade: a camada
   de dados estava certa, e só o caminho de ponta a ponta acusava.
+- `perto-de-voce.spec.ts` — a ordem por proximidade e o título por cidade.
+  A escada tem teste unitário sobre a função pura; o que só o navegador
+  responde é se ela chega à tela, porque a ordem depende da sessão.
 - `acessibilidade.spec.ts` — axe-core em todas as rotas, WCAG 2.1 AA.
+
+Duas contas para a suíte inteira, criadas uma vez cada em `auth.setup.ts`:
+candidato e empresa. Não é só economia de Argon2id — o cadastro tem limite
+de 5 por origem em 15 minutos, e uma conta por teste estourava esse limite
+no meio da execução, fazendo falhar o cadastro do teste seguinte em vez do
+que ele mede. O limite protege contra criação de conta em massa e não se
+afrouxa para o teste correr; quem se ajusta é a suíte.
 
 ### Cobertura
 
