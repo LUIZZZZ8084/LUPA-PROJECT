@@ -86,6 +86,12 @@ Segurança (auditoria dos 20 pontos, em duas passadas):
   [#64](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/64),
   PR [#65](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/65)
 
+Decisões futuras, com dado em vez de palpite:
+
+- Registrar busca sem resultado, para decidir sobre busca semântica —
+  [#66](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/66),
+  PR [#85](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/85)
+
 Qualidade:
 
 - Score de mutação de 59,4% para 71,6%, com o piso onde estava —
@@ -99,8 +105,6 @@ Ordem definida pelo Luiz em 25/08/2026: **pagamento é a última etapa.**
 
 Antes disso, e sem depender de decisão nova:
 
-- [ ] Registrar busca sem resultado, para decidir sobre busca semântica —
-      [#66](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/66)
 - [ ] Limite de tentativa durável no Postgres —
       [#67](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/67)
 - [ ] Notificação push por bairro e categoria —

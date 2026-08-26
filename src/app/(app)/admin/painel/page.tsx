@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
+import { buscasSemResultado, DIAS_DA_JANELA } from "@/server/buscas/servico";
 import { painelAdmin } from "@/server/metrics/servico";
+import { BuscasSemResultado } from "./buscas-sem-resultado";
 import { PainelCliente } from "./painel-cliente";
 
 export const metadata: Metadata = {
@@ -29,6 +31,14 @@ export default async function PainelAdminPage() {
   // polling só atualiza dali em diante.
   const inicial = await painelAdmin(sessao);
 
+  /*
+   * Fora do polling de propósito. O painel se atualiza a cada 15 segundos
+   * porque cadastro e faturamento mudam durante o dia; isto aqui é insumo
+   * de uma decisão que se toma uma vez por mês, e pedir de novo a cada
+   * quinze segundos seria consulta sem leitor.
+   */
+  const termos = await buscasSemResultado(sessao);
+
   return (
     <PageShell width="wide">
       <PageTitle
@@ -37,6 +47,7 @@ export default async function PainelAdminPage() {
         description="Cadastros, faturamento e distribuição por bairro em Sinop."
       />
       <PainelCliente inicial={inicial} />
+      <BuscasSemResultado termos={termos} dias={DIAS_DA_JANELA} />
     </PageShell>
   );
 }

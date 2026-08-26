@@ -382,6 +382,63 @@ create index pedidos_verificacao_status_idx
   on pedidos_verificacao (status, enviado_em);
 
 -- ============================================================================
+-- 9c. Buscas que não acharam nada
+--
+-- Uma linha por termo por dia, incrementada — a mesma forma das
+-- visualizações, pelo mesmo motivo: o que se usa é o agregado, e uma linha
+-- por busca faria a tabela crescer com o tráfego em vez de com o
+-- vocabulário.
+--
+-- **Não guarda quem buscou.** Nem id, nem sessão, nem endereço. Histórico
+-- de busca de quem procura emprego é a mesma classe de informação que o
+-- currículo: numa cidade do tamanho de Sinop, saber que fulano pesquisou
+-- "vaga de motorista" três vezes esta semana diz que ele quer sair do
+-- emprego atual.
+--
+-- O termo é gravado normalizado (minúsculas, sem acento) porque o que
+-- interessa é agrupar: "Eletricista", "eletricista" e "eletrecista" só
+-- viram sinal quando somam.
+--
+-- Para que serve: decidir entre ampliar a tabela de sinônimos e partir para
+-- busca semântica. Hoje essa escolha seria palpite — não existe registro do
+-- que as pessoas procuram e não encontram.
+-- ============================================================================
+
+create table buscas_sem_resultado (
+  termo  text not null,
+  dia    date not null default current_date,
+  onde   text not null,
+  total  integer not null default 0,
+
+  primary key (termo, dia, onde),
+  constraint total_nao_negativo check (total >= 0),
+  constraint onde_conhecido check (onde in ('vagas', 'servicos')),
+  constraint termo_com_tamanho check (length(termo) between 2 and 80)
+);
+
+create index buscas_sem_resultado_dia_idx on buscas_sem_resultado (dia desc);
+
+/*
+ * Incremento atômico, como o das visualizações.
+ *
+ * Duas pessoas buscando o mesmo termo no mesmo segundo pelo caminho
+ * ler-somar-gravar perderiam uma contagem — e num termo raro, que é
+ * justamente o que interessa aqui, perder uma é perder metade do sinal.
+ */
+create or replace function registrar_busca_sem_resultado(
+  p_termo text,
+  p_onde  text
+)
+returns void
+language sql
+as $$
+  insert into buscas_sem_resultado (termo, dia, onde, total)
+  values (p_termo, current_date, p_onde, 1)
+  on conflict (termo, dia, onde)
+  do update set total = buscas_sem_resultado.total + 1;
+$$;
+
+-- ============================================================================
 -- 9b. Visualizações de vaga
 --
 -- Uma linha por vaga e por dia, incrementada — não uma linha por
@@ -666,6 +723,7 @@ alter table categorias_servico  enable row level security;
 -- Sem política: ninguém lê nem escreve pela chave anônima. O incremento
 -- passa pela função, e a leitura do painel, pela chave de serviço.
 alter table visualizacoes_vaga  enable row level security;
+alter table buscas_sem_resultado enable row level security;
 
 /*
  * `usuarios` e `admins` ficam sem política nenhuma.
@@ -750,6 +808,7 @@ grant select on job_listings, provider_listings to anon, authenticated;
 -- já tenha concedido por fora: aqui é onde qualquer um lendo este
 -- arquivo confirma que não vaza.
 revoke select on visualizacoes_vaga            from anon, authenticated;
+revoke select on buscas_sem_resultado         from anon, authenticated;
 revoke select on company_applications          from anon, authenticated;
 revoke select on candidate_applications        from anon, authenticated;
 revoke select on candidatos_disponiveis        from anon, authenticated;

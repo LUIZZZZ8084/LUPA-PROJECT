@@ -370,6 +370,29 @@ confere, para dar mensagem decente antes de gravar — mas duas requisições
 simultâneas passariam pela checagem e criariam a décima primeira. O banco é
 o único lugar onde essa corrida não existe.
 
+### Busca sem resultado é vocabulário, não histórico de pessoa
+
+`buscas_sem_resultado` guarda termo, dia, tela e contagem — quatro colunas,
+nenhuma ligando o termo a alguém. Existe para responder uma pergunta que
+hoje seria palpite: basta ampliar a tabela de sinônimos em
+`src/lib/skills.ts`, ou o vocabulário é variado demais e a busca precisa
+virar semântica?
+
+Cauda curta e repetitiva pede sinônimo — barato, previsível, sem chamada de
+rede. Cauda longa e variada é o que justificaria busca vetorial, que custa
+dinheiro por consulta e põe dependência externa no caminho de uma tela que
+abre em 3G.
+
+**Não se guarda quem buscou.** Histórico de busca de quem procura emprego é
+a mesma classe de informação que o currículo: numa cidade do tamanho de
+Sinop, saber que alguém pesquisou "vaga de motorista" três vezes esta
+semana diz que essa pessoa quer sair do emprego atual. O teste de schema
+lista as colunas e recusa qualquer uma que identifique.
+
+O termo é gravado normalizado, porque o que interessa é agrupar — e o
+registro sai por `after()`: quem buscou quer ver a tela, mesmo que ela diga
+"nada encontrado".
+
 ### Visualização de vaga é contagem, não histórico
 
 `visualizacoes_vaga` guarda uma linha por vaga por dia, e o incremento
