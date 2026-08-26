@@ -20,6 +20,7 @@ import {
 } from "@/lib/data";
 import { pluralize, timeAgo, whatsappLink } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { recomendadosParaEmpresa } from "@/server/candidaturas/recomendados";
 import {
   serieDoPainel,
   temPainelDeEmpresa,
@@ -28,6 +29,7 @@ import {
 import { EncerrarVagaButton } from "../encerrar-vaga-button";
 import { MoverCandidaturaSelect } from "../mover-candidatura-select";
 import { SerieGrafico } from "../serie-grafico";
+import { Recomendados } from "./recomendados";
 
 export const metadata: Metadata = {
   title: "Minha Empresa",
@@ -37,15 +39,17 @@ export const metadata: Metadata = {
 export default async function EmpresaPage() {
   const sessao = await sessaoAtual();
   const companyId = empresaDoPainel(sessao?.usuarioId ?? null);
-  const [company, jobs, applications, stats, serie] = await Promise.all([
-    getCompany(companyId),
-    getCompanyJobs(companyId),
-    getCompanyApplications(companyId),
-    getCompanyStats(companyId),
-    // Quem não é empresa cai no estado vazio logo abaixo; pedir a série
-    // antes disso trocaria a explicação por uma tela de erro.
-    temPainelDeEmpresa(sessao) ? serieDoPainel(sessao) : [],
-  ]);
+  const [company, jobs, applications, stats, serie, recomendados] =
+    await Promise.all([
+      getCompany(companyId),
+      getCompanyJobs(companyId),
+      getCompanyApplications(companyId),
+      getCompanyStats(companyId),
+      // Quem não é empresa cai no estado vazio logo abaixo; pedir a série
+      // antes disso trocaria a explicação por uma tela de erro.
+      temPainelDeEmpresa(sessao) ? serieDoPainel(sessao) : [],
+      recomendadosParaEmpresa(sessao),
+    ]);
   const totais = totaisDaSerie(serie);
 
   if (!company) {
@@ -188,6 +192,8 @@ export default async function EmpresaPage() {
           </ul>
         )}
       </section>
+
+      <Recomendados vagas={recomendados} />
 
       {/* Currículos recebidos */}
       <section className="mt-8">

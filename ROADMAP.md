@@ -33,6 +33,9 @@ Base:
 
 Painel da empresa — completo, menos cobrança:
 
+- Habilidades viram skills e o painel recomenda candidatos —
+  [#73](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/73),
+  PR [#74](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/74)
 - Ficha do candidato e contato direto nos currículos recebidos —
   [#71](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/71),
   PR [#72](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/72)

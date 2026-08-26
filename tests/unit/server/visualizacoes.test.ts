@@ -176,6 +176,7 @@ describe("visualizações de vaga", () => {
       tipoContrato: null,
       salarioMin: null,
       salarioMax: null,
+      habilidades: [],
       status: "aberta" as const,
       criadoEm: "2026-01-01T00:00:00.000Z",
     };

@@ -149,6 +149,7 @@ function vagaDoMock(job: JobListing): Vaga {
     tipoContrato: job.contract_type,
     salarioMin: job.salary_min,
     salarioMax: job.salary_max,
+    habilidades: job.skills,
     status: job.status,
     criadoEm: job.created_at,
   };
@@ -167,6 +168,7 @@ function jobListingDaVaga(vaga: Vaga): JobListing {
     contract_type: vaga.tipoContrato as JobListing["contract_type"],
     salary_min: vaga.salarioMin,
     salary_max: vaga.salarioMax,
+    skills: vaga.habilidades,
     status: vaga.status,
     created_at: vaga.criadoEm,
     company: {
