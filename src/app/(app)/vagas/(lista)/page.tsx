@@ -8,6 +8,7 @@ import {
   PageTitle,
 } from "@/components/layout/page-shell";
 import { ButtonLink } from "@/components/ui/button";
+import { cidadeDaBusca, umParametro } from "@/lib/busca";
 import {
   CIDADES,
   CONTRACT_TYPES,
@@ -16,12 +17,39 @@ import {
 } from "@/lib/constants";
 import { getJobs } from "@/lib/data";
 import { pluralize } from "@/lib/format";
+import { origemDoUsuario } from "@/server/auth/origem";
 
-export const metadata: Metadata = {
-  title: "Vagas de emprego em Sinop",
-  description:
-    "Vagas CLT, estágio e temporárias em Sinop-MT, filtradas por categoria, bairro e tipo de contrato.",
-};
+/**
+ * O título acompanha a cidade filtrada.
+ *
+ * Fixo em "Sinop", ele anunciava Sinop para quem abria
+ * `/vagas?cidade=Sorriso` — inclusive para o buscador e para quem
+ * compartilha o link. A busca por cidade é o argumento do produto; a
+ * página que responde "vagas em Sorriso" precisa se chamar assim.
+ *
+ * Sem cidade escolhida o título fala do estado, e Sinop fica na descrição,
+ * que é onde o esforço de divulgação está.
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  const cidade = cidadeDaBusca(await searchParams);
+
+  if (cidade) {
+    return {
+      title: `Vagas de emprego em ${cidade}`,
+      description: `Vagas CLT, estágio e temporárias em ${cidade}-${ESTADO}, filtradas por categoria, bairro e tipo de contrato.`,
+    };
+  }
+
+  return {
+    title: "Vagas de emprego em Mato Grosso",
+    description:
+      "Vagas CLT, estágio e temporárias nos 142 municípios de Mato Grosso, começando por Sinop. Filtre por cidade, categoria e tipo de contrato.",
+  };
+}
 
 export default async function VagasPage({
   searchParams,
@@ -29,10 +57,7 @@ export default async function VagasPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const single = (key: string) => {
-    const v = params[key];
-    return Array.isArray(v) ? v[0] : v;
-  };
+  const single = (key: string) => umParametro(params, key);
 
   /*
    * Sem cidade na URL, a busca é do estado inteiro — não de Sinop.
@@ -46,21 +71,44 @@ export default async function VagasPage({
    * O chip do filtro já anuncia "Todo o MT" enquanto nada está escolhido.
    * `undefined` aqui é o que faz a tela entregar o que ela promete.
    */
+  /*
+   * Ordena, não filtra: o mais perto de quem está olhando vem primeiro, e
+   * nada sai da lista por estar longe. Sem isso, quem é de Sinop abre a
+   * busca do estado inteiro e a primeira coisa que vê pode ser Cuiabá, a
+   * 500km — o oposto do que "hiperlocal" promete.
+   */
+  const perto = await origemDoUsuario();
+
   const filters = {
     city: single("cidade"),
     category: single("categoria"),
     contract_type: single("tipo"),
     q: single("q"),
+    perto,
   };
 
   const jobs = await getJobs(filters);
+
+  /*
+   * A ordenação é dita na tela, não só sentida.
+   *
+   * Ordem que muda o resultado sem aparecer em lugar nenhum é a mesma
+   * armadilha da #76, onde um padrão invisível escondia vaga e a empresa
+   * concluía que não tinha publicado. Aqui não esconde nada, mas quem vê
+   * uma vaga de outra cidade no meio da lista merece saber por que a ordem
+   * é aquela — e que dá para trocar pelo filtro de cidade.
+   *
+   * Só aparece sem cidade escolhida: com o filtro em Sorriso, "mais perto
+   * de você" descreveria uma ordenação que já não decide quase nada.
+   */
+  const ordenadoPorProximidade = Boolean(perto && !filters.city);
 
   return (
     <PageShell>
       <PageTitle
         title="Vagas"
         accent="text-vagas"
-        description="Emprego formal em Sinop e região, direto de quem está contratando."
+        description="Emprego formal em todo o Mato Grosso, direto de quem está contratando."
       />
 
       <FilterBar
@@ -96,6 +144,9 @@ export default async function VagasPage({
 
       <p className="mb-3 text-xs text-muted">
         {pluralize(jobs.length, "vaga encontrada", "vagas encontradas")}
+        {ordenadoPorProximidade && jobs.length > 0 && (
+          <> · mais perto de você primeiro</>
+        )}
       </p>
 
       {jobs.length === 0 ? (

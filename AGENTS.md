@@ -28,6 +28,7 @@ Scripts operacionais:
 node scripts/criar-admin.mjs      # cria ou promove a conta de admin
 node scripts/gerar-avatares.mjs   # regenera os avatares de demonstração
 node scripts/gerar-cidades.mjs    # baixa a lista de municípios de MT (IBGE)
+node scripts/gerar-regioes.mjs    # baixa a região de cada município (IBGE)
 ```
 
 ```bash
@@ -310,6 +311,37 @@ preenchida, e ela pode trocar.
 **A cidade não se edita no perfil.** Mudar de cidade muda quem encontra a
 pessoa e onde os anúncios dela aparecem — é troca de contexto inteiro, não
 correção de campo. Por ora é caso de suporte, como o CNPJ.
+
+### Perto se mede por região do IBGE, não por quilômetro
+
+A busca cobre Mato Grosso inteiro e o estado tem 903 mil km². Ordenar só
+por data faz a primeira coisa que alguém de Sinop vê ser uma vaga em
+Cuiabá, a 500km — o oposto do que "hiperlocal" promete. Por isso a
+listagem ordena pelo mais perto de quem está olhando, numa escada de cinco
+degraus (`src/lib/proximidade.ts`): mesmo bairro, mesma cidade, mesma
+região imediata, mesma região intermediária, resto do estado.
+
+**Por que região e não distância.** A região imediata do IBGE agrupa
+municípios pelo deslocamento real das pessoas para bens e serviços — é a
+pergunta certa aqui: até onde alguém daqui viaja para trabalhar. Linha reta
+seria pior e ainda exigiria outra fonte de dados, porque em MT quem decide
+o tempo de viagem é a estrada: 200km de asfalto e 200km de terra não são a
+mesma distância. O mapa vem do mesmo IBGE que já gera a lista de cidades,
+por `scripts/gerar-regioes.mjs`, e é versionado — busca não pode depender
+de API de terceiro estar no ar.
+
+**Ordenar não é filtrar.** Nada sai da lista por estar longe, e o filtro de
+cidade continua sendo a forma de restringir. É a lição da #76 aplicada de
+propósito: lá um padrão posto na tela virou filtro invisível e escondeu
+vaga de quem tinha acabado de publicar.
+
+**E a ordem é dita na tela** ("mais perto de você primeiro"), pelo mesmo
+motivo. Ordenação que muda o resultado sem aparecer em lugar nenhum é a
+mesma armadilha, só que mais difícil de perceber.
+
+**Para prestador, perto é onde ele atende**, não onde mora: o eletricista
+do Jacarandá que atende o Centro está perto de quem é do Centro. O endereço
+dele responderia a pergunta errada.
 
 ### 404 em vez de 403 quando faz sentido
 

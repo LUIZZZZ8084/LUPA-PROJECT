@@ -18,6 +18,7 @@ import {
   MOCK_VERIFICATIONS,
   type VerificationRequest,
 } from "./mock-data";
+import { type Origem, porProximidade } from "./proximidade";
 import { isSupabaseConfigured } from "./supabase/config";
 import { createClient } from "./supabase/server";
 import { clienteDeServico } from "./supabase/service";
@@ -50,6 +51,60 @@ const norm = (s: string) =>
 
 const matches = (haystack: string[], q: string) =>
   haystack.some((h) => norm(h).includes(norm(q)));
+
+/*
+ * Ordenação por proximidade, aplicada em memória nos dois caminhos.
+ *
+ * Em SQL exigiria a tabela de regiões dentro do Postgres, e ela é dado
+ * gerado do IBGE que hoje vive num `.ts` versionado — levá-la ao banco
+ * criaria uma segunda cópia para manter em dia, e cópia que envelhece
+ * sozinha é como a ordenação passa a mentir sem ninguém perceber.
+ *
+ * O custo é aceitável porque a lista é de um estado, não do país: a
+ * consulta já volta filtrada por cidade, categoria e texto. Se um dia a
+ * busca passar de alguns milhares de itens, o lugar de resolver isso é
+ * paginação, que muda a resposta inteira — não este `sort`.
+ *
+ * `Array.prototype.sort` é estável desde o ES2019, e as duas consultas já
+ * chegam ordenadas. Então empate no grau preserva a ordem anterior, e o
+ * desempate explícito abaixo é o mesmo critério, escrito para valer também
+ * no modo demonstração.
+ */
+
+const desempateDeVaga = (a: JobListing, b: JobListing) =>
+  +new Date(b.created_at) - +new Date(a.created_at);
+
+const desempateDePrestador = (a: ProviderListing, b: ProviderListing) => {
+  // Verificados primeiro, depois nota, depois volume de avaliações.
+  if (a.doc_verified !== b.doc_verified) return a.doc_verified ? -1 : 1;
+  if (b.avg_rating !== a.avg_rating) return b.avg_rating - a.avg_rating;
+  return b.review_count - a.review_count;
+};
+
+const ordenarVagas = (jobs: JobListing[], perto: Origem | undefined) =>
+  jobs.sort(
+    porProximidade(
+      perto,
+      (j) => ({ cidade: j.city, bairro: j.neighborhood }),
+      desempateDeVaga,
+    ),
+  );
+
+const ordenarPrestadores = (
+  providers: ProviderListing[],
+  perto: Origem | undefined,
+) =>
+  providers.sort(
+    porProximidade(
+      perto,
+      (p) => ({
+        cidade: p.city,
+        bairro: p.neighborhood,
+        atende: p.service_area,
+      }),
+      desempateDePrestador,
+    ),
+  );
 
 /**
  * Traduz falha de consulta em exceção, em vez de silêncio.
@@ -210,12 +265,15 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
 
       const { data, error } = await query;
       if (error) throw falhaDeConsulta("job_listings", error);
-      return (data ?? []) as unknown as JobListing[];
+      return ordenarVagas(
+        (data ?? []) as unknown as JobListing[],
+        filters.perto,
+      );
     }
   }
 
   const jobs = await jobsEmDemonstracao();
-  return jobs
+  const encontradas = jobs
     .filter((job) => {
       if (job.status !== "aberta") return false;
       if (filters.city && job.city !== filters.city) return false;
@@ -237,7 +295,9 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
         return false;
       return true;
     })
-    .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+    .sort(desempateDeVaga);
+
+  return ordenarVagas(encontradas, filters.perto);
 }
 
 export async function getJobById(id: string): Promise<JobListing | null> {
@@ -303,11 +363,14 @@ export async function getProviders(
 
       const { data, error } = await query;
       if (error) throw falhaDeConsulta("provider_listings", error);
-      return (data ?? []) as unknown as ProviderListing[];
+      return ordenarPrestadores(
+        (data ?? []) as unknown as ProviderListing[],
+        filters.perto,
+      );
     }
   }
 
-  return MOCK_PROVIDERS.filter((p) => {
+  const encontrados = MOCK_PROVIDERS.filter((p) => {
     if (filters.city && p.city !== filters.city) return false;
     if (filters.category && p.category.slug !== filters.category) return false;
     if (filters.min_rating && p.avg_rating < filters.min_rating) return false;
@@ -320,12 +383,9 @@ export async function getProviders(
     )
       return false;
     return true;
-  }).sort((a, b) => {
-    // Verificados primeiro, depois nota, depois volume de avaliações.
-    if (a.doc_verified !== b.doc_verified) return a.doc_verified ? -1 : 1;
-    if (b.avg_rating !== a.avg_rating) return b.avg_rating - a.avg_rating;
-    return b.review_count - a.review_count;
-  });
+  }).sort(desempateDePrestador);
+
+  return ordenarPrestadores(encontrados, filters.perto);
 }
 
 export async function getProviderById(
@@ -730,8 +790,23 @@ export async function getVerificationQueue(): Promise<VerificationRequest[]> {
    Home
    ============================================================ */
 
-export async function getHomeFeed() {
-  const [jobs, providers] = await Promise.all([getJobs(), getProviders()]);
+/**
+ * Os destaques da primeira tela.
+ *
+ * Recebe `perto` pelo mesmo motivo que as buscas: depois que o app abriu
+ * para os 142 municípios, quatro vagas escolhidas só por data podem ser
+ * quatro vagas a 500km de quem abriu. A home é onde a maioria decide se o
+ * app é sobre a cidade dela — e é a tela com menos espaço para explicar
+ * que não é.
+ *
+ * Sem sessão, `perto` chega `undefined` e a ordem volta a ser por data,
+ * como era. É o mesmo lugar seguro para cair que as listas usam.
+ */
+export async function getHomeFeed(perto?: Origem) {
+  const [jobs, providers] = await Promise.all([
+    getJobs({ perto }),
+    getProviders({ perto }),
+  ]);
   return {
     jobs: jobs.slice(0, 4),
     providers: providers.slice(0, 4),
