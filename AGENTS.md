@@ -464,9 +464,19 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   a URL. Rota que chama `notFound()` não pode ter `loading.tsx` acima dela.
 - **Opacidade sobre texto derruba o contraste** abaixo do mínimo legível.
   Para estado desabilitado, use cor explícita.
+- **Valor padrão de filtro na tela vira filtro invisível.** `/vagas` lia
+  `single("cidade") ?? "Sinop"` — sobra do tempo em que Sinop era a única
+  cidade. Aberto o estado inteiro, toda vaga publicada fora de Sinop sumia
+  da busca enquanto continuava aparecendo na home, que consulta `getJobs()`
+  sem filtro. A empresa via a vaga no painel, não via em `/vagas` e
+  concluía que não tinha publicado. O chip da tela já dizia "Todo o MT": o
+  padrão contradizia o que a interface prometia, e ninguém o via porque ele
+  não estava na URL. **Quando o alcance de uma listagem muda, procure os
+  padrões deixados nas telas** — a camada de dados estava certa o tempo
+  todo, e teste sobre ela passava verde com o bug em pé.
 
-Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, que
-varre o código-fonte.
+Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
+último em `tests/unit/cidades.test.ts` — os três varrem o código-fonte.
 
 - **Suíte e2e não pode falar com banco de verdade.** `npm start` carrega o
   `.env.local`, e quem tem credenciais reais ali roda o e2e contra

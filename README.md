@@ -80,7 +80,9 @@ docs/
 - **Mato Grosso inteiro, começando por Sinop.** Os 142 municípios do estado
   são aceitos no cadastro, na vaga e nos filtros — a lista vem do IBGE por
   `scripts/gerar-cidades.mjs`. Sinop é onde o esforço de divulgação começa,
-  não o limite de quem pode entrar.
+  não o limite de quem pode entrar. A busca aberta, sem cidade escolhida,
+  mostra o estado inteiro: quem quiser só a sua cidade filtra, e o filtro
+  fica na URL.
 - **PWA, não app de loja.** Manifest e ícones gerados em build; "adicionar à
   tela inicial" sem revisão da Apple ou do Google.
 

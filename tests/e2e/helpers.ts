@@ -79,3 +79,57 @@ export async function aguardarAnimacoes(page: Page): Promise<void> {
     { timeout: 10_000 },
   );
 }
+
+/**
+ * Um CNPJ diferente a cada chamada, com dígito verificador de verdade.
+ *
+ * Duas exigências que só se atendem gerando: o cadastro recusa CNPJ
+ * repetido, e recusa dígito verificador errado. Um literal fixo passa na
+ * primeira conta e reprova na segunda — que foi como este ajudante falhou
+ * assim que a suíte rodou nos dois projetos, desktop e mobile.
+ *
+ * A conta da verificação é a mesma de `cnpjValido`, em
+ * `src/server/validation.ts`. Repetir a regra aqui é proposital: um
+ * ajudante de teste que importa código do servidor deixa de exercitar o
+ * contrato e passa a concordar com ele.
+ */
+function cnpjDeTeste(): string {
+  const base = String(Math.floor(Math.random() * 1e12)).padStart(12, "0");
+
+  const digito = (numero: string) => {
+    const pesos = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2].slice(-numero.length);
+    const soma = [...numero].reduce(
+      (total, d, i) => total + Number(d) * pesos[i],
+      0,
+    );
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  };
+
+  const d1 = digito(base);
+  return `${base}${d1}${digito(`${base}${d1}`)}`;
+}
+
+/**
+ * Cria uma conta de empresa e entra, num contexto só deste teste.
+ *
+ * A sessão compartilhada da suíte é de candidato — é o papel que a maioria
+ * dos testes precisa, e criar todas as contas de uma vez custaria um
+ * Argon2id de 19 MiB por papel em cada execução. Quem precisa publicar
+ * vaga paga o preço sozinho, aqui.
+ */
+export async function entrarComoEmpresa(page: Page): Promise<void> {
+  const email = `e2e-empresa-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@teste.lupa`;
+
+  await page.goto("/cadastro?tipo=empresa");
+
+  await page.getByLabel("Nome do responsável").fill("Responsável de Teste");
+  await page.getByLabel("Nome da empresa").fill("Transportadora de Teste");
+  await page.getByLabel("CNPJ").fill(cnpjDeTeste());
+  await page.getByLabel("E-mail").fill(email);
+  await page.getByLabel("WhatsApp").fill("66999999999");
+  await page.getByLabel("Senha").fill("senha-de-teste-123");
+
+  await page.getByRole("button", { name: /criar conta/i }).click();
+  await page.getByText(/Conta criada/i).waitFor({ timeout: 15_000 });
+}

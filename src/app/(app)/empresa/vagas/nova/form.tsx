@@ -28,8 +28,15 @@ export function NewJobForm({ cidadeDaEmpresa }: { cidadeDaEmpresa: string }) {
       <Panel className="text-center">
         <CheckCircle2 size={40} className="mx-auto text-vagas" />
         <h2 className="mt-4 text-lg font-bold">Vaga publicada</h2>
+        {/*
+          A cidade é a da vaga, não "Sinop" fixo. O texto chumbado dizia
+          Sinop para quem tinha acabado de publicar em Sorriso — e, enquanto
+          a busca também filtrava Sinop sozinha, era a promessa e o defeito
+          na mesma tela.
+        */}
         <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-          Sua vaga já aparece na busca de quem está procurando emprego em Sinop.
+          Sua vaga já aparece na busca de quem está procurando emprego em{" "}
+          {cidade}.
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <ButtonLink href="/empresa" variant="empresas" size="sm">

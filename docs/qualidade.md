@@ -56,6 +56,10 @@ em Pixel 7:
   em 464px dentro de uma coluna de 358px.
 - `fluxos.spec.ts` — busca, filtros, candidatura, navegação, e a verificação
   de que nenhum link `wa.me` aponta para telefone de prestador fictício.
+- `vaga-de-outra-cidade.spec.ts` — publica uma vaga fora de Sinop com uma
+  conta de empresa e confere que ela aparece na busca. Nasceu do bug em que
+  a tela de busca chutava "Sinop" quando a URL não trazia cidade: a camada
+  de dados estava certa, e só o caminho de ponta a ponta acusava.
 - `acessibilidade.spec.ts` — axe-core em todas as rotas, WCAG 2.1 AA.
 
 ### Cobertura
