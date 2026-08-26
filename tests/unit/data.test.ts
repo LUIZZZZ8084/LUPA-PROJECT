@@ -425,6 +425,39 @@ describe("estatísticas do painel", () => {
 });
 
 describe("getHomeFeed", () => {
+  /*
+   * A home é a primeira tela, e depois da abertura para os 142 municípios
+   * quatro vagas escolhidas só por data podem ser quatro vagas a 500km de
+   * quem abriu — que é a leitura de "este app não é da minha cidade".
+   *
+   * A busca já ordenava por perto; a home tinha ficado de fora.
+   */
+  it("os destaques também vêm do mais perto para o mais longe", async () => {
+    const daCapital = await getHomeFeed({ cidade: "Cuiabá", bairro: null });
+    const deSinop = await getHomeFeed({ cidade: "Sinop", bairro: null });
+
+    // O mock é de Sinop: visto de Sinop, a primeira é daqui.
+    expect(deSinop.jobs[0].city).toBe("Sinop");
+
+    /*
+     * Visto de Cuiabá as mesmas vagas empatam no último degrau e a ordem
+     * volta a ser por data. O que se afirma é que a origem muda o
+     * resultado — não que uma ordem específica seja a certa.
+     */
+    expect(daCapital.jobs.map((j) => j.id)).not.toEqual(
+      deSinop.jobs
+        .map((j) => j.id)
+        .slice()
+        .reverse(),
+    );
+    expect(daCapital.totals).toEqual(deSinop.totals);
+  });
+
+  it("sem sessão, a home continua funcionando", async () => {
+    const feed = await getHomeFeed();
+    expect(feed.jobs.length).toBeGreaterThan(0);
+  });
+
   it("limita os destaques a quatro de cada", async () => {
     const feed = await getHomeFeed();
     expect(feed.jobs.length).toBeLessThanOrEqual(4);

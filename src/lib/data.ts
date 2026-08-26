@@ -790,8 +790,23 @@ export async function getVerificationQueue(): Promise<VerificationRequest[]> {
    Home
    ============================================================ */
 
-export async function getHomeFeed() {
-  const [jobs, providers] = await Promise.all([getJobs(), getProviders()]);
+/**
+ * Os destaques da primeira tela.
+ *
+ * Recebe `perto` pelo mesmo motivo que as buscas: depois que o app abriu
+ * para os 142 municípios, quatro vagas escolhidas só por data podem ser
+ * quatro vagas a 500km de quem abriu. A home é onde a maioria decide se o
+ * app é sobre a cidade dela — e é a tela com menos espaço para explicar
+ * que não é.
+ *
+ * Sem sessão, `perto` chega `undefined` e a ordem volta a ser por data,
+ * como era. É o mesmo lugar seguro para cair que as listas usam.
+ */
+export async function getHomeFeed(perto?: Origem) {
+  const [jobs, providers] = await Promise.all([
+    getJobs({ perto }),
+    getProviders({ perto }),
+  ]);
   return {
     jobs: jobs.slice(0, 4),
     providers: providers.slice(0, 4),

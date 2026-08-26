@@ -19,9 +19,15 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { CIDADE_INICIAL, ESTADO_NOME } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
+import { origemDoUsuario } from "@/server/auth/origem";
 
 export default async function HomePage() {
-  const { jobs, providers, totals } = await getHomeFeed();
+  // Os destaques também vêm do mais perto para o mais longe: a home é a
+  // primeira impressão, e quatro vagas de Cuiabá para quem é de Sinop
+  // dizem que o app não é da cidade dela.
+  const { jobs, providers, totals } = await getHomeFeed(
+    await origemDoUsuario(),
+  );
 
   return (
     <>
