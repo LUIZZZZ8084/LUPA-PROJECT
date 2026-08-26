@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Loader2 } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, useId } from "react";
 import {
   CampoBairro,
   CampoBairrosAtendidos,
@@ -138,6 +138,48 @@ function Conta({ perfil }: { perfil: PerfilCompleto }) {
   );
 }
 
+/**
+ * A opção de ser encontrado, com o que ela significa ao lado.
+ *
+ * O rótulo é curto e a explicação vai em `aria-describedby`. Envolver a
+ * caixa num `<label>` com o parágrafo inteiro dentro faz o nome acessível
+ * dela virar o texto todo: quem usa leitor de tela ouve quatro linhas
+ * antes de saber o que é o controle, e `getByLabel("Habilidades")` passa
+ * a casar aqui por causa de uma palavra no meio da explicação — foi assim
+ * que um teste de outra tela quebrou.
+ */
+function VisivelParaEmpresas({ ligado }: { ligado: boolean }) {
+  const id = useId();
+  const idExplicacao = `${id}-explicacao`;
+
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-line bg-panel-2 p-4">
+      <input
+        id={id}
+        type="checkbox"
+        name="visivelParaEmpresas"
+        defaultChecked={ligado}
+        aria-describedby={idExplicacao}
+        className="mt-0.5 h-4 w-4 flex-none rounded border-line bg-panel accent-vagas"
+      />
+      <div className="text-sm">
+        <label htmlFor={id} className="font-semibold">
+          Quero que empresas me encontrem
+        </label>
+        <p
+          id={idExplicacao}
+          className="mt-1 text-[11px] leading-relaxed text-muted"
+        >
+          Empresas com vaga aberta passam a ver seu nome, sua cidade, suas
+          habilidades e seu contato — mesmo sem você se candidatar. Seu
+          currículo continua privado: só vai para as vagas em que você se
+          candidatar. Pode desmarcar quando quiser.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
   const [estado, acao, pendente] = useActionState(
     salvarCurriculoComEstado,
@@ -197,25 +239,7 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
           faz a pessoa marcar sem saber o que entregou — e isto entrega o
           telefone dela para empresas que ela não escolheu.
         */}
-        <label className="flex items-start gap-3 rounded-xl border border-line bg-panel-2 p-4">
-          <input
-            type="checkbox"
-            name="visivelParaEmpresas"
-            defaultChecked={c?.visivelParaEmpresas ?? false}
-            className="mt-0.5 h-4 w-4 flex-none rounded border-line bg-panel accent-vagas"
-          />
-          <span className="text-sm">
-            <span className="font-semibold">
-              Quero que empresas me encontrem
-            </span>
-            <span className="mt-1 block text-[11px] leading-relaxed text-muted">
-              Empresas com vaga aberta passam a ver seu nome, sua cidade, suas
-              habilidades e seu contato — mesmo sem você se candidatar. Seu
-              currículo continua privado: só vai para as vagas em que você se
-              candidatar. Pode desmarcar quando quiser.
-            </span>
-          </span>
-        </label>
+        <VisivelParaEmpresas ligado={c?.visivelParaEmpresas ?? false} />
 
         <Field label="Disponibilidade" error={estado.campos?.disponibilidade}>
           <Input
