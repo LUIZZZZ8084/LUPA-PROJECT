@@ -97,15 +97,6 @@ function repositorio(): RepositorioLimite {
   return cache;
 }
 
-/** Só para teste: injeta uma implementação e devolve o restaurador. */
-export function usarRepositorioLimite(repo: RepositorioLimite): () => void {
-  const anterior = cache;
-  cache = repo;
-  return () => {
-    cache = anterior;
-  };
-}
-
 /**
  * Lança `muitas_tentativas` se a chave estiver bloqueada.
  *
