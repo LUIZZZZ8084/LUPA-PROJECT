@@ -8,6 +8,7 @@
  * municípios, a validação que decide quem entra, e o filtro que separa uma
  * cidade da outra.
  */
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -138,5 +139,38 @@ describe("o filtro de cidade separa de verdade", () => {
     const emSinop = await getProviders({ city: "Sinop" });
     expect(emSinop.every((p) => p.city === "Sinop")).toBe(true);
     expect(await getProviders({ city: "Cuiabá" })).toEqual([]);
+  });
+});
+
+/**
+ * A regressão da Issue #76, travada no código-fonte.
+ *
+ * A camada de dados sempre esteve certa — `getJobs()` sem cidade devolve o
+ * estado inteiro, e é o que a home consulta. Quem escondia a vaga era a
+ * tela de busca, que preenchia a cidade com "Sinop" quando a URL não
+ * trazia nenhuma. O resultado: vaga publicada em Sorriso aparecia nos
+ * destaques da home e sumia de /vagas, e a empresa concluía que não tinha
+ * publicado.
+ *
+ * jsdom não carrega rota do App Router, então a trava é sobre o texto do
+ * arquivo — mesma escolha do contrato de layout em `cards.test.tsx`. O
+ * caminho completo, no navegador, está em
+ * `tests/e2e/vaga-de-outra-cidade.spec.ts`.
+ */
+describe("contrato das telas de busca", () => {
+  const telas = [
+    "src/app/(app)/vagas/(lista)/page.tsx",
+    "src/app/(app)/servicos/(lista)/page.tsx",
+  ];
+
+  it.each(telas)("%s não chuta cidade quando a URL não traz uma", (tela) => {
+    const fonte = readFileSync(tela, "utf8");
+    const semComentarios = fonte.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
+
+    // `single("cidade") ?? "..."` e `single("cidade") || "..."` — a leitura
+    // do parâmetro seguida de qualquer valor padrão.
+    expect(semComentarios).not.toMatch(
+      /single\(\s*["']cidade["']\s*\)\s*(\?\?|\|\|)/,
+    );
   });
 });
