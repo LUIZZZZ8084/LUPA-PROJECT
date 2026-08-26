@@ -8,6 +8,8 @@
  * Apagá-los deixaria o espelho incompleto.
  */
 
+import type { Origem } from "./proximidade";
+
 export type Role = "candidato_clt" | "prestador_servico" | "empresa";
 
 export type VerificationStatus =
@@ -181,8 +183,17 @@ export interface MyApplication extends Application {
 
 /* ---------- Filtros de busca ---------- */
 
+/**
+ * `perto` não filtra nada: decide só a ordem, pondo o mais perto de quem
+ * está olhando em primeiro. Anda junto dos filtros porque atravessa a mesma
+ * consulta, mas a diferença importa — filtro esconde, proximidade reordena.
+ *
+ * A escada e o porquê dela estão em `src/lib/proximidade.ts`.
+ */
+
 export interface JobFilters {
   city?: string;
+  perto?: Origem;
   category?: string;
   contract_type?: string;
   q?: string;
@@ -190,6 +201,7 @@ export interface JobFilters {
 
 export interface ProviderFilters {
   city?: string;
+  perto?: Origem;
   category?: string;
   /** Nota mínima, ex.: 4 mostra só quem tem 4,0 ou mais. */
   min_rating?: number;

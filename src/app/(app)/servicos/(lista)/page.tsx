@@ -8,15 +8,33 @@ import {
 } from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
+import { cidadeDaBusca, umParametro } from "@/lib/busca";
 import { CIDADES, ESTADO, SERVICE_CATEGORIES } from "@/lib/constants";
 import { getProviders } from "@/lib/data";
 import { pluralize } from "@/lib/format";
+import { origemDoUsuario } from "@/server/auth/origem";
 
-export const metadata: Metadata = {
-  title: "Profissionais e serviços em Sinop",
-  description:
-    "Eletricista, diarista, pintor, encanador e mais em Sinop-MT. Perfis verificados, avaliações reais e contato direto no WhatsApp.",
-};
+/** Mesmo motivo do título de `/vagas`: quem filtra Sorriso não está em Sinop. */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
+  const cidade = cidadeDaBusca(await searchParams);
+
+  if (cidade) {
+    return {
+      title: `Profissionais e serviços em ${cidade}`,
+      description: `Eletricista, diarista, pintor, encanador e mais em ${cidade}-${ESTADO}. Perfis verificados, avaliações reais e contato direto no WhatsApp.`,
+    };
+  }
+
+  return {
+    title: "Profissionais e serviços em Mato Grosso",
+    description:
+      "Eletricista, diarista, pintor, encanador e mais em Mato Grosso, começando por Sinop. Perfis verificados, avaliações reais e contato direto no WhatsApp.",
+  };
+}
 
 export default async function ServicosPage({
   searchParams,
@@ -24,21 +42,27 @@ export default async function ServicosPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const single = (key: string) => {
-    const v = params[key];
-    return Array.isArray(v) ? v[0] : v;
-  };
+  const single = (key: string) => umParametro(params, key);
 
   const minRating = single("avaliacao");
+  const cidade = single("cidade");
+
+  // Ordena, não filtra — o profissional mais perto aparece primeiro. Para
+  // prestador, "perto" conta os bairros que ele atende, não onde ele mora.
+  const perto = await origemDoUsuario();
 
   // Mesma sobra que escondia vaga fora de Sinop em /vagas: sem cidade na
   // URL, a busca é de todo o estado, como o chip "Todo o MT" já promete.
   const providers = await getProviders({
-    city: single("cidade"),
+    city: cidade,
     category: single("categoria"),
     min_rating: minRating ? Number(minRating) : undefined,
     q: single("q"),
+    perto,
   });
+
+  // A ordem é dita na tela; ver o comentário longo em `/vagas`.
+  const ordenadoPorProximidade = Boolean(perto && !cidade);
 
   return (
     <PageShell>
@@ -52,7 +76,7 @@ export default async function ServicosPage({
         accent="servicos"
         searchPlaceholder="Buscar eletricista, diarista, pintor..."
         values={{
-          cidade: single("cidade"),
+          cidade,
           categoria: single("categoria"),
           avaliacao: minRating,
           q: single("q"),
@@ -91,6 +115,9 @@ export default async function ServicosPage({
           providers.length,
           "profissional encontrado",
           "profissionais encontrados",
+        )}
+        {ordenadoPorProximidade && providers.length > 0 && (
+          <> · mais perto de você primeiro</>
         )}
       </p>
 
