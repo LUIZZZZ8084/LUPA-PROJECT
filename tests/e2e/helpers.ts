@@ -9,6 +9,27 @@ export const ARQUIVO_SESSAO = join(
 );
 
 /**
+ * A sessão de empresa, guardada à parte.
+ *
+ * Duas contas para a suíte inteira, criadas uma vez cada: a de candidato
+ * cobre a maioria dos testes, e esta cobre os que publicam vaga —
+ * `vaga:publicar` não está no papel de candidato.
+ *
+ * Compartilhar não é só economia de Argon2id. O cadastro tem limite por
+ * origem (5 em 15 minutos, do PR #57) e a suíte roda dois projetos contra
+ * o mesmo servidor: uma conta por teste estourava o limite no meio da
+ * execução, e o que falhava era o cadastro do teste seguinte, não o que
+ * ele mede. O limite é proteção de verdade contra criação de conta em
+ * massa e não deve ser afrouxado para o teste correr — a suíte é que se
+ * ajusta a ele.
+ */
+export const ARQUIVO_SESSAO_EMPRESA = join(
+  process.cwd(),
+  "test-results",
+  "sessao-empresa.json",
+);
+
+/**
  * Espera o React assumir o controle da página.
  *
  * Sem isso, o teste altera o HTML servido antes de existir listener e o
