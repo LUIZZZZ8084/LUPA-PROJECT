@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { aguardarHidratacao, entrarComoEmpresa } from "./helpers";
+import { ARQUIVO_SESSAO_EMPRESA, aguardarHidratacao } from "./helpers";
 
 /**
  * Vaga publicada fora de Sinop precisa aparecer na busca — Issue #76.
@@ -15,18 +15,16 @@ import { aguardarHidratacao, entrarComoEmpresa } from "./helpers";
  * o bug em pé — foi exatamente assim que ele sobreviveu ao PR que abriu os
  * 142 municípios.
  *
- * A sessão é criada aqui porque a compartilhada da suíte é de candidato, e
- * candidato não tem `vaga:publicar`.
+ * A sessão é a de empresa criada no setup: a compartilhada da suíte é de
+ * candidato, e candidato não tem `vaga:publicar`.
  */
 test.describe("vaga publicada fora de Sinop", () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
+  test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
 
   const CIDADE = "Sorriso";
 
   test("aparece na busca de vagas, e não só na home", async ({ page }) => {
     const cargo = `Conferente de Pátio E2E ${Date.now()}`;
-
-    await entrarComoEmpresa(page);
 
     await page.goto("/empresa/vagas/nova");
     await page.getByLabel("Cargo").fill(cargo);
@@ -75,8 +73,6 @@ test.describe("vaga publicada fora de Sinop", () => {
     page,
   }) => {
     const cargo = `Auxiliar de Expedição E2E ${Date.now()}`;
-
-    await entrarComoEmpresa(page);
 
     await page.goto("/empresa/vagas/nova");
     await page.getByLabel("Cargo").fill(cargo);

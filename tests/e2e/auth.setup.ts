@@ -1,5 +1,10 @@
 import { test as setup } from "@playwright/test";
-import { ARQUIVO_SESSAO, entrarComoTeste } from "./helpers";
+import {
+  ARQUIVO_SESSAO,
+  ARQUIVO_SESSAO_EMPRESA,
+  entrarComoEmpresa,
+  entrarComoTeste,
+} from "./helpers";
 
 /**
  * Cria uma conta uma vez e guarda a sessão em disco.
@@ -15,4 +20,17 @@ import { ARQUIVO_SESSAO, entrarComoTeste } from "./helpers";
 setup("cria a sessão compartilhada", async ({ page }) => {
   await entrarComoTeste(page);
   await page.context().storageState({ path: ARQUIVO_SESSAO });
+});
+
+/**
+ * A mesma coisa para empresa, num arquivo à parte.
+ *
+ * Os testes que publicam vaga precisam de `vaga:publicar`, que candidato
+ * não tem. Criar a conta dentro de cada um deles estourava o limite de
+ * cadastro por origem no meio da execução — ver o comentário em
+ * `ARQUIVO_SESSAO_EMPRESA`.
+ */
+setup("cria a sessão de empresa", async ({ page }) => {
+  await entrarComoEmpresa(page);
+  await page.context().storageState({ path: ARQUIVO_SESSAO_EMPRESA });
 });

@@ -21,11 +21,13 @@ import {
   ratingBreakdown,
 } from "@/lib/data";
 import {
+  DEMO_COMPANY_ID,
   MOCK_APPLICATIONS,
   MOCK_JOBS,
   MOCK_PROVIDERS,
   MOCK_REVIEWS,
 } from "@/lib/mock-data";
+import { repositorioVagas } from "@/server/vagas";
 
 describe("getJobs", () => {
   it("devolve apenas vagas abertas", async () => {
@@ -433,5 +435,87 @@ describe("getHomeFeed", () => {
     const feed = await getHomeFeed();
     expect(feed.totals.jobs).toBe((await getJobs()).length);
     expect(feed.totals.providers).toBe((await getProviders()).length);
+  });
+});
+
+/**
+ * Ordenação por proximidade na camada de dados — Issue #79.
+ *
+ * A escada em si é conferida em `proximidade.test.ts`, sobre a função
+ * pura. O que se cobra aqui é a ligação: que `getJobs` e `getProviders`
+ * realmente aplicam o comparador, que ordenar não virou filtrar, e que sem
+ * `perto` a ordem continua exatamente a de antes.
+ *
+ * Os dados de exemplo são todos de Sinop, então a vaga de outra cidade é
+ * criada no repositório de demonstração — o mesmo caminho que a empresa
+ * percorre ao publicar.
+ */
+describe("busca ordenada pelo mais perto", () => {
+  const publicarEm = async (cidade: string, titulo: string) =>
+    repositorioVagas().criar({
+      empresaId: DEMO_COMPANY_ID,
+      titulo,
+      descricao: "Vaga criada por teste para conferir a ordenação.",
+      categoria: "Logística e Transporte",
+      cidade,
+      tipoContrato: "CLT",
+    });
+
+  it("traz a cidade da pessoa antes da região, e a região antes do resto", async () => {
+    await getJobs(); // semeia os dados de exemplo antes de criar os novos
+    const cuiaba = await publicarEm("Cuiabá", "Vaga de Cuiabá");
+    const claudia = await publicarEm("Cláudia", "Vaga de Cláudia");
+    const sorriso = await publicarEm("Sorriso", "Vaga de Sorriso");
+
+    const jobs = await getJobs({ perto: { cidade: "Sinop" } });
+    const posicao = (id: string) => jobs.findIndex((j) => j.id === id);
+
+    // Alguma vaga de Sinop precisa vir antes de todas as outras.
+    expect(posicao(claudia.id)).toBeGreaterThan(0);
+    expect(posicao(claudia.id)).toBeLessThan(posicao(sorriso.id));
+    expect(posicao(sorriso.id)).toBeLessThan(posicao(cuiaba.id));
+  });
+
+  it("ordenar não é filtrar: nada sai da lista por estar longe", async () => {
+    const semPerto = await getJobs();
+    const comPerto = await getJobs({ perto: { cidade: "Cuiabá" } });
+
+    expect(comPerto).toHaveLength(semPerto.length);
+    expect(new Set(comPerto.map((j) => j.id))).toEqual(
+      new Set(semPerto.map((j) => j.id)),
+    );
+  });
+
+  it("sem `perto`, a ordem continua sendo a data — como antes da #79", async () => {
+    const datas = (await getJobs()).map((j) => +new Date(j.created_at));
+    expect(datas).toEqual([...datas].sort((a, b) => b - a));
+  });
+
+  it("dentro da mesma cidade, o desempate por data continua valendo", async () => {
+    const jobs = await getJobs({ perto: { cidade: "Sinop" } });
+    const datas = jobs
+      .filter((j) => j.city === "Sinop")
+      .map((j) => +new Date(j.created_at));
+
+    expect(datas).toEqual([...datas].sort((a, b) => b - a));
+  });
+
+  it("o filtro de cidade continua restringindo, com `perto` junto", async () => {
+    const jobs = await getJobs({
+      city: "Cláudia",
+      perto: { cidade: "Sinop" },
+    });
+    expect(jobs.length).toBeGreaterThan(0);
+    expect(jobs.every((j) => j.city === "Cláudia")).toBe(true);
+  });
+
+  it("prestador: o desempate por nota sobrevive à proximidade", async () => {
+    // Todos os prestadores de exemplo são de Sinop, então empatam no grau.
+    const providers = await getProviders({ perto: { cidade: "Sinop" } });
+    const semPerto = await getProviders();
+
+    expect(providers.map((p) => p.profile_id)).toEqual(
+      semPerto.map((p) => p.profile_id),
+    );
   });
 });
