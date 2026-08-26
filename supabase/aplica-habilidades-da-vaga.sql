@@ -25,6 +25,18 @@
 -- Aditivo e repetível.
 -- =============================================================================
 
+/*
+ * Tudo numa transação só.
+ *
+ * DDL no Postgres é transacional, e aqui isso não é preciosismo: o passo
+ * do meio derruba `job_listings`, que é o catálogo de vagas do app
+ * inteiro. Se o `create` seguinte falhar por qualquer motivo — um erro de
+ * digitação, uma coluna renomeada —, sem transação a view fica destruída
+ * e a busca de vagas sai do ar até alguém perceber. Com `begin`, ou
+ * funciona inteiro ou nada muda.
+ */
+begin;
+
 alter table vagas
   add column if not exists habilidades text[] not null default '{}';
 
@@ -69,6 +81,8 @@ join perfis_empresa e on e.usuario_id = v.empresa_id
 join usuarios u on u.id = e.usuario_id;
 
 grant select on job_listings to anon, authenticated;
+
+commit;
 
 -- ─── Conferência ────────────────────────────────────────────────────────
 -- `coluna_existe` e `anon_le_o_catalogo` devem ser true.
