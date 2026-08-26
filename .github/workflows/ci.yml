@@ -118,6 +118,43 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  # O ROADMAP.md é o único lugar que responde "o que está pronto e o que
+  # falta" sem obrigar ninguém a reconstruir a história a partir de PRs
+  # mergeados. Ele já ficou errado uma vez, listando como pendentes três
+  # coisas entregues — e documento que erra uma vez deixa de ser
+  # consultado. Manter na mão dependia de alguém lembrar; lembrar falhou.
+  roadmap:
+    name: Roadmap em dia
+    runs-on: ubuntu-latest
+    steps:
+      # Histórico completo: sem ele não dá para comparar com a base e
+      # descobrir quais arquivos o PR mexeu.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Arquivos alterados
+        id: diff
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "arquivos<<FIM" >> "$GITHUB_OUTPUT"
+          git diff --name-only "origin/${{ github.base_ref }}...HEAD" >> "$GITHUB_OUTPUT"
+          echo "FIM" >> "$GITHUB_OUTPUT"
+
+      # Sem `npm ci`: o script usa só o que vem no Node. Instalar
+      # dependência para conferir um markdown seria dois minutos de CI em
+      # cada PR sem nenhum ganho.
+      - name: Conferir o ROADMAP.md
+        run: node scripts/conferir-roadmap.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CORPO_DO_PR: ${{ github.event.pull_request.body }}
+          ARQUIVOS_ALTERADOS: ${{ steps.diff.outputs.arquivos }}
+
   mutacao:
     name: Teste de mutação
     runs-on: ubuntu-latest

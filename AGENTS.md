@@ -30,6 +30,10 @@ node scripts/gerar-avatares.mjs   # regenera os avatares de demonstração
 node scripts/gerar-cidades.mjs    # baixa a lista de municípios de MT (IBGE)
 ```
 
+```bash
+npm run roadmap   # confere se o ROADMAP.md ainda diz a verdade
+```
+
 ---
 
 ## Fluxo de trabalho obrigatório
@@ -58,6 +62,16 @@ que foi descartado no caminho.
 
 **6. `npm run verify` passa antes de abrir o PR.** Se a cobertura cair
 abaixo do piso, escreva o teste — não baixe o piso.
+
+**7. O PR que entrega um item do roadmap atualiza o `ROADMAP.md` no mesmo
+PR.** Não no próximo, não depois. O roadmap é o único lugar que responde "o
+que está pronto e o que falta" sem obrigar ninguém a reconstruir a história
+a partir de PRs mergeados — e é o que o Paulinho abre para saber onde
+estamos. Ele já ficou errado uma vez, listando como pendentes três coisas
+entregues; documento que erra uma vez deixa de ser consultado. A CI cobra
+(`npm run roadmap`): item pendente sem Issue reprova, Issue fechada ainda
+listada como pendente reprova, e PR que fecha item do roadmap sem tocar no
+arquivo reprova.
 
 Nomes de branch: `feat/`, `fix/`, `docs/`, `refactor/` seguidos de um
 descritor curto em português com hífens.

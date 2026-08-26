@@ -104,9 +104,12 @@ Por último, na ordem:
 
 ## Depende de uma ação manual
 
-- [ ] Trocar a senha de admin — duas passaram por conversa de chat
-- [ ] Fazer um envio real de foto, currículo e logo em produção, para
-      conferir o Storage com credencial de verdade
+Trabalho que não é código: alguém precisa fazer com a mão, em produção.
+
+- [ ] Trocar a senha de admin —
+      [#69](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/69)
+- [ ] Conferir envio de foto, currículo e logo em produção —
+      [#70](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/70)
 
 ## Fora do escopo por decisão, não por esquecimento
 
