@@ -2,6 +2,13 @@
 
 > Este documento é o brief técnico completo do projeto "Lupa". Use-o como contexto inicial para gerar a estrutura do projeto, o schema de banco de dados e a implementação dos fluxos descritos, na ordem sugerida na seção 12.
 
+> **Este é o brief original, não o estado atual.** Ele é mantido como está
+> de propósito: é o ponto de partida, e reescrevê-lo apagaria a razão de
+> várias decisões. Onde o produto já andou além dele, o item aparece
+> riscado com a nota do que mudou. Para saber o que existe hoje, veja o
+> [ROADMAP.md](../ROADMAP.md); para o porquê de cada decisão de
+> arquitetura, o [AGENTS.md](../AGENTS.md).
+
 ## 0. Identidade de marca
 
 - **Nome:** Lupa. Origem dupla e intencional: (1) combinação de Luiz (fundador) + Paulinho (cofundador técnico) — "LU" + "PA"; (2) "lupa" é uma palavra real do português (instrumento de busca/aumento), o que já comunica a proposta do produto — ajudar a pessoa a encontrar a vaga, o profissional ou o candidato certo.
@@ -53,7 +60,7 @@ Fora do escopo do V0 (adiar para V1/V2):
 - Cobrança/assinatura automatizada (validar demanda antes de cobrar; ligar pagamento assim que houver tração real).
 - Boost/impulsionamento pago de perfil de prestador.
 - Notificação push segmentada (V0 pode usar e-mail; push fica pro V1).
-- Multi-cidade ativo na UI (o schema já suporta, mas o V0 só abre busca/cadastro para Sinop — outras cidades entram em V1+ conforme demanda).
+- ~~Multi-cidade ativo na UI (o schema já suporta, mas o V0 só abre busca/cadastro para Sinop — outras cidades entram em V1+ conforme demanda).~~ **Superado.** Os 142 municípios de MT valem no cadastro, na vaga e nos filtros desde a [#62](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/62); a busca sem cidade escolhida mostra o estado inteiro desde a [#76](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/76). Sinop continua sendo onde a divulgação começa, não o limite de quem entra.
 
 ## 5. Modelo de dados (Postgres / Supabase)
 
