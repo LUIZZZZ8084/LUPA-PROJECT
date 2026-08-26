@@ -53,6 +53,9 @@ next-env.d.ts
 # design-sync: scripts encenados, build regenerável e estado de máquina
 .ds-sync/
 ds-bundle/
-.design-sync/.cache/
-.design-sync/learnings/
-.design-sync/node_modules
+# O diretório inteiro: com só os subdiretórios ignorados, o `npm run
+# verify` local reprova no lint do CSS gerado pela ferramenta — e o
+# vermelho não é do projeto. Na CI passa, porque lá o diretório não
+# existe; quem paga é quem roda na própria máquina.
+.design-sync/
+/dist
