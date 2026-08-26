@@ -153,19 +153,28 @@ function numerosFechadosPor(corpo) {
 }
 
 async function estadoDaIssue(numero) {
-  const issue = await pedirJson(`/repos/${REPO}/issues/${numero}`);
+  const { status, corpo } = await pedirJson(`/repos/${REPO}/issues/${numero}`);
 
   /*
    * Falha de rede ou Issue que não existe não pode reprovar a entrega: a
    * verificação existe para pegar roadmap desatualizado, não para tornar
    * a CI refém da API do GitHub.
+   *
+   * Mas o aviso diz o status, e não só "não consegui". Sem ele, a CI passa
+   * verde sem ter conferido nada e ninguém descobre — aconteceu na
+   * primeira execução deste job, com 403 por falta de permissão de leitura
+   * de Issue no token. Verde por não ter olhado é pior que vermelho.
    */
-  if (!issue) {
-    avisos.push(`Não consegui ler a Issue #${numero}. Item não conferido.`);
+  if (!corpo) {
+    avisos.push(
+      `Não consegui ler a Issue #${numero} (HTTP ${status ?? "sem resposta"})` +
+        `${status === 403 || status === 401 ? " — o token não tem permissão de ler Issue" : ""}.` +
+        " Item não conferido.",
+    );
     return null;
   }
 
-  return issue.state;
+  return corpo.state;
 }
 
 /**
@@ -197,17 +206,18 @@ function pedirJson(caminho) {
         },
       },
       (res) => {
-        let corpo = "";
+        let texto = "";
         res.setEncoding("utf8");
         res.on("data", (parte) => {
-          corpo += parte;
+          texto += parte;
         });
         res.on("end", () => {
-          if (res.statusCode !== 200) return resolve(null);
+          const status = res.statusCode;
+          if (status !== 200) return resolve({ status, corpo: null });
           try {
-            resolve(JSON.parse(corpo));
+            resolve({ status, corpo: JSON.parse(texto) });
           } catch {
-            resolve(null);
+            resolve({ status, corpo: null });
           }
         });
       },
@@ -215,9 +225,9 @@ function pedirJson(caminho) {
 
     req.setTimeout(10_000, () => {
       req.destroy();
-      resolve(null);
+      resolve({ status: null, corpo: null });
     });
-    req.on("error", () => resolve(null));
+    req.on("error", () => resolve({ status: null, corpo: null }));
     req.end();
   });
 }

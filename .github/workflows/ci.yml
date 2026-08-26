@@ -126,6 +126,12 @@ jobs:
   roadmap:
     name: Roadmap em dia
     runs-on: ubuntu-latest
+    # O token do Actions vem só com leitura de conteúdo neste repositório;
+    # sem isto o script não lê o estado das Issues e o job passa verde sem
+    # ter conferido nada. Aconteceu na primeira execução dele.
+    permissions:
+      contents: read
+      issues: read
     steps:
       # Histórico completo: sem ele não dá para comparar com a base e
       # descobrir quais arquivos o PR mexeu.
