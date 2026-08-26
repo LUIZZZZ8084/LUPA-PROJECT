@@ -125,8 +125,19 @@ export const VERIFICATION_LABELS = {
   reprovado: "Reprovado",
 } as const;
 
+/**
+ * Estágios do processo, do ponto de vista de quem contrata.
+ *
+ * `enviada` se chama "Nova" na tela: toda candidatura da lista foi
+ * enviada — é a definição de estar ali —, então "Enviada" descrevia o
+ * óbvio, e do ponto de vista errado. O que a empresa precisa saber é o
+ * que ainda não olhou.
+ *
+ * O valor no banco continua `enviada`: mudar o enum custaria migração e
+ * apagaria o histórico, sem ganhar nada.
+ */
 export const APPLICATION_LABELS = {
-  enviada: "Enviada",
+  enviada: "Nova",
   visualizada: "Visualizada",
   entrevista: "Entrevista",
   aprovada: "Aprovada",

@@ -1,4 +1,4 @@
-import { FileText, Inbox, Plus } from "lucide-react";
+import { FileText, Inbox, MessageCircle, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -18,16 +18,16 @@ import {
   getCompanyJobs,
   getCompanyStats,
 } from "@/lib/data";
-import { pluralize, timeAgo } from "@/lib/format";
+import { pluralize, timeAgo, whatsappLink } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import {
   serieDoPainel,
   temPainelDeEmpresa,
   totaisDaSerie,
 } from "@/server/visualizacoes/servico";
-import { EncerrarVagaButton } from "./encerrar-vaga-button";
-import { MoverCandidaturaSelect } from "./mover-candidatura-select";
-import { SerieGrafico } from "./serie-grafico";
+import { EncerrarVagaButton } from "../encerrar-vaga-button";
+import { MoverCandidaturaSelect } from "../mover-candidatura-select";
+import { SerieGrafico } from "../serie-grafico";
 
 export const metadata: Metadata = {
   title: "Minha Empresa",
@@ -201,20 +201,54 @@ export default async function EmpresaPage() {
         ) : (
           <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
             {applications.map((app) => (
-              <li key={app.id} className="flex items-center gap-3 p-4">
-                <Avatar name={app.candidate.full_name} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">
-                    {app.candidate.full_name}
-                  </p>
-                  <p className="truncate text-[11px] text-muted">
-                    {app.job_title}
-                    {app.candidate.neighborhood
-                      ? ` · ${app.candidate.neighborhood}`
-                      : ""}
-                    {` · ${timeAgo(app.created_at)}`}
-                  </p>
-                </div>
+              <li
+                key={app.id}
+                className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
+              >
+                {/*
+                  A linha inteira abre a ficha: nome, bairro e vaga não
+                  bastam para decidir chamar alguém, e antes disto não
+                  havia para onde clicar.
+                */}
+                <Link
+                  href={`/empresa/candidaturas/${app.id}`}
+                  className="flex min-w-0 flex-1 items-center gap-3"
+                >
+                  <Avatar name={app.candidate.full_name} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">
+                      {app.candidate.full_name}
+                    </p>
+                    <p className="truncate text-[11px] text-muted">
+                      {app.job_title}
+                      {app.candidate.neighborhood
+                        ? ` · ${app.candidate.neighborhood}`
+                        : ""}
+                      {` · ${timeAgo(app.created_at)}`}
+                    </p>
+                  </div>
+                </Link>
+
+                {/*
+                  Atalho de contato na própria lista: o caminho entre
+                  receber o currículo e chamar a pessoa não deveria ter
+                  uma tela no meio.
+                */}
+                {app.candidate.phone && (
+                  <a
+                    href={whatsappLink(
+                      app.candidate.phone,
+                      `Olá! Vimos sua candidatura para a vaga de ${app.job_title} na Lupa e gostaríamos de conversar.`,
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Falar com ${app.candidate.full_name} no WhatsApp`}
+                    className="flex-none rounded-lg border border-line p-2 text-muted transition-colors hover:border-vagas hover:text-vagas"
+                  >
+                    <MessageCircle size={16} />
+                  </a>
+                )}
+
                 <MoverCandidaturaSelect id={app.id} statusAtual={app.status} />
               </li>
             ))}

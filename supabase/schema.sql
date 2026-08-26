@@ -472,7 +472,28 @@ select
     'full_name',    u.nome_completo,
     'avatar_url',   u.avatar_url,
     'neighborhood', u.bairro,
+    'city',         u.cidade,
+    /*
+     * Contato do candidato, para a empresa dona da vaga.
+     *
+     * Está aqui porque candidatura sem contato não vira entrevista — a
+     * empresa recebe o currículo, não tem como chamar, e o produto para
+     * na organização. Quem se candidatou consentiu com isto: é o ato de
+     * se candidatar que autoriza o contato, e é ele que delimita quem
+     * alcança o quê.
+     *
+     * A view continua revogada para a chave anônima, e o `where` de quem
+     * a consulta é sempre a empresa da sessão. Sem as duas coisas, isto
+     * viraria lista de telefone de quem está procurando emprego.
+     */
+    'email',        u.email,
+    'phone',        u.telefone,
     'desired_area', pc.area_desejada,
+    'availability', pc.disponibilidade,
+    'summary',      pc.resumo,
+    'experiences',  coalesce(pc.experiencias, '[]'::jsonb),
+    'education',    pc.formacao,
+    'skills',       coalesce(pc.habilidades, '{}'::text[]),
     'resume_url',   pc.curriculo_url
   ) as candidate
 from candidaturas c

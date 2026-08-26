@@ -33,6 +33,10 @@ Base:
 
 Painel da empresa — completo, menos cobrança:
 
+- Ficha do candidato e contato direto nos currículos recebidos —
+  [#71](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/71),
+  PR [#72](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/72)
+
 - Publicar, editar e encerrar vaga —
   [#43](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/43),
   PR [#51](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/51)

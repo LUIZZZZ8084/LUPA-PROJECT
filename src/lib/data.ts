@@ -480,7 +480,15 @@ async function candidatoParaDemo(
       full_name: usuario.nomeCompleto,
       avatar_url: usuario.avatarUrl,
       neighborhood: usuario.bairro,
+      city: usuario.cidade,
+      email: usuario.email,
+      phone: usuario.telefone,
       desired_area: perfil?.areaDesejada ?? null,
+      availability: perfil?.disponibilidade ?? null,
+      summary: perfil?.resumo ?? null,
+      experiences: [],
+      education: perfil?.formacao ?? null,
+      skills: perfil?.habilidades ?? [],
       resume_url: perfil?.curriculoUrl ?? null,
     };
   }
