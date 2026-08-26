@@ -21,7 +21,12 @@ rápido; a versão completa, com o porquê de cada regra, está no
    cabeçalho até 72 caracteres. O Husky recusa o que não bater.
 5. **Rode `npm run verify`** antes de abrir o PR — é o mesmo conjunto que
    roda na CI (tipos, lint, código morto, arquitetura, cobertura).
-6. **Abra o PR referenciando a Issue** com `Closes #N` no corpo, para ela
+6. **Atualize o [ROADMAP.md](ROADMAP.md) no mesmo PR**, movendo o item de
+   "Pendente" para "Concluído" com o link do PR. Não no próximo, não
+   depois: o roadmap já ficou errado uma vez, listando como pendentes três
+   coisas entregues, e documento que erra uma vez deixa de ser consultado.
+   `npm run roadmap` confere, e a CI reprova.
+7. **Abra o PR referenciando a Issue** com `Closes #N` no corpo, para ela
    fechar sozinha no merge. Todo merge na `main` publica na Vercel.
 
 ## Onde perguntar
