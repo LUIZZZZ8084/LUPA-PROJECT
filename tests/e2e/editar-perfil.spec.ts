@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { ARQUIVO_SESSAO_EMPRESA } from "./helpers";
 
 /**
  * Editar o perfil e ver o resultado onde ele importa.
@@ -117,14 +118,34 @@ test.describe("envio de arquivo sem armazenamento", () => {
     await expect(page.getByText(/Nenhuma imagem enviada/)).toBeVisible();
   });
 
-  test("candidato vê o campo de currículo; a foto todos veem", async ({
+  test("candidato vê o campo de currículo, e o de foto — não o de logo", async ({
     page,
   }) => {
     await page.goto("/perfil/editar");
 
+    await expect(page.getByText("Foto de perfil")).toBeVisible();
     await expect(page.getByText("Currículo em PDF")).toBeVisible();
     await expect(page.getByText(/Nenhum currículo enviado/)).toBeVisible();
     // Logo é de empresa; a sessão compartilhada é de candidato.
     await expect(page.getByText("Logo da empresa")).toHaveCount(0);
+  });
+});
+
+/**
+ * Empresa não tem foto de perfil pessoal — quem a representa na busca e
+ * nas vagas é a logo, que já tem campo próprio. Mostrar os dois faria a
+ * empresa perguntar qual dos dois vale, e ambos apontam pro mesmo lugar
+ * na tela: o topo do próprio perfil.
+ */
+test.describe("empresa vê logo, não foto de perfil", () => {
+  test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
+
+  test("o campo é 'Logo da empresa', sem 'Foto de perfil'", async ({
+    page,
+  }) => {
+    await page.goto("/perfil/editar");
+
+    await expect(page.getByText("Logo da empresa")).toBeVisible();
+    await expect(page.getByText("Foto de perfil")).toHaveCount(0);
   });
 });
