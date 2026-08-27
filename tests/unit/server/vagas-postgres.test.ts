@@ -49,6 +49,7 @@ const LINHA = {
   categoria: "Agronegócio",
   cidade: "Sinop",
   bairro: null,
+  endereco: null,
   tipo_contrato: "CLT",
   salario_min: null,
   salario_max: null,
@@ -78,6 +79,7 @@ describe("RepositorioVagasPostgres", () => {
       categoria: LINHA.categoria,
       cidade: LINHA.cidade,
       bairro: null,
+      endereco: null,
       tipoContrato: LINHA.tipo_contrato,
       salarioMin: null,
       salarioMax: null,
@@ -104,6 +106,7 @@ describe("RepositorioVagasPostgres", () => {
       categoria: LINHA.categoria,
       cidade: LINHA.cidade,
       tipoContrato: LINHA.tipo_contrato,
+      endereco: "Av. das Itaúbas, 1200",
     });
 
     const insercao = chamadas.find((c) => c.metodo === "insert");
@@ -126,6 +129,7 @@ describe("RepositorioVagasPostgres", () => {
         categoria: LINHA.categoria,
         cidade: LINHA.cidade,
         tipoContrato: LINHA.tipo_contrato,
+        endereco: "Av. das Itaúbas, 1200",
       }),
     ).rejects.toMatchObject({ codigo: "conflito" });
   });
@@ -294,6 +298,7 @@ describe("nenhum campo de edição se perde no caminho", () => {
     categoria: "Logística e Transporte",
     cidade: "Sorriso",
     bairro: "Centro",
+    endereco: "Rua das Palmeiras, 45",
     habilidades: ["Empilhadeira"],
     tipoContrato: "CLT",
     salarioMin: 2000,

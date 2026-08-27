@@ -19,6 +19,7 @@ function paraVaga(linha: Record<string, unknown>): Vaga {
     categoria: (linha.categoria as string | null) ?? null,
     cidade: String(linha.cidade),
     bairro: (linha.bairro as string | null) ?? null,
+    endereco: (linha.endereco as string | null) ?? null,
     tipoContrato: (linha.tipo_contrato as string | null) ?? null,
     salarioMin: (linha.salario_min as number | null) ?? null,
     salarioMax: (linha.salario_max as number | null) ?? null,
@@ -92,6 +93,7 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
         categoria: dados.categoria,
         cidade: dados.cidade,
         bairro: dados.bairro ?? null,
+        endereco: dados.endereco,
         tipo_contrato: dados.tipoContrato,
         salario_min: dados.salarioMin ?? null,
         salario_max: dados.salarioMax ?? null,
@@ -139,6 +141,7 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
           : {}),
         ...(campos.cidade !== undefined ? { cidade: campos.cidade } : {}),
         ...(campos.bairro !== undefined ? { bairro: campos.bairro } : {}),
+        ...(campos.endereco !== undefined ? { endereco: campos.endereco } : {}),
         ...(campos.habilidades !== undefined
           ? { habilidades: campos.habilidades }
           : {}),

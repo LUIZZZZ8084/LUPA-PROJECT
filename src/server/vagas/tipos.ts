@@ -17,6 +17,9 @@ export interface Vaga {
   categoria: string | null;
   cidade: string;
   bairro: string | null;
+  /** Rua, número, referência — texto livre, informativo. `null` em vaga
+   * publicada antes deste campo existir; nunca decide ranking. */
+  endereco: string | null;
   tipoContrato: string | null;
   salarioMin: number | null;
   salarioMax: number | null;
@@ -32,6 +35,7 @@ export interface DadosNovaVaga {
   categoria: string;
   cidade: string;
   bairro?: string | null;
+  endereco: string;
   tipoContrato: string;
   salarioMin?: number | null;
   salarioMax?: number | null;
@@ -46,6 +50,7 @@ export type EdicaoVaga = Partial<
     | "categoria"
     | "cidade"
     | "bairro"
+    | "endereco"
     | "habilidades"
     | "tipoContrato"
     | "salarioMin"

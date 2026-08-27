@@ -208,6 +208,18 @@ create table vagas (
   categoria     text,
   cidade        text not null default 'Sinop',
   bairro        text,
+  /*
+   * Rua, número, ponto de referência — texto livre, sem geocodificação.
+   *
+   * Aditivo ao bairro, não substituto: o ranking de proximidade continua
+   * usando só bairro e cidade, porque comparar endereço livre ("Rua X,
+   * 123" vs "Rua X 123") não é confiável o bastante para decidir ordem.
+   * Endereço é só para quem já decidiu se candidatar saber onde é.
+   *
+   * Opcional na coluna para não quebrar vaga publicada antes deste campo
+   * existir; a tela de publicação exige preenchido em vaga nova.
+   */
+  endereco      text,
   tipo_contrato text,
   salario_min   numeric(10,2),
   salario_max   numeric(10,2),
@@ -625,6 +637,7 @@ select
   v.categoria                 as category,
   v.cidade                    as city,
   v.bairro                    as neighborhood,
+  v.endereco                  as address,
   v.tipo_contrato             as contract_type,
   v.salario_min               as salary_min,
   v.salario_max               as salary_max,

@@ -50,6 +50,7 @@ const DADOS_VAGA = {
   categoria: "Logística",
   cidade: "Sinop",
   tipoContrato: "CLT",
+  endereco: "Av. das Itaúbas, 1200",
 };
 
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -173,6 +174,7 @@ describe("visualizações de vaga", () => {
       categoria: null,
       cidade: "Sinop",
       bairro: null,
+      endereco: null,
       tipoContrato: null,
       salarioMin: null,
       salarioMax: null,

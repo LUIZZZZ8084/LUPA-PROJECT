@@ -492,6 +492,7 @@ describe("busca ordenada pelo mais perto", () => {
       categoria: "Logística e Transporte",
       cidade,
       tipoContrato: "CLT",
+      endereco: "Av. das Itaúbas, 1200",
     });
 
   it("traz a cidade da pessoa antes da região, e a região antes do resto", async () => {
