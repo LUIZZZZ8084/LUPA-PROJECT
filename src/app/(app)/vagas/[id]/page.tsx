@@ -95,7 +95,9 @@ export default async function JobDetailPage({
           <Fact
             icon={<MapPin size={15} />}
             label="Local"
-            value={`${job.neighborhood ?? job.city}`}
+            value={
+              job.neighborhood ? `${job.neighborhood}, ${job.city}` : job.city
+            }
           />
           <Fact
             icon={<Briefcase size={15} />}
