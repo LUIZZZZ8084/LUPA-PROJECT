@@ -53,6 +53,17 @@ const nextConfig: NextConfig = {
   experimental: {
     // Importa só o ícone usado do lucide, em vez do pacote inteiro.
     optimizePackageImports: ["lucide-react"],
+
+    /*
+     * Sem isto, o Next recusa o corpo de qualquer Server Action acima de
+     * 1 MB — o padrão do framework — antes mesmo de chegar em
+     * `conferirArquivo` (`src/server/arquivos/regras.ts`), que promete até
+     * 2 MB de imagem e 5 MB de currículo. A rejeição do framework não passa
+     * pelo `try/catch` de `criarAcao`: a tela quebra em vez de mostrar
+     * mensagem amigável. O valor cobre a maior regra com folga para o
+     * envelope do multipart.
+     */
+    serverActions: { bodySizeLimit: "6mb" },
   },
 
   /*

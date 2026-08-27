@@ -436,18 +436,24 @@ export function FormularioDePerfil({
        * A foto vem primeiro: é o que a pessoa reconhece primeiro no
        * próprio perfil, e é o campo que mais muda a impressão de quem
        * está do outro lado decidindo se contrata.
+       *
+       * Empresa fica de fora: quem representa a empresa na busca e nas
+       * vagas é a logo, não uma foto pessoal — e a logo já tem campo
+       * próprio, mais abaixo.
        */}
-      <CampoDeArquivo
-        titulo="Foto de perfil"
-        descricao="Aparece na busca e ao lado do seu nome. Perfil com foto passa mais confiança para quem vai contratar."
-        formatos="JPG, PNG ou WEBP, até 2 MB"
-        accept="image/jpeg,image/png,image/webp"
-        enviar={enviarFotoComEstado}
-        remover={() => removerFoto({})}
-        disponivel={temArmazenamento}
-      >
-        <PreviaDeImagem url={u.avatarUrl} nome={u.nomeCompleto} />
-      </CampoDeArquivo>
+      {papel !== "empresa" && (
+        <CampoDeArquivo
+          titulo="Foto de perfil"
+          descricao="Aparece na busca e ao lado do seu nome. Perfil com foto passa mais confiança para quem vai contratar."
+          formatos="JPG, PNG ou WEBP, até 2 MB"
+          accept="image/jpeg,image/png,image/webp"
+          enviar={enviarFotoComEstado}
+          remover={() => removerFoto({})}
+          disponivel={temArmazenamento}
+        >
+          <PreviaDeImagem url={u.avatarUrl} nome={u.nomeCompleto} />
+        </CampoDeArquivo>
+      )}
 
       <Conta perfil={perfil} />
 
