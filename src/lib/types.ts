@@ -101,6 +101,10 @@ export interface Job {
   category: string | null;
   city: string;
   neighborhood: string | null;
+  /** Rua, número, ponto de referência — texto livre, sem geocodificação.
+   * Informativo: não entra no ranking de proximidade, que usa só bairro
+   * e cidade. `null` em vaga publicada antes deste campo existir. */
+  address: string | null;
   contract_type: ContractType | null;
   salary_min: number | null;
   salary_max: number | null;

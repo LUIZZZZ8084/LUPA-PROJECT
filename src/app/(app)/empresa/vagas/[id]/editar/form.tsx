@@ -114,6 +114,20 @@ export function EditJobForm({ vaga }: { vaga: Vaga }) {
         </div>
 
         <Field
+          label="Endereço"
+          required
+          error={state.campos?.endereco}
+          hint="Rua, número e um ponto de referência. Ajuda quem depende de ônibus a decidir antes de se candidatar."
+        >
+          <Input
+            name="endereco"
+            defaultValue={vaga.endereco ?? ""}
+            placeholder="Ex.: Av. das Itaúbas, 1200, perto do terminal rodoviário"
+            required
+          />
+        </Field>
+
+        <Field
           label="Habilidades desejadas"
           hint="Separe por vírgula. Ex.: colheitadeira, CNH D. É o que o painel usa para recomendar candidatos."
           error={state.campos?.habilidades}

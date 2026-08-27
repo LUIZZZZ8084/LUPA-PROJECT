@@ -47,6 +47,12 @@ export const camposVaga = {
   cidade: zCidade,
   tipoContrato: z.string().trim().min(1, "Escolha o tipo de contrato."),
   bairro: zBairro,
+  /*
+   * Aditivo ao bairro, não substituto: informa onde é de verdade — rua,
+   * número, referência —, mas nunca decide o ranking de proximidade, que
+   * continua olhando só bairro e cidade.
+   */
+  endereco: zTexto(5, 200, "O endereço"),
   habilidades: zHabilidades,
   salarioMin: zSalario,
   salarioMax: zSalario,

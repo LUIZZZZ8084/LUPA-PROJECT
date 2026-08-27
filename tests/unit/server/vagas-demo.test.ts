@@ -27,6 +27,7 @@ const DADOS = {
   categoria: "Administrativo",
   cidade: "Sinop",
   tipoContrato: "CLT",
+  endereco: "Av. das Itaúbas, 1200",
 };
 
 describe("vagas em modo demonstração", () => {

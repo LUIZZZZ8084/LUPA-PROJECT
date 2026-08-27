@@ -120,6 +120,16 @@ export default async function JobDetailPage({
           )}
         </div>
 
+        {job.address && (
+          <div className="mt-6 border-t border-line pt-5">
+            <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+              <MapPin size={15} className="text-vagas" />
+              Endereço
+            </h2>
+            <p className="text-sm text-muted">{job.address}</p>
+          </div>
+        )}
+
         <div className="mt-6 border-t border-line pt-5">
           <h2 className="mb-3 text-sm font-semibold">Sobre a vaga</h2>
           <div className="space-y-3 text-sm leading-relaxed text-muted">

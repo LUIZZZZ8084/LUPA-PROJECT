@@ -31,6 +31,7 @@ test.describe("vaga publicada fora de Sinop", () => {
     await page.getByLabel("Categoria").selectOption("Logística e Transporte");
     await page.getByLabel("Tipo de contrato").selectOption("CLT");
     await page.getByLabel("Cidade da vaga").selectOption(CIDADE);
+    await page.getByLabel("Endereço").fill("Rua de teste, 100");
     await page
       .getByLabel("Descrição da vaga")
       .fill(
@@ -79,6 +80,7 @@ test.describe("vaga publicada fora de Sinop", () => {
     await page.getByLabel("Categoria").selectOption("Logística e Transporte");
     await page.getByLabel("Tipo de contrato").selectOption("CLT");
     await page.getByLabel("Cidade da vaga").selectOption(CIDADE);
+    await page.getByLabel("Endereço").fill("Rua de teste, 100");
     await page
       .getByLabel("Descrição da vaga")
       .fill(

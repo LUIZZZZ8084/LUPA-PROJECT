@@ -25,6 +25,7 @@ test.describe("mais perto de você primeiro", () => {
     await page.getByLabel("Categoria").selectOption("Logística e Transporte");
     await page.getByLabel("Tipo de contrato").selectOption("CLT");
     await page.getByLabel("Cidade da vaga").selectOption(cidade);
+    await page.getByLabel("Endereço").fill("Rua de teste, 100");
     await page
       .getByLabel("Descrição da vaga")
       .fill(

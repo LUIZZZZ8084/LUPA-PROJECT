@@ -14,6 +14,7 @@ const DADOS = {
   categoria: "Administrativo",
   cidade: "Sinop",
   tipoContrato: "CLT",
+  endereco: "Av. das Itaúbas, 1200",
 };
 
 describe("schemaNovaVaga", () => {
@@ -74,6 +75,21 @@ describe("schemaNovaVaga", () => {
 
   it("recusa sem categoria", () => {
     const r = schemaNovaVaga.safeParse({ ...DADOS, categoria: "" });
+    expect(r.success).toBe(false);
+  });
+
+  /*
+   * Aditivo ao bairro, não substituto — mas obrigatório, ao contrário
+   * dele: é o que diz onde a vaga é de verdade para quem já decidiu se
+   * candidatar.
+   */
+  it("recusa sem endereço", () => {
+    const r = schemaNovaVaga.safeParse({ ...DADOS, endereco: "" });
+    expect(r.success).toBe(false);
+  });
+
+  it("recusa endereço curto demais", () => {
+    const r = schemaNovaVaga.safeParse({ ...DADOS, endereco: "Rua" });
     expect(r.success).toBe(false);
   });
 

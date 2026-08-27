@@ -39,6 +39,7 @@ const DADOS = {
   categoria: "Agronegócio",
   cidade: "Sinop",
   tipoContrato: "CLT",
+  endereco: "Av. das Itaúbas, 1200",
 };
 
 describe("vagas do painel da empresa", () => {
