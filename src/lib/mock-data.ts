@@ -28,6 +28,9 @@ export const MOCK_COMPANIES: (Company & { doc_verified: boolean })[] = [
     logo_url: `/avatares/cmp-agro-norte.svg`,
     plan: "mensal",
     doc_verified: true,
+    site: "https://agronorte.example.com",
+    instagram: "https://instagram.com/agronorte",
+    facebook: "https://facebook.com/agronorte",
   },
   {
     profile_id: "cmp-comercial-sinop",
@@ -36,6 +39,9 @@ export const MOCK_COMPANIES: (Company & { doc_verified: boolean })[] = [
     logo_url: `/avatares/cmp-comercial-sinop.svg`,
     plan: "trial",
     doc_verified: true,
+    site: null,
+    instagram: "https://instagram.com/comercialsinop",
+    facebook: null,
   },
   {
     profile_id: "cmp-casa-construcao",
@@ -44,6 +50,9 @@ export const MOCK_COMPANIES: (Company & { doc_verified: boolean })[] = [
     logo_url: `/avatares/cmp-casa-construcao.svg`,
     plan: "mensal",
     doc_verified: true,
+    site: "https://casaeconstrucao.example.com",
+    instagram: null,
+    facebook: "https://facebook.com/casaeconstrucaosinop",
   },
   {
     profile_id: "cmp-bom-preco",
@@ -52,6 +61,9 @@ export const MOCK_COMPANIES: (Company & { doc_verified: boolean })[] = [
     logo_url: `/avatares/cmp-bom-preco.svg`,
     plan: "trial",
     doc_verified: false,
+    site: null,
+    instagram: null,
+    facebook: null,
   },
   {
     profile_id: "cmp-transportes-brasil",
@@ -60,6 +72,9 @@ export const MOCK_COMPANIES: (Company & { doc_verified: boolean })[] = [
     logo_url: `/avatares/cmp-transportes-brasil.svg`,
     plan: "mensal",
     doc_verified: true,
+    site: "https://transportesbrasil.example.com",
+    instagram: null,
+    facebook: null,
   },
   {
     profile_id: "cmp-clinica-vida",
@@ -68,6 +83,9 @@ export const MOCK_COMPANIES: (Company & { doc_verified: boolean })[] = [
     logo_url: `/avatares/cmp-clinica-vida.svg`,
     plan: "trial",
     doc_verified: true,
+    site: null,
+    instagram: "https://instagram.com/clinicavidasinop",
+    facebook: null,
   },
 ];
 
@@ -80,6 +98,9 @@ const companyRef = (id: string) => {
     company_name: c.company_name,
     logo_url: c.logo_url,
     doc_verified: c.doc_verified,
+    site: c.site,
+    instagram: c.instagram,
+    facebook: c.facebook,
   };
 };
 
@@ -357,6 +378,8 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
+    instagram: "https://instagram.com/joaosilvaeletricista",
+    facebook: null,
   },
   {
     profile_id: "prv-carlos-souza",
@@ -377,6 +400,8 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
+    instagram: null,
+    facebook: null,
   },
   {
     profile_id: "prv-marcos-lima",
@@ -396,6 +421,8 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
+    instagram: "https://instagram.com/marcoslimapinturas",
+    facebook: "https://facebook.com/marcoslimapinturas",
   },
   {
     profile_id: "prv-jose-moreira",
@@ -415,6 +442,8 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
+    instagram: null,
+    facebook: null,
   },
   {
     profile_id: "prv-ana-paula",
@@ -435,6 +464,8 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
+    instagram: null,
+    facebook: null,
   },
   {
     profile_id: "prv-rosa-mendes",
@@ -457,6 +488,8 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
+    instagram: null,
+    facebook: null,
   },
   {
     profile_id: "prv-pedro-alves",
@@ -476,6 +509,8 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
+    instagram: null,
+    facebook: null,
   },
   {
     profile_id: "prv-luciana-costa",
@@ -495,6 +530,8 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
+    instagram: null,
+    facebook: null,
   },
   {
     profile_id: "prv-antonio-ferreira",
@@ -514,6 +551,8 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
+    instagram: null,
+    facebook: null,
   },
 ];
 

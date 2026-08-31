@@ -148,6 +148,8 @@ describe("salvar o perfil do papel", () => {
       precoInicial: 150,
       anosExperiencia: 7,
       bairrosAtendidos: ["Centro"],
+      instagram: null,
+      facebook: null,
     });
 
     expect((await repo.perfilPrestador(id))?.categoriaId).toBe(1);
@@ -184,6 +186,8 @@ describe("salvar o perfil do papel", () => {
         setor: null,
         porte: null,
         site: null,
+        instagram: null,
+        facebook: null,
         descricao: null,
       }),
     ).rejects.toSatisfy((e) => ehAppError(e) && e.codigo === "nao_encontrado");
@@ -198,6 +202,8 @@ describe("salvar o perfil do papel", () => {
       setor: null,
       porte: null,
       site: null,
+      instagram: null,
+      facebook: null,
       descricao: null,
       logoUrl: null,
       plano: "trial",
@@ -208,6 +214,8 @@ describe("salvar o perfil do papel", () => {
       setor: "Agronegócio",
       porte: "Média",
       site: null,
+      instagram: null,
+      facebook: null,
       descricao: null,
     });
 

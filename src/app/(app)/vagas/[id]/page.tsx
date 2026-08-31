@@ -82,6 +82,43 @@ export default async function JobDetailPage({
               {job.company.company_name}
               {job.company.doc_verified && <VerifiedMark size={14} />}
             </p>
+
+            {(job.company.site ||
+              job.company.instagram ||
+              job.company.facebook) && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {job.company.site && (
+                  <a
+                    href={job.company.site}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
+                  >
+                    Site
+                  </a>
+                )}
+                {job.company.instagram && (
+                  <a
+                    href={job.company.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
+                  >
+                    Instagram
+                  </a>
+                )}
+                {job.company.facebook && (
+                  <a
+                    href={job.company.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
+                  >
+                    Facebook
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

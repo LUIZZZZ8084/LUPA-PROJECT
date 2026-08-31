@@ -124,6 +124,8 @@ describe("anúncio do prestador", () => {
     precoInicial: "",
     anosExperiencia: "",
     bairrosAtendidos: [],
+    instagram: "",
+    facebook: "",
   };
 
   it("aceita o anúncio mínimo", () => {
@@ -185,6 +187,29 @@ describe("anúncio do prestador", () => {
     });
     expect(varios.success && varios.data.bairrosAtendidos).toHaveLength(2);
   });
+
+  it("instagram e facebook são opcionais", () => {
+    const r = schemaPrestador.safeParse(base);
+    expect(r.success).toBe(true);
+    expect(r.success && r.data.instagram).toBeNull();
+    expect(r.success && r.data.facebook).toBeNull();
+  });
+
+  it("recusa instagram que não é endereço", () => {
+    expect(
+      schemaPrestador.safeParse({ ...base, instagram: "arroba_fulano" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("aceita instagram e facebook válidos", () => {
+    const r = schemaPrestador.safeParse({
+      ...base,
+      instagram: "https://instagram.com/fulano",
+      facebook: "https://facebook.com/fulano",
+    });
+    expect(r.success).toBe(true);
+  });
 });
 
 describe("empresa", () => {
@@ -193,6 +218,8 @@ describe("empresa", () => {
     setor: "",
     porte: "",
     site: "",
+    instagram: "",
+    facebook: "",
     descricao: "",
   };
 
@@ -214,6 +241,20 @@ describe("empresa", () => {
       site: "https://agronorte.com.br",
     });
     expect(r.success).toBe(true);
+  });
+
+  it("instagram e facebook são opcionais, e também precisam ser endereço", () => {
+    expect(schemaEmpresa.safeParse(base).success).toBe(true);
+    expect(
+      schemaEmpresa.safeParse({ ...base, instagram: "agronorte" }).success,
+    ).toBe(false);
+    expect(
+      schemaEmpresa.safeParse({
+        ...base,
+        instagram: "https://instagram.com/agronorte",
+        facebook: "https://facebook.com/agronorte",
+      }).success,
+    ).toBe(true);
   });
 
   /**

@@ -54,6 +54,8 @@ export interface PerfilEmpresa {
   setor: string | null;
   porte: string | null;
   site: string | null;
+  instagram: string | null;
+  facebook: string | null;
   descricao: string | null;
   logoUrl: string | null;
   plano: "trial" | "mensal";
@@ -66,6 +68,8 @@ export interface PerfilPrestador {
   precoInicial: number | null;
   anosExperiencia: number | null;
   bairrosAtendidos: string[];
+  instagram: string | null;
+  facebook: string | null;
 }
 
 export interface PerfilCandidato {
@@ -106,6 +110,8 @@ export interface EdicaoPrestador {
   precoInicial: number | null;
   anosExperiencia: number | null;
   bairrosAtendidos: string[];
+  instagram: string | null;
+  facebook: string | null;
 }
 
 /**
@@ -122,6 +128,8 @@ export interface EdicaoEmpresa {
   setor: string | null;
   porte: string | null;
   site: string | null;
+  instagram: string | null;
+  facebook: string | null;
   descricao: string | null;
 }
 

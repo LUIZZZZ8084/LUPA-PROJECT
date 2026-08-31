@@ -83,6 +83,8 @@ export interface ProviderProfile {
   photo_urls: string[];
   avg_rating: number;
   review_count: number;
+  instagram: string | null;
+  facebook: string | null;
 }
 
 export interface Company {
@@ -91,6 +93,9 @@ export interface Company {
   cnpj: string | null;
   logo_url: string | null;
   plan: CompanyPlan;
+  site: string | null;
+  instagram: string | null;
+  facebook: string | null;
 }
 
 export interface Job {
@@ -136,7 +141,10 @@ export interface Review {
 
 /** Vaga já com os dados da empresa embutidos, como aparece nos cards. */
 export interface JobListing extends Job {
-  company: Pick<Company, "company_name" | "logo_url"> & {
+  company: Pick<
+    Company,
+    "company_name" | "logo_url" | "site" | "instagram" | "facebook"
+  > & {
     doc_verified: boolean;
   };
   applicant_count: number;
