@@ -167,6 +167,8 @@ describe("RepositorioPostgres", () => {
       setor: null,
       porte: null,
       site: null,
+      instagram: null,
+      facebook: null,
       descricao: null,
       logoUrl: null,
       plano: "trial",
@@ -183,6 +185,8 @@ describe("RepositorioPostgres", () => {
       precoInicial: null,
       anosExperiencia: null,
       bairrosAtendidos: [],
+      instagram: null,
+      facebook: null,
     });
     expect(chamadas.at(-1)?.tabela).toBe("perfis_prestador");
 
@@ -252,6 +256,8 @@ describe("perfis para a edição", () => {
         setor: "Agronegócio",
         porte: "Média",
         site: null,
+        instagram: null,
+        facebook: null,
         descricao: null,
         logo_url: "/avatares/cmp.svg",
         plano: "mensal",
@@ -267,6 +273,8 @@ describe("perfis para a edição", () => {
       setor: "Agronegócio",
       porte: "Média",
       site: null,
+      instagram: null,
+      facebook: null,
       descricao: null,
       logoUrl: "/avatares/cmp.svg",
       plano: "mensal",
@@ -409,6 +417,8 @@ describe("gravação de perfil", () => {
       precoInicial: 150,
       anosExperiencia: 7,
       bairrosAtendidos: ["Centro"],
+      instagram: null,
+      facebook: null,
     });
 
     const upsert = chamadas.find((c) => c.metodo === "upsert");
@@ -432,6 +442,8 @@ describe("gravação de perfil", () => {
       setor: "Agronegócio",
       porte: "Média",
       site: null,
+      instagram: null,
+      facebook: null,
       descricao: null,
     });
 

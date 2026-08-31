@@ -150,6 +150,8 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       setor: perfil.setor,
       porte: perfil.porte,
       site: perfil.site,
+      instagram: perfil.instagram,
+      facebook: perfil.facebook,
       descricao: perfil.descricao,
       logo_url: perfil.logoUrl,
       plano: perfil.plano,
@@ -167,6 +169,8 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       preco_inicial: perfil.precoInicial,
       anos_experiencia: perfil.anosExperiencia,
       bairros_atendidos: perfil.bairrosAtendidos,
+      instagram: perfil.instagram,
+      facebook: perfil.facebook,
     });
 
     if (error)
@@ -231,6 +235,8 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       setor: (data.setor as string | null) ?? null,
       porte: (data.porte as string | null) ?? null,
       site: (data.site as string | null) ?? null,
+      instagram: (data.instagram as string | null) ?? null,
+      facebook: (data.facebook as string | null) ?? null,
       descricao: (data.descricao as string | null) ?? null,
       logoUrl: (data.logo_url as string | null) ?? null,
       plano: data.plano as PerfilEmpresa["plano"],
@@ -258,6 +264,8 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       anosExperiencia:
         data.anos_experiencia === null ? null : Number(data.anos_experiencia),
       bairrosAtendidos: (data.bairros_atendidos as string[] | null) ?? [],
+      instagram: (data.instagram as string | null) ?? null,
+      facebook: (data.facebook as string | null) ?? null,
     };
   }
 
@@ -345,6 +353,8 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         preco_inicial: dados.precoInicial,
         anos_experiencia: dados.anosExperiencia,
         bairros_atendidos: dados.bairrosAtendidos,
+        instagram: dados.instagram,
+        facebook: dados.facebook,
       },
       { onConflict: "usuario_id" },
     );
@@ -370,6 +380,8 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         setor: dados.setor,
         porte: dados.porte,
         site: dados.site,
+        instagram: dados.instagram,
+        facebook: dados.facebook,
         descricao: dados.descricao,
       })
       .eq("usuario_id", usuarioId);

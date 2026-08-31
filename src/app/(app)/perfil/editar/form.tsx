@@ -329,6 +329,26 @@ function Anuncio({ perfil }: { perfil: PerfilCompleto }) {
           selecionados={p?.bairrosAtendidos ?? []}
           error={estado.campos?.bairrosAtendidos}
         />
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <Field label="Instagram" error={estado.campos?.instagram}>
+            <Input
+              name="instagram"
+              type="url"
+              defaultValue={p?.instagram ?? ""}
+              placeholder="https://instagram.com/seunegocio"
+            />
+          </Field>
+
+          <Field label="Facebook" error={estado.campos?.facebook}>
+            <Input
+              name="facebook"
+              type="url"
+              defaultValue={p?.facebook ?? ""}
+              placeholder="https://facebook.com/seunegocio"
+            />
+          </Field>
+        </div>
       </Secao>
     </form>
   );
@@ -398,6 +418,26 @@ function Empresa({ perfil }: { perfil: PerfilCompleto }) {
             placeholder="https://"
           />
         </Field>
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <Field label="Instagram" error={estado.campos?.instagram}>
+            <Input
+              name="instagram"
+              type="url"
+              defaultValue={e?.instagram ?? ""}
+              placeholder="https://instagram.com/suaempresa"
+            />
+          </Field>
+
+          <Field label="Facebook" error={estado.campos?.facebook}>
+            <Input
+              name="facebook"
+              type="url"
+              defaultValue={e?.facebook ?? ""}
+              placeholder="https://facebook.com/suaempresa"
+            />
+          </Field>
+        </div>
 
         <Field label="Descrição" error={estado.campos?.descricao}>
           <Textarea

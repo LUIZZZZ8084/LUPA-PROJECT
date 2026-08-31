@@ -38,6 +38,8 @@ const ANUNCIO: DadosPrestador = {
   precoInicial: 150,
   anosExperiencia: 7,
   bairrosAtendidos: ["Centro", "Menezes"],
+  instagram: null,
+  facebook: null,
 };
 
 /** Só nota e contagem: o resto do anúncio vem do perfil. */
@@ -50,6 +52,8 @@ const EMPRESA: DadosEmpresa = {
   setor: null,
   porte: null,
   site: null,
+  instagram: null,
+  facebook: null,
   descricao: null,
   logoUrl: null,
   plano: "mensal",
@@ -133,6 +137,25 @@ describe("prestador", () => {
     );
     expect(screen.queryByText("Experiência")).toBeNull();
   });
+
+  it("sem instagram nem facebook, não mostra nenhum link", () => {
+    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} />);
+    expect(screen.queryByRole("link", { name: "Instagram" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Facebook" })).toBeNull();
+  });
+
+  it("com instagram, mostra o link", () => {
+    render(
+      <PerfilPrestador
+        perfil={{ ...ANUNCIO, instagram: "https://instagram.com/fulano" }}
+        listagem={LISTAGEM}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Instagram" })).toHaveAttribute(
+      "href",
+      "https://instagram.com/fulano",
+    );
+  });
 });
 
 describe("empresa", () => {
@@ -152,5 +175,29 @@ describe("empresa", () => {
   it("plano de teste aparece como período de teste", () => {
     render(<PerfilEmpresa empresa={{ ...EMPRESA, plano: "trial" }} />);
     expect(screen.getByText("Período de teste")).toBeTruthy();
+  });
+
+  /**
+   * `site` existia no banco havia tempo e nunca tinha aparecido em lugar
+   * nenhum — nem aqui, nem em tela pública. Este teste é o que trava essa
+   * regressão específica de volta.
+   */
+  it("mostra o site, quando preenchido", () => {
+    render(
+      <PerfilEmpresa
+        empresa={{ ...EMPRESA, site: "https://agronorte.com.br" }}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Site" })).toHaveAttribute(
+      "href",
+      "https://agronorte.com.br",
+    );
+  });
+
+  it("sem site, instagram nem facebook, não mostra nenhum link", () => {
+    render(<PerfilEmpresa empresa={EMPRESA} />);
+    expect(screen.queryByRole("link", { name: "Site" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Instagram" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Facebook" })).toBeNull();
   });
 });

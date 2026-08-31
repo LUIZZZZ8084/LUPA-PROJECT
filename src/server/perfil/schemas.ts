@@ -38,6 +38,18 @@ const zOpcional = (max: number, oQue: string) =>
  */
 const zBairro = z.preprocess(vazioViraNulo, zNomeDeBairro.nullable());
 
+/**
+ * Link de rede social, opcional. Mesma forma do site: em branco vira
+ * `null`; preenchido, precisa ser um endereço de verdade — meio caminho
+ * entre recusar tudo que não seja URL e aceitar qualquer texto solto que
+ * quebraria o link na hora de mostrar.
+ */
+const zLinkOpcional = (oQue: string) =>
+  z.preprocess(
+    vazioViraNulo,
+    z.union([z.url(`Endereço de ${oQue} inválido.`), z.null()]),
+  );
+
 /** Comum a todos os papéis: mora em `usuarios`. */
 export const schemaBasico = z.object({
   nomeCompleto: zNome,
@@ -133,6 +145,8 @@ export const schemaPrestador = z.object({
         `Escolha até ${MAX_BAIRROS_ATENDIDOS} bairros.`,
       ),
   ),
+  instagram: zLinkOpcional("Instagram"),
+  facebook: zLinkOpcional("Facebook"),
 });
 
 /** O CNPJ não está aqui: é âncora de identidade, não campo de perfil. */
@@ -147,10 +161,9 @@ export const schemaEmpresa = z.object({
     vazioViraNulo,
     z.enum(["MEI", "Micro", "Pequena", "Média", "Grande"]).nullable(),
   ),
-  site: z.preprocess(
-    vazioViraNulo,
-    z.union([z.url("Endereço de site inválido."), z.null()]),
-  ),
+  site: zLinkOpcional("site"),
+  instagram: zLinkOpcional("Instagram"),
+  facebook: zLinkOpcional("Facebook"),
   descricao: zOpcional(2000, "A descrição"),
 });
 

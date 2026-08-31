@@ -175,6 +175,8 @@ create table perfis_prestador (
   anos_experiencia  int,
   bairros_atendidos text[] not null default '{}',
   fotos_urls        text[] not null default '{}',
+  instagram         text,
+  facebook          text,
   -- Denormalizados e mantidos pelo trigger em `avaliacoes`: a busca ordena
   -- por nota e não pode agregar a cada consulta.
   nota_media        numeric(2,1) not null default 0,
@@ -191,6 +193,8 @@ create table perfis_empresa (
   setor        text,
   porte        text,
   site         text,
+  instagram    text,
+  facebook     text,
   descricao    text,
   logo_url     text,
   plano        plano_empresa not null default 'trial'
@@ -613,6 +617,8 @@ select
   pp.fotos_urls                          as photo_urls,
   pp.nota_media                          as avg_rating,
   pp.total_avaliacoes                    as review_count,
+  pp.instagram                           as instagram,
+  pp.facebook                            as facebook,
   u.nome_completo                        as full_name,
   u.telefone                             as phone,
   u.cidade                               as city,
@@ -647,7 +653,10 @@ select
   jsonb_build_object(
     'company_name', e.razao_social,
     'logo_url',     e.logo_url,
-    'doc_verified', u.doc_verificado
+    'doc_verified', u.doc_verificado,
+    'site',         e.site,
+    'instagram',    e.instagram,
+    'facebook',     e.facebook
   ) as company,
   (select count(*) from candidaturas c where c.vaga_id = v.id) as applicant_count
 from vagas v

@@ -180,6 +180,31 @@ export default async function ProviderPage({
           </div>
         )}
 
+        {(provider.instagram || provider.facebook) && (
+          <div className="mt-5 flex items-center gap-4 border-t border-line pt-5">
+            {provider.instagram && (
+              <a
+                href={provider.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-muted underline-offset-2 transition-colors hover:text-servicos hover:underline"
+              >
+                Instagram
+              </a>
+            )}
+            {provider.facebook && (
+              <a
+                href={provider.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-muted underline-offset-2 transition-colors hover:text-servicos hover:underline"
+              >
+                Facebook
+              </a>
+            )}
+          </div>
+        )}
+
         <div className="mt-6 border-t border-line pt-5">
           <WhatsAppButton
             phone={provider.phone}

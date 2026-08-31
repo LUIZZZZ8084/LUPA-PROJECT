@@ -232,6 +232,9 @@ function jobListingDaVaga(vaga: Vaga): JobListing {
       company_name: empresa?.company_name ?? "Empresa",
       logo_url: empresa?.logo_url ?? null,
       doc_verified: empresa?.doc_verified ?? false,
+      site: empresa?.site ?? null,
+      instagram: empresa?.instagram ?? null,
+      facebook: empresa?.facebook ?? null,
     },
     applicant_count: MOCK_APPLICATIONS.filter((a) => a.job_id === vaga.id)
       .length,
@@ -477,6 +480,12 @@ export async function getCompany(id: string): Promise<Company | null> {
         cnpj: (data.cnpj as string | null) ?? null,
         logo_url: (data.logo_url as string | null) ?? null,
         plan: data.plano as Company["plan"],
+        // Fora do select de propósito: o painel "Minha Empresa" não
+        // mostra nenhum dos três, e trazer coluna sem consumidor é
+        // trabalho que ninguém pediu.
+        site: null,
+        instagram: null,
+        facebook: null,
       };
     }
   }

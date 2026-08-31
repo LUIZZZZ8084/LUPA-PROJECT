@@ -76,6 +76,45 @@ function Secao({
   );
 }
 
+/**
+ * Site, Instagram e Facebook — sempre os mesmos três, sempre nesta ordem.
+ * Cada um só aparece se preenchido, e a linha inteira some se nenhum
+ * estiver: o que não foi informado não deixa buraco na tela.
+ */
+function LinksSociais({
+  site,
+  instagram,
+  facebook,
+}: {
+  site: string | null;
+  instagram: string | null;
+  facebook: string | null;
+}) {
+  if (!site && !instagram && !facebook) return null;
+
+  const links = [
+    { url: site, rotulo: "Site" },
+    { url: instagram, rotulo: "Instagram" },
+    { url: facebook, rotulo: "Facebook" },
+  ].filter((l) => l.url);
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+      {links.map(({ url, rotulo }) => (
+        <a
+          key={rotulo}
+          href={url ?? undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-muted underline-offset-2 transition-colors hover:text-ink hover:underline"
+        >
+          {rotulo}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
     <div className="flex gap-2 py-1 text-sm">
@@ -213,6 +252,12 @@ export function PerfilPrestador({
         </div>
       )}
 
+      <LinksSociais
+        site={null}
+        instagram={perfil.instagram}
+        facebook={perfil.facebook}
+      />
+
       {listagem && (
         <div className="mt-4">
           <ButtonLink
@@ -258,6 +303,12 @@ export function PerfilEmpresa({
           {empresa.plano === "mensal" ? "Plano mensal" : "Período de teste"}
         </Badge>
       </div>
+
+      <LinksSociais
+        site={empresa.site}
+        instagram={empresa.instagram}
+        facebook={empresa.facebook}
+      />
 
       <div className="mt-4">
         <ButtonLink href="/empresa" variant="outline" size="sm">

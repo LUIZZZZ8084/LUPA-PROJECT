@@ -98,6 +98,8 @@ export async function cadastrar(
       precoInicial: dados.precoInicial ?? null,
       anosExperiencia: dados.anosExperiencia ?? null,
       bairrosAtendidos: dados.bairrosAtendidos ?? [],
+      instagram: null,
+      facebook: null,
     });
   } else {
     await repo.criarPerfilEmpresa({
@@ -107,6 +109,8 @@ export async function cadastrar(
       setor: dados.setor ?? null,
       porte: dados.porte ?? null,
       site: dados.site ?? null,
+      instagram: null,
+      facebook: null,
       descricao: dados.descricao ?? null,
       logoUrl: null,
       plano: "trial",
