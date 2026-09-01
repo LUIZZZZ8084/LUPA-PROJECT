@@ -115,15 +115,24 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Tudo, menos o que não é página: estáticos, imagens geradas e o
-     * favicon. Verificar JWT em cada arquivo custaria latência sem nada a
-     * proteger — e o `_next/static` é servido pela CDN, sem passar por aqui
-     * de qualquer forma.
+     * Tudo, menos o que não é página: estáticos, imagens geradas, o
+     * favicon e o manifesto. Verificar JWT em cada arquivo custaria
+     * latência sem nada a proteger — e o `_next/static` é servido pela
+     * CDN, sem passar por aqui de qualquer forma.
      *
      * Antes o matcher cobria só `/admin`. O app passou a ser fechado, então
      * a borda precisa ver toda navegação; a lista de rotas abertas fica no
      * código, onde dá para explicar cada uma.
+     *
+     * `manifest.webmanifest` entrou depois, e a ausência dele era um
+     * defeito de verdade: o manifesto responde a `/manifest.webmanifest`,
+     * gerado por `src/app/manifest.ts` do mesmo jeito que `icon` e
+     * `apple-icon` — que já estavam aqui. Barrado, ele redirecionava para
+     * o login, e o navegador não lê HTML de login como manifesto: o PWA
+     * deixava de ser instalável justamente para quem ainda não tem conta,
+     * que é quem acabou de receber o link. Não é navegação e não tem o que
+     * proteger; o que ele diz (nome, cor, ícone) já é público.
      */
-    "/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|icon|apple-icon|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };
