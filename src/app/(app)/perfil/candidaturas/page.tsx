@@ -9,7 +9,10 @@ import {
 } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { APPLICATION_LABELS, APPLICATION_TONE } from "@/lib/constants";
+import {
+  APPLICATION_LABELS_CANDIDATO,
+  APPLICATION_TONE,
+} from "@/lib/constants";
 import { getMyApplications } from "@/lib/data";
 import { timeAgo } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
@@ -58,7 +61,7 @@ export default async function MinhasCandidaturasPage() {
                 </p>
               </div>
               <Badge tone={APPLICATION_TONE[c.status]}>
-                {APPLICATION_LABELS[c.status]}
+                {APPLICATION_LABELS_CANDIDATO[c.status]}
               </Badge>
             </li>
           ))}

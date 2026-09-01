@@ -138,10 +138,33 @@ export const VERIFICATION_LABELS = {
  */
 export const APPLICATION_LABELS = {
   enviada: "Nova",
-  visualizada: "Visualizada",
+  visualizada: "Em triagem",
   entrevista: "Entrevista",
-  aprovada: "Aprovada",
-  rejeitada: "Não selecionado",
+  aprovada: "Selecionado",
+  rejeitada: "Reprovado",
+} as const;
+
+/**
+ * Os mesmos estágios, ditos para quem se candidatou.
+ *
+ * Só `enviada` muda de nome, e a diferença é a pergunta de cada lado.
+ * A empresa olha a lista e pergunta "o que ainda não olhei?" — para ela,
+ * "Nova" responde. O candidato abre "Minhas candidaturas" e pergunta
+ * "alguém já olhou o meu?" — e "Nova" não responde nada, porque a
+ * candidatura dele nasceu nova e ele sabe disso.
+ *
+ * "Não visualizado" responde, e é verificável: o estágio sai de `enviada`
+ * sozinho quando alguém da empresa abre a ficha (`marcarComoVisualizada`,
+ * em `src/server/candidaturas/ficha.ts`). Não depende de a empresa
+ * lembrar de marcar nada — e por isso a palavra pode ser categórica.
+ *
+ * Os outros quatro são iguais nos dois lados de propósito: nome diferente
+ * para o mesmo estado, sem uma pergunta diferente por trás, seria só duas
+ * pessoas falando de coisas distintas na mesma conversa.
+ */
+export const APPLICATION_LABELS_CANDIDATO = {
+  ...APPLICATION_LABELS,
+  enviada: "Não visualizado",
 } as const;
 
 /** Cor do selo de estágio, no painel da empresa e em "Minhas candidaturas". */

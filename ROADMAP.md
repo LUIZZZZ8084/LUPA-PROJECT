@@ -101,6 +101,10 @@ Qualidade:
   [#60](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/60),
   PR [#61](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/61)
 - Arquitetura desenhada em `docs/arquitetura.md`
+- Envio de foto, currículo e logo conferido em produção, com conta real —
+  [#70](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/70). A
+  conferência achou o caminho quebrado acima de 1 MB, corrigido em
+  PR [#91](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/91)
 
 ## Pendente
 
@@ -133,8 +137,6 @@ Trabalho que não é código: alguém precisa fazer com a mão, em produção.
 
 - [ ] Trocar a senha de admin —
       [#69](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/69)
-- [ ] Conferir envio de foto, currículo e logo em produção —
-      [#70](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/70)
 
 ## Fora do escopo por decisão, não por esquecimento
 

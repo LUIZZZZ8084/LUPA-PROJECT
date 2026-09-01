@@ -20,6 +20,10 @@ import {
 } from "@/lib/data";
 import { pluralize, timeAgo, whatsappLink } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
+import {
+  type MatchDaCandidatura,
+  matchPorCandidatura,
+} from "@/server/candidaturas/match";
 import { recomendadosParaEmpresa } from "@/server/candidaturas/recomendados";
 import {
   serieDoPainel,
@@ -36,6 +40,40 @@ export const metadata: Metadata = {
   description: "Publique vagas, receba currículos e acompanhe visualizações.",
 };
 
+/**
+ * O quanto o candidato casa com a vaga a que se candidatou.
+ *
+ * Sem match no mapa, não desenha nada: a vaga não declarou habilidade e o
+ * título não deu pista. Mostrar "0%" ali seria afirmar que o candidato não
+ * tem nada do que se pede, quando a verdade é que ninguém disse o que se
+ * pede.
+ *
+ * O número vive no `aria-label` por extenso porque o selo mostra só
+ * "72%", e "72%" sozinho não diz de quê — nem para quem usa leitor de
+ * tela, nem para quem está no celular, onde `title` não existe. Quem
+ * quiser o detalhe abre a ficha.
+ */
+function SeloDeMatch({ match }: { match: MatchDaCandidatura | undefined }) {
+  if (!match) return null;
+
+  const tone =
+    match.porcentagem >= 70
+      ? "vagas"
+      : match.porcentagem >= 40
+        ? "warn"
+        : "neutral";
+
+  return (
+    <Badge
+      tone={tone}
+      className="flex-none"
+      aria-label={`Combina com ${match.pontos} de ${match.deQuantas} habilidades que a vaga pede`}
+    >
+      {match.porcentagem}%
+    </Badge>
+  );
+}
+
 export default async function EmpresaPage() {
   const sessao = await sessaoAtual();
   const companyId = empresaDoPainel(sessao?.usuarioId ?? null);
@@ -51,6 +89,7 @@ export default async function EmpresaPage() {
       recomendadosParaEmpresa(sessao),
     ]);
   const totais = totaisDaSerie(serie);
+  const match = matchPorCandidatura(applications, jobs);
 
   if (!company) {
     return (
@@ -218,11 +257,15 @@ export default async function EmpresaPage() {
                 */}
                 <Link
                   href={`/empresa/candidaturas/${app.id}`}
-                  className="flex min-w-0 flex-1 items-center gap-3"
+                  className="group flex min-w-0 flex-1 items-center gap-3"
                 >
-                  <Avatar name={app.candidate.full_name} size="sm" />
+                  <Avatar
+                    name={app.candidate.full_name}
+                    src={app.candidate.avatar_url}
+                    size="sm"
+                  />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">
+                    <p className="truncate text-sm font-semibold underline-offset-2 group-hover:underline">
                       {app.candidate.full_name}
                     </p>
                     <p className="truncate text-[11px] text-muted">
@@ -234,6 +277,8 @@ export default async function EmpresaPage() {
                     </p>
                   </div>
                 </Link>
+
+                <SeloDeMatch match={match.get(app.id)} />
 
                 {/*
                   Atalho de contato na própria lista: o caminho entre
