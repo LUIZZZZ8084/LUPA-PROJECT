@@ -173,9 +173,23 @@ significa sessão de admin forjável por qualquer um que leia o repositório.
 espalhada em `if` é como se descobre, meses depois, que uma empresa vê a
 candidatura de outra.
 
-**Admin não pode tudo.** Administra, mas não publica vaga nem se candidata.
-Admin com todas as capacidades transforma um acesso comprometido em perda
-total.
+**O admin enxerga tudo, e não age no lugar de ninguém.** Quem administra a
+ferramenta é o responsável por ela e precisa alcançar o que existe lá
+dentro para dar suporte — painel, métricas, fila de verificação, lista de
+candidatos disponíveis. Decisão do Luiz em 31/08/2026, que afrouxou de
+propósito o corte anterior, mais fechado.
+
+O que continua fora é **escrita com dono**: publicar vaga, se candidatar,
+mover a candidatura de uma empresa. A razão não é desconfiar de quem
+administra — é que essas ações têm autor, e uma vaga publicada por um
+acesso comprometido não deixa rastro de que não foi a empresa. Quando for
+preciso agir como outro papel, que seja por personificação registrada em
+log, onde a ação continua tendo dono.
+
+Enquanto a senha de admin em produção for a padrão
+([#69](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/69)), o alcance
+do admin é o alcance de quem leu este repositório. É o que torna aquela
+Issue pré-requisito, e não tarefa de arrumação.
 
 **Duas perguntas em cada operação:** o papel pode fazer isto
 (`exigirCapacidade`) e este registro é desta pessoa (`exigirDono`). Só a

@@ -43,6 +43,15 @@ export type Capacidade =
   | "candidatura:criar"
   | "candidatura:ver_propria"
   | "candidatura:mover_estagio"
+  /*
+   * Procurar entre quem pediu para ser encontrado.
+   *
+   * Capacidade própria, e não uma das de vaga, porque o alcance é outro:
+   * as de vaga terminam em quem se candidatou àquela vaga, e esta começa
+   * em quem nunca se candidatou a nada. Quem consente é o candidato, no
+   * `visivel_para_empresas` — a capacidade só diz quem pode perguntar.
+   */
+  | "candidato:buscar_disponiveis"
   // Publicações no perfil
   | "publicacao:criar"
   | "publicacao:editar_propria"
@@ -83,17 +92,25 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "vaga:encerrar_propria",
     "vaga:ver_candidaturas_proprias",
     "candidatura:mover_estagio",
+    "candidato:buscar_disponiveis",
     "publicacao:criar",
     "publicacao:editar_propria",
     "publicacao:arquivar_propria",
   ],
 
   /*
-   * Admin administra; não se candidata nem publica vaga.
+   * Admin enxerga tudo; não age no lugar de ninguém.
    *
-   * Dar tudo ao admin é o atalho que transforma um acesso comprometido em
-   * perda total. Se um dia for preciso agir como empresa, que seja por
-   * personificação registrada em log, não por permissão permanente.
+   * Decisão do Luiz (31/08): quem administra a ferramenta é o responsável
+   * por ela e precisa alcançar o que existe lá dentro para dar suporte —
+   * inclusive a lista de candidatos disponíveis.
+   *
+   * O que continua fora é **escrita no lugar de outro papel**: publicar
+   * vaga, se candidatar, mover a candidatura de uma empresa. Não é
+   * desconfiança de quem administra; é que essas ações têm dono, e um
+   * acesso comprometido que pode agir como empresa não deixa rastro de
+   * que não era a empresa. Se um dia for preciso, que seja por
+   * personificação registrada em log — aí a ação continua tendo autor.
    */
   admin: [
     "admin:painel",
@@ -101,6 +118,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "admin:decidir_verificacao",
     "admin:moderar",
     "perfil:editar_proprio",
+    "candidato:buscar_disponiveis",
   ],
 };
 
