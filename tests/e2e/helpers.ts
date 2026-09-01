@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
+import { ROTAS_PROFUNDAS_EMPRESA } from "./rotas";
 
 /** Onde a sessão compartilhada dos testes fica guardada. */
 export const ARQUIVO_SESSAO = join(
@@ -28,6 +30,24 @@ export const ARQUIVO_SESSAO_EMPRESA = join(
   "test-results",
   "sessao-empresa.json",
 );
+
+/**
+ * As credenciais das contas da suíte, guardadas junto com a sessão.
+ *
+ * Quem precisa exercitar o *login* — e não só estar logado — não tem como
+ * reaproveitar o `storageState`: cookie pronto pula justamente o caminho
+ * que se quer medir. Criar mais uma conta também não serve, porque o
+ * cadastro tem limite de 5 por origem em 15 minutos e a suíte já gasta
+ * duas no setup.
+ *
+ * O arquivo vive em `test-results/`, que está fora do controle de versão.
+ */
+export function arquivoDeCredencial(papel: "candidato" | "empresa"): string {
+  return join(process.cwd(), "test-results", `credencial-${papel}.json`);
+}
+
+/** A mesma para as duas contas: elas só existem enquanto a suíte roda. */
+export const SENHA_DE_TESTE = "senha-de-teste-123";
 
 /**
  * Espera o React assumir o controle da página.
@@ -62,7 +82,7 @@ export async function aguardarHidratacao(page: Page, seletor = "select") {
  * memória: não há conta pré-existente, e o e-mail único evita colisão
  * entre testes que rodam em paralelo contra o mesmo servidor.
  */
-export async function entrarComoTeste(page: Page): Promise<void> {
+export async function entrarComoTeste(page: Page): Promise<string> {
   const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@teste.lupa`;
 
   await page.goto("/cadastro?tipo=candidato_clt");
@@ -74,10 +94,12 @@ export async function entrarComoTeste(page: Page): Promise<void> {
   // vitrine inserido por SQL, isto é cadastro passando pela validação real.
   await page.getByLabel("WhatsApp").fill("66999999999");
   await page.getByLabel("Área desejada").selectOption({ index: 1 });
-  await page.getByLabel("Senha").fill("senha-de-teste-123");
+  await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
 
   await page.getByRole("button", { name: /criar conta/i }).click();
   await page.getByText(/Conta criada/i).waitFor({ timeout: 15_000 });
+
+  return email;
 }
 
 /**
@@ -139,7 +161,7 @@ function cnpjDeTeste(): string {
  * Argon2id de 19 MiB por papel em cada execução. Quem precisa publicar
  * vaga paga o preço sozinho, aqui.
  */
-export async function entrarComoEmpresa(page: Page): Promise<void> {
+export async function entrarComoEmpresa(page: Page): Promise<string> {
   const email = `e2e-empresa-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@teste.lupa`;
 
   await page.goto("/cadastro?tipo=empresa");
@@ -149,8 +171,48 @@ export async function entrarComoEmpresa(page: Page): Promise<void> {
   await page.getByLabel("CNPJ").fill(cnpjDeTeste());
   await page.getByLabel("E-mail").fill(email);
   await page.getByLabel("WhatsApp").fill("66999999999");
-  await page.getByLabel("Senha").fill("senha-de-teste-123");
+  await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
 
   await page.getByRole("button", { name: /criar conta/i }).click();
   await page.getByText(/Conta criada/i).waitFor({ timeout: 15_000 });
+
+  return email;
+}
+
+/**
+ * Descobre as rotas de empresa que dependem de um id.
+ *
+ * Ficha do candidato e edição de vaga só existem a partir de um registro,
+ * e o id de um registro de demonstração não é contrato: fixá-lo aqui faria
+ * a varredura medir um 404 no dia em que o seed mudasse — e continuar
+ * verde, porque página de erro também passa em contraste e não rola para
+ * o lado. Por isso o caminho é o mesmo que a empresa percorre: abre o
+ * painel e segue o link.
+ *
+ * Devolve só o que encontrou. Um painel sem candidatura nenhuma é estado
+ * legítimo, e obrigar a existir tornaria a varredura refém do seed.
+ */
+export async function rotasProfundasDaEmpresa(
+  page: Page,
+): Promise<{ path: string; nome: string }[]> {
+  await page.goto("/empresa");
+
+  const achadas: { path: string; nome: string }[] = [];
+
+  for (const { nome, seletor } of ROTAS_PROFUNDAS_EMPRESA) {
+    const href = await page
+      .locator(seletor)
+      .first()
+      .getAttribute("href")
+      .catch(() => null);
+
+    if (href) achadas.push({ path: href, nome });
+  }
+
+  return achadas;
+}
+
+/** O e-mail da conta que o setup criou para aquele papel. */
+export function emailDaConta(papel: "candidato" | "empresa"): string {
+  return JSON.parse(readFileSync(arquivoDeCredencial(papel), "utf8")).email;
 }

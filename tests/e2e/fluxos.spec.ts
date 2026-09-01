@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { aguardarHidratacao } from "./helpers";
+import { ARQUIVO_SESSAO_EMPRESA, aguardarHidratacao } from "./helpers";
 
 test.describe("busca de vagas", () => {
   test("filtra por categoria e mantém o filtro na URL", async ({ page }) => {
@@ -160,13 +160,29 @@ test.describe("segurança da demonstração", () => {
   test("o aviso de demonstração aparece em todas as páginas", async ({
     page,
   }) => {
-    for (const path of ["/", "/vagas", "/servicos", "/empresa"]) {
+    for (const path of ["/", "/vagas", "/servicos"]) {
       await page.goto(path);
       await expect(
         page.getByText(/não são ofertas reais/),
         `faltando aviso em ${path}`,
       ).toBeVisible();
     }
+  });
+
+  /*
+   * O painel da empresa, à parte, porque exige a sessão dele.
+   *
+   * É onde o aviso importa mais: é a tela em que alguém vê currículo com
+   * nome e telefone. Sem o aviso ali, a empresa conclui que aquelas
+   * pessoas se candidataram de verdade.
+   */
+  test.describe("no painel da empresa", () => {
+    test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
+
+    test("o aviso de demonstração também aparece", async ({ page }) => {
+      await page.goto("/empresa");
+      await expect(page.getByText(/não são ofertas reais/)).toBeVisible();
+    });
   });
 });
 

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { ARQUIVO_SESSAO_EMPRESA } from "./helpers";
 
 /**
  * A ficha do candidato, no navegador.
@@ -8,6 +9,16 @@ import { expect, test } from "@playwright/test";
  * bairro, vaga, e nenhum lugar para clicar.
  */
 test.describe("ficha do candidato", () => {
+  /*
+   * Sessão de empresa, e não a compartilhada.
+   *
+   * Estes testes abrem `/empresa`. Até a #104 isso funcionava com a sessão
+   * de candidato — não porque o teste estivesse certo, mas porque a página
+   * não conferia o papel. Fechado o portão, a sessão certa passou a ser
+   * exigência, e é o que o teste devia estar usando desde sempre.
+   */
+  test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
+
   test("a linha da lista abre a pessoa", async ({ page }) => {
     await page.goto("/empresa");
 
