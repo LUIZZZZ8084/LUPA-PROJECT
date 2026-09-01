@@ -218,13 +218,22 @@ describe("RBAC", () => {
   });
 
   /**
-   * Admin com tudo transforma um acesso comprometido em perda total.
+   * A linha do admin: enxergar, sim; agir no lugar de outro papel, não.
+   *
+   * Ele alcança o que existe na ferramenta para poder dar suporte — o
+   * painel, as métricas, a fila de verificação, a lista de candidatos
+   * disponíveis. O que fica de fora é escrita com dono: publicar uma vaga
+   * ou se candidatar em nome de alguém não deixa rastro de que não foi
+   * aquela pessoa, e é isso que um acesso comprometido exploraria.
    */
-  it("admin administra, mas não publica vaga nem se candidata", () => {
+  it("admin enxerga, mas não age no lugar de empresa nem de candidato", () => {
     expect(pode("admin", "admin:painel")).toBe(true);
     expect(pode("admin", "admin:decidir_verificacao")).toBe(true);
+    expect(pode("admin", "candidato:buscar_disponiveis")).toBe(true);
+
     expect(pode("admin", "vaga:publicar")).toBe(false);
     expect(pode("admin", "candidatura:criar")).toBe(false);
+    expect(pode("admin", "candidatura:mover_estagio")).toBe(false);
   });
 
   it("nenhum papel comum alcança as capacidades de admin", () => {

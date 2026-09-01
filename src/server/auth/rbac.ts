@@ -99,11 +99,18 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
   ],
 
   /*
-   * Admin administra; não se candidata nem publica vaga.
+   * Admin enxerga tudo; não age no lugar de ninguém.
    *
-   * Dar tudo ao admin é o atalho que transforma um acesso comprometido em
-   * perda total. Se um dia for preciso agir como empresa, que seja por
-   * personificação registrada em log, não por permissão permanente.
+   * Decisão do Luiz (31/08): quem administra a ferramenta é o responsável
+   * por ela e precisa alcançar o que existe lá dentro para dar suporte —
+   * inclusive a lista de candidatos disponíveis.
+   *
+   * O que continua fora é **escrita no lugar de outro papel**: publicar
+   * vaga, se candidatar, mover a candidatura de uma empresa. Não é
+   * desconfiança de quem administra; é que essas ações têm dono, e um
+   * acesso comprometido que pode agir como empresa não deixa rastro de
+   * que não era a empresa. Se um dia for preciso, que seja por
+   * personificação registrada em log — aí a ação continua tendo autor.
    */
   admin: [
     "admin:painel",
@@ -111,6 +118,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "admin:decidir_verificacao",
     "admin:moderar",
     "perfil:editar_proprio",
+    "candidato:buscar_disponiveis",
   ],
 };
 

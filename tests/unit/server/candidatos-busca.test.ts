@@ -95,16 +95,17 @@ describe("quem pode perguntar", () => {
   });
 
   /**
-   * Admin administra; não contrata.
+   * Admin pode, por decisão do Luiz (31/08): quem administra a ferramenta
+   * é o responsável por ela e precisa alcançar o que existe lá dentro para
+   * dar suporte.
    *
-   * A matriz do RBAC já registra que dar tudo ao admin é o atalho que
-   * transforma um acesso comprometido em perda total — e a lista de quem
-   * está procurando emprego é exatamente o tipo de dado que ele não
-   * precisa para administrar.
+   * O que continua fora do alcance dele é escrita no lugar de outro papel
+   * — publicar vaga, se candidatar, mover candidatura de uma empresa —,
+   * porque essas ações têm dono e precisam manter o autor.
    */
-  it("admin não pode", async () => {
+  it("admin pode", async () => {
     disponiveis = [pessoa("a")];
-    expect(await candidatosDisponiveis(admin)).toEqual([]);
+    expect(await candidatosDisponiveis(admin)).toHaveLength(1);
   });
 
   it("sem sessão, nada", async () => {
@@ -293,6 +294,19 @@ describe("perfil de um candidato", () => {
   it("candidato não abre perfil de candidato", async () => {
     disponiveis = [pessoa("a")];
     expect(await perfilDoCandidato(candidato, "a")).toBeNull();
+  });
+
+  /**
+   * Admin abre para dar suporte — mas sem vagas próprias, não há
+   * candidatura dele para autorizar currículo. O caminho para a ficha
+   * nasce da relação empresa↔candidatura, e o admin não tem essa relação.
+   */
+  it("admin abre o perfil, e continua sem caminho para o currículo", async () => {
+    disponiveis = [pessoa("a")];
+    const p = await perfilDoCandidato(admin, "a");
+
+    expect(p?.candidato.full_name).toBe("Pessoa a");
+    expect(p?.candidaturaId).toBeNull();
   });
 
   it("sem candidatura na minha empresa, não há caminho para o currículo", async () => {
