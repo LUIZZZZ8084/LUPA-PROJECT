@@ -43,6 +43,15 @@ export type Capacidade =
   | "candidatura:criar"
   | "candidatura:ver_propria"
   | "candidatura:mover_estagio"
+  /*
+   * Procurar entre quem pediu para ser encontrado.
+   *
+   * Capacidade própria, e não uma das de vaga, porque o alcance é outro:
+   * as de vaga terminam em quem se candidatou àquela vaga, e esta começa
+   * em quem nunca se candidatou a nada. Quem consente é o candidato, no
+   * `visivel_para_empresas` — a capacidade só diz quem pode perguntar.
+   */
+  | "candidato:buscar_disponiveis"
   // Publicações no perfil
   | "publicacao:criar"
   | "publicacao:editar_propria"
@@ -83,6 +92,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "vaga:encerrar_propria",
     "vaga:ver_candidaturas_proprias",
     "candidatura:mover_estagio",
+    "candidato:buscar_disponiveis",
     "publicacao:criar",
     "publicacao:editar_propria",
     "publicacao:arquivar_propria",

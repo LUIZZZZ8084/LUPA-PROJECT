@@ -1,4 +1,4 @@
-import { FileText, Inbox, MessageCircle, Plus } from "lucide-react";
+import { FileText, Inbox, MessageCircle, Plus, UserSearch } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -119,10 +119,16 @@ export default async function EmpresaPage() {
         accent="text-empresas"
         description="Acompanhe suas vagas e os currículos recebidos."
         action={
-          <ButtonLink href="/empresa/vagas/nova" variant="empresas">
-            <Plus size={17} />
-            Publicar nova vaga
-          </ButtonLink>
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/candidatos" variant="outline">
+              <UserSearch size={17} />
+              Candidatos
+            </ButtonLink>
+            <ButtonLink href="/empresa/vagas/nova" variant="empresas">
+              <Plus size={17} />
+              Publicar nova vaga
+            </ButtonLink>
+          </div>
         }
       />
 
