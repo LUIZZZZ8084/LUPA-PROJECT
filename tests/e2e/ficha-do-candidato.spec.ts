@@ -87,7 +87,7 @@ test.describe("ficha do candidato", () => {
 
     const selo = page
       .locator("main")
-      .getByText(/^(Nova|Visualizada|Entrevista|Aprovada|Não selecionado)$/);
+      .getByText(/^(Nova|Em triagem|Entrevista|Selecionado|Reprovado)$/);
     await expect(selo.first()).toBeVisible();
   });
 
