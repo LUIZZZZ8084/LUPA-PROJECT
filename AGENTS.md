@@ -186,10 +186,17 @@ acesso comprometido não deixa rastro de que não foi a empresa. Quando for
 preciso agir como outro papel, que seja por personificação registrada em
 log, onde a ação continua tendo dono.
 
-Enquanto a senha de admin em produção for a padrão
-([#69](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/69)), o alcance
-do admin é o alcance de quem leu este repositório. É o que torna aquela
-Issue pré-requisito, e não tarefa de arrumação.
+**Não há senha de admin no repositório, e nunca houve.**
+`scripts/criar-admin.mjs` lê `ADMIN_SENHA` do ambiente ou gera uma senha
+forte e a imprime uma única vez. Este parágrafo já afirmou o contrário —
+que existia uma "senha padrão" e que o alcance do admin era o de quem
+lesse o repositório. Era falso, e foi escrito sem abrir o script.
+
+O que a [#69](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/69)
+trata é outra coisa: duas senhas de admin passaram por conversa de chat
+em 25/08/2026. Não há indício de vazamento — o que se perdeu foi a
+garantia. Trocar é higiene, e o Luiz decidiu em 01/09 que não é urgente,
+porque só ele e o Paulinho operam a conta.
 
 **Duas perguntas em cada operação:** o papel pode fazer isto
 (`exigirCapacidade`) e este registro é desta pessoa (`exigirDono`). Só a

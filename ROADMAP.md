@@ -138,17 +138,24 @@ Qualidade:
 
 ## Pendente
 
-Ordem definida pelo Luiz em 25/08/2026: **pagamento é a última etapa.**
+**Tudo o que sobrou vai junto com o empacotamento em APK.** Decisão do
+Luiz em 01/09/2026, que reúne numa etapa só o que antes estava espalhado.
+Nada aqui está bloqueado por código.
 
-Antes disso, e sem depender de decisão nova:
-
-- [ ] Notificação push por bairro e categoria —
+- [ ] Notificação push por cidade e categoria —
       [#48](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/48)
 
-Por último, na ordem:
+      Espera o APK por razão técnica: o caminho é PWA → Capacitor
+      (`docs/brief-tecnico.md`, seção 12), e no Android o Capacitor usa
+      Firebase Cloud Messaging. Fazer agora com Web Push puro seria
+      construir duas vezes.
 
 - [ ] Cobrança via Mercado Pago (planos trial/mensal) —
       [#46](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/46)
+
+      Espera por razão de produto, decidida em 25/08 e mantida:
+      *pagamento é a última etapa*. Validar demanda antes de cobrar.
+
 - [ ] Gerador de currículo pago — depende do #46 —
       [#47](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/47)
 
@@ -157,7 +164,7 @@ Por último, na ordem:
 | O que | Quem decide | Por que está parado |
 |---|---|---|
 | Conta do Mercado Pago | Luiz | Sem credencial não há como integrar |
-| Provedor de push (#48) | Luiz | Escolha de fornecedor e custo |
+| Provedor de push (#48) | Luiz | Resolvido junto com o APK: Firebase, que o Capacitor usa no Android |
 | Cloudflare | Luiz | Só com abuso real medido — o passo antes é o #67 |
 | Busca vetorial | Luiz | Só com o dado do #66 na mão |
 
@@ -168,8 +175,23 @@ Trabalho que não é código: alguém precisa fazer com a mão, em produção.
 - [ ] Trocar a senha de admin —
       [#69](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/69)
 
+      **Sem urgência**, decidido em 01/09/2026: só o Luiz e o Paulinho
+      operam a conta. Não há senha de admin no repositório — o
+      `criar-admin.mjs` lê do ambiente ou gera uma. O que a Issue trata é
+      que duas senhas passaram por conversa de chat em 25/08, então a
+      garantia se perdeu; não há indício de vazamento.
+
 ## Fora do escopo por decisão, não por esquecimento
 
-Banco de talentos com busca ativa de candidatos, testes e triagem
-automática, múltiplos usuários por empresa, chat interno e proteção por
-captcha. O porquê de cada um está no AGENTS.md.
+Testes e triagem automática, múltiplos usuários por empresa, chat interno
+e proteção por captcha. O porquê de cada um está no AGENTS.md.
+
+Sincronizar os componentes com o Claude Design —
+[#75](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/75), fechada em
+01/09/2026 sem fazer. O `.gitignore` continua ignorando `.ds-sync/`,
+`.design-sync/`, `dist/` e `ds-bundle/`, que é o rastro da ferramenta ter
+rodado uma vez.
+
+Busca de candidatos saiu desta lista em 31/08/2026: `/candidatos` existe,
+e o que a sustenta é o consentimento do candidato, não o afrouxamento da
+razão que a mantinha fora.
