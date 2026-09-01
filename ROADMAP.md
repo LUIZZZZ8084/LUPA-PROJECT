@@ -8,7 +8,7 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 25/08/2026.**
+**Última atualização: 01/09/2026.**
 
 ## Concluído
 
@@ -33,6 +33,14 @@ Base:
 
 Painel da empresa — completo, menos cobrança:
 
+- Busca entre quem pediu para ser encontrado, com filtro por habilidade e
+  área, e perfil do candidato —
+  [#96](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/96),
+  PR [#99](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/99)
+- Estágio com o nome de quem lê ("Não visualizado" para o candidato,
+  "Nova" para a empresa) e % de casamento na lista de currículos —
+  [#95](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/95),
+  PR [#97](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/97)
 - "Quero que empresas me encontrem": consentimento do candidato, desligado
   por padrão, e proximidade no bloco de recomendados —
   [#83](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/83),
@@ -70,6 +78,24 @@ Alcance:
   filtrada, em vez de dizer Sinop sempre —
   [#78](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/78)
 
+Perfil e vaga, o que cada um informa:
+
+- Endereço na vaga, aditivo ao bairro e fora do ranking —
+  [#86](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/86),
+  PR [#87](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/87)
+- Instagram e Facebook para empresa e prestador; o `site`, que existia e
+  nunca aparecia, passa a aparecer —
+  [#92](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/92),
+  PR [#94](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/94)
+- "Local" da vaga dizia só o bairro, sem a cidade — ambíguo com o estado
+  inteiro aberto —
+  [#88](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/88),
+  PR [#89](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/89)
+- Empresa via campo de foto pessoal que não usa, e o envio morria acima de
+  1 MB — o limite do framework era menor que o anunciado —
+  [#90](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/90),
+  PR [#91](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/91)
+
 Segurança (auditoria dos 20 pontos, em duas passadas):
 
 - Views sensíveis vazavam pela chave anônima —
@@ -105,6 +131,10 @@ Qualidade:
   [#70](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/70). A
   conferência achou o caminho quebrado acima de 1 MB, corrigido em
   PR [#91](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/91)
+- Manifesto do PWA era barrado pelo muro de login, e o app deixava de ser
+  instalável para quem ainda não tem conta —
+  [#98](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/98),
+  PR [#100](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/100)
 
 ## Pendente
 
