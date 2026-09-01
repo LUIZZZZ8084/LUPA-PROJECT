@@ -247,6 +247,80 @@ de dados serve o que é público, e o currículo fica fora de qualquer view
 por decisão de privacidade — lendo por lá, a pessoa salvava e a tela
 continuava dizendo que estava vazio.
 
+**Empresa não tem foto de perfil.** Quem representa a empresa na busca e
+nas vagas é a logo, que tem campo próprio. O campo de foto pessoal
+aparecia para os três papéis porque ficava fora de qualquer checagem —
+a intenção de mostrar só o bloco do papel de quem entrou já estava
+escrita no comentário da função, mas nunca chegou a valer para ele.
+
+**Site, Instagram e Facebook, para empresa e prestador.** Prestador
+autônomo aqui divulga mais pelo Instagram do que por site próprio, e não
+tinha onde pôr. Os três são opcionais e informativos: não entram em
+ranking nenhum, só dão o link para quem já decidiu olhar.
+
+`perfis_empresa.site` existia desde o começo e **nunca apareceu em lugar
+nenhum** — nem na tela pública, nem na prévia do próprio perfil. Campo
+que se edita e cujo resultado ninguém vê é campo que a pessoa preenche
+uma vez e conclui que não funciona.
+
+### O endereço da vaga é aditivo ao bairro, não substituto
+
+A vaga informa endereço — rua, número, ponto de referência, texto livre.
+Quem depende de ônibus ou de andar precisa saber onde é **antes** de se
+candidatar, não depois, no contato com a empresa.
+
+**Ele não entra no ranking de proximidade**, que continua olhando só
+bairro e cidade. Comparar endereço livre não é confiável o bastante para
+decidir ordem: "Rua X, 123" e "Rua X 123" são a mesma rua e strings
+diferentes. Bairro é curado onde existe lista, e é isso que o torna
+comparável.
+
+A coluna é opcional no banco, para não quebrar vaga publicada antes do
+campo existir; a tela de publicação é que exige preenchido em vaga nova.
+
+### Estágio da candidatura: o nome depende de quem lê
+
+Os cinco estágios (`enviada`, `visualizada`, `entrevista`, `aprovada`,
+`rejeitada`) são um campo só, e **`enviada` tem dois nomes** porque os
+dois lados fazem perguntas diferentes:
+
+| Quem olha | Pergunta | Lê |
+|---|---|---|
+| Empresa | "o que ainda não olhei?" | **Nova** |
+| Candidato | "alguém já olhou o meu?" | **Não visualizado** |
+
+"Nova" não responde nada para o candidato — a candidatura dele nasceu
+nova e ele sabe disso. E "Não visualizado" pode ser categórico porque o
+estágio sai de `enviada` **sozinho** quando alguém da empresa abre a
+ficha (`marcarComoVisualizada`), sem depender de ninguém lembrar de
+marcar. Os outros quatro são iguais nos dois lados: nome diferente para o
+mesmo estado, sem pergunta diferente por trás, seria só duas pessoas
+falando de coisas distintas.
+
+Os rótulos vivem em `APPLICATION_LABELS` e `APPLICATION_LABELS_CANDIDATO`,
+com teste que trava a divergência. O valor no banco não muda: renomear o
+enum custaria migração e apagaria histórico sem ganhar nada.
+
+### Na % de casamento, zero é uma afirmação
+
+A lista de currículos recebidos mostra quanto o candidato casa com a
+vaga, pelo mesmo `casar()` do bloco de recomendados — um segundo cálculo
+daria dois números para a mesma pergunta na mesma tela.
+
+**"0%" diz à empresa "comparei, e esta pessoa não tem nada do que vocês
+pedem"**, e isso basta para alguém não ser chamado. Por isso só sai
+quando é verdade. Fica fora do mapa, e a tela não desenha selo nenhum,
+quando:
+
+- a vaga não declara habilidade e o título não dá pista; **ou**
+- o candidato não declarou habilidade nenhuma.
+
+A segunda metade é o caso **comum**, não o raro: o cadastro não pede
+habilidade, ela entra depois no perfil. Sem ela, todo recém-cadastrado
+apareceria com 0% ao lado do nome — e a empresa aprenderia a ignorar o
+selo, ou descartaria quem só não preencheu um campo. Achado testando na
+tela, não lendo o código.
+
 ### Navegação pública, revertida
 
 O V0 nasceu com vagas e prestadores abertos a qualquer visitante. A razão
@@ -464,9 +538,12 @@ tão importante quanto o que entrou:
 
 | Recurso | Estado |
 |---|---|
-| Perfil público: razão social, setor, porte, site, descrição, logo | Modelado (`perfis_empresa`) |
-| Publicar, editar e encerrar vaga | Tela existe; ações no servidor pendentes |
-| Ver candidaturas por estágio | Tela existe; mover estágio pendente |
+| Perfil público: razão social, setor, porte, site, redes, descrição, logo | Pronto |
+| Publicar, editar e encerrar vaga | Pronto |
+| Ver candidaturas por estágio, e mover entre eles | Pronto |
+| Ficha do candidato, com currículo e contato | Pronto |
+| % de casamento com a vaga, na lista de currículos | Pronto |
+| Buscar entre quem pediu para ser encontrado | Pronto |
 | Publicações no perfil, até 10 ativas | Pronto |
 | Métricas próprias: visualizações e candidaturas por dia, 30 dias | Pronto |
 | Plano e cobrança | `trial`/`mensal` no schema; sem integração |
@@ -504,11 +581,26 @@ O padrão desligado é a parte que importa: numa cidade do tamanho de Sinop,
 quem está empregado e procurando outra coisa pode ter o patrão atual entre
 as empresas cadastradas.
 
-**Fora do escopo por decisão, não por esquecimento:** busca livre de
-candidatos (o alcance é sempre por vaga aberta, com casamento de
-habilidade), testes e triagem automática, e múltiplos usuários por empresa. Os três fazem sentido num produto maduro; num piloto de uma
-cidade, cada um deles é uma superfície a mais para manter sem ninguém
-pedindo ainda.
+**A busca de candidatos existe, e não é livre.** `/candidatos` lista quem
+ligou `visivel_para_empresas`, com filtro por habilidade e por área
+desejada; `/candidatos/[id]` abre o perfil. Decisão do Luiz em 31/08/2026,
+que afrouxou o corte anterior — até ali, "busca livre de candidatos"
+estava aqui como fora do escopo.
+
+O que sustenta o afrouxamento é o consentimento ter passado a existir. A
+razão do corte antigo não mudou: continua sendo o patrão atual entre as
+empresas cadastradas. Por isso quem não ligou a opção segue invisível, e
+o que a busca alcança é **contato, não currículo** — a view que responde
+a essa tela não traz currículo nem resumo.
+
+`candidato:buscar_disponiveis` é capacidade própria, e não uma das de
+vaga, porque o alcance é outro: as de vaga terminam em quem se candidatou
+àquela vaga, e esta começa em quem nunca se candidatou a nada.
+
+**Fora do escopo por decisão, não por esquecimento:** testes e triagem
+automática, e múltiplos usuários por empresa. Os dois fazem sentido num
+produto maduro; num piloto de uma cidade, cada um é uma superfície a mais
+para manter sem ninguém pedindo ainda.
 
 ---
 
@@ -561,6 +653,24 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   a URL. Rota que chama `notFound()` não pode ter `loading.tsx` acima dela.
 - **Opacidade sobre texto derruba o contraste** abaixo do mínimo legível.
   Para estado desabilitado, use cor explícita.
+- **Server Action recusa corpo acima de 1 MB, e o erro não passa pelo
+  `try/catch`.** É o padrão do Next quando
+  `experimental.serverActions.bodySizeLimit` não está configurado — e as
+  regras de arquivo prometiam 2 MB de imagem e 5 MB de currículo. Foto de
+  celular cai bem nessa faixa: o upload morria com "This page couldn't
+  load", porque a recusa acontece na camada do framework, antes de
+  `criarAcao` existir, e não vira mensagem de campo. Hoje o limite está em
+  `6mb` no `next.config.ts`, cobrindo a maior regra com folga para o
+  envelope do multipart. **Limite anunciado pela aplicação precisa caber
+  no limite do framework.**
+- **O matcher do proxy é onde um item esquecido não quebra nada e ninguém
+  vê.** `manifest.webmanifest` ficou de fora da lista de exclusões,
+  embora `icon` e `apple-icon` — gerados por rota do mesmo jeito —
+  estivessem lá. O manifesto passou a responder 307 para o login, e o
+  navegador não lê HTML de login como manifesto: o PWA deixou de ser
+  instalável para quem ainda não tem conta, que é justamente quem acabou
+  de receber o link. Nenhuma tela quebrou. Arquivo gerado por rota vai no
+  matcher, não em `ABERTAS`, que é lista de rota de navegação.
 - **Valor padrão de filtro na tela vira filtro invisível.** `/vagas` lia
   `single("cidade") ?? "Sinop"` — sobra do tempo em que Sinop era a única
   cidade. Aberto o estado inteiro, toda vaga publicada fora de Sinop sumia
