@@ -1,5 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import { hostsDeImagemRemota } from "./src/lib/imagens";
 
 /**
  * Content-Security-Policy.
@@ -45,6 +46,18 @@ const CSP = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: hostsDeImagemRemota(),
+    /*
+     * Só os tamanhos que a grade e o ampliado realmente pedem. Cada
+     * largura na lista é uma variante que a Vercel gera e cobra; deixar o
+     * padrão do Next (oito larguras) multiplicaria isso sem ninguém ver
+     * diferença numa miniatura de terço de tela.
+     */
+    imageSizes: [96, 128, 200, 256],
+    deviceSizes: [360, 480, 640, 828, 1080],
+  },
+
   // Falhar o build em erro de tipo é proposital: é mais barato corrigir
   // aqui do que descobrir com um usuário em Sinop. O lint roda separado,
   // via `npm run lint` e no pre-commit.

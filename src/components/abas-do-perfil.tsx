@@ -1,6 +1,7 @@
 "use client";
 
 import { ImagePlus, Loader2, Trash2, X } from "lucide-react";
+import Image from "next/image";
 import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
@@ -104,13 +105,21 @@ export function AbasDoPerfil({
                   className="block w-full overflow-hidden rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-servicos"
                 >
                   {t.imagemUrl ? (
-                    // biome-ignore lint/performance/noImgElement: o host do Storage não está nos `remotePatterns` — ver #121.
-                    <img
-                      src={t.imagemUrl}
-                      alt={t.titulo}
-                      loading="lazy"
-                      className="aspect-square w-full object-cover transition-opacity hover:opacity-85"
-                    />
+                    <span className="relative block aspect-square w-full">
+                      <Image
+                        src={t.imagemUrl}
+                        alt={t.titulo}
+                        fill
+                        /*
+                         * Três colunas no celular, e a grade não passa de
+                         * `max-w-lg` no desktop — daí o teto fixo. Sem
+                         * `sizes` o Next assume tela cheia e baixa uma
+                         * imagem grande demais para uma miniatura.
+                         */
+                        sizes="(max-width: 640px) 33vw, 176px"
+                        className="object-cover transition-opacity hover:opacity-85"
+                      />
+                    </span>
                   ) : (
                     <span className="flex aspect-square w-full items-center justify-center bg-panel-2 p-2 text-center text-[11px] text-muted">
                       {t.titulo}
@@ -182,11 +191,19 @@ function Ampliada({
         </button>
 
         {trabalho.imagemUrl && (
-          // biome-ignore lint/performance/noImgElement: mesma razão da grade — ver #121.
-          <img
+          /*
+           * Aqui a proporção é a da foto, que só se sabe ao carregar:
+           * `width`/`height` dão a relação para reservar o espaço, e
+           * `h-auto` devolve a proporção real quando ela chega. Sem isso a
+           * legenda pula para baixo no meio da leitura.
+           */
+          <Image
             src={trabalho.imagemUrl}
             alt={trabalho.titulo}
-            className="w-full object-contain"
+            width={1024}
+            height={1024}
+            sizes="(max-width: 640px) 100vw, 512px"
+            className="h-auto w-full object-contain"
           />
         )}
 
