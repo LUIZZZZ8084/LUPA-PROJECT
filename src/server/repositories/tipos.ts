@@ -17,6 +17,18 @@ export interface Usuario {
   senhaHash: string;
   papel: Papel;
   nomeCompleto: string;
+  /**
+   * CPF de quem oferece serviço, só em dígitos.
+   *
+   * Mora aqui e não em `PerfilPrestador` por privacidade, não por
+   * arrumação: `perfis_prestador` é lida pela chave anônima, que vai para
+   * o navegador; `usuarios` só pela chave de serviço. CNPJ é registro
+   * público e pode ficar exposto — CPF não.
+   *
+   * Nulo para quem não é prestador e para quem virou antes do campo
+   * existir.
+   */
+  cpf: string | null;
   telefone: string;
   cidade: string;
   bairro: string | null;
@@ -140,12 +152,33 @@ export interface RepositorioUsuarios {
   atualizarSenhaHash(id: string, senhaHash: string): Promise<void>;
   registrarAcesso(id: string): Promise<void>;
 
+  /**
+   * Troca o papel de uma conta que já existe.
+   *
+   * Existe para o candidato que vira prestador. O papel é a chave de todo
+   * o RBAC, então quem chama isto tem duas obrigações: avisar a pessoa do
+   * que ela perde, e reemitir a sessão — o papel vai dentro do JWT, e sem
+   * reemitir ela ficaria com as capacidades antigas até o token expirar.
+   */
+  atualizarPapel(id: string, papel: Papel): Promise<void>;
+
   criarPerfilEmpresa(perfil: PerfilEmpresa): Promise<void>;
   criarPerfilPrestador(perfil: PerfilPrestador): Promise<void>;
   criarPerfilCandidato(perfil: PerfilCandidato): Promise<void>;
 
   /** Para o cadastro de empresa: CNPJ é único na plataforma. */
   cnpjEmUso(cnpj: string): Promise<boolean>;
+
+  /** Mesma regra do CNPJ, para quem ativa o lado prestador. */
+  cpfEmUso(cpf: string): Promise<boolean>;
+
+  /**
+   * Grava o documento de quem virou prestador.
+   *
+   * Separado de `atualizarPapel` porque são duas garantias diferentes, e
+   * quem lê o serviço precisa ver as duas acontecendo.
+   */
+  definirCpf(id: string, cpf: string): Promise<void>;
 
   /**
    * Candidatos que ligaram "quero que empresas me encontrem".

@@ -6,11 +6,11 @@
  * navegador, não garantia. Quem posta direto na action manda o que quiser.
  */
 
-export type Especie = "avatar" | "logo" | "curriculo";
+export type Especie = "avatar" | "logo" | "curriculo" | "publicacao";
 
 export interface Regra {
   /** Bucket de destino. */
-  balde: "avatares" | "curriculos";
+  balde: "avatares" | "curriculos" | "portfolio";
   /** Pasta dentro do bucket, para separar o que é foto do que é logo. */
   pasta: string;
   /** Público significa servido por URL fixa; privado exige URL assinada. */
@@ -20,6 +20,15 @@ export interface Regra {
   limiteBytes: number;
   /** Como explicar o limite para quem está enviando. */
   descricao: string;
+  /**
+   * Se cada envio ganha caminho próprio em vez de substituir o anterior.
+   *
+   * Foto de perfil, logo e currículo são um por pessoa: o caminho fixo faz
+   * a troca substituir, e é isso que evita o bucket virar depósito de
+   * versões pagas. O feed do prestador são até dez fotos ao mesmo tempo —
+   * ali o caminho fixo apagaria a foto anterior a cada envio.
+   */
+  varias?: boolean;
 }
 
 /**
@@ -44,6 +53,18 @@ const IMAGEM = {
 export const REGRAS: Readonly<Record<Especie, Regra>> = {
   avatar: { balde: "avatares", pasta: "avatar", publico: true, ...IMAGEM },
   logo: { balde: "avatares", pasta: "logo", publico: true, ...IMAGEM },
+  /*
+   * As fotos do feed do prestador, no bucket que já existe para isso.
+   * Mesmo limite de tamanho das outras imagens: quem envia é a mesma
+   * pessoa, do mesmo celular, no mesmo dado móvel contado.
+   */
+  publicacao: {
+    balde: "portfolio",
+    pasta: "trabalho",
+    publico: true,
+    varias: true,
+    ...IMAGEM,
+  },
   curriculo: {
     balde: "curriculos",
     pasta: "curriculo",
@@ -124,5 +145,17 @@ export function caminhoDoArquivo(
   if (!extensao) {
     throw new Error(`tipo sem extensão conhecida: ${tipoMime}`);
   }
+
+  /*
+   * Onde há várias por pessoa, o nome ganha um sorteio do servidor.
+   *
+   * Continua sem nada vindo do cliente: o id é da sessão e o sufixo é
+   * gerado aqui. Sem ele, a segunda foto do feed sobrescreveria a
+   * primeira — o caminho fixo é proposital para avatar, e errado aqui.
+   */
+  if (regra.varias) {
+    return `${regra.pasta}/${usuarioId}/${crypto.randomUUID()}.${extensao}`;
+  }
+
   return `${regra.pasta}/${usuarioId}.${extensao}`;
 }

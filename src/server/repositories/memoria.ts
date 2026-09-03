@@ -1,3 +1,4 @@
+import type { Papel } from "../auth/rbac";
 import type {
   DadosNovoUsuario,
   EdicaoBasica,
@@ -29,6 +30,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
   private usuarios = new Map<string, Usuario>();
   private porEmailIndice = new Map<string, string>();
   private cnpjs = new Set<string>();
+  private cpfs = new Set<string>();
 
   private empresas = new Map<string, PerfilEmpresa>();
   private prestadores = new Map<string, PerfilPrestador>();
@@ -58,6 +60,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
       senhaHash: dados.senhaHash,
       papel: dados.papel,
       nomeCompleto: dados.nomeCompleto,
+      cpf: null,
       telefone: dados.telefone,
       cidade: dados.cidade,
       bairro: dados.bairro ?? null,
@@ -77,6 +80,11 @@ export class RepositorioMemoria implements RepositorioUsuarios {
   async atualizarSenhaHash(id: string, senhaHash: string): Promise<void> {
     const usuario = this.usuarios.get(id);
     if (usuario) this.usuarios.set(id, { ...usuario, senhaHash });
+  }
+
+  async atualizarPapel(id: string, papel: Papel): Promise<void> {
+    const usuario = this.usuarios.get(id);
+    if (usuario) this.usuarios.set(id, { ...usuario, papel });
   }
 
   async registrarAcesso(id: string): Promise<void> {
@@ -118,6 +126,17 @@ export class RepositorioMemoria implements RepositorioUsuarios {
 
   async cnpjEmUso(cnpj: string): Promise<boolean> {
     return this.cnpjs.has(cnpj);
+  }
+
+  async cpfEmUso(cpf: string): Promise<boolean> {
+    return this.cpfs.has(cpf);
+  }
+
+  async definirCpf(id: string, cpf: string): Promise<void> {
+    const usuario = this.usuarios.get(id);
+    if (!usuario) return;
+    this.usuarios.set(id, { ...usuario, cpf });
+    this.cpfs.add(cpf);
   }
 
   /* ---------- Leitura de perfil ---------- */

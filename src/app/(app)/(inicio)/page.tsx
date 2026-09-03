@@ -17,25 +17,81 @@ import { Reveal } from "@/components/motion/reveal";
 import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
-import { CIDADE_INICIAL, ESTADO_NOME } from "@/lib/constants";
+import { CIDADE_INICIAL, ESTADO_NOME, rotuloDaCidade } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
+import { sessaoAtual } from "@/server/auth/cookies";
 import { origemDoUsuario } from "@/server/auth/origem";
+import { type Papel, pode } from "@/server/auth/rbac";
+
+/**
+ * O terceiro card, decidido pelo papel de quem está olhando.
+ *
+ * Ele apontava sempre para `/cadastro?tipo=prestador_servico` — a tela de
+ * criar conta. Só que ninguém vê esta home sem sessão: o app é fechado por
+ * login. Mandar quem já tem conta para o cadastro é pedir que ela mantenha
+ * duas contas e não ache nenhuma depois.
+ *
+ * Quem pode ativar (candidato) vai para a ativação; quem já é prestador vai
+ * para o próprio perfil, que é onde ele edita o anúncio; e para os outros
+ * papéis o card deixa de prometer o que não se aplica a eles.
+ */
+function cardDeServico(papel: Papel | undefined) {
+  if (papel && pode(papel, "prestador:ativar")) {
+    return {
+      href: "/perfil/virar-prestador",
+      titulo: "Oferecer serviço",
+      legenda: "Divulgue suas habilidades",
+    };
+  }
+
+  if (papel === "prestador_servico") {
+    return {
+      href: "/perfil",
+      titulo: "Meu perfil de prestador",
+      legenda: "Edite seu anúncio",
+    };
+  }
+
+  return {
+    href: "/perfil",
+    titulo: "Meu perfil",
+    legenda: "Seus dados e verificação",
+  };
+}
 
 export default async function HomePage() {
   // Os destaques também vêm do mais perto para o mais longe: a home é a
   // primeira impressão, e quatro vagas de Cuiabá para quem é de Sinop
   // dizem que o app não é da cidade dela.
-  const { jobs, providers, totals } = await getHomeFeed(
-    await origemDoUsuario(),
-  );
+  const origem = await origemDoUsuario();
+  const { jobs, providers, totals } = await getHomeFeed(origem);
+  const sessao = await sessaoAtual();
+  const terceiroCard = cardDeServico(sessao?.papel);
 
   return (
     <>
       <section className="aurora border-b border-line">
         <div className="mx-auto max-w-4xl px-4 pt-10 pb-12 sm:px-6 sm:pt-16">
+          {/*
+           * O pino de localização promete "aqui é onde você está" — e até
+           * a #107 dizia sempre "Mato Grosso · começando por Sinop",
+           * pra quem quer que fosse, de qualquer cidade. `origemDoUsuario()`
+           * já lê a cidade da conta para ordenar a busca por perto; usar o
+           * mesmo valor aqui é a diferença entre um selo de abrangência e
+           * uma promessa que o ícone já fazia sem cumprir.
+           *
+           * Sem sessão o home nem renderiza (app fechado por login), e
+           * `cidade` tem padrão no cadastro — mas se algum dia vier vazia,
+           * cai de volta no selo antigo em vez de mostrar um pino sem
+           * legenda.
+           */}
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
             <MapPin size={12} className="text-vagas" />
-            {ESTADO_NOME} · começando por {CIDADE_INICIAL}
+            {origem?.cidade
+              ? origem.bairro
+                ? `${origem.bairro}, ${rotuloDaCidade(origem.cidade)}`
+                : rotuloDaCidade(origem.cidade)
+              : `${ESTADO_NOME} · começando por ${CIDADE_INICIAL}`}
           </span>
 
           <h1 className="mt-5 text-[2rem] leading-[1.1] font-bold tracking-tight sm:text-5xl">
@@ -65,10 +121,10 @@ export default async function HomePage() {
               tone="servicos"
             />
             <ActionCard
-              href="/cadastro?tipo=prestador_servico"
+              href={terceiroCard.href}
               icon={<Users size={20} />}
-              title="Oferecer serviço"
-              subtitle="Divulgue suas habilidades"
+              title={terceiroCard.titulo}
+              subtitle={terceiroCard.legenda}
               tone="empresas"
             />
           </div>
@@ -160,8 +216,20 @@ export default async function HomePage() {
           </Panel>
         </Reveal>
 
+        {/*
+         * Direitos autorais, não área de cobertura.
+         *
+         * Dizia "aberto a todo o Mato Grosso · começamos por Sinop" — a
+         * cobertura geográfica já está clara na home inteira (filtro de
+         * cidade, badge do topo); rodapé é onde se espera outra coisa.
+         *
+         * "Palu" é "Lupa" com as duas metades trocadas: LU (Luiz) + PA
+         * (Paulinho) virou PA + LU — a mesma lógica de fundação do nome
+         * do produto, agora para a pessoa jurídica por trás dele.
+         */}
         <p className="mt-8 text-center text-xs text-faint">
-          Lupa · aberto a todo o {ESTADO_NOME} · começamos por {CIDADE_INICIAL}
+          Lupa · © {new Date().getFullYear()} Palu Soluções Digitais. Todos os
+          direitos reservados.
         </p>
       </PageShell>
     </>

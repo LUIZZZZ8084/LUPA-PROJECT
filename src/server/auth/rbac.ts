@@ -34,6 +34,18 @@ export type Capacidade =
   // Perfil
   | "perfil:editar_proprio"
   | "perfil:enviar_documento"
+  /*
+   * Ativar o lado prestador de uma conta que já existe.
+   *
+   * Só o candidato tem: a empresa não vira prestador (é outra pessoa
+   * jurídica, com CNPJ, não CPF), o prestador já é, e o admin não age no
+   * lugar de ninguém. Capacidade própria, e não um `if` na tela, porque é
+   * a matriz que responde "quem pode virar o quê" — a tela só pergunta.
+   *
+   * A troca é de mão única de propósito: quem ativa deixa de se candidatar
+   * a vagas. Voltar atrás é caso de suporte, como a cidade e o CNPJ.
+   */
+  | "prestador:ativar"
   // Vagas
   | "vaga:publicar"
   | "vaga:editar_propria"
@@ -58,6 +70,15 @@ export type Capacidade =
   | "publicacao:arquivar_propria"
   // Avaliações
   | "avaliacao:receber"
+  /*
+   * Avaliar um prestador.
+   *
+   * Vale para qualquer conta de gente — entrar já é pré-requisito para
+   * usar o app, e quem contratou pode ser candidato, outro prestador ou
+   * uma empresa. O admin fica de fora pela regra da casa: ele enxerga
+   * tudo e não age no lugar de ninguém, e reputação é ação com autor.
+   */
+  | "avaliacao:escrever"
   // Administração
   | "admin:painel"
   | "admin:metricas"
@@ -73,15 +94,28 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "perfil:enviar_documento",
     "candidatura:criar",
     "candidatura:ver_propria",
+    "prestador:ativar",
+    "avaliacao:escrever",
   ],
 
   prestador_servico: [
     "perfil:editar_proprio",
     "perfil:enviar_documento",
+    /*
+     * Ver as candidaturas antigas, sem poder criar novas.
+     *
+     * Quem virou prestador deixou de se candidatar — mas o que ela já fez
+     * continua sendo dela. Sem esta linha, `/perfil/candidaturas`
+     * responderia 404 no dia seguinte à troca, e a pessoa concluiria que o
+     * app perdeu o histórico dela. `candidatura:criar` fica de fora, que é
+     * o que a troca de papel de fato tira.
+     */
+    "candidatura:ver_propria",
     "publicacao:criar",
     "publicacao:editar_propria",
     "publicacao:arquivar_propria",
     "avaliacao:receber",
+    "avaliacao:escrever",
   ],
 
   empresa: [
@@ -96,6 +130,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "publicacao:criar",
     "publicacao:editar_propria",
     "publicacao:arquivar_propria",
+    "avaliacao:escrever",
   ],
 
   /*

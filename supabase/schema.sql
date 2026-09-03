@@ -80,6 +80,21 @@ create table usuarios (
   senha_hash           text not null,
   papel                papel_usuario not null,
   nome_completo        text not null,
+  /*
+   * CPF de quem oferece serviço.
+   *
+   * Fica aqui, e não em `perfis_prestador`, por uma razão de privacidade
+   * que não é simetria com o CNPJ: `perfis_prestador` tem policy
+   * `using (true)` e `grant select` para `anon` — o que entra lá é
+   * público. `usuarios` só é alcançada pela chave de serviço, no
+   * servidor, e é onde já mora o hash de senha.
+   *
+   * CNPJ pode ser público porque é registro público; CPF não é.
+   *
+   * Nulo para quem se cadastrou antes do campo existir e para quem não é
+   * prestador. Quem ativa o lado prestador hoje preenche.
+   */
+  cpf                  text,
   telefone             text not null,
   cidade               text not null default 'Sinop',
   bairro               text,
@@ -95,6 +110,10 @@ create table usuarios (
   constraint email_com_formato check (position('@' in email) > 1),
   constraint telefone_so_digitos check (telefone ~ '^[0-9]{10,13}$')
 );
+
+-- Um CPF, um prestador. Parcial porque a esmagadora maioria das contas não
+-- tem documento nenhum, e nulo não pode colidir com nulo.
+create unique index usuarios_cpf_idx on usuarios (cpf) where cpf is not null;
 
 -- E-mail único ignorando maiúsculas: "Joao@" e "joao@" são a mesma pessoa, e
 -- aceitar os dois cria duas contas para quem só errou o teclado.
@@ -185,6 +204,7 @@ create table perfis_prestador (
 
 create index perfis_prestador_categoria_idx on perfis_prestador (categoria_id);
 create index perfis_prestador_nota_idx on perfis_prestador (nota_media desc);
+
 
 create table perfis_empresa (
   usuario_id   uuid primary key references usuarios(id) on delete cascade,
@@ -277,13 +297,38 @@ create index candidaturas_candidato_idx on candidaturas (candidato_id);
 create table avaliacoes (
   id             uuid primary key default gen_random_uuid(),
   prestador_id   uuid not null references usuarios(id) on delete cascade,
+  /*
+   * De quem é a avaliação.
+   *
+   * Nulo nas de demonstração, que vieram do seed antes de existir escrita
+   * pela aplicação. `on delete set null` porque a avaliação é informação
+   * do prestador também: apagar a conta de quem escreveu não pode apagar
+   * a reputação de quem foi avaliado.
+   */
+  avaliador_id   uuid references usuarios(id) on delete set null,
+  -- Mantido para as linhas antigas e para exibir sem outra consulta.
   nome_avaliador text not null,
   nota           int not null check (nota between 1 and 5),
   comentario     text,
-  criado_em      timestamptz not null default now()
+  criado_em      timestamptz not null default now(),
+
+  -- Ninguém avalia a si mesmo.
+  constraint avaliacao_nao_e_de_si_mesmo
+    check (avaliador_id is null or avaliador_id <> prestador_id)
 );
 
 create index avaliacoes_prestador_idx on avaliacoes (prestador_id, criado_em desc);
+
+/*
+ * Uma avaliação por pessoa, por prestador.
+ *
+ * A checagem na aplicação não basta: dois envios simultâneos passam os
+ * dois e gravam os dois. Parcial porque as de demonstração não têm dono e
+ * nulo não colide com nulo.
+ */
+create unique index avaliacoes_um_por_pessoa_idx
+  on avaliacoes (prestador_id, avaliador_id)
+  where avaliador_id is not null;
 
 -- Mantém nota_media e total_avaliacoes em dia a cada avaliação.
 create or replace function atualizar_nota_prestador()

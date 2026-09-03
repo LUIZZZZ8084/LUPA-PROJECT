@@ -312,3 +312,37 @@ test.describe("telas de autenticação", () => {
     ).toHaveCount(0);
   });
 });
+
+test.describe("vitrine só com quem foi verificado", () => {
+  /**
+   * Virar prestador não coloca ninguém na busca — o documento passa pela
+   * fila que o admin decide. Numa plataforma onde alguém abre a porta de
+   * casa para um desconhecido, anúncio não conferido na vitrine é o
+   * começo do golpe.
+   */
+  test("prestador em análise não aparece na busca", async ({ page }) => {
+    await page.goto("/servicos");
+
+    await expect(page.getByText("José Moreira")).toHaveCount(0);
+    await expect(page.getByText("Pedro Alves")).toHaveCount(0);
+
+    // E a vitrine não ficou vazia por causa do filtro.
+    await expect(page.locator('a[href^="/servicos/"]').first()).toBeVisible();
+  });
+
+  /**
+   * Mas o perfil abre por link direto, e diz o que é.
+   *
+   * Filtrar também aqui esconderia o prestador do próprio perfil — a
+   * armadilha que já derrubou quem acabava de virar prestador.
+   */
+  test("o perfil em análise abre e explica por que não aparece", async ({
+    page,
+  }) => {
+    const resposta = await page.goto("/servicos/prv-jose-moreira");
+
+    expect(resposta?.status()).toBe(200);
+    await expect(page.getByText("Perfil em análise")).toBeVisible();
+    await expect(page.getByText(/não aparece na busca/i)).toBeVisible();
+  });
+});
