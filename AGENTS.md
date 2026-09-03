@@ -212,6 +212,32 @@ perfil levava a uma tela separada só para isso — uma tela a mais entre a
 pessoa e a foto do trabalho dela, estando ela já olhando para o lugar onde
 a foto vai aparecer. O atalho saiu; sobrou "Como você aparece na busca".
 
+**Editar e remover moram dentro da própria foto, não numa lista abaixo da
+grade.** A primeira versão desenhava as duas coisas: a grade de miniaturas
+e, embaixo, uma lista de títulos com uma lixeira — o mesmo item duas
+vezes, a segunda sem foto e sem graça nenhuma. Reclamação do Luiz em
+03/09/2026, com print: "que coisa horrível é esse teste aí". A correção
+foi levar editar, remover e a confirmação para dentro do card ampliado,
+que é onde a pessoa já está olhando quando decide mexer.
+
+**"Remover" pede confirmação, e a frase diz que arquiva.** Um segundo
+clique sem aviso teria feito alguém tirar do ar sem querer; a frase
+("nada é apagado") é a mesma garantia que já vale para arquivar em
+qualquer lugar do app — só que agora repetida no lugar onde a decisão é
+tomada.
+
+**A exclusão fecha o card sozinho, e isso não veio de graça.** Um
+`<form action={excluir}>` puro deixava o card aberto depois do clique: o
+item saía da grade por trás — o contador de espaços já mostrava o número
+novo —, mas o card ampliado guarda o próprio trabalho num estado do
+componente pai, que uma revalidação não recalcula. É a mesma família de
+armadilha que a troca de papel e a confirmação de avaliação já
+registraram neste arquivo, só que ao contrário: em vez de um estado que
+some antes da hora, um estado que sobrevive além da hora. A saída foi
+`useTransition` chamando `fechar()` explicitamente depois do `await` —
+fechar o que a lista já reflete, em vez de confiar que o React vai
+perceber sozinho.
+
 **"Bairros atendidos" saiu junto.** Era lista curada por cidade, e não
 existe lista pronta de bairro para os 142 municípios de MT — a mesma razão
 que já tinha derrubado o enum de bairro antes. O bairro que vale é o que a

@@ -114,6 +114,55 @@ export async function publicarTrabalho(
   });
 }
 
+/**
+ * Editar pelo próprio card ampliado: texto e, se vier, foto nova.
+ *
+ * Espelha `publicarTrabalho` de propósito. A foto é opcional porque o caso
+ * comum é corrigir a legenda — mandar o arquivo de novo só para arrumar uma
+ * palavra seria cruel em dado móvel contado.
+ *
+ * Foto nova **substitui** a anterior. `caminhoDoArquivo` sorteia um sufixo
+ * para publicação, então o objeto antigo continua no bucket; apagá-lo aqui
+ * exigiria destrinchar a URL para achar o caminho, e o custo de um objeto
+ * órfão é menor que o de apagar o arquivo errado.
+ */
+export async function editarTrabalho(
+  sessao: Autenticado | null,
+  id: string,
+  dados: { titulo: string; corpo: string; foto?: File | null },
+): Promise<Publicacao> {
+  const autenticado = exigirCapacidade(sessao, "publicacao:editar_propria");
+
+  /*
+   * A checagem de dono acontece de novo dentro de `editarPublicacao`. Aqui
+   * ela vem antes porque o envio do arquivo é o passo caro e irreversível:
+   * subir a foto de alguém para depois descobrir que a publicação é de
+   * outro deixaria lixo no bucket a cada tentativa.
+   */
+  const atual = await repositorioPublicacoes().porId(id);
+  if (!atual) throw erros.naoEncontrado("Publicação");
+  exigirDono(autenticado, atual.autorId, "Publicação");
+
+  let imagemUrl: string | undefined;
+
+  if (dados.foto && dados.foto.size > 0 && temArmazenamento) {
+    const { referencia } = await enviarArquivo(
+      autenticado.usuarioId,
+      "publicacao",
+      dados.foto,
+    );
+    imagemUrl = referencia;
+  }
+
+  return editarPublicacao(sessao, id, {
+    titulo: dados.titulo,
+    corpo: dados.corpo,
+    // Sem foto nova, o campo nem viaja: `undefined` é "não mexa", enquanto
+    // `null` apagaria a foto que já está lá.
+    ...(imagemUrl === undefined ? {} : { imagemUrl }),
+  });
+}
+
 export async function editarPublicacao(
   sessao: Autenticado | null,
   id: string,

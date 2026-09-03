@@ -8,6 +8,7 @@ import {
   arquivarPublicacao,
   criarPublicacao,
   editarPublicacao,
+  editarTrabalho,
   publicarTrabalho,
   reativarPublicacao,
 } from "@/server/publicacoes/servico";
@@ -157,6 +158,36 @@ export const reativar = criarAcao({
     return { id: publicacao.id, status: publicacao.status };
   },
 });
+
+/**
+ * Editar pelo card ampliado da aba Serviços.
+ *
+ * A foto é opcional: o caso comum é corrigir a legenda, e obrigar a
+ * reenviar a imagem para trocar uma palavra seria caro em dado móvel
+ * contado. Quando vem, substitui a que estava lá.
+ */
+export const editarComFoto = criarAcao({
+  nome: "publicacao.editar-trabalho",
+  entrada: z.object({
+    id: zId,
+    titulo: conteudo.titulo,
+    corpo: conteudo.corpo,
+    foto: z.instanceof(File).optional(),
+  }),
+  executar: async ({ id, ...dados }) => {
+    const publicacao = await editarTrabalho(await sessaoAtual(), id, dados);
+    revalidatePath("/perfil/publicacoes");
+    revalidarVitrines();
+    return { id: publicacao.id };
+  },
+});
+
+export async function editarComFotoComEstado(
+  _anterior: EstadoPublicacao,
+  formData: FormData,
+): Promise<EstadoPublicacao> {
+  return paraEstado(await editarComFoto(formData));
+}
 
 /**
  * Remover pela aba Serviços do perfil público.

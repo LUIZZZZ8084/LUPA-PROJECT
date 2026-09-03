@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   arquivarPelaAba,
+  editarComFotoComEstado,
   publicarComFotoComEstado,
 } from "@/app/(app)/perfil/publicacoes/actions";
 import { AbasDoPerfil, GerenciarTrabalhos } from "@/components/abas-do-perfil";
@@ -258,18 +259,22 @@ export default async function ProviderPage({
           acoesDoDono={
             ehDono ? (
               <GerenciarTrabalhos
-                trabalhos={trabalhos.map((t) => ({
-                  id: t.id,
-                  titulo: t.titulo,
-                  corpo: t.corpo,
-                  imagemUrl: t.imagemUrl,
-                }))}
                 restantes={resumoTrabalhos.restantes}
                 limite={resumoTrabalhos.limite}
                 publicar={publicarComFotoComEstado}
-                arquivar={arquivarPelaAba}
               />
             ) : null
+          }
+          /*
+           * Editar e remover vivem dentro da foto ampliada. A lista de
+           * títulos abaixo da grade desenhava o mesmo item duas vezes, e a
+           * segunda sem foto — decisão do Luiz em 03/09/2026, olhando para
+           * o resultado na tela.
+           */
+          dono={
+            ehDono
+              ? { editar: editarComFotoComEstado, excluir: arquivarPelaAba }
+              : undefined
           }
           sobre={
             <>
