@@ -7,9 +7,19 @@
  * — a vitrine da demonstração é estática —, então a grade cheia não é
  * alcançável de ponta a ponta sem banco.
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { AbasDoPerfil, type TrabalhoNaAba } from "@/components/abas-do-perfil";
+import {
+  AbasDoPerfil,
+  GerenciarTrabalhos,
+  type TrabalhoNaAba,
+} from "@/components/abas-do-perfil";
 
 const TRABALHOS: TrabalhoNaAba[] = [
   {
@@ -124,5 +134,127 @@ describe("abas do perfil", () => {
 
     expect(screen.getByText("Ainda não publicou trabalhos.")).toBeTruthy();
     expect(document.querySelector("#painel-servicos ul")).toBeNull();
+  });
+});
+
+/**
+ * O painel do dono, dentro da aba.
+ *
+ * É por aqui que a pessoa publica e remove sem sair do perfil. Os estados
+ * que importam: o que ela vê antes de abrir o formulário, o que acontece
+ * quando o limite acabou, e o que aparece quando o envio falha.
+ */
+describe("gerenciar trabalhos", () => {
+  const semEfeito = async () => ({});
+  const removerNada = async () => {};
+
+  function montarGerenciador(
+    restantes: number,
+    publicar = semEfeito,
+    trabalhos = TRABALHOS,
+  ) {
+    return render(
+      <GerenciarTrabalhos
+        trabalhos={trabalhos}
+        restantes={restantes}
+        limite={10}
+        publicar={publicar}
+        arquivar={removerNada}
+      />,
+    );
+  }
+
+  it("diz quantos espaços sobraram", () => {
+    montarGerenciador(7);
+    expect(screen.getByText("7 de 10 espaços livres.")).toBeTruthy();
+  });
+
+  /**
+   * No limite, o botão desabilita e o texto diz o que fazer. Um botão que
+   * aceita o clique e recusa depois é a armadilha que este projeto já
+   * registrou mais de uma vez.
+   */
+  it("no limite, não deixa adicionar e explica por quê", () => {
+    montarGerenciador(0);
+
+    const botao = screen.getByRole("button", { name: /adicionar trabalho/i });
+    expect((botao as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/Remova um para publicar outro/)).toBeTruthy();
+  });
+
+  it("abre o formulário e dá para desistir", () => {
+    montarGerenciador(3);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /adicionar trabalho/i }),
+    );
+    expect(screen.getByLabelText("O que é este trabalho")).toBeTruthy();
+    expect(screen.getByLabelText("Legenda")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByLabelText("Legenda")).toBeNull();
+  });
+
+  it("lista o que já existe, com botão de remover nomeado", () => {
+    montarGerenciador(7);
+
+    expect(
+      screen.getByRole("button", {
+        name: "Remover Quadro de disjuntores trocado",
+      }),
+    ).toBeTruthy();
+  });
+
+  it("sem trabalho nenhum, não desenha lista de remoção", () => {
+    montarGerenciador(10, semEfeito, []);
+    expect(screen.queryByRole("button", { name: /^Remover/ })).toBeNull();
+  });
+});
+
+/**
+ * O envio que falha precisa dizer por quê, sem fechar o formulário.
+ *
+ * Fechar levaria junto o que a pessoa digitou — e em conexão ruim isso é a
+ * diferença entre corrigir e desistir.
+ */
+describe("gerenciar trabalhos: envio", () => {
+  it("mostra o erro e mantém o formulário aberto", async () => {
+    render(
+      <GerenciarTrabalhos
+        trabalhos={[]}
+        restantes={5}
+        limite={10}
+        publicar={async () => ({ erro: "Escolha uma foto." })}
+        arquivar={async () => {}}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /adicionar trabalho/i }),
+    );
+    fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+
+    expect(await screen.findByText("Escolha uma foto.")).toBeTruthy();
+    expect(screen.getByLabelText("Legenda")).toBeTruthy();
+  });
+
+  /** Deu certo: o formulário fecha sozinho, sem a pessoa ter de fechar. */
+  it("no sucesso, fecha o formulário", async () => {
+    render(
+      <GerenciarTrabalhos
+        trabalhos={[]}
+        restantes={5}
+        limite={10}
+        publicar={async () => ({ ok: true })}
+        arquivar={async () => {}}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /adicionar trabalho/i }),
+    );
+    fireEvent.submit(document.querySelector("form") as HTMLFormElement);
+
+    await waitFor(() => expect(screen.queryByLabelText("Legenda")).toBeNull());
   });
 });
