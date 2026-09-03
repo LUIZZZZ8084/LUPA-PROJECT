@@ -136,6 +136,30 @@ describe("prestador", () => {
     expect(screen.queryByText(/Bairros atendidos/)).toBeNull();
   });
 
+  /**
+   * O estado sem CPF confirmado não oferece um botão que não leva a lugar
+   * nenhum. A tela chegou a prometer "envie documento e selfie", e esse
+   * envio nunca existiu no app — este teste é o que impede a promessa
+   * quebrada de voltar (#133).
+   */
+  it("sem CPF confirmado, avisa sem oferecer um botão morto", () => {
+    render(
+      <PerfilPrestador
+        perfil={ANUNCIO}
+        listagem={LISTAGEM}
+        docVerificado={false}
+      />,
+    );
+    expect(screen.getByText(/ainda não aparece na busca/i)).toBeTruthy();
+    expect(screen.queryByText(/envie documento/i)).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: /enviar documento/i }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /enviar documento/i }),
+    ).toBeNull();
+  });
+
   /** Ver o próprio anúncio como o cliente vê é o que revela o que falta. */
   it("leva ao próprio perfil público", () => {
     render(

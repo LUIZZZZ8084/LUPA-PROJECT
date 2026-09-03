@@ -370,10 +370,25 @@ ignorá-la.
 
 ### A vitrine só mostra prestador verificado
 
-Virar prestador não coloca ninguém na busca: o documento passa pela fila
-que o admin já opera, e só depois de aprovado o perfil entra em
-`/servicos`. Numa plataforma onde alguém abre a porta de casa para um
-desconhecido, anúncio não conferido na vitrine é o começo do golpe.
+Virar prestador não coloca ninguém na busca sem verificação — só que a
+verificação, desde 03/09/2026, não é mais fila de admin: é o CPF, válido
+e único, confirmado na mesma ação que ativa o papel (#133). Numa
+plataforma onde alguém abre a porta de casa para um desconhecido, anúncio
+não conferido na vitrine é o começo do golpe.
+
+**A fila do admin existe no banco e nunca teve porta de entrada.**
+`pedidos_verificacao` e a tela de decisão em `/admin` foram construídas
+para receber documento e selfie — mas nenhuma tela do app jamais teve
+campo para enviar os dois. `Especie` em `src/server/arquivos/regras.ts`
+só conhece `avatar`, `logo`, `curriculo` e `publicacao`; documento e
+selfie nunca foram um deles. Fora da demonstração, que usa dado semeado,
+todo prestador ficava para sempre atrás de uma tela que prometia "envie
+documento e selfie em Editar perfil" e não levava a lugar nenhum — a
+mesma classe de bug que a lista abaixo já registra duas vezes. A correção
+foi trocar a promessa quebrada pelo que já era exigido de qualquer forma:
+CPF válido e único vira a verificação em si, com o mesmo limite que já
+vale para CNPJ — prova que o documento existe e é único, não que é de
+quem digitou.
 
 **O filtro é da busca, não da view.** `provider_listings` serve a lista e
 o perfil individual; filtrar lá esconderia o prestador do próprio perfil —
@@ -935,6 +950,21 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   para a tela da vaga. Ficou pior quando a tela de virar prestador passou
   a prometer, por escrito, que o botão some. **Promessa na tela é contrato:
   quem escreve o aviso confere se ele é verdade.**
+
+- **Uma promessa sem o outro lado nunca construído.** Duas telas — o
+  perfil do prestador e o perfil público dele — diziam "envie documento e
+  selfie em Editar perfil", e uma terceira, no rodapé de `/perfil`,
+  descrevia como esses arquivos eram guardados e apagados. Nenhuma tela de
+  envio jamais existiu: `Especie` nunca teve `"documento"` nem `"selfie"`,
+  e nada além do seed escrevia em `pedidos_verificacao`. Fora da
+  demonstração, todo prestador ficava para sempre atrás de uma promessa
+  que não levava a lugar nenhum — e passou batido porque o texto lia bem,
+  a fila do admin existia de verdade (só sem remetente), e ninguém tinha
+  testado o caminho de ponta a ponta com uma conta que não fosse
+  semeada. Corrigido na #133, trocando a promessa por CPF válido e único
+  como a própria verificação. **Documentar como um dado sensível é
+  guardado não prova que existe tela para enviá-lo — confira as duas
+  pontas, não só o texto que soa responsável.**
 
 - **`npm run dev` fala com o banco de produção.** O `.env.local` tem as
   credenciais reais, e `next dev` as carrega. Conferir uma tela "no

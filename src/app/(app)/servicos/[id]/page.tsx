@@ -1,7 +1,6 @@
 import { Banknote, Briefcase, Check, MapPin, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   arquivarPelaAba,
@@ -164,16 +163,10 @@ export default async function ProviderPage({
             <div>
               <h2 className="font-bold text-base">Perfil em análise</h2>
               <p className="mt-1.5 text-muted text-sm leading-relaxed">
-                O documento deste profissional ainda não foi conferido pela
-                Lupa, então ele não aparece na busca de serviços. Se este perfil
-                é seu, envie documento e selfie em{" "}
-                <Link
-                  href="/perfil/editar"
-                  className="underline hover:text-ink"
-                >
-                  Editar perfil
-                </Link>
-                .
+                O CPF deste profissional ainda não foi confirmado, então ele não
+                aparece na busca de serviços. Se este perfil é seu, você ativou
+                antes de confirmarmos o CPF na hora — fale com o suporte para
+                regularizar.
               </p>
             </div>
           </div>

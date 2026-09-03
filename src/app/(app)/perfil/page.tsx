@@ -230,10 +230,9 @@ export default async function PerfilPage() {
           Seus dados e a LGPD
         </h2>
         <p className="mt-2 text-xs leading-relaxed text-muted">
-          Documento de identidade e selfie são dados pessoais sensíveis. Na Lupa
-          eles ficam em armazenamento privado, são usados só para confirmar sua
-          identidade e são apagados assim que a verificação é concluída —
-          permanece apenas o status aprovado no seu perfil.
+          CPF e CNPJ são conferidos automaticamente contra a Receita Federal,
+          sem que você precise enviar documento ou selfie — nenhum dos dois fica
+          guardado em lugar nenhum. Permanece só a confirmação, no seu perfil.
         </p>
       </Panel>
     </PageShell>

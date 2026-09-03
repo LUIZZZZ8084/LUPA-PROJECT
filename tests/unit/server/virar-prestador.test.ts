@@ -74,6 +74,26 @@ describe("virar prestador", () => {
   });
 
   /**
+   * CPF válido e único é a própria verificação, sem fila e sem foto.
+   *
+   * A tela chegou a prometer "envie documento e selfie", e esse envio
+   * nunca existiu no app — nenhuma tela tinha campo de arquivo para isso,
+   * e nada além do seed escrevia em `pedidos_verificacao`. Fora da
+   * demonstração, todo prestador ficava preso atrás de uma promessa que a
+   * tela não cumpria. Este teste é o que impede a volta desse estado: a
+   * ativação precisa deixar a conta pronta para a busca, na mesma ação.
+   */
+  it("confirma o documento na mesma ação que ativa, sem fila", async () => {
+    const { usuario, sessao } = await criarCandidato("/foto.png");
+
+    expect((await repo.porId(usuario.id))?.docVerificado).toBe(false);
+
+    await virarPrestador(sessao, DADOS, COM_STORAGE);
+
+    expect((await repo.porId(usuario.id))?.docVerificado).toBe(true);
+  });
+
+  /**
    * O ponto da decisão do Luiz: a pessoa perde o que a tela avisou que ia
    * perder — nem mais, nem menos.
    */
