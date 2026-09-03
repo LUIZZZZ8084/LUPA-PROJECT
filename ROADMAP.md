@@ -86,6 +86,9 @@ Prestador:
 - A busca de serviços só mostra quem passou pela verificação; o perfil
   continua alcançável e diz que está em análise —
   [#114](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/114)
+- O feed de trabalhos do prestador, que tinha backend e nenhuma tela — e
+  o atalho do perfil que apontava para a busca pública —
+  [#115](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/115)
 
 Perfil e vaga, o que cada um informa:
 

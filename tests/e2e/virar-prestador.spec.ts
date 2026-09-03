@@ -22,17 +22,42 @@ import { cpfDeTeste, entrarComoTeste } from "./helpers";
  */
 test.describe.configure({ mode: "serial" });
 
+/*
+ * Só no projeto desktop.
+ *
+ * Cada arquivo destes cria uma conta, e o cadastro tem limite de 5 por
+ * origem em 15 minutos — proteção de verdade contra criação em massa, que
+ * a suíte respeita em vez de afrouxar. Rodando nos dois projetos, os dois
+ * arquivos mais o setup passam de cinco, e quem falha é o cadastro do
+ * teste seguinte, não o que mede.
+ *
+ * O que se testa aqui é troca de papel e estado, não layout: a varredura
+ * responsiva já cobre largura de tela em todas as rotas.
+ */
+// biome-ignore lint/correctness/noEmptyPattern: o Playwright exige o padrão de desestruturação no primeiro argumento e recusa o arquivo na coleta quando o parâmetro é nomeado. Aqui não se usa fixture — o que interessa é o `info`.
+test.beforeEach(({}, info) => {
+  info.skip(info.project.name !== "desktop", "fluxo não depende de viewport");
+});
+
 test.describe("virar prestador", () => {
   let page: Page;
 
-  test.beforeAll(async ({ browser }) => {
+  /*
+   * O guarda se repete aqui porque `beforeAll` roda antes do
+   * `beforeEach`: sem ele, a conta era criada no projeto mobile mesmo com
+   * todos os testes pulando — e era esse cadastro extra que estourava o
+   * limite por origem.
+   */
+  test.beforeAll(async ({ browser }, info) => {
+    if (info.project.name !== "desktop") return;
+
     const contexto = await browser.newContext({ storageState: undefined });
     page = await contexto.newPage();
     await entrarComoTeste(page);
   });
 
   test.afterAll(async () => {
-    await page.context().close();
+    await page?.context().close();
   });
 
   test("o card da home leva para a ativação, não para o cadastro", async () => {

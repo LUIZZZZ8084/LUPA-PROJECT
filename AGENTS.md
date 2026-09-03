@@ -166,6 +166,34 @@ de ter virado prestador, que é exatamente o que a troca encerrou.
 **Voltar atrás é caso de suporte**, como a cidade e o CNPJ, e pela mesma
 razão: é troca de identidade dentro da plataforma, não correção de campo.
 
+### O feed do prestador, e por que "remover" não apaga
+
+O backend de publicações existia inteiro — serviço, repositório, actions,
+tabela e trigger de limite — e **nenhuma tela o consumia**. O atalho do
+perfil apontava para `/servicos`, a busca pública, prometendo "edite
+categoria, preço e publicações": a pessoa clicava para mexer no próprio
+anúncio e caía na vitrine de todo mundo. Hoje o atalho leva a
+`/perfil/publicacoes`, que é a tela que aquela descrição sempre prometeu.
+
+Cada item é uma foto do trabalho com um texto. **Dez ativos**, o limite
+que já morava no banco — mantido por decisão do Luiz em 03/09/2026,
+depois de ele ter cogitado cinco.
+
+**"Remover" arquiva, não apaga.** O texto do botão diz o que a pessoa
+quer fazer; por baixo, o registro fica e volta pelo botão ao lado.
+Apagar de verdade tiraria dela um trabalho que ela teve — e arquivar já
+libera a vaga no feed, que é o efeito que ela procurava.
+
+**A foto tem caminho próprio, ao contrário do avatar.** `caminhoDoArquivo`
+usa caminho fixo por pessoa para avatar, logo e currículo, e é de
+propósito: trocar substitui, e o bucket não vira depósito de versões
+pagas. Aqui são até dez arquivos ao mesmo tempo, então a regra
+`publicacao` ganha um sufixo sorteado no servidor. Continua sem nada
+vindo do cliente: o id é da sessão, o sufixo é gerado aqui.
+
+O bucket é o `portfolio`, que já existia no `storage.sql` com leitura
+pública — criado para isto e nunca usado.
+
 ### A vitrine só mostra prestador verificado
 
 Virar prestador não coloca ninguém na busca: o documento passa pela fila

@@ -23,6 +23,7 @@ import {
   ratingBreakdown,
 } from "@/lib/data";
 import { formatStartingPrice } from "@/lib/format";
+import { listarPublicacoes } from "@/server/publicacoes/servico";
 
 /**
  * As avaliações ficam abaixo da dobra e crescem sem limite — um prestador
@@ -89,6 +90,12 @@ export default async function ProviderPage({
   if (!provider) notFound();
 
   const reviews = await getReviews(id);
+
+  /*
+   * Só o que está no feed. Arquivado é trabalho que o prestador tirou de
+   * exibição — mostrar aqui ignoraria a escolha dele.
+   */
+  const trabalhos = await listarPublicacoes(id, "ativa");
   const breakdown = ratingBreakdown(reviews);
 
   const similar = (
@@ -252,6 +259,40 @@ export default async function ProviderPage({
           </p>
         </div>
       </Panel>
+
+      {/*
+       * Os trabalhos publicados.
+       *
+       * Vem antes das avaliações de propósito: quem procura um eletricista
+       * decide primeiro olhando o que ele já fez, e só depois lê o que os
+       * outros acharam.
+       */}
+      {trabalhos.length > 0 && (
+        <section className="mt-5">
+          <h2 className="mb-3 font-bold text-base">Trabalhos publicados</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {trabalhos.map((t) => (
+              <Panel key={t.id} className="overflow-hidden">
+                {t.imagemUrl && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  // biome-ignore lint/performance/noImgElement: mesma razão do feed — o host do Storage não está nos `remotePatterns`, e trocar isso é mudança de build.
+                  <img
+                    src={t.imagemUrl}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="-mx-5 -mt-5 mb-4 h-40 w-[calc(100%+2.5rem)] object-cover"
+                  />
+                )}
+                <h3 className="font-semibold text-sm">{t.titulo}</h3>
+                <p className="mt-1.5 whitespace-pre-line text-muted text-sm leading-relaxed">
+                  {t.corpo}
+                </p>
+              </Panel>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Avaliações — carregado sob demanda, ver ReviewsPanel */}
       <ReviewsPanel

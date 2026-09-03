@@ -58,10 +58,16 @@ const ATALHOS: {
     exige: "candidatura:ver_propria",
   },
   {
-    href: "/servicos",
+    /*
+     * Apontava para `/servicos` — a busca pública — prometendo "edite
+     * categoria, preço e publicações". O prestador clicava para mexer no
+     * próprio anúncio e caía na vitrine de todo mundo. A tela que a
+     * descrição prometia não existia; agora existe.
+     */
+    href: "/perfil/publicacoes",
     icon: Wrench,
-    titulo: "Meu perfil de prestador",
-    descricao: "Edite categoria, preço, bairros atendidos e publicações.",
+    titulo: "Meus trabalhos",
+    descricao: "Publique fotos dos serviços que você já fez.",
     cor: "text-servicos",
     exige: "publicacao:criar",
   },

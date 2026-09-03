@@ -26,6 +26,11 @@ const PAPEL_POR_ESPECIE: Record<Especie, Papel[]> = {
    */
   curriculo: ["candidato_clt"],
   logo: ["empresa"],
+  /*
+   * As fotos do feed são do prestador, e só dele: é o portfólio que faz
+   * alguém decidir contratar.
+   */
+  publicacao: ["prestador_servico"],
 };
 
 function exigirPapel(papel: Papel, especie: Especie): void {
@@ -41,6 +46,19 @@ export async function trocarArquivoDoPerfil(
   arquivo: File,
 ): Promise<void> {
   exigirPapel(papel, especie);
+
+  /*
+   * Foto do feed não passa por aqui.
+   *
+   * Este módulo guarda a referência no registro da *pessoa* — avatar,
+   * logo, currículo, um de cada. A foto de uma publicação pertence àquela
+   * publicação, e são até dez. Sem esta recusa, chamar com `publicacao`
+   * enviaria o arquivo e não guardaria a referência em lugar nenhum: o
+   * envio pareceria dar certo e a foto sumiria.
+   */
+  if (especie === "publicacao") {
+    throw erros.interno("foto de publicação não é arquivo de perfil");
+  }
 
   const { referencia } = await enviarArquivo(usuarioId, especie, arquivo);
   const repo = repositorioUsuarios();
