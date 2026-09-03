@@ -93,6 +93,9 @@ export async function entrarComoTeste(page: Page): Promise<string> {
   // neutralizados do seed não passam aqui de propósito: aquilo é dado de
   // vitrine inserido por SQL, isto é cadastro passando pela validação real.
   await page.getByLabel("WhatsApp").fill("66999999999");
+  // CPF único por conta — mesmo motivo do CNPJ de teste logo abaixo: um
+  // literal fixo passa na primeira conta e é recusado na segunda.
+  await page.getByLabel("CPF").fill(cpfDeTeste());
   await page.getByLabel("Área desejada").selectOption({ index: 1 });
   await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
 

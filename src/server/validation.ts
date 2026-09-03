@@ -116,6 +116,15 @@ export const zCnpj = z
   .refine(cnpjValido, "CNPJ inválido.");
 
 /**
+ * CPF, mesma régua do CNPJ acima: transforma e valida pelo dígito
+ * verificador, não só pela contagem de casas.
+ */
+export const zCpf = z
+  .string()
+  .transform(onlyDigits)
+  .refine(cpfValido, "CPF inválido.");
+
+/**
  * Cidade. Só município de Mato Grosso.
  *
  * A checagem é contra a lista do IBGE, e não um `z.string()` qualquer:

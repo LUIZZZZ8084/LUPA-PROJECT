@@ -81,7 +81,7 @@ create table usuarios (
   papel                papel_usuario not null,
   nome_completo        text not null,
   /*
-   * CPF de quem oferece serviço.
+   * CPF de candidato e prestador — as duas pessoas físicas da plataforma.
    *
    * Fica aqui, e não em `perfis_prestador`, por uma razão de privacidade
    * que não é simetria com o CNPJ: `perfis_prestador` tem policy
@@ -91,8 +91,9 @@ create table usuarios (
    *
    * CNPJ pode ser público porque é registro público; CPF não é.
    *
-   * Nulo para quem se cadastrou antes do campo existir e para quem não é
-   * prestador. Quem ativa o lado prestador hoje preenche.
+   * Nulo só sobra para empresa (que se identifica por CNPJ) e para quem
+   * se cadastrou antes de o CPF virar obrigatório — essa conta antiga
+   * preenche ao virar prestador, em `virarPrestador`.
    */
   cpf                  text,
   telefone             text not null,
@@ -111,8 +112,8 @@ create table usuarios (
   constraint telefone_so_digitos check (telefone ~ '^[0-9]{10,13}$')
 );
 
--- Um CPF, um prestador. Parcial porque a esmagadora maioria das contas não
--- tem documento nenhum, e nulo não pode colidir com nulo.
+-- Um CPF, uma conta. Parcial porque empresa não tem CPF nenhum — é CNPJ —
+-- e nulo não pode colidir com nulo.
 create unique index usuarios_cpf_idx on usuarios (cpf) where cpf is not null;
 
 -- E-mail único ignorando maiúsculas: "Joao@" e "joao@" são a mesma pessoa, e

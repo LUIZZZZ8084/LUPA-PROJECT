@@ -64,6 +64,18 @@ export async function cadastrar(
     );
   }
 
+  /*
+   * Mesma regra do CNPJ, para as duas pessoas físicas: um CPF não abre
+   * uma segunda conta. `dados.papel !== "empresa"` é o que dá ao Zod a
+   * variante certa da união — só candidato e prestador têm `cpf`.
+   */
+  if (dados.papel !== "empresa" && (await repo.cpfEmUso(dados.cpf))) {
+    throw erros.conflito(
+      "Este CPF já está cadastrado. Entre com a conta existente.",
+      "CPF duplicado",
+    );
+  }
+
   const senhaHash = await gerarHash(dados.senha);
 
   const usuario = await repo.criar({
@@ -71,6 +83,7 @@ export async function cadastrar(
     senhaHash,
     papel: dados.papel,
     nomeCompleto: dados.nomeCompleto,
+    cpf: dados.papel === "empresa" ? null : dados.cpf,
     telefone: dados.telefone,
     cidade: dados.cidade ?? CIDADE_INICIAL,
     bairro: dados.bairro ?? null,

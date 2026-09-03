@@ -11,6 +11,10 @@ import { validar } from "@/server/validation";
 
 const SENHA = "uma senha bem longa";
 
+/** Válidos pelo dígito verificador — a mesma exigência do schema. */
+const CPF_CANDIDATO = "52998224725";
+const CPF_PRESTADOR = "11144477735";
+
 const candidato = {
   papel: "candidato_clt" as const,
   nomeCompleto: "Everton Rodrigues",
@@ -18,6 +22,7 @@ const candidato = {
   senha: SENHA,
   telefone: "66999220001",
   cidade: "Sinop" as const,
+  cpf: CPF_CANDIDATO,
   areaDesejada: "Agronegócio" as const,
 };
 
@@ -28,6 +33,7 @@ const prestador = {
   senha: SENHA,
   telefone: "66999110001",
   cidade: "Sinop" as const,
+  cpf: CPF_PRESTADOR,
   categoriaId: 1,
   descricao: "Instalações elétricas residenciais e comerciais em Sinop.",
   precoInicial: 150,
@@ -81,7 +87,20 @@ describe("cadastro e login", () => {
       const r = validar(schemaCadastro, candidato);
       expect(r.ok).toBe(true);
       // Sem currículo, sem experiência, sem formação no cadastro.
-      expect(Object.keys(candidato)).toHaveLength(7);
+      expect(Object.keys(candidato)).toHaveLength(8);
+    });
+
+    it("CPF de dígito errado é recusado, para candidato e prestador", () => {
+      for (const dados of [candidato, prestador]) {
+        const r = validar(schemaCadastro, { ...dados, cpf: "52998224726" });
+        expect(r.ok, dados.papel).toBe(false);
+        if (r.ok) continue;
+        expect(r.erro.campos?.some((c) => c.campo === "cpf")).toBe(true);
+      }
+    });
+
+    it("empresa não pede nem aceita CPF — CNPJ já identifica a empresa", () => {
+      expect(Object.keys(empresa)).not.toContain("cpf");
     });
 
     it("prestador sem descrição é recusado — o perfil é o anúncio", () => {
@@ -190,6 +209,36 @@ describe("cadastro e login", () => {
       await expect(
         cadastrar(validarOk({ ...empresa, email: "outro@agronorte.teste" })),
       ).rejects.toMatchObject({ codigo: "conflito" });
+    });
+
+    /**
+     * A mesma regra do CNPJ, para as duas pessoas físicas — inclusive
+     * entre papéis diferentes: um CPF é de uma pessoa só, não de um papel.
+     */
+    it("CPF repetido é recusado, mesmo trocando de papel", async () => {
+      await cadastrar(validarOk(candidato));
+
+      await expect(
+        cadastrar(
+          validarOk({
+            ...prestador,
+            email: "outro@teste.lupa",
+            cpf: candidato.cpf,
+          }),
+        ),
+      ).rejects.toMatchObject({ codigo: "conflito" });
+    });
+
+    it("guarda o CPF no usuário, só em dígitos", async () => {
+      const criado = await cadastrar(
+        validarOk({ ...candidato, cpf: "529.982.247-25" }),
+      );
+      expect(criado.cpf).toBe(CPF_CANDIDATO);
+    });
+
+    it("empresa é criada sem CPF — ela tem CNPJ", async () => {
+      const criado = await cadastrar(validarOk(empresa));
+      expect(criado.cpf).toBeNull();
     });
 
     it("começa sem nenhuma verificação concluída", async () => {
@@ -330,6 +379,28 @@ describe("cadastro e login", () => {
 
 /* ---------- Auxiliares ---------- */
 
+/**
+ * Um CPF válido por número, para as contas de teste que a suíte cria em
+ * lote. Determinístico e não repete `CPF_CANDIDATO`/`CPF_PRESTADOR`
+ * porque o cadastro agora recusa CPF repetido, mesmo entre papéis.
+ */
+function cpfDeTeste(n: number): string {
+  const base = String(100_000_001 + n).padStart(9, "0");
+
+  const digito = (numero: string) => {
+    const peso = numero.length + 1;
+    let soma = 0;
+    for (let i = 0; i < numero.length; i++) {
+      soma += Number(numero[i]) * (peso - i);
+    }
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  };
+
+  const d1 = digito(base);
+  return `${base}${d1}${digito(base + d1)}`;
+}
+
 function validarOk(dados: unknown) {
   const r = validar(schemaCadastro, dados);
   if (!r.ok) throw new Error(JSON.stringify(r.erro.campos));
@@ -376,7 +447,7 @@ describe("limite de tentativas no cadastro", () => {
   afterEach(() => restaurarCadastro());
 
   function conta(n: number) {
-    return { ...candidato, email: `pessoa${n}@teste.lupa` };
+    return { ...candidato, email: `pessoa${n}@teste.lupa`, cpf: cpfDeTeste(n) };
   }
 
   it("contas seguidas da mesma origem acabam bloqueadas", async () => {

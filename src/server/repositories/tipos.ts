@@ -53,6 +53,11 @@ export interface DadosNovoUsuario {
   senhaHash: string;
   papel: Papel;
   nomeCompleto: string;
+  /**
+   * Obrigatório para candidato e prestador desde que o cadastro passou a
+   * exigir CPF; `null` só sobra para empresa, que se identifica por CNPJ.
+   */
+  cpf?: string | null;
   telefone: string;
   cidade: string;
   bairro?: string | null;
@@ -169,14 +174,21 @@ export interface RepositorioUsuarios {
   /** Para o cadastro de empresa: CNPJ é único na plataforma. */
   cnpjEmUso(cnpj: string): Promise<boolean>;
 
-  /** Mesma regra do CNPJ, para quem ativa o lado prestador. */
+  /**
+   * Mesma regra do CNPJ: um CPF, uma conta.
+   *
+   * Consultado no cadastro de candidato e prestador, e de novo em
+   * `virarPrestador` — para quem criou a conta antes de o CPF virar
+   * obrigatório e ainda não tem um gravado.
+   */
   cpfEmUso(cpf: string): Promise<boolean>;
 
   /**
-   * Grava o documento de quem virou prestador.
+   * Grava o CPF de quem virou prestador sem ter um no cadastro.
    *
    * Separado de `atualizarPapel` porque são duas garantias diferentes, e
-   * quem lê o serviço precisa ver as duas acontecendo.
+   * quem lê o serviço precisa ver as duas acontecendo. Quem já se
+   * cadastrou com CPF não passa por aqui de novo — ver `virarPrestador`.
    */
   definirCpf(id: string, cpf: string): Promise<void>;
 

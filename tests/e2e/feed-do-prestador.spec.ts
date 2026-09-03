@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { cpfDeTeste, entrarComoTeste } from "./helpers";
+import { entrarComoTeste } from "./helpers";
 
 /**
  * O feed de trabalhos do prestador.
@@ -50,9 +50,9 @@ test.describe("feed do prestador", () => {
     page = await contexto.newPage();
     await entrarComoTeste(page);
 
-    // Vira prestador: sem isso não há feed para ter.
+    // Vira prestador: sem isso não há feed para ter. Sem CPF aqui — a
+    // conta já se cadastrou com um, e a tela não pede de novo.
     await page.goto("/perfil/virar-prestador");
-    await page.getByLabel("CPF").fill(cpfDeTeste());
     await page.getByLabel("Categoria do serviço").selectOption({ index: 1 });
     await page
       .getByLabel("Sobre o seu trabalho")

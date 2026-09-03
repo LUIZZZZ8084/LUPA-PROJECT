@@ -65,7 +65,7 @@ export function SignUpForm({ role }: { role: Role }) {
           <Input name="nomeCompleto" autoComplete="name" required />
         </Field>
 
-        {role === "empresa" && (
+        {role === "empresa" ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field
               label="Nome da empresa"
@@ -83,6 +83,26 @@ export function SignUpForm({ role }: { role: Role }) {
               />
             </Field>
           </div>
+        ) : (
+          /*
+           * Pessoa física também tem documento. CNPJ identifica a empresa
+           * acima; aqui é a mesma exigência para quem procura vaga ou
+           * oferece serviço — sem isso a conta não amarra a ninguém.
+           */
+          <Field
+            label="CPF"
+            required
+            error={state.campos?.cpf}
+            hint="Não aparece no seu perfil público."
+          >
+            <Input
+              name="cpf"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="000.000.000-00"
+              required
+            />
+          </Field>
         )}
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

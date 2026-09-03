@@ -86,9 +86,12 @@ function FaltaFoto() {
 export function AtivarPrestadorForm({
   precisaDeFoto,
   bairro,
+  temCpf,
 }: {
   precisaDeFoto: boolean;
   bairro: string | null;
+  /** Quem já informou CPF no cadastro não digita de novo aqui. */
+  temCpf: boolean;
 }) {
   const [state, action, pendente] = useActionState(
     ativarPrestadorComEstado,
@@ -112,20 +115,22 @@ export function AtivarPrestadorForm({
 
       <form action={action}>
         <Panel className="space-y-5">
-          <Field
-            label="CPF"
-            required
-            error={state.campos?.cpf}
-            hint="É o que amarra o anúncio a uma pessoa real. Não aparece no seu perfil público."
-          >
-            <Input
-              name="cpf"
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="000.000.000-00"
+          {!temCpf && (
+            <Field
+              label="CPF"
               required
-            />
-          </Field>
+              error={state.campos?.cpf}
+              hint="É o que amarra o anúncio a uma pessoa real. Não aparece no seu perfil público."
+            >
+              <Input
+                name="cpf"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="000.000.000-00"
+                required
+              />
+            </Field>
+          )}
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field

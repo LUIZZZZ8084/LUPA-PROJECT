@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { cpfDeTeste, entrarComoTeste } from "./helpers";
+import { entrarComoTeste } from "./helpers";
 
 /**
  * Virar prestador, no navegador.
@@ -91,26 +91,18 @@ test.describe("virar prestador", () => {
     await expect(page.getByText(/continuam visíveis/i)).toBeVisible();
   });
 
-  test("recusa CPF inválido sem trocar papel nenhum", async () => {
-    await page.goto("/perfil/virar-prestador");
-
-    await page.getByLabel("CPF").fill("111.111.111-11");
-    await page.getByLabel("Categoria do serviço").selectOption({ index: 1 });
-    await page
-      .getByLabel("Sobre o seu trabalho")
-      .fill("Instalações elétricas residenciais e comerciais em Sinop.");
-    await page.getByRole("button", { name: /virar prestador/i }).click();
-
-    await expect(page.getByText(/CPF inválido/i)).toBeVisible();
-
-    // Continua na tela — quem não pode ativar não ativou.
-    await expect(page).toHaveURL(/virar-prestador/);
-  });
-
+  /*
+   * Sem campo de CPF nesta tela: a conta de `entrarComoTeste` já se
+   * cadastrou com um. A validação de CPF inválido é coberta no cadastro
+   * — em `tests/unit/server/cadastro-login.test.ts` — que é onde o campo
+   * mora agora. Esta tela só pede CPF de quem se cadastrou antes de ele
+   * virar obrigatório, e não há como chegar a essa conta pela UI pública.
+   */
   test("ativa, troca o papel, e a interface acompanha", async () => {
     await page.goto("/perfil/virar-prestador");
 
-    await page.getByLabel("CPF").fill(cpfDeTeste());
+    await expect(page.getByLabel("CPF")).toHaveCount(0);
+
     await page.getByLabel("Categoria do serviço").selectOption({ index: 1 });
     await page
       .getByLabel("Sobre o seu trabalho")

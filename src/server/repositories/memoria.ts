@@ -54,13 +54,15 @@ export class RepositorioMemoria implements RepositorioUsuarios {
       throw new Error("email já cadastrado");
     }
 
+    const cpf = dados.cpf ?? null;
+
     const usuario: Usuario = {
       id: crypto.randomUUID(),
       email,
       senhaHash: dados.senhaHash,
       papel: dados.papel,
       nomeCompleto: dados.nomeCompleto,
-      cpf: null,
+      cpf,
       telefone: dados.telefone,
       cidade: dados.cidade,
       bairro: dados.bairro ?? null,
@@ -74,6 +76,9 @@ export class RepositorioMemoria implements RepositorioUsuarios {
 
     this.usuarios.set(usuario.id, usuario);
     this.porEmailIndice.set(email, usuario.id);
+    // Mesmo índice que `definirCpf` alimenta — o cadastro direto de
+    // candidato e prestador é só outro caminho até o mesmo CPF gravado.
+    if (cpf) this.cpfs.add(cpf);
     return usuario;
   }
 
@@ -230,6 +235,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.usuarios.clear();
     this.porEmailIndice.clear();
     this.cnpjs.clear();
+    this.cpfs.clear();
     this.empresas.clear();
     this.prestadores.clear();
     this.candidatos.clear();

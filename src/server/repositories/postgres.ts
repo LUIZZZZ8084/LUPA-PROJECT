@@ -98,6 +98,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         senha_hash: dados.senhaHash,
         papel: dados.papel,
         nome_completo: dados.nomeCompleto,
+        cpf: dados.cpf ?? null,
         telefone: dados.telefone,
         cidade: dados.cidade,
         bairro: dados.bairro ?? null,
@@ -107,8 +108,22 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       .single();
 
     if (error) {
-      // 23505 = violação de índice único. Aqui só pode ser o e-mail.
-      if (error.code === "23505") throw new Error("email já cadastrado");
+      /*
+       * 23505 = violação de índice único. Antes só podia ser o e-mail;
+       * agora o CPF também entra nesta mesma inserção, então o índice que
+       * a mensagem do Postgres nomeia é quem decide qual.
+       *
+       * A checagem em `cadastrar` já barra os dois casos antes de chegar
+       * aqui — isto é o desempate de uma corrida entre duas inserções
+       * simultâneas, não o caminho normal.
+       */
+      if (error.code === "23505") {
+        throw new Error(
+          error.message.includes("cpf")
+            ? "cpf já cadastrado"
+            : "email já cadastrado",
+        );
+      }
       throw erros.indisponivel(`criação de usuário: ${error.message}`);
     }
 

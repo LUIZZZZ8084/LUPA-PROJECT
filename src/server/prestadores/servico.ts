@@ -30,7 +30,11 @@ import { cpfValido } from "../validation";
  */
 
 export interface DadosAtivacaoPrestador {
-  cpf: string;
+  /**
+   * Só chega vazio de quem se cadastrou antes de o CPF virar obrigatório
+   * — para quem já tem um gravado, o formulário nem mostra o campo.
+   */
+  cpf?: string;
   categoriaId: number;
   descricao: string;
   precoInicial?: number | null;
@@ -70,21 +74,39 @@ export async function virarPrestador(
     );
   }
 
-  const cpf = onlyDigits(dados.cpf);
-  if (!cpfValido(cpf)) {
-    throw erros.validacao([{ campo: "cpf", mensagem: "CPF inválido." }]);
-  }
-
   /*
-   * Um CPF, um prestador — a mesma regra do CNPJ da empresa. O índice
-   * único no banco é quem garante de verdade contra duas ativações
-   * simultâneas; esta checagem existe para dar mensagem decente antes de
-   * gravar, não no lugar dela.
+   * Quem se cadastrou depois do CPF virar obrigatório já tem um gravado
+   * em `usuarios` — pedir de novo aqui seria digitar duas vezes o mesmo
+   * documento, e a checagem de unicidade abaixo rejeitaria o próprio CPF
+   * da pessoa como "já em uso por outro perfil", porque já está, por ela
+   * mesma. Só quem se cadastrou antes disso chega aqui sem CPF.
    */
-  if (await repo.cpfEmUso(cpf)) {
-    throw erros.validacao([
-      { campo: "cpf", mensagem: "Este CPF já está em uso por outro perfil." },
-    ]);
+  let cpf = usuario.cpf;
+
+  if (!cpf) {
+    if (!dados.cpf) {
+      throw erros.validacao([{ campo: "cpf", mensagem: "Informe seu CPF." }]);
+    }
+
+    cpf = onlyDigits(dados.cpf);
+    if (!cpfValido(cpf)) {
+      throw erros.validacao([{ campo: "cpf", mensagem: "CPF inválido." }]);
+    }
+
+    /*
+     * Um CPF, um prestador — a mesma regra do CNPJ da empresa. O índice
+     * único no banco é quem garante de verdade contra duas ativações
+     * simultâneas; esta checagem existe para dar mensagem decente antes
+     * de gravar, não no lugar dela.
+     */
+    if (await repo.cpfEmUso(cpf)) {
+      throw erros.validacao([
+        {
+          campo: "cpf",
+          mensagem: "Este CPF já está em uso por outro perfil.",
+        },
+      ]);
+    }
   }
 
   if (!SERVICE_CATEGORIES.some((c) => c.id === dados.categoriaId)) {
@@ -114,8 +136,11 @@ export async function virarPrestador(
    * O documento vai para `usuarios`, não para `perfis_prestador`: aquela
    * tabela é lida pela chave anônima, que roda no navegador. CNPJ pode ser
    * público porque é registro público; CPF não é.
+   *
+   * Só grava quem chegou sem CPF — quem já tinha um do cadastro não tem o
+   * que regravar.
    */
-  await repo.definirCpf(autenticado.usuarioId, cpf);
+  if (!usuario.cpf) await repo.definirCpf(autenticado.usuarioId, cpf);
   await repo.atualizarPapel(autenticado.usuarioId, "prestador_servico");
 
   log.info("conta virou prestador", {

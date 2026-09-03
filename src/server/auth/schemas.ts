@@ -10,6 +10,7 @@ import {
   zCelular,
   zCidade,
   zCnpj,
+  zCpf,
   zEmail,
   zNome,
   zNomeDeBairro,
@@ -43,10 +44,17 @@ const base = {
  * dado móvel limitado, abandona uma tela com quinze campos. Currículo,
  * experiência e formação entram depois, na edição de perfil, quando a pessoa
  * já viu que existem vagas de verdade aqui.
+ *
+ * O CPF é a exceção que fica: sem ele, uma pessoa física entra na
+ * plataforma sem nenhum documento que a amarre a uma identidade real — a
+ * mesma brecha que o CNPJ fecha para empresa. Fica de fora do formulário
+ * de edição pelo mesmo motivo do CNPJ em `EdicaoEmpresa`: corrigir é caso
+ * de suporte, não campo de tela.
  */
 export const schemaCandidato = z.object({
   ...base,
   papel: z.literal("candidato_clt"),
+  cpf: zCpf,
   areaDesejada: z.enum(JOB_CATEGORIES),
 });
 
@@ -56,10 +64,16 @@ export const schemaCandidato = z.object({
  * Precisa de mais no cadastro porque o perfil já nasce sendo o anúncio: sem
  * categoria e descrição, ninguém o encontra na busca e ele conclui que a
  * plataforma não funciona.
+ *
+ * O CPF aqui repete o de `schemaCandidato` em vez de só herdar de `base`
+ * de propósito: quem entra direto como prestador nunca passava por
+ * `virarPrestador`, que é onde o CPF vivia até aqui — cadastrar direto
+ * era a brecha, não a exceção.
  */
 export const schemaPrestador = z.object({
   ...base,
   papel: z.literal("prestador_servico"),
+  cpf: zCpf,
   categoriaId: z.coerce
     .number()
     .int()
