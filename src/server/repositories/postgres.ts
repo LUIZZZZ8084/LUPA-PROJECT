@@ -256,6 +256,18 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     if (error) throw erros.indisponivel(`gravação de CPF: ${error.message}`);
   }
 
+  async definirDocVerificado(id: string, verificado: boolean): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({ doc_verificado: verificado })
+      .eq("id", id);
+
+    if (error) {
+      throw erros.indisponivel(`verificação de documento: ${error.message}`);
+    }
+  }
+
   /* ---------- Leitura de perfil, para a tela de edição ---------- */
 
   async perfilEmpresa(usuarioId: string): Promise<PerfilEmpresa | null> {

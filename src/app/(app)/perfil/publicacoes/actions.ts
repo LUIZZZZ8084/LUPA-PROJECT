@@ -42,13 +42,6 @@ export const publicar = criarAcao({
 });
 
 /**
- * O que o formulário do feed manda: a foto e o texto, num envio só.
- *
- * A foto é opcional no schema porque o modo demonstração não tem Storage.
- * Onde ele existe, a tela é que exige — do mesmo jeito que o CPF da
- * ativação: o banco aceita ausente, a interface cobra.
- */
-/**
  * As duas telas onde a grade de trabalhos aparece.
  *
  * O feed vive no perfil público, e desde 03/09/2026 há dois: o do
@@ -61,6 +54,13 @@ function revalidarVitrines() {
   revalidatePath("/candidatos", "layout");
 }
 
+/**
+ * O que o formulário do feed manda: a foto e o texto, num envio só.
+ *
+ * A foto é opcional no schema porque o modo demonstração não tem Storage.
+ * Onde ele existe, a tela é que exige — do mesmo jeito que o CPF da
+ * ativação: o banco aceita ausente, a interface cobra.
+ */
 export const publicarComFoto = criarAcao({
   nome: "publicacao.publicar-trabalho",
   entrada: z.object({

@@ -181,6 +181,17 @@ export interface RepositorioUsuarios {
   definirCpf(id: string, cpf: string): Promise<void>;
 
   /**
+   * Marca a conta como verificada, sem passar pela fila do admin.
+   *
+   * Existe para a conferência automática de CNPJ: quando a Receita
+   * responde que a empresa existe, está ativa e tem aquela razão social,
+   * não há o que um humano acrescentar olhando um documento.
+   *
+   * Continua sendo escrita com dono — quem chama confere a sessão antes.
+   */
+  definirDocVerificado(id: string, verificado: boolean): Promise<void>;
+
+  /**
    * Candidatos que ligaram "quero que empresas me encontrem".
    *
    * Só existe para o modo demonstração: com banco, a view

@@ -139,6 +139,12 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.cpfs.add(cpf);
   }
 
+  async definirDocVerificado(id: string, verificado: boolean): Promise<void> {
+    const usuario = this.usuarios.get(id);
+    if (!usuario) return;
+    this.usuarios.set(id, { ...usuario, docVerificado: verificado });
+  }
+
   /* ---------- Leitura de perfil ---------- */
 
   async perfilEmpresa(usuarioId: string): Promise<PerfilEmpresa | null> {

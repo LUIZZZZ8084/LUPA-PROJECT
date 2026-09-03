@@ -302,6 +302,46 @@ exige CNPJ, e aceitar CPF é migração própria — `perfis_empresa.cnpj` é
 separa vaga real de anúncio falso. Vaga publicada por pessoa física
 precisa de outro selo antes de existir.
 
+### O CNPJ é conferido na Receita, e o que isso prova
+
+O cadastro validava o CNPJ por **dígito verificador**, o que prova que o
+número é bem formado — não que a empresa existe. E não era hipótese:
+`11222333000181`, o exemplo da nossa própria suíte, passa no dígito e é uma
+empresa real no Rio Grande do Sul. Qualquer número inventado com o dígito
+certo chegava à fila do admin como se fosse empresa.
+
+Hoje a empresa aperta um botão no perfil e a Lupa consulta a BrasilAPI
+(pública, sem credencial e sem custo). Batendo as três condições — existe,
+situação **ATIVA**, razão social igual à da Receita —, ela é verificada na
+hora, sem fila.
+
+**O que isso prova:** a empresa existe e está ativa. É o que mata o anúncio
+de empresa inventada, o risco concreto por trás do CNPJ obrigatório.
+
+**O que isso não prova:** que quem se cadastrou é dono dela. Razão social é
+dado público, e alguém pode digitar o CNPJ de uma empresa de verdade que
+não é sua. Provar posse é outro problema — e não valia travar este por
+causa dele, porque até agora não se provava nem a existência.
+
+**A consulta não entra no caminho do cadastro.** API de terceiro fora do ar
+não pode impedir ninguém de criar conta — a mesma razão que faz a lista de
+municípios ser versionada em vez de buscada no IBGE em execução. É ação de
+quem já tem conta, e toda falha cai de volta no envio de documento, que
+continua existindo.
+
+**Nada disso vale para o prestador**, que tem CPF. Não há consulta pública
+gratuita de CPF; é a
+[#120](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/120), presa a
+provedor pago. A mensagem diz isso e manda para o caminho que existe, em vez
+de deixar a pessoa num botão que nunca vai funcionar para ela.
+
+**A comparação de razão social é tolerante de propósito.** A Receita grava
+em caixa alta e sem acento; quem digita escreve "Agro Norte Ltda." com
+ponto e acento. Normaliza-se acento, caixa, pontuação e espaço — nunca
+palavra: "Agro Norte" e "Agro Norte Comércio" continuam sendo nomes
+diferentes. Verificação que reprova quem está certo ensina todo mundo a
+ignorá-la.
+
 ### A vitrine só mostra prestador verificado
 
 Virar prestador não coloca ninguém na busca: o documento passa pela fila
