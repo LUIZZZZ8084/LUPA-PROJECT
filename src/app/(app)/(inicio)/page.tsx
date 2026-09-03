@@ -17,7 +17,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
-import { CIDADE_INICIAL, ESTADO_NOME } from "@/lib/constants";
+import { CIDADE_INICIAL, ESTADO_NOME, rotuloDaCidade } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
 import { origemDoUsuario } from "@/server/auth/origem";
 
@@ -25,17 +25,33 @@ export default async function HomePage() {
   // Os destaques também vêm do mais perto para o mais longe: a home é a
   // primeira impressão, e quatro vagas de Cuiabá para quem é de Sinop
   // dizem que o app não é da cidade dela.
-  const { jobs, providers, totals } = await getHomeFeed(
-    await origemDoUsuario(),
-  );
+  const origem = await origemDoUsuario();
+  const { jobs, providers, totals } = await getHomeFeed(origem);
 
   return (
     <>
       <section className="aurora border-b border-line">
         <div className="mx-auto max-w-4xl px-4 pt-10 pb-12 sm:px-6 sm:pt-16">
+          {/*
+           * O pino de localização promete "aqui é onde você está" — e até
+           * a #107 dizia sempre "Mato Grosso · começando por Sinop",
+           * pra quem quer que fosse, de qualquer cidade. `origemDoUsuario()`
+           * já lê a cidade da conta para ordenar a busca por perto; usar o
+           * mesmo valor aqui é a diferença entre um selo de abrangência e
+           * uma promessa que o ícone já fazia sem cumprir.
+           *
+           * Sem sessão o home nem renderiza (app fechado por login), e
+           * `cidade` tem padrão no cadastro — mas se algum dia vier vazia,
+           * cai de volta no selo antigo em vez de mostrar um pino sem
+           * legenda.
+           */}
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
             <MapPin size={12} className="text-vagas" />
-            {ESTADO_NOME} · começando por {CIDADE_INICIAL}
+            {origem?.cidade
+              ? origem.bairro
+                ? `${origem.bairro}, ${rotuloDaCidade(origem.cidade)}`
+                : rotuloDaCidade(origem.cidade)
+              : `${ESTADO_NOME} · começando por ${CIDADE_INICIAL}`}
           </span>
 
           <h1 className="mt-5 text-[2rem] leading-[1.1] font-bold tracking-tight sm:text-5xl">
