@@ -166,6 +166,37 @@ de ter virado prestador, que é exatamente o que a troca encerrou.
 **Voltar atrás é caso de suporte**, como a cidade e o CNPJ, e pela mesma
 razão: é troca de identidade dentro da plataforma, não correção de campo.
 
+### Avaliar um prestador: quem pode, e o que o banco garante
+
+O painel do perfil convidava — "foi atendido por ele? sua avaliação ajuda
+a próxima pessoa" — e não havia nada para clicar. A tabela `avaliacoes`
+existe desde o começo, com o trigger que mantém `nota_media` e
+`total_avaliacoes` do prestador, e nunca ninguém escreveu nela pela
+aplicação: as linhas de hoje vieram do seed.
+
+**Qualquer conta com sessão avalia.** Decisão do Luiz em 03/09/2026:
+entrar já é pré-requisito para usar o app inteiro, então não há portão a
+mais. O admin fica de fora pela regra da casa — ele enxerga tudo e não age
+no lugar de ninguém, e reputação é ação com autor.
+
+**Duas travas moram no banco, não na tela:** ninguém avalia a si mesmo
+(`check`) e cada pessoa avalia uma vez (índice único parcial). A checagem
+na aplicação existe para dar mensagem decente antes de tentar — dois
+envios simultâneos passariam os dois por ela.
+
+`avaliador_id` entrou por migração. Antes só havia `nome_avaliador`, texto
+solto: servia para popular o seed, não para receber gente autenticada —
+sem dono, a mesma pessoa avalia dez vezes e ninguém consegue mostrar a ela
+a própria avaliação depois. O nome continua sendo gravado junto, porque a
+tela lista sem consultar `usuarios`, que é fechada para `anon` — e porque
+a avaliação é o registro do que aconteceu naquele dia.
+
+**A confirmação é renderizada pelo servidor.** A action revalida a rota,
+e a revalidação desmonta o formulário levando junto o "enviado" que ele
+mostrava: quem avaliava via o formulário sumir, sem confirmação nenhuma.
+Mesma armadilha do 404 depois de virar prestador — estado de cliente não
+sobrevive à revalidação da própria rota.
+
 ### O feed do prestador, e por que "remover" não apaga
 
 O backend de publicações existia inteiro — serviço, repositório, actions,

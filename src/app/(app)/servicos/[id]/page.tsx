@@ -1,4 +1,4 @@
-import { Banknote, Briefcase, MapPin, ShieldAlert } from "lucide-react";
+import { Banknote, Briefcase, Check, MapPin, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -23,7 +23,11 @@ import {
   ratingBreakdown,
 } from "@/lib/data";
 import { formatStartingPrice } from "@/lib/format";
+import { sessaoAtual } from "@/server/auth/cookies";
+import { pode } from "@/server/auth/rbac";
+import { jaAvaliou } from "@/server/avaliacoes/servico";
 import { listarPublicacoes } from "@/server/publicacoes/servico";
+import { FormularioDeAvaliacao } from "./avaliar";
 
 /**
  * As avaliações ficam abaixo da dobra e crescem sem limite — um prestador
@@ -89,6 +93,7 @@ export default async function ProviderPage({
   const provider = await getProviderById(id);
   if (!provider) notFound();
 
+  const sessao = await sessaoAtual();
   const reviews = await getReviews(id);
 
   /*
@@ -96,6 +101,20 @@ export default async function ProviderPage({
    * exibição — mostrar aqui ignoraria a escolha dele.
    */
   const trabalhos = await listarPublicacoes(id, "ativa");
+
+  /*
+   * O formulário de avaliação só aparece para quem pode usá-lo.
+   *
+   * O painel logo abaixo já convidava a avaliar sem oferecer nada para
+   * clicar. Mostrar o formulário a quem não pode enviar seria o inverso do
+   * mesmo erro: promessa que a action recusa depois do clique.
+   */
+  const jaAvaliouEste = await jaAvaliou(sessao, provider.profile_id);
+
+  const podeAvaliar =
+    Boolean(sessao && pode(sessao.papel, "avaliacao:escrever")) &&
+    sessao?.usuarioId !== provider.profile_id &&
+    !jaAvaliouEste;
   const breakdown = ratingBreakdown(reviews);
 
   const similar = (
@@ -292,6 +311,38 @@ export default async function ProviderPage({
             ))}
           </div>
         </section>
+      )}
+
+      {podeAvaliar && (
+        <FormularioDeAvaliacao
+          prestadorId={provider.profile_id}
+          nomeDoPrestador={provider.full_name}
+        />
+      )}
+
+      {/*
+       * A confirmação vem do servidor, não do estado do formulário.
+       *
+       * A action revalida esta rota — a nota média muda —, e a revalidação
+       * desmonta o formulário junto com o "enviado" que ele mostrava. Quem
+       * acabava de avaliar via o formulário simplesmente sumir, sem
+       * confirmação nenhuma. É a mesma armadilha do 404 depois de virar
+       * prestador: estado de cliente não sobrevive à revalidação da
+       * própria rota.
+       */}
+      {jaAvaliouEste && (
+        <Panel className="mt-5 border-vagas/30 bg-vagas/8">
+          <div className="flex items-start gap-3">
+            <Check size={20} className="mt-0.5 flex-none text-vagas" />
+            <div>
+              <h2 className="font-bold text-base">Você já avaliou</h2>
+              <p className="mt-1.5 text-muted text-sm leading-relaxed">
+                Sua avaliação está na lista abaixo. Cada pessoa avalia uma vez —
+                é o que mantém a nota honesta.
+              </p>
+            </div>
+          </div>
+        </Panel>
       )}
 
       {/* Avaliações — carregado sob demanda, ver ReviewsPanel */}

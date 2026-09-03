@@ -89,6 +89,9 @@ Prestador:
 - O feed de trabalhos do prestador, que tinha backend e nenhuma tela — e
   o atalho do perfil que apontava para a busca pública —
   [#115](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/115)
+- Avaliar um prestador com nota e comentário — o convite que estava na
+  tela desde o começo e não tinha botão —
+  [#116](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/116)
 
 Perfil e vaga, o que cada um informa:
 

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { avaliacoesEmMemoria } from "@/server/avaliacoes/servico";
 import {
   RepositorioCandidaturasMemoria,
   repositorioCandidaturas,
@@ -362,6 +363,32 @@ export async function getRelatedJobs(
  * `candidatos_disponiveis`, onde o `where` mora na view porque ali o
  * risco é revelar quem não consentiu.
  */
+/**
+ * Soma as avaliações desta sessão ao que o prestador já tinha.
+ *
+ * Só existe para o modo demonstração. Com banco, o trigger em `avaliacoes`
+ * mantém `nota_media` e `total_avaliacoes` em dia sozinho; aqui, sem isto,
+ * quem avaliasse veria o comentário entrar na lista e a nota do topo não
+ * mexer — e concluiria que não foi. O mock já cuidava para que "perfil,
+ * cards e barras nunca discordem entre si"; esta função estende a mesma
+ * garantia ao que se escreve durante a demonstração.
+ */
+function comAvaliacoesDaSessao(provider: ProviderListing): ProviderListing {
+  const daSessao = avaliacoesEmMemoria(provider.profile_id);
+  if (daSessao.length === 0) return provider;
+
+  const total = provider.review_count + daSessao.length;
+  const soma =
+    provider.avg_rating * provider.review_count +
+    daSessao.reduce((s, a) => s + a.nota, 0);
+
+  return {
+    ...provider,
+    review_count: total,
+    avg_rating: Math.round((soma / total) * 10) / 10,
+  };
+}
+
 export async function getProviders(
   filters: ProviderFilters = {},
 ): Promise<ProviderListing[]> {
@@ -408,7 +435,9 @@ export async function getProviders(
     )
       return false;
     return true;
-  }).sort(desempateDePrestador);
+  })
+    .map(comAvaliacoesDaSessao)
+    .sort(desempateDePrestador);
 
   return ordenarPrestadores(encontrados, filters.perto);
 }
@@ -431,7 +460,8 @@ export async function getProviderById(
       return (data as unknown as ProviderListing) ?? null;
     }
   }
-  return MOCK_PROVIDERS.find((p) => p.profile_id === id) ?? null;
+  const encontrado = MOCK_PROVIDERS.find((p) => p.profile_id === id);
+  return encontrado ? comAvaliacoesDaSessao(encontrado) : null;
 }
 
 export async function getReviews(providerId: string): Promise<Review[]> {
@@ -459,9 +489,23 @@ export async function getReviews(providerId: string): Promise<Review[]> {
       }));
     }
   }
-  return MOCK_REVIEWS.filter((r) => r.provider_id === providerId).sort(
-    (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
-  );
+  /*
+   * Na demonstração, o que foi escrito nesta sessão vem junto com o seed —
+   * senão avaliar pareceria funcionar e sumiria na navegação seguinte.
+   */
+  const daSessao = avaliacoesEmMemoria(providerId).map((a, i) => ({
+    id: `memoria-${i}`,
+    provider_id: a.prestadorId,
+    reviewer_name: a.nome,
+    rating: a.nota,
+    comment: a.comentario,
+    created_at: a.criadoEm,
+  }));
+
+  return [
+    ...daSessao,
+    ...MOCK_REVIEWS.filter((r) => r.provider_id === providerId),
+  ].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
 }
 
 /** Distribuição de notas 5→1, usada na barra do perfil do prestador. */

@@ -297,13 +297,38 @@ create index candidaturas_candidato_idx on candidaturas (candidato_id);
 create table avaliacoes (
   id             uuid primary key default gen_random_uuid(),
   prestador_id   uuid not null references usuarios(id) on delete cascade,
+  /*
+   * De quem é a avaliação.
+   *
+   * Nulo nas de demonstração, que vieram do seed antes de existir escrita
+   * pela aplicação. `on delete set null` porque a avaliação é informação
+   * do prestador também: apagar a conta de quem escreveu não pode apagar
+   * a reputação de quem foi avaliado.
+   */
+  avaliador_id   uuid references usuarios(id) on delete set null,
+  -- Mantido para as linhas antigas e para exibir sem outra consulta.
   nome_avaliador text not null,
   nota           int not null check (nota between 1 and 5),
   comentario     text,
-  criado_em      timestamptz not null default now()
+  criado_em      timestamptz not null default now(),
+
+  -- Ninguém avalia a si mesmo.
+  constraint avaliacao_nao_e_de_si_mesmo
+    check (avaliador_id is null or avaliador_id <> prestador_id)
 );
 
 create index avaliacoes_prestador_idx on avaliacoes (prestador_id, criado_em desc);
+
+/*
+ * Uma avaliação por pessoa, por prestador.
+ *
+ * A checagem na aplicação não basta: dois envios simultâneos passam os
+ * dois e gravam os dois. Parcial porque as de demonstração não têm dono e
+ * nulo não colide com nulo.
+ */
+create unique index avaliacoes_um_por_pessoa_idx
+  on avaliacoes (prestador_id, avaliador_id)
+  where avaliador_id is not null;
 
 -- Mantém nota_media e total_avaliacoes em dia a cada avaliação.
 create or replace function atualizar_nota_prestador()
