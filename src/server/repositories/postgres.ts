@@ -1,6 +1,7 @@
 import "server-only";
 
 import { clienteDeServico } from "@/lib/supabase/service";
+import type { Papel } from "../auth/rbac";
 import { erros } from "../errors";
 import type {
   DadosNovoUsuario,
@@ -35,6 +36,7 @@ function paraUsuario(linha: Record<string, unknown>): Usuario {
     senhaHash: String(linha.senha_hash),
     papel: linha.papel as Usuario["papel"],
     nomeCompleto: String(linha.nome_completo),
+    cpf: (linha.cpf as string | null) ?? null,
     telefone: String(linha.telefone),
     cidade: String(linha.cidade),
     bairro: (linha.bairro as string | null) ?? null,
@@ -122,6 +124,23 @@ export class RepositorioPostgres implements RepositorioUsuarios {
 
     if (error)
       throw erros.indisponivel(`atualização de senha: ${error.message}`);
+  }
+
+  async atualizarPapel(id: string, papel: Papel): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({ papel })
+      .eq("id", id);
+
+    /*
+     * Aqui a falha derruba, ao contrário de `registrarAcesso`: quem chama
+     * isto vai reemitir a sessão logo em seguida. Gravar o papel novo no
+     * cookie sem ter gravado no banco deixaria a pessoa com capacidades
+     * que o banco não reconhece — e o desencontro só apareceria no próximo
+     * login, dias depois.
+     */
+    if (error) throw erros.indisponivel(`troca de papel: ${error.message}`);
   }
 
   async registrarAcesso(id: string): Promise<void> {
@@ -213,6 +232,28 @@ export class RepositorioPostgres implements RepositorioUsuarios {
 
     if (error) throw erros.indisponivel(`consulta de CNPJ: ${error.message}`);
     return Boolean(data);
+  }
+
+  async cpfEmUso(cpf: string): Promise<boolean> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("id")
+      .eq("cpf", cpf)
+      .maybeSingle();
+
+    if (error) throw erros.indisponivel(`consulta de CPF: ${error.message}`);
+    return Boolean(data);
+  }
+
+  async definirCpf(id: string, cpf: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({ cpf })
+      .eq("id", id);
+
+    if (error) throw erros.indisponivel(`gravação de CPF: ${error.message}`);
   }
 
   /* ---------- Leitura de perfil, para a tela de edição ---------- */

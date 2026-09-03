@@ -132,6 +132,35 @@ function cnpjDeTeste(): string {
 }
 
 /**
+ * Um CPF diferente a cada chamada, com dígito verificador de verdade.
+ *
+ * Mesma necessidade do CNPJ acima, e pelo mesmo motivo prático: os dois
+ * projetos — desktop e mobile — rodam contra o mesmo servidor. Um literal
+ * fixo funciona no primeiro e é recusado no segundo com "este CPF já está
+ * em uso", que é o app se comportando certo: um CPF é de uma pessoa só.
+ *
+ * A conta da verificação é repetida aqui de propósito, como a do CNPJ. Um
+ * ajudante de teste que importa `cpfValido` do servidor deixa de exercitar
+ * o contrato e passa a concordar com ele.
+ */
+export function cpfDeTeste(): string {
+  const base = String(Math.floor(Math.random() * 1e9)).padStart(9, "0");
+
+  const digito = (numero: string) => {
+    const peso = numero.length + 1;
+    const soma = [...numero].reduce(
+      (total, d, i) => total + Number(d) * (peso - i),
+      0,
+    );
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  };
+
+  const d1 = digito(base);
+  return `${base}${d1}${digito(`${base}${d1}`)}`;
+}
+
+/**
  * Cria uma conta de empresa e entra, num contexto só deste teste.
  *
  * A sessão compartilhada da suíte é de candidato — é o papel que a maioria

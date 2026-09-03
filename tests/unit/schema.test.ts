@@ -471,6 +471,58 @@ describe("grants de anon e authenticated", () => {
     expect(r.rows[0].tem_acesso).toBe(false);
   });
 
+  /**
+   * O CPF é o documento de quem oferece serviço, e mora em `usuarios`.
+   *
+   * O lugar simétrico ao CNPJ seria `perfis_prestador` — e é justamente
+   * onde ele não pode ficar: aquela tabela tem policy `using (true)` e
+   * `grant select` para `anon`, a chave que roda no navegador. CNPJ pode
+   * ser público porque é registro público; CPF não é.
+   *
+   * Este teste existe para o dia em que alguém "arrumar" a assimetria.
+   */
+  it("o CPF não está em nenhuma tabela ou view que anon leia", async () => {
+    const r = await db.query<{ objeto: string }>(
+      `select cl.relname as objeto
+         from pg_attribute a
+         join pg_class cl on cl.oid = a.attrelid
+         join pg_namespace n on n.oid = cl.relnamespace
+        where a.attname = 'cpf'
+          and a.attnum > 0
+          and not a.attisdropped
+          and n.nspname = 'public'
+          and cl.relkind in ('r', 'v')
+          and has_table_privilege('anon', cl.oid, 'SELECT')`,
+    );
+
+    expect(r.rows.map((l) => l.objeto)).toEqual([]);
+  });
+
+  it("o CPF é único onde existe, e livre onde não existe", async () => {
+    await db.query(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf)
+       values ('cpf1@lupa.test', 'h', 'prestador_servico', 'Um', '66999990001', '52998224725')`,
+    );
+
+    // Segundo prestador com o mesmo documento não entra.
+    await expect(
+      db.query(
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf)
+         values ('cpf2@lupa.test', 'h', 'prestador_servico', 'Dois', '66999990002', '52998224725')`,
+      ),
+    ).rejects.toThrow();
+
+    /*
+     * Mas duas contas sem documento convivem: o índice é parcial porque a
+     * esmagadora maioria das contas nunca vai ter CPF — não é prestador.
+     */
+    await db.query(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
+       values ('semcpf1@lupa.test', 'h', 'candidato_clt', 'Três', '66999990003'),
+              ('semcpf2@lupa.test', 'h', 'candidato_clt', 'Quatro', '66999990004')`,
+    );
+  });
+
   it.each(PUBLICAS_DE_PROPOSITO)(
     "anon continua lendo %s — a revogação não é geral demais",
     async (tabela) => {

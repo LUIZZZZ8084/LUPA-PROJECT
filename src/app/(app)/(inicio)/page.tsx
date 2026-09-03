@@ -19,7 +19,45 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { CIDADE_INICIAL, ESTADO_NOME, rotuloDaCidade } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
+import { sessaoAtual } from "@/server/auth/cookies";
 import { origemDoUsuario } from "@/server/auth/origem";
+import { type Papel, pode } from "@/server/auth/rbac";
+
+/**
+ * O terceiro card, decidido pelo papel de quem está olhando.
+ *
+ * Ele apontava sempre para `/cadastro?tipo=prestador_servico` — a tela de
+ * criar conta. Só que ninguém vê esta home sem sessão: o app é fechado por
+ * login. Mandar quem já tem conta para o cadastro é pedir que ela mantenha
+ * duas contas e não ache nenhuma depois.
+ *
+ * Quem pode ativar (candidato) vai para a ativação; quem já é prestador vai
+ * para o próprio perfil, que é onde ele edita o anúncio; e para os outros
+ * papéis o card deixa de prometer o que não se aplica a eles.
+ */
+function cardDeServico(papel: Papel | undefined) {
+  if (papel && pode(papel, "prestador:ativar")) {
+    return {
+      href: "/perfil/virar-prestador",
+      titulo: "Oferecer serviço",
+      legenda: "Divulgue suas habilidades",
+    };
+  }
+
+  if (papel === "prestador_servico") {
+    return {
+      href: "/perfil",
+      titulo: "Meu perfil de prestador",
+      legenda: "Edite seu anúncio",
+    };
+  }
+
+  return {
+    href: "/perfil",
+    titulo: "Meu perfil",
+    legenda: "Seus dados e verificação",
+  };
+}
 
 export default async function HomePage() {
   // Os destaques também vêm do mais perto para o mais longe: a home é a
@@ -27,6 +65,8 @@ export default async function HomePage() {
   // dizem que o app não é da cidade dela.
   const origem = await origemDoUsuario();
   const { jobs, providers, totals } = await getHomeFeed(origem);
+  const sessao = await sessaoAtual();
+  const terceiroCard = cardDeServico(sessao?.papel);
 
   return (
     <>
@@ -81,10 +121,10 @@ export default async function HomePage() {
               tone="servicos"
             />
             <ActionCard
-              href="/cadastro?tipo=prestador_servico"
+              href={terceiroCard.href}
               icon={<Users size={20} />}
-              title="Oferecer serviço"
-              subtitle="Divulgue suas habilidades"
+              title={terceiroCard.titulo}
+              subtitle={terceiroCard.legenda}
               tone="empresas"
             />
           </div>

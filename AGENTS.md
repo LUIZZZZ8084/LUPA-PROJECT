@@ -139,6 +139,54 @@ tela mostrar dados falsos mesmo com o banco ligado.
 
 ## Decisões de arquitetura, com o porquê
 
+### Virar prestador troca o papel, e a pessoa é avisada
+
+O card "Oferecer serviço" mandava para `/cadastro?tipo=prestador_servico`
+— a tela de criar conta. Ninguém vê aquela home sem sessão, então isso era
+pedir uma segunda conta a quem já tinha uma. Hoje leva para
+`/perfil/virar-prestador`, que completa o perfil que já existe.
+
+**A conta troca de papel, não acumula.** Decisão do Luiz em 02/09/2026,
+tomada de olhos abertos sobre o custo: `candidato_clt` vira
+`prestador_servico` e **deixa de poder se candidatar a vagas**. A
+alternativa — papel acumulado — foi apresentada e recusada; o que ele
+exigiu junto foi o aviso, e por isso ele está antes do formulário, não
+depois do botão.
+
+O que sobrevive à troca é o histórico: `candidatura:ver_propria` vale para
+os dois papéis. A pessoa não se candidata mais, mas o que ela já fez
+continua dela — sem isso, `/perfil/candidaturas` responderia 404 no dia
+seguinte e ela concluiria que o app perdeu tudo.
+
+**A sessão é reemitida na mesma ação.** O papel viaja dentro do JWT, com 7
+dias de validade: gravar no banco sem reemitir deixaria a pessoa com as
+capacidades de candidato até o token vencer — podendo se candidatar depois
+de ter virado prestador, que é exatamente o que a troca encerrou.
+
+**Voltar atrás é caso de suporte**, como a cidade e o CNPJ, e pela mesma
+razão: é troca de identidade dentro da plataforma, não correção de campo.
+
+### CPF mora em `usuarios`, não em `perfis_prestador`
+
+Parece que o lugar simétrico ao CNPJ da empresa seria `perfis_prestador`.
+Não é, e a diferença não é de arrumação — é de privacidade:
+
+- `perfis_prestador` tem policy `for select using (true)` e `grant select`
+  para `anon`, a chave que vai para o navegador. Documento ali é documento
+  publicado.
+- `usuarios` não tem grant nenhum para `anon`: só a chave de serviço a
+  alcança, e é onde já mora o hash de senha.
+
+**E CNPJ pode ser público porque é registro público. CPF não é.** O teste
+de schema recusa a coluna `cpf` em qualquer tabela ou view que `anon`
+leia — foi escrito depois de eu ter posto o campo no lugar errado e o
+teste ter pego.
+
+A coluna é opcional no banco: conta criada antes do campo existir continua
+funcionando, e a esmagadora maioria das contas nunca vai ter CPF, porque
+não é prestador. O índice único é parcial pelo mesmo motivo — nulo não
+colide com nulo. Quem ativa hoje preenche, e a tela é que exige.
+
 ### Autenticação própria, não Supabase Auth
 
 Migração `0001` substituiu `auth.users` por uma tabela `usuarios` nossa.
@@ -643,6 +691,39 @@ para manter sem ninguém pedindo ainda.
 ## Armadilhas que já custaram caro
 
 Bugs reais deste projeto, cada um com um teste que impede a volta:
+
+- **`revalidatePath` re-renderiza a rota em que você ainda está, e o portão
+  dela pode ter acabado de fechar.** A tela de virar prestador troca o
+  papel e revalida o layout — o papel decide o menu inteiro. Só que a
+  revalidação re-renderiza *aquela mesma rota*, cujo portão agora recusa
+  quem acabou de passar por ele: quem ativava com sucesso terminava
+  olhando para "Não encontramos essa página". A navegação no cliente
+  (`router.replace`) perdia a corrida contra a revalidação, e não dava
+  para redirecionar de dentro da action porque `criarAcao` captura toda
+  exceção — inclusive o `NEXT_REDIRECT`. A saída foi a própria página
+  redirecionar quem já é prestador, que é determinístico e roda no
+  servidor. **Ação que muda o papel e revalida precisa responder o que a
+  rota de origem faz depois** — e a resposta não pode ser 404 na cara de
+  quem acabou de acertar.
+
+- **Botão que só recusa depois do clique.** "Candidatar-se" aparecia em
+  toda vaga aberta para qualquer papel — prestador, empresa —, e a recusa
+  só vinha da action, depois do clique. O próprio código já condenava isso
+  nos atalhos do perfil ("mostrar um link que devolve sem permissão ao ser
+  clicado é pior do que não mostrar"), mas a regra não tinha atravessado
+  para a tela da vaga. Ficou pior quando a tela de virar prestador passou
+  a prometer, por escrito, que o botão some. **Promessa na tela é contrato:
+  quem escreve o aviso confere se ele é verdade.**
+
+- **`npm run dev` fala com o banco de produção.** O `.env.local` tem as
+  credenciais reais, e `next dev` as carrega. Conferir uma tela "no
+  navegador" criando conta ali escreve em produção — foi assim que uma
+  conta de teste (`teste-sorriso@teste.lupa`) foi parar na base real e
+  precisou ser apagada à mão. O `playwright.config.ts` zera as variáveis à
+  força justamente por isso; o dev server não. **Para conferir fluxo que
+  escreve, use a suíte e2e, que roda em demonstração por construção** — e
+  ela ainda deixa o teste para trás, em vez de um clique que ninguém
+  repete.
 
 - **`useSearchParams()` exige `<Suspense>`, e esse boundary pode nunca
   resolver.** A barra de filtros ficou invisível e inerte: o conteúdo era
