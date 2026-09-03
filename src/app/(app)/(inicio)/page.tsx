@@ -176,8 +176,20 @@ export default async function HomePage() {
           </Panel>
         </Reveal>
 
+        {/*
+         * Direitos autorais, não área de cobertura.
+         *
+         * Dizia "aberto a todo o Mato Grosso · começamos por Sinop" — a
+         * cobertura geográfica já está clara na home inteira (filtro de
+         * cidade, badge do topo); rodapé é onde se espera outra coisa.
+         *
+         * "Palu" é "Lupa" com as duas metades trocadas: LU (Luiz) + PA
+         * (Paulinho) virou PA + LU — a mesma lógica de fundação do nome
+         * do produto, agora para a pessoa jurídica por trás dele.
+         */}
         <p className="mt-8 text-center text-xs text-faint">
-          Lupa · aberto a todo o {ESTADO_NOME} · começamos por {CIDADE_INICIAL}
+          Lupa · © {new Date().getFullYear()} Palu Soluções Digitais. Todos os
+          direitos reservados.
         </p>
       </PageShell>
     </>
