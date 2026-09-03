@@ -10,6 +10,7 @@ import {
 import { AbasDoPerfil, GerenciarTrabalhos } from "@/components/abas-do-perfil";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
+import { SocialLinks } from "@/components/social-links";
 import { Avatar } from "@/components/ui/avatar";
 import { Panel } from "@/components/ui/card";
 import {
@@ -280,27 +281,11 @@ export default async function ProviderPage({
               )}
 
               {(provider.instagram || provider.facebook) && (
-                <div className="mt-5 flex items-center gap-4 border-t border-line pt-5">
-                  {provider.instagram && (
-                    <a
-                      href={provider.instagram}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-muted underline-offset-2 transition-colors hover:text-servicos hover:underline"
-                    >
-                      Instagram
-                    </a>
-                  )}
-                  {provider.facebook && (
-                    <a
-                      href={provider.facebook}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-muted underline-offset-2 transition-colors hover:text-servicos hover:underline"
-                    >
-                      Facebook
-                    </a>
-                  )}
+                <div className="mt-5 border-t border-line pt-5">
+                  <SocialLinks
+                    instagram={provider.instagram}
+                    facebook={provider.facebook}
+                  />
                 </div>
               )}
             </>
