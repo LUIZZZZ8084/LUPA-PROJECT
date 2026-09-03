@@ -1,6 +1,7 @@
 import { FileText, Inbox, MessageCircle, Plus, UserSearch } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   EmptyState,
   PageShell,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/data";
 import { pluralize, timeAgo, whatsappLink } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { pode } from "@/server/auth/rbac";
 import {
   type MatchDaCandidatura,
   matchPorCandidatura,
@@ -76,7 +78,27 @@ function SeloDeMatch({ match }: { match: MatchDaCandidatura | undefined }) {
 
 export default async function EmpresaPage() {
   const sessao = await sessaoAtual();
-  const companyId = empresaDoPainel(sessao?.usuarioId ?? null);
+
+  /*
+   * O painel é "minha empresa", e quem não tem empresa não tem painel.
+   *
+   * A página lia a sessão e nunca conferia o papel: qualquer conta
+   * autenticada — candidato, prestador — abria daqui. Não vazava dado, e
+   * é por isso que ninguém viu: em produção `empresaDoPainel()` devolve o
+   * id de quem está pedindo, então as consultas voltam vazias, e publicar
+   * já barrava na capacidade dentro da action. O que faltava era o
+   * portão, e portão que falta é o que a próxima página criada aqui
+   * embaixo herda.
+   *
+   * 404 e não 403, como no resto da casa. O admin também cai aqui de
+   * propósito: ele enxerga tudo pelo `/admin/painel`, e uma empresa
+   * própria é justamente o que ele não tem.
+   */
+  if (!sessao || !pode(sessao.papel, "vaga:ver_candidaturas_proprias")) {
+    notFound();
+  }
+
+  const companyId = empresaDoPainel(sessao.usuarioId);
   const [company, jobs, applications, stats, serie, recomendados] =
     await Promise.all([
       getCompany(companyId),

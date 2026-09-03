@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { pode } from "@/server/auth/rbac";
+import { type Capacidade, pode } from "@/server/auth/rbac";
 import { CONFIG_SESSAO, lerSessao } from "@/server/auth/session";
 
 /**
@@ -18,8 +18,54 @@ import { CONFIG_SESSAO, lerSessao } from "@/server/auth/session";
  * assinatura da sessão, nunca uma senha.
  */
 
-/** Prefixos que exigem papel `admin`. */
-const PREFIXOS_ADMIN = ["/admin", "/api/admin"];
+/**
+ * Áreas fechadas por capacidade, e a capacidade que cada uma exige.
+ *
+ * A guarda vive aqui, e não só na página, por uma razão que já custou
+ * caro duas vezes: `notFound()` dentro do componente chega tarde. O
+ * metadata já foi resolvido — a aba dizia "Minha Empresa" exibindo o
+ * corpo do 404 — e, onde existe `loading.tsx` no ramo, o shell é
+ * transmitido antes de a página decidir e **o status fica em 200**. O
+ * painel da empresa tem um `loading.tsx` de propósito, para não abrir em
+ * branco no 3G; sem esta lista, fechá-lo custaria o esqueleto.
+ *
+ * O mais específico vence: `/empresa/vagas/nova` exige publicar, que o
+ * admin não tem — ele enxerga, e de propósito não publica no lugar de
+ * ninguém.
+ *
+ * `semSessao` separa dois casos que parecem um só. Para quem tem sessão e
+ * não pode, a resposta é sempre 404 — 403 confirmaria que a área existe.
+ * Para quem não tem sessão nenhuma a pergunta é outra: a área
+ * administrativa não se confirma nem para anônimo, mas `/empresa` e
+ * `/candidatos` são tela de produto, e a empresa que abre o link do painel
+ * deslogada precisa do login com o destino guardado, não de um 404 que a
+ * faz achar que perdeu a conta.
+ */
+interface AreaFechada {
+  prefixo: string;
+  capacidade: Capacidade;
+  semSessao: "404" | "login";
+}
+
+const AREAS_FECHADAS: readonly AreaFechada[] = [
+  { prefixo: "/api/admin", capacidade: "admin:painel", semSessao: "404" },
+  { prefixo: "/admin", capacidade: "admin:painel", semSessao: "404" },
+  {
+    prefixo: "/empresa/vagas/nova",
+    capacidade: "vaga:publicar",
+    semSessao: "login",
+  },
+  {
+    prefixo: "/empresa",
+    capacidade: "vaga:ver_candidaturas_proprias",
+    semSessao: "login",
+  },
+  {
+    prefixo: "/candidatos",
+    capacidade: "candidato:buscar_disponiveis",
+    semSessao: "login",
+  },
+];
 
 /**
  * O que continua aberto sem sessão.
@@ -54,10 +100,35 @@ function ehRotaAberta(pathname: string): boolean {
  */
 const CAMINHO_INEXISTENTE = "/__nao-encontrado";
 
-function ehRotaDeAdmin(pathname: string): boolean {
-  return PREFIXOS_ADMIN.some(
-    (prefixo) => pathname === prefixo || pathname.startsWith(`${prefixo}/`),
+/**
+ * A área fechada que cobre este caminho, ou `null` se ele é livre para
+ * quem tem sessão. Ordem da lista decide: o primeiro que casa vence, e
+ * ela está escrita do mais específico para o mais geral.
+ */
+function areaDe(pathname: string): AreaFechada | null {
+  return (
+    AREAS_FECHADAS.find(
+      ({ prefixo }) =>
+        pathname === prefixo || pathname.startsWith(`${prefixo}/`),
+    ) ?? null
   );
+}
+
+/** O login, com o destino pretendido guardado na query. */
+function paraOLogin(request: NextRequest) {
+  const login = request.nextUrl.clone();
+  const { pathname } = request.nextUrl;
+  login.pathname = ENTRADA;
+  login.search = "";
+  /*
+   * O destino pretendido vai junto, para a pessoa terminar onde queria
+   * chegar. Sem isso, quem abre o link de uma vaga entra e cai na home,
+   * tendo que procurar de novo o que já tinha achado.
+   */
+  if (pathname !== "/") {
+    login.searchParams.set("destino", pathname + request.nextUrl.search);
+  }
+  return NextResponse.redirect(login);
 }
 
 export async function proxy(request: NextRequest) {
@@ -66,7 +137,9 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(CONFIG_SESSAO.NOME_COOKIE)?.value;
   const sessao = token ? await lerSessao(token) : null;
 
-  if (!ehRotaDeAdmin(pathname)) {
+  const area = areaDe(pathname);
+
+  if (!area) {
     if (sessao || ehRotaAberta(pathname)) return NextResponse.next();
 
     /*
@@ -78,24 +151,14 @@ export async function proxy(request: NextRequest) {
       return NextResponse.json({ erro: "não autenticado" }, { status: 401 });
     }
 
-    /*
-     * O destino pretendido vai junto, para a pessoa terminar onde queria
-     * chegar. Sem isso, quem abre o link de uma vaga entra e cai na home,
-     * tendo que procurar de novo o que já tinha achado.
-     */
-    const login = request.nextUrl.clone();
-    login.pathname = ENTRADA;
-    login.search = "";
-    if (pathname !== "/") {
-      login.searchParams.set("destino", pathname + request.nextUrl.search);
-    }
-
-    return NextResponse.redirect(login);
+    return paraOLogin(request);
   }
 
-  if (sessao && pode(sessao.papel, "admin:painel")) {
+  if (sessao && pode(sessao.papel, area.capacidade)) {
     return NextResponse.next();
   }
+
+  if (!sessao && area.semSessao === "login") return paraOLogin(request);
 
   /*
    * Para a API, um JSON de 404 — devolver HTML numa rota de dados confunde

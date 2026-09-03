@@ -229,13 +229,28 @@ function Linha({
   rotulo: string;
   children: React.ReactNode;
 }) {
+  /*
+   * `dt` e `dd` são filhos diretos do `div` que embrulha o par.
+   *
+   * A versão anterior punha o ícone como irmão e descia mais um `div`
+   * antes deles: `dl > div > div > dt`. O HTML aceita **um** `div`
+   * embrulhando o par, e não dois — com o segundo, `dt` e `dd` deixam de
+   * pertencer à lista, e leitor de tela para de anunciar "Onde mora" como
+   * o rótulo de "Jardim Primavera · Sinop": lê duas frases soltas. O axe
+   * acusa como `definition-list` e `dlitem`, impacto sério, e ninguém
+   * tinha visto porque esta tela nunca passou por varredura.
+   *
+   * O ícone foi para dentro do `dt`, que é onde ele pertence: ele ilustra
+   * o rótulo, não a linha.
+   */
   return (
-    <div className="flex items-start gap-2.5">
-      <span className="mt-0.5 flex-none text-muted">{icone}</span>
-      <div className="min-w-0">
-        <dt className="text-[11px] text-muted">{rotulo}</dt>
-        <dd className="mt-0.5">{children}</dd>
-      </div>
+    <div className="min-w-0">
+      <dt className="flex items-center gap-2 text-[11px] text-muted">
+        <span className="flex-none">{icone}</span>
+        {rotulo}
+      </dt>
+      {/* Alinha o valor com o rótulo, descontando ícone e espaço. */}
+      <dd className="mt-0.5 pl-[23px]">{children}</dd>
     </div>
   );
 }

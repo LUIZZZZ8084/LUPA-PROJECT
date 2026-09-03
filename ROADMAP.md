@@ -150,6 +150,12 @@ Qualidade:
   instalável para quem ainda não tem conta —
   [#98](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/98),
   PR [#100](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/100)
+- Varredura de rotas e de autorização: toda rota do app passa por
+  contraste e por largura de tela, com a sessão do papel certo, e um
+  contrato varre `src/app` para a lista não envelhecer de novo. A
+  investigação achou `/empresa` e `/empresa/vagas/nova` sem checagem de
+  papel — qualquer conta autenticada abria as duas —
+  [#104](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/104)
 
 ## Pendente
 

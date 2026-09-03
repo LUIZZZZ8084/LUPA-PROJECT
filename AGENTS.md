@@ -831,6 +831,31 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   `6mb` no `next.config.ts`, cobrindo a maior regra com folga para o
   envelope do multipart. **Limite anunciado pela aplicação precisa caber
   no limite do framework.**
+- **Página que lê a sessão e nunca consulta a matriz.** `/empresa` e
+  `/empresa/vagas/nova` chamavam `sessaoAtual()` — uma para saber de quem
+  era o painel, a outra só para preencher a cidade — e nenhuma das duas
+  perguntava se aquele papel podia estar ali. Qualquer conta autenticada,
+  candidato ou prestador, abria as duas. Não vazou dado: em produção
+  `empresaDoPainel()` devolve o id de quem está pedindo, então as consultas
+  voltam vazias, e publicar já barrava dentro da action. É justamente por
+  isso que durou — **portão que falta não quebra tela nenhuma**, e o que se
+  perde é a garantia de que a matriz do RBAC é a fonte da verdade. A prova
+  de que fazia falta estava na própria suíte: três specs alcançavam
+  `/empresa` com sessão de candidato e passavam. Ler a sessão numa página
+  não é checar permissão; quem lê `sessaoAtual()` decide alguma coisa com
+  ela, e essa decisão passa por `pode()`.
+
+- **Lista de rotas escrita à mão envelhece em silêncio.** As varreduras de
+  contraste e de rolagem horizontal liam uma lista fixa de 13 rotas, num
+  app que já tinha 17. `/candidatos`, `/candidatos/[id]` e
+  `/perfil/candidaturas` nasceram depois e nunca passaram por nenhuma das
+  duas. Nada ficou vermelho — a suíte seguiu verde com 304 testes enquanto
+  quatro telas cresciam sem cobertura. Hoje `tests/unit/rotas-varridas.test.ts`
+  varre `src/app` e reprova rota fora de toda varredura; excluir continua
+  valendo, mas a razão tem que estar escrita em `ROTAS_NAO_VARRIDAS`.
+  **Quando a cobertura de um teste é uma lista, alguém precisa cobrar a
+  lista.**
+
 - **O matcher do proxy é onde um item esquecido não quebra nada e ninguém
   vê.** `manifest.webmanifest` ficou de fora da lista de exclusões,
   embora `icon` e `apple-icon` — gerados por rota do mesmo jeito —

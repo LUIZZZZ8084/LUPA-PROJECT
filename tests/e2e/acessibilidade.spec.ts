@@ -1,7 +1,31 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
-import { aguardarAnimacoes } from "./helpers";
-import { ROTAS } from "./rotas";
+import { expect, type Page, test } from "@playwright/test";
+import {
+  ARQUIVO_SESSAO_EMPRESA,
+  aguardarAnimacoes,
+  rotasProfundasDaEmpresa,
+} from "./helpers";
+import { ROTAS, ROTAS_EMPRESA } from "./rotas";
+
+/**
+ * As violações de uma página, já reduzidas ao que se lê num relatório.
+ *
+ * Extraído para que a varredura de empresa meça exatamente o mesmo — duas
+ * cópias da configuração do axe divergem na primeira vez que alguém
+ * acrescenta uma tag num lugar só.
+ */
+async function violacoesDe(page: Page) {
+  const resultado = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+
+  return resultado.violations.map((v) => ({
+    regra: v.id,
+    impacto: v.impact,
+    descricao: v.description,
+    elementos: v.nodes.slice(0, 3).map((n) => n.html.slice(0, 120)),
+  }));
+}
 
 /**
  * Acessibilidade não é detalhe aqui: parte do público tem baixa
@@ -23,16 +47,7 @@ for (const { path, nome } of ROTAS) {
     await page.goto(path);
     await aguardarAnimacoes(page);
 
-    const resultado = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
-
-    const violacoes = resultado.violations.map((v) => ({
-      regra: v.id,
-      impacto: v.impact,
-      descricao: v.description,
-      elementos: v.nodes.slice(0, 3).map((n) => n.html.slice(0, 120)),
-    }));
+    const violacoes = await violacoesDe(page);
 
     expect(
       violacoes,
@@ -40,3 +55,42 @@ for (const { path, nome } of ROTAS) {
     ).toEqual([]);
   });
 }
+
+/**
+ * As rotas que só a empresa alcança.
+ *
+ * Ficaram fora da varredura por um motivo estrutural, não por descuido: a
+ * sessão compartilhada da suíte é de candidato, e depois que `/empresa`
+ * ganhou portão de papel elas respondem 404 com ela. Medir aqui é medir a
+ * tela certa.
+ */
+test.describe("rotas da empresa", () => {
+  test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
+
+  for (const { path, nome } of ROTAS_EMPRESA) {
+    test(`${nome} sem violações de acessibilidade`, async ({ page }) => {
+      await page.goto(path);
+      await aguardarAnimacoes(page);
+      await expect(violacoesDe(page)).resolves.toEqual([]);
+    });
+  }
+
+  /**
+   * Ficha do candidato e edição de vaga, com o id resolvido pelo painel.
+   *
+   * São as duas telas em que a empresa passa mais tempo — ler currículo e
+   * corrigir anúncio — e nenhuma delas jamais passou por contraste.
+   */
+  test("as telas com id também passam", async ({ page }) => {
+    const profundas = await rotasProfundasDaEmpresa(page);
+    expect(profundas.length, "o painel não ofereceu nenhum link").toBe(2);
+
+    for (const { path, nome } of profundas) {
+      await page.goto(path);
+      await aguardarAnimacoes(page);
+
+      const violacoes = await violacoesDe(page);
+      expect(violacoes, `${nome} (${path})`).toEqual([]);
+    }
+  });
+});

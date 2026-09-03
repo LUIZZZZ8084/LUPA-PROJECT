@@ -1,10 +1,21 @@
+import { writeFileSync } from "node:fs";
 import { test as setup } from "@playwright/test";
 import {
   ARQUIVO_SESSAO,
   ARQUIVO_SESSAO_EMPRESA,
+  arquivoDeCredencial,
   entrarComoEmpresa,
   entrarComoTeste,
 } from "./helpers";
+
+/**
+ * O e-mail de cada conta, para quem precisa exercitar o *login* — e não
+ * apenas estar logado. Um arquivo por papel: os dois setups rodam em
+ * paralelo, e num arquivo só quem terminasse por último apagaria o outro.
+ */
+function guardarCredencial(papel: "candidato" | "empresa", email: string) {
+  writeFileSync(arquivoDeCredencial(papel), JSON.stringify({ email }));
+}
 
 /**
  * Cria uma conta uma vez e guarda a sessão em disco.
@@ -18,8 +29,9 @@ import {
  * correr: quem protege senha é ele.
  */
 setup("cria a sessão compartilhada", async ({ page }) => {
-  await entrarComoTeste(page);
+  const email = await entrarComoTeste(page);
   await page.context().storageState({ path: ARQUIVO_SESSAO });
+  guardarCredencial("candidato", email);
 });
 
 /**
@@ -31,6 +43,7 @@ setup("cria a sessão compartilhada", async ({ page }) => {
  * `ARQUIVO_SESSAO_EMPRESA`.
  */
 setup("cria a sessão de empresa", async ({ page }) => {
-  await entrarComoEmpresa(page);
+  const email = await entrarComoEmpresa(page);
   await page.context().storageState({ path: ARQUIVO_SESSAO_EMPRESA });
+  guardarCredencial("empresa", email);
 });

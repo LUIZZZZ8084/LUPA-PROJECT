@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { ARQUIVO_SESSAO_EMPRESA } from "./helpers";
 
 /**
  * As métricas do painel da empresa, conferidas no navegador.
@@ -11,6 +12,16 @@ import { expect, test } from "@playwright/test";
  * a única leitura que vale.
  */
 test.describe("métricas do painel da empresa", () => {
+  /*
+   * Sessão de empresa, e não a compartilhada.
+   *
+   * Estes testes abrem `/empresa`. Até a #104 isso funcionava com a sessão
+   * de candidato — não porque o teste estivesse certo, mas porque a página
+   * não conferia o papel. Fechado o portão, a sessão certa passou a ser
+   * exigência, e é o que o teste devia estar usando desde sempre.
+   */
+  test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
+
   test("mostra as duas séries e diz o que a visualização conta", async ({
     page,
   }) => {
