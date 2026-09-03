@@ -96,6 +96,21 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "candidatura:ver_propria",
     "prestador:ativar",
     "avaliacao:escrever",
+    /*
+     * Publicar trabalho também é do candidato.
+     *
+     * Decisão do Luiz em 03/09/2026: o feed é do prestador e do candidato.
+     * Quem faz obra, faxina ou instalação sem ter aberto CNPJ está
+     * cadastrado aqui — é o papel mais numeroso do app —, e a foto do
+     * serviço já feito é justamente o que convence quem contrata.
+     *
+     * Não confunde os papéis: publicar trabalho não põe ninguém na
+     * vitrine de `/servicos`, que continua sendo de quem ativou o perfil
+     * de prestador e teve o documento aprovado.
+     */
+    "publicacao:criar",
+    "publicacao:editar_propria",
+    "publicacao:arquivar_propria",
   ],
 
   prestador_servico: [
@@ -139,9 +154,14 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "vaga:ver_candidaturas_proprias",
     "candidatura:mover_estagio",
     "candidato:buscar_disponiveis",
-    "publicacao:criar",
-    "publicacao:editar_propria",
-    "publicacao:arquivar_propria",
+    /*
+     * A empresa não publica no feed, e isso é decisão, não esquecimento.
+     *
+     * Ela tinha as três capacidades e nenhuma tela que as usasse — o feed
+     * nasceu para quem vende o próprio trabalho. Quem representa a empresa
+     * na busca é a logo e o cartão dela, que têm campo próprio; o que ela
+     * publica são vagas.
+     */
     "avaliacao:escrever",
   ],
 

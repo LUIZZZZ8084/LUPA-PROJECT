@@ -50,13 +50,26 @@ describe("publicações de perfil", () => {
   });
 
   describe("permissões", () => {
-    it("prestador e empresa publicam", async () => {
+    /**
+     * O feed é de quem vende o próprio trabalho.
+     *
+     * Decisão do Luiz em 03/09/2026. Quem faz obra, faxina ou instalação
+     * sem ter aberto CNPJ está cadastrado como candidato — o papel mais
+     * numeroso do app —, e a foto do serviço já feito é o que convence
+     * quem contrata.
+     */
+    it("prestador e candidato publicam", async () => {
       await expect(criarPublicacao(prestador, CONTEUDO)).resolves.toBeTruthy();
-      await expect(criarPublicacao(empresa, CONTEUDO)).resolves.toBeTruthy();
+      await expect(criarPublicacao(candidato, CONTEUDO)).resolves.toBeTruthy();
     });
 
-    it("candidato não publica no perfil", async () => {
-      const erro = await capturar(() => criarPublicacao(candidato, CONTEUDO));
+    /**
+     * A empresa tinha a capacidade e nenhuma tela que a usasse. Quem
+     * representa a empresa na busca é a logo e o cartão dela, que têm
+     * campo próprio; o que ela publica são vagas.
+     */
+    it("empresa não publica no feed", async () => {
+      const erro = await capturar(() => criarPublicacao(empresa, CONTEUDO));
       expect(erro.codigo).toBe("sem_permissao");
     });
 
@@ -87,7 +100,7 @@ describe("publicações de perfil", () => {
 
     it("ninguém arquiva a publicação de outro", async () => {
       const dele = await criarPublicacao(prestador, CONTEUDO);
-      const outro: Autenticado = { usuarioId: "x", papel: "empresa" };
+      const outro: Autenticado = { usuarioId: "x", papel: "candidato_clt" };
 
       const erro = await capturar(() => arquivarPublicacao(outro, dele.id));
       expect(erro.codigo).toBe("nao_encontrado");
@@ -152,7 +165,7 @@ describe("publicações de perfil", () => {
 
     it("o limite é por perfil, não global", async () => {
       await encher(LIMITE_PUBLICACOES_ATIVAS);
-      await expect(criarPublicacao(empresa, CONTEUDO)).resolves.toBeTruthy();
+      await expect(criarPublicacao(candidato, CONTEUDO)).resolves.toBeTruthy();
     });
 
     it("arquivada não conta, mas continua acessível ao autor", async () => {
@@ -222,10 +235,10 @@ describe("publicações de perfil", () => {
 
     it("não mistura autores", async () => {
       await criarPublicacao(prestador, CONTEUDO);
-      await criarPublicacao(empresa, CONTEUDO);
+      await criarPublicacao(candidato, CONTEUDO);
 
       expect(await listarPublicacoes(prestador.usuarioId)).toHaveLength(1);
-      expect(await listarPublicacoes(empresa.usuarioId)).toHaveLength(1);
+      expect(await listarPublicacoes(candidato.usuarioId)).toHaveLength(1);
     });
   });
 });

@@ -1,11 +1,4 @@
-import {
-  Award,
-  Briefcase,
-  Building2,
-  MapPin,
-  Star,
-  Wrench,
-} from "lucide-react";
+import { Award, Briefcase, Building2, Star, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
@@ -167,6 +160,23 @@ export function PerfilCandidato({ perfil }: { perfil: DadosCandidato | null }) {
         Currículo e área desejada não aparecem em busca pública. Nem todo mundo
         quer que o patrão atual descubra que está procurando emprego.
       </p>
+
+      {/*
+       * O mesmo caminho que o prestador tem para a própria prévia.
+       *
+       * É lá que ficam as fotos do trabalho e é lá que ele as adiciona e
+       * remove — decisão do Luiz em 03/09/2026, que tirou a tela separada.
+       * Sem este botão a aba existiria sem ninguém saber chegar nela.
+       */}
+      <div className="mt-4">
+        <ButtonLink
+          href={`/candidatos/${perfil.usuarioId}`}
+          variant="outline"
+          size="sm"
+        >
+          Ver como você aparece
+        </ButtonLink>
+      </div>
     </Secao>
   );
 }
@@ -236,22 +246,6 @@ export function PerfilPrestador({
             rotulo="Experiência"
             valor={`${perfil.anosExperiencia} anos`}
           />
-        </div>
-      )}
-
-      {perfil.bairrosAtendidos.length > 0 && (
-        <div className="mt-3">
-          <p className="flex items-center gap-1.5 text-xs text-muted">
-            <MapPin size={13} />
-            Bairros atendidos
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {perfil.bairrosAtendidos.map((b) => (
-              <Badge key={b} tone="neutral">
-                {b}
-              </Badge>
-            ))}
-          </div>
         </div>
       )}
 

@@ -117,6 +117,22 @@ export async function candidatosDisponiveis(
 export interface PerfilDeCandidato {
   candidato: CandidatoDisponivel;
   /**
+   * Quem está olhando é o dono do perfil.
+   *
+   * É o que liga a edição dentro da aba Serviços e o aviso de que ele
+   * ainda está invisível para empresas — a mesma forma do perfil do
+   * prestador, que também é a prévia que o dono usa para conferir como
+   * aparece.
+   */
+  ehDono: boolean;
+  /**
+   * "Quero que empresas me encontrem", como está hoje.
+   *
+   * Só interessa ao dono: para todo mundo, quem não consentiu simplesmente
+   * não existe nesta tela.
+   */
+  visivelParaEmpresas: boolean;
+  /**
    * Se esta pessoa se candidatou a uma vaga desta empresa, o id da
    * candidatura — que é o caminho para a ficha, com currículo.
    *
@@ -139,9 +155,46 @@ export async function perfilDoCandidato(
   sessao: Autenticado | null,
   id: string,
 ): Promise<PerfilDeCandidato | null> {
-  if (!sessao || !pode(sessao.papel, "candidato:buscar_disponiveis")) {
-    return null;
+  if (!sessao) return null;
+
+  /*
+   * O dono vê o próprio perfil, tenha consentido ou não.
+   *
+   * É a prévia dele: o `/perfil` promete "veja como você aparece", e a
+   * promessa quebraria justamente para quem ainda não ligou a opção — ou
+   * seja, para todo mundo no dia seguinte ao cadastro, já que ela nasce
+   * desligada.
+   *
+   * Vem do repositório, e não de `getCandidatosDisponiveis()`: aquela
+   * lista é a dos que consentiram, e é assim que ela tem que continuar.
+   */
+  if (sessao.usuarioId === id) {
+    const [usuario, perfil] = await Promise.all([
+      repositorioUsuarios().porId(id),
+      repositorioUsuarios().perfilCandidato(id),
+    ]);
+    if (!usuario) return null;
+
+    return {
+      candidato: {
+        id: usuario.id,
+        full_name: usuario.nomeCompleto,
+        avatar_url: usuario.avatarUrl,
+        city: usuario.cidade,
+        neighborhood: usuario.bairro,
+        email: usuario.email,
+        phone: usuario.telefone,
+        desired_area: perfil?.areaDesejada ?? null,
+        availability: perfil?.disponibilidade ?? null,
+        skills: perfil?.habilidades ?? [],
+      },
+      ehDono: true,
+      visivelParaEmpresas: perfil?.visivelParaEmpresas ?? false,
+      candidaturaId: null,
+    };
   }
+
+  if (!pode(sessao.papel, "candidato:buscar_disponiveis")) return null;
 
   const todos = await getCandidatosDisponiveis();
   const candidato = todos.find((c) => c.id === id);
@@ -159,6 +212,9 @@ export async function perfilDoCandidato(
 
   return {
     candidato,
+    ehDono: false,
+    // Quem chegou até aqui está na lista de quem consentiu, por definição.
+    visivelParaEmpresas: true,
     candidaturaId: daEmpresa.find((c) => c.candidate_id === id)?.id ?? null,
   };
 }
