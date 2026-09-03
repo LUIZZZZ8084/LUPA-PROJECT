@@ -32,9 +32,14 @@ vi.mock("@/lib/data", () => ({
 }));
 
 let usuario: unknown = null;
+/** O perfil de candidato do dono, para o caminho da prévia própria. */
+let perfilDoDono: unknown = null;
 
 vi.mock("@/server/repositories", () => ({
-  repositorioUsuarios: () => ({ porId: async () => usuario }),
+  repositorioUsuarios: () => ({
+    porId: async () => usuario,
+    perfilCandidato: async () => perfilDoDono,
+  }),
 }));
 
 import type { Autenticado } from "@/server/auth/rbac";
@@ -339,5 +344,78 @@ describe("perfil de um candidato", () => {
 
     const p = await perfilDoCandidato(empresa, "a");
     expect(p?.candidaturaId).toBeNull();
+  });
+
+  /**
+   * O dono vê a própria prévia, tenha consentido ou não.
+   *
+   * "Quero que empresas me encontrem" nasce desligado de propósito — o
+   * patrão atual pode estar entre as empresas cadastradas. Se a prévia
+   * dependesse do consentimento, ela responderia 404 justamente para quem
+   * acabou de se cadastrar, que é todo mundo no primeiro dia.
+   */
+  describe("a prévia do próprio dono", () => {
+    beforeEach(() => {
+      usuario = {
+        id: "cand-9",
+        nomeCompleto: "Quem Procura",
+        avatarUrl: null,
+        cidade: "Sinop",
+        bairro: "Centro",
+        email: "quem@teste.lupa",
+        telefone: "66999990000",
+      };
+      perfilDoDono = {
+        areaDesejada: "Construção civil",
+        disponibilidade: "Imediata",
+        habilidades: ["Pedreiro"],
+        visivelParaEmpresas: false,
+      };
+      disponiveis = [];
+    });
+
+    it("abre mesmo sem consentimento, e diz que está invisível", async () => {
+      const p = await perfilDoCandidato(candidato, "cand-9");
+
+      expect(p?.ehDono).toBe(true);
+      expect(p?.visivelParaEmpresas).toBe(false);
+      expect(p?.candidato.full_name).toBe("Quem Procura");
+      expect(p?.candidato.skills).toEqual(["Pedreiro"]);
+    });
+
+    it("com o consentimento ligado, o aviso não aparece", async () => {
+      perfilDoDono = { ...(perfilDoDono as object), visivelParaEmpresas: true };
+      const p = await perfilDoCandidato(candidato, "cand-9");
+
+      expect(p?.visivelParaEmpresas).toBe(true);
+    });
+
+    /**
+     * Conta sem perfil de candidato ainda abre. Quem se cadastrou ontem
+     * não preencheu nada, e um 404 aqui diria que a conta não existe.
+     */
+    it("sem perfil preenchido, abre com os campos vazios", async () => {
+      perfilDoDono = null;
+      const p = await perfilDoCandidato(candidato, "cand-9");
+
+      expect(p?.ehDono).toBe(true);
+      expect(p?.candidato.desired_area).toBeNull();
+      expect(p?.candidato.skills).toEqual([]);
+    });
+
+    /** Ser dono não abre a porta do perfil dos outros. */
+    it("o dono não alcança o perfil alheio por ser dono do seu", async () => {
+      disponiveis = [pessoa("a")];
+      expect(await perfilDoCandidato(candidato, "a")).toBeNull();
+    });
+
+    /** A prévia é do dono; a empresa continua vendo o que consentiu. */
+    it("para quem não é o dono, ehDono é falso", async () => {
+      disponiveis = [pessoa("a")];
+      const p = await perfilDoCandidato(empresa, "a");
+
+      expect(p?.ehDono).toBe(false);
+      expect(p?.visivelParaEmpresas).toBe(true);
+    });
   });
 });

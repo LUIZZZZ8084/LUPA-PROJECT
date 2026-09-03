@@ -221,6 +221,37 @@ A grade e a expansão são travadas em teste de componente, não no e2e: no
 modo demonstração a vitrine é estática, e o prestador criado durante o
 teste não tem perfil público para visitar.
 
+### O feed é de quem vende o próprio trabalho
+
+Decisão do Luiz em 03/09/2026: publicar trabalho é do **prestador e do
+candidato**. A empresa perdeu as três capacidades de publicação.
+
+**Por que o candidato ganhou.** Quem faz obra, faxina ou instalação sem ter
+aberto CNPJ está cadastrado como candidato — o papel mais numeroso do app.
+A foto do serviço já feito é justamente o que convence quem contrata, e era
+exatamente o que ela não tinha onde pôr.
+
+**Por que a empresa perdeu.** Tinha as capacidades e nenhuma tela que as
+usasse. Quem representa a empresa na busca é a logo e o cartão dela, que têm
+campo próprio; o que ela publica são vagas.
+
+Publicar trabalho **não** põe ninguém na vitrine de `/servicos`, que
+continua sendo de quem ativou o perfil de prestador e teve o documento
+aprovado. São coisas separadas de propósito.
+
+**A prévia do candidato abre mesmo sem consentimento.** O perfil dele mora
+em `/candidatos/[id]`, a mesma rota que a empresa usa — e é lá que ele
+adiciona e remove as fotos, como o prestador faz no dele. Se a prévia
+dependesse de `visivel_para_empresas`, ela responderia 404 justamente para
+quem acabou de se cadastrar, já que a opção nasce desligada. Em vez disso a
+tela diz, com todas as letras, que só ele vê aquilo — e oferece onde ligar.
+
+**A busca continua fechada; o perfil, não.** `/candidatos` ganhou `exato` no
+`src/proxy.ts`: a lista exige `candidato:buscar_disponiveis`, e o detalhe é
+decidido por `perfilDoCandidato`, que responde `null` igual para "não
+existe", "não consentiu" e "você não pode". É a mesma separação que
+`/empresa` já fazia — quem decide o detalhe é a página, não o prefixo.
+
 ### O feed do prestador, e por que "remover" não apaga
 
 O backend de publicações existia inteiro — serviço, repositório, actions,

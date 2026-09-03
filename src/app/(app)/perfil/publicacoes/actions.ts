@@ -48,6 +48,19 @@ export const publicar = criarAcao({
  * Onde ele existe, a tela é que exige — do mesmo jeito que o CPF da
  * ativação: o banco aceita ausente, a interface cobra.
  */
+/**
+ * As duas telas onde a grade de trabalhos aparece.
+ *
+ * O feed vive no perfil público, e desde 03/09/2026 há dois: o do
+ * prestador em `/servicos/[id]` e o do candidato em `/candidatos/[id]`.
+ * Revalidar só um deixaria o trabalho novo invisível na outra até o
+ * próximo deploy — e a pessoa concluiria que não salvou.
+ */
+function revalidarVitrines() {
+  revalidatePath("/servicos", "layout");
+  revalidatePath("/candidatos", "layout");
+}
+
 export const publicarComFoto = criarAcao({
   nome: "publicacao.publicar-trabalho",
   entrada: z.object({
@@ -59,9 +72,7 @@ export const publicarComFoto = criarAcao({
     const publicacao = await publicarTrabalho(await sessaoAtual(), dados);
 
     revalidatePath("/perfil/publicacoes");
-    // O feed aparece no perfil público — sem isto, o trabalho novo só
-    // apareceria para quem chegasse depois do próximo deploy.
-    revalidatePath("/servicos", "layout");
+    revalidarVitrines();
 
     return { id: publicacao.id };
   },
@@ -130,7 +141,7 @@ export const arquivar = criarAcao({
     const publicacao = await arquivarPublicacao(await sessaoAtual(), id);
     revalidatePath("/perfil");
     revalidatePath("/perfil/publicacoes");
-    revalidatePath("/servicos", "layout");
+    revalidarVitrines();
     return { id: publicacao.id, status: publicacao.status };
   },
 });
@@ -142,7 +153,7 @@ export const reativar = criarAcao({
     const publicacao = await reativarPublicacao(await sessaoAtual(), id);
     revalidatePath("/perfil");
     revalidatePath("/perfil/publicacoes");
-    revalidatePath("/servicos", "layout");
+    revalidarVitrines();
     return { id: publicacao.id, status: publicacao.status };
   },
 });
@@ -152,12 +163,12 @@ export const reativar = criarAcao({
  *
  * A aba é onde a pessoa está olhando quando decide tirar um trabalho do
  * ar, e um `<form action>` com o id preso por `bind` não precisa de campo
- * escondido nem de estado no cliente. A revalidação inclui `/servicos`
- * porque é lá que a grade vive.
+ * escondido nem de estado no cliente. A revalidação cobre as duas
+ * vitrines, porque é onde a grade vive.
  */
 export async function arquivarPelaAba(id: string): Promise<void> {
   const dados = new FormData();
   dados.set("id", id);
   await arquivar(dados);
-  revalidatePath("/servicos", "layout");
+  revalidarVitrines();
 }

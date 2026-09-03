@@ -45,6 +45,14 @@ interface AreaFechada {
   prefixo: string;
   capacidade: Capacidade;
   semSessao: "404" | "login";
+  /**
+   * Fecha só o caminho exato, não o que vem abaixo dele.
+   *
+   * Existe para o caso em que a lista é restrita e o item não é: quem pode
+   * ver a busca não é o mesmo conjunto de quem pode abrir um perfil dali.
+   * Sem isto, o prefixo levaria a regra da lista para todos os filhos.
+   */
+  exato?: boolean;
 }
 
 const AREAS_FECHADAS: readonly AreaFechada[] = [
@@ -68,10 +76,24 @@ const AREAS_FECHADAS: readonly AreaFechada[] = [
    * — que exista um painel de contratante não é segredo, ao contrário da
    * área de admin, que continua aqui.
    */
+  /*
+   * A busca de candidatos é fechada; um perfil de candidato, não.
+   *
+   * `exato` porque as duas perguntas são diferentes. Quem vê a lista é
+   * quem pode procurar entre quem consentiu. Quem abre `/candidatos/<id>`
+   * pode ser essa mesma empresa — ou o próprio dono, indo ver como ele
+   * aparece, que é o caminho que o perfil dele oferece.
+   *
+   * Quem decide o detalhe é `perfilDoCandidato`, e ele responde `null`
+   * igual para "não existe", "não consentiu" e "você não pode" — os três
+   * viram 404, porque distinguir confirmaria a quem sonda ids que a pessoa
+   * existe e está procurando emprego.
+   */
   {
     prefixo: "/candidatos",
     capacidade: "candidato:buscar_disponiveis",
     semSessao: "login",
+    exato: true,
   },
 ];
 
@@ -115,9 +137,10 @@ const CAMINHO_INEXISTENTE = "/__nao-encontrado";
  */
 function areaDe(pathname: string): AreaFechada | null {
   return (
-    AREAS_FECHADAS.find(
-      ({ prefixo }) =>
-        pathname === prefixo || pathname.startsWith(`${prefixo}/`),
+    AREAS_FECHADAS.find(({ prefixo, exato }) =>
+      exato
+        ? pathname === prefixo
+        : pathname === prefixo || pathname.startsWith(`${prefixo}/`),
     ) ?? null
   );
 }

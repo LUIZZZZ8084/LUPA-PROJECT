@@ -114,14 +114,26 @@ describe("prestador", () => {
     expect(screen.getByText("(3)")).toBeTruthy();
   });
 
-  it("mostra categoria, descrição, experiência e bairros", () => {
+  it("mostra categoria, descrição e experiência", () => {
     render(
       <PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} docVerificado />,
     );
     expect(screen.getByText("Eletricista")).toBeTruthy();
     expect(screen.getByText(/Instalações elétricas/)).toBeTruthy();
     expect(screen.getByText("7 anos")).toBeTruthy();
-    expect(screen.getByText("Menezes")).toBeTruthy();
+  });
+
+  /**
+   * Bairros atendidos saiu do perfil público e da edição na #119, e tinha
+   * sobrado aqui: prévia mostrando dado que ninguém consegue mais mexer é
+   * como a pessoa descobre um campo fantasma e vem perguntar onde edita.
+   */
+  it("não mostra bairros atendidos", () => {
+    render(
+      <PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} docVerificado />,
+    );
+    expect(screen.queryByText("Menezes")).toBeNull();
+    expect(screen.queryByText(/Bairros atendidos/)).toBeNull();
   });
 
   /** Ver o próprio anúncio como o cliente vê é o que revela o que falta. */
