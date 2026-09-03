@@ -146,3 +146,18 @@ export const reativar = criarAcao({
     return { id: publicacao.id, status: publicacao.status };
   },
 });
+
+/**
+ * Remover pela aba Serviços do perfil público.
+ *
+ * A aba é onde a pessoa está olhando quando decide tirar um trabalho do
+ * ar, e um `<form action>` com o id preso por `bind` não precisa de campo
+ * escondido nem de estado no cliente. A revalidação inclui `/servicos`
+ * porque é lá que a grade vive.
+ */
+export async function arquivarPelaAba(id: string): Promise<void> {
+  const dados = new FormData();
+  dados.set("id", id);
+  await arquivar(dados);
+  revalidatePath("/servicos", "layout");
+}

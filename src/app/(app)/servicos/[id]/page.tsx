@@ -3,10 +3,14 @@ import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  arquivarPelaAba,
+  publicarComFotoComEstado,
+} from "@/app/(app)/perfil/publicacoes/actions";
+import { AbasDoPerfil, GerenciarTrabalhos } from "@/components/abas-do-perfil";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import {
   Skeleton,
@@ -26,7 +30,10 @@ import { formatStartingPrice } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { jaAvaliou } from "@/server/avaliacoes/servico";
-import { listarPublicacoes } from "@/server/publicacoes/servico";
+import {
+  listarPublicacoes,
+  resumo as resumoDePublicacoes,
+} from "@/server/publicacoes/servico";
 import { FormularioDeAvaliacao } from "./avaliar";
 
 /**
@@ -109,6 +116,16 @@ export default async function ProviderPage({
    * clicar. Mostrar o formulário a quem não pode enviar seria o inverso do
    * mesmo erro: promessa que a action recusa depois do clique.
    */
+  /*
+   * O dono edita dentro da própria aba.
+   *
+   * O atalho "Meus trabalhos" levava a uma tela separada só para isto —
+   * uma tela a mais entre a pessoa e a foto do trabalho dela, olhando
+   * justamente para o lugar onde a foto vai aparecer.
+   */
+  const ehDono = sessao?.usuarioId === provider.profile_id;
+  const resumoTrabalhos = await resumoDePublicacoes(provider.profile_id);
+
   const jaAvaliouEste = await jaAvaliou(sessao, provider.profile_id);
 
   const podeAvaliar =
@@ -217,52 +234,80 @@ export default async function ProviderPage({
           docVerified={provider.doc_verified}
         />
 
-        {provider.description && (
-          <div className="mt-6 border-t border-line pt-5">
-            <h2 className="mb-2.5 text-sm font-semibold">Sobre mim</h2>
-            <p className="text-sm leading-relaxed text-muted">
-              {provider.description}
-            </p>
-          </div>
-        )}
+        {/*
+         * "Bairros atendidos" saiu daqui.
+         *
+         * Era uma lista curada por cidade, e não existe lista pronta de
+         * bairro para os 142 municípios de MT — foi por isso que o enum de
+         * bairro já tinha caído antes. O bairro que vale é o que a pessoa
+         * informou no cadastro, e ele já aparece na linha de localização
+         * acima. Decisão do Luiz em 03/09/2026.
+         */}
+        <AbasDoPerfil
+          trabalhos={trabalhos.map((t) => ({
+            id: t.id,
+            titulo: t.titulo,
+            corpo: t.corpo,
+            imagemUrl: t.imagemUrl,
+          }))}
+          vazio={
+            ehDono
+              ? "Você ainda não publicou nenhum trabalho. Uma foto do que você já fez vale mais que qualquer descrição."
+              : "Este profissional ainda não publicou trabalhos."
+          }
+          acoesDoDono={
+            ehDono ? (
+              <GerenciarTrabalhos
+                trabalhos={trabalhos.map((t) => ({
+                  id: t.id,
+                  titulo: t.titulo,
+                  corpo: t.corpo,
+                  imagemUrl: t.imagemUrl,
+                }))}
+                restantes={resumoTrabalhos.restantes}
+                limite={resumoTrabalhos.limite}
+                publicar={publicarComFotoComEstado}
+                arquivar={arquivarPelaAba}
+              />
+            ) : null
+          }
+          sobre={
+            <>
+              {provider.description && (
+                <div className="pt-5">
+                  <p className="text-muted text-sm leading-relaxed">
+                    {provider.description}
+                  </p>
+                </div>
+              )}
 
-        {provider.service_area.length > 0 && (
-          <div className="mt-5 border-t border-line pt-5">
-            <h2 className="mb-2.5 text-sm font-semibold">Bairros atendidos</h2>
-            <div className="flex flex-wrap gap-2">
-              {provider.service_area.map((area) => (
-                <Badge key={area} tone="outline">
-                  {area}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {(provider.instagram || provider.facebook) && (
-          <div className="mt-5 flex items-center gap-4 border-t border-line pt-5">
-            {provider.instagram && (
-              <a
-                href={provider.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-muted underline-offset-2 transition-colors hover:text-servicos hover:underline"
-              >
-                Instagram
-              </a>
-            )}
-            {provider.facebook && (
-              <a
-                href={provider.facebook}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-muted underline-offset-2 transition-colors hover:text-servicos hover:underline"
-              >
-                Facebook
-              </a>
-            )}
-          </div>
-        )}
+              {(provider.instagram || provider.facebook) && (
+                <div className="mt-5 flex items-center gap-4 border-t border-line pt-5">
+                  {provider.instagram && (
+                    <a
+                      href={provider.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-muted underline-offset-2 transition-colors hover:text-servicos hover:underline"
+                    >
+                      Instagram
+                    </a>
+                  )}
+                  {provider.facebook && (
+                    <a
+                      href={provider.facebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-muted underline-offset-2 transition-colors hover:text-servicos hover:underline"
+                    >
+                      Facebook
+                    </a>
+                  )}
+                </div>
+              )}
+            </>
+          }
+        />
 
         <div className="mt-6 border-t border-line pt-5">
           <WhatsAppButton
@@ -278,40 +323,6 @@ export default async function ProviderPage({
           </p>
         </div>
       </Panel>
-
-      {/*
-       * Os trabalhos publicados.
-       *
-       * Vem antes das avaliações de propósito: quem procura um eletricista
-       * decide primeiro olhando o que ele já fez, e só depois lê o que os
-       * outros acharam.
-       */}
-      {trabalhos.length > 0 && (
-        <section className="mt-5">
-          <h2 className="mb-3 font-bold text-base">Trabalhos publicados</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {trabalhos.map((t) => (
-              <Panel key={t.id} className="overflow-hidden">
-                {t.imagemUrl && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  // biome-ignore lint/performance/noImgElement: mesma razão do feed — o host do Storage não está nos `remotePatterns`, e trocar isso é mudança de build.
-                  <img
-                    src={t.imagemUrl}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="-mx-5 -mt-5 mb-4 h-40 w-[calc(100%+2.5rem)] object-cover"
-                  />
-                )}
-                <h3 className="font-semibold text-sm">{t.titulo}</h3>
-                <p className="mt-1.5 whitespace-pre-line text-muted text-sm leading-relaxed">
-                  {t.corpo}
-                </p>
-              </Panel>
-            ))}
-          </div>
-        </section>
-      )}
 
       {podeAvaliar && (
         <FormularioDeAvaliacao

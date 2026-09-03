@@ -65,12 +65,20 @@ test.describe("feed do prestador", () => {
     await page?.context().close();
   });
 
-  test("o atalho do perfil leva ao feed, não para a busca pública", async () => {
+  /**
+   * O atalho "Meus trabalhos" saiu do perfil, por decisão do Luiz em
+   * 03/09/2026: publicar passou a acontecer dentro da aba Serviços do
+   * próprio perfil público, que é onde a pessoa já está olhando quando
+   * decide mostrar um trabalho. Uma tela a mais no caminho é uma tela a
+   * mais para desistir.
+   */
+  test("o perfil não oferece mais uma tela separada de trabalhos", async () => {
     await page.goto("/perfil");
 
-    const atalho = page.getByRole("link", { name: /meus trabalhos/i });
-    await expect(atalho).toBeVisible();
-    await expect(atalho).toHaveAttribute("href", "/perfil/publicacoes");
+    await expect(
+      page.getByRole("link", { name: /meus trabalhos/i }),
+    ).toHaveCount(0);
+    await expect(page.getByText(/como você aparece na busca/i)).toBeVisible();
   });
 
   test("começa vazio, e diz para que serve", async () => {
@@ -154,21 +162,31 @@ test.describe("feed do prestador", () => {
     ).toEqual([]);
   });
 
-  test("o trabalho aparece no perfil público do prestador", async () => {
-    await page.goto("/perfil");
+  /**
+   * A aba Serviços existe no perfil público.
+   *
+   * A grade em si — três colunas e a expansão com legenda — é travada em
+   * teste de componente (`tests/unit/abas-do-perfil.test.tsx`): no modo
+   * demonstração o prestador criado durante o teste não tem perfil
+   * público, porque a vitrine da demonstração é estática. Aqui se confere
+   * o que dá para conferir de ponta a ponta: que a aba existe e que a
+   * seção antiga saiu.
+   */
+  test("o perfil público de um prestador tem as duas abas", async () => {
+    await page.goto("/servicos/prv-joao-silva");
 
-    /*
-     * O perfil público é alcançado pelo próprio id da sessão. O prestador
-     * criado neste teste não passou pela verificação, então não está na
-     * busca — mas o perfil abre por link direto, que é justamente o que a
-     * #114 preservou.
-     */
-    const meuPerfil = page.getByRole("link", { name: /ver meu perfil/i });
-    if ((await meuPerfil.count()) > 0) {
-      await meuPerfil.first().click();
-      await expect(
-        page.getByRole("heading", { name: "Trabalhos publicados" }),
-      ).toBeVisible();
-    }
+    await expect(page.getByRole("tab", { name: "Sobre mim" })).toBeVisible();
+    await page.getByRole("tab", { name: "Serviços" }).click();
+    await expect(page.locator("#painel-servicos")).toBeVisible();
+
+    await expect(
+      page.getByRole("heading", { name: "Trabalhos publicados" }),
+    ).toHaveCount(0);
+  });
+
+  /** Bairros atendidos saiu: não há lista curada para 142 municípios. */
+  test("o perfil não mostra mais bairros atendidos", async () => {
+    await page.goto("/servicos/prv-joao-silva");
+    await expect(page.getByText(/bairros atendidos/i)).toHaveCount(0);
   });
 });

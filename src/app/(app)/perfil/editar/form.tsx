@@ -2,10 +2,7 @@
 
 import { Check, Loader2 } from "lucide-react";
 import { useActionState, useId } from "react";
-import {
-  CampoBairro,
-  CampoBairrosAtendidos,
-} from "@/components/cidade-e-bairro";
+import { CampoBairro } from "@/components/cidade-e-bairro";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -324,11 +321,14 @@ function Anuncio({ perfil }: { perfil: PerfilCompleto }) {
           </Field>
         </div>
 
-        <CampoBairrosAtendidos
-          cidade={perfil.usuario.cidade}
-          selecionados={p?.bairrosAtendidos ?? []}
-          error={estado.campos?.bairrosAtendidos}
-        />
+        {/*
+         * "Bairros atendidos" saiu.
+         *
+         * Era lista curada por cidade, e não existe lista pronta de bairro
+         * para os 142 municípios de MT — a mesma razão que já tinha
+         * derrubado o enum de bairro. O bairro que vale é o que a pessoa
+         * informou no cadastro. Decisão do Luiz em 03/09/2026.
+         */}
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Instagram" error={estado.campos?.instagram}>
