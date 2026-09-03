@@ -166,6 +166,25 @@ de ter virado prestador, que é exatamente o que a troca encerrou.
 **Voltar atrás é caso de suporte**, como a cidade e o CNPJ, e pela mesma
 razão: é troca de identidade dentro da plataforma, não correção de campo.
 
+### A vitrine só mostra prestador verificado
+
+Virar prestador não coloca ninguém na busca: o documento passa pela fila
+que o admin já opera, e só depois de aprovado o perfil entra em
+`/servicos`. Numa plataforma onde alguém abre a porta de casa para um
+desconhecido, anúncio não conferido na vitrine é o começo do golpe.
+
+**O filtro é da busca, não da view.** `provider_listings` serve a lista e
+o perfil individual; filtrar lá esconderia o prestador do próprio perfil —
+a mesma armadilha do 404 que já derrubou quem acabava de ativar. Por isso
+`getProviders` filtra e `getProviderById` não.
+
+Isso é o oposto do que vale para `candidatos_disponiveis`, e de propósito:
+lá o `where` mora na view porque o risco é revelar quem não consentiu —
+esquecer o filtro numa tela exporia uma pessoa. Aqui o não verificado não
+é segredo, é um anúncio ainda não conferido, e a tela dele diz isso com
+todas as letras — para o visitante, que merece saber, e para o dono, que
+de outro modo não entenderia por que não se acha na busca.
+
 ### CPF mora em `usuarios`, não em `perfis_prestador`
 
 Parece que o lugar simétrico ao CNPJ da empresa seria `perfis_prestador`.

@@ -1,6 +1,7 @@
-import { Banknote, Briefcase, MapPin } from "lucide-react";
+import { Banknote, Briefcase, MapPin, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
@@ -102,6 +103,38 @@ export default async function ProviderPage({
   return (
     <PageShell width="narrow">
       <BackLink href="/servicos" label="Voltar para serviços" />
+
+      {/*
+       * Perfil não verificado abre, mas diz o que é.
+       *
+       * A busca só mostra quem passou pela fila do admin — mas o perfil
+       * continua alcançável por link direto, e precisa ser honesto com as
+       * duas pessoas que chegam aqui: o visitante, que merece saber que
+       * ninguém conferiu este anúncio ainda; e o próprio prestador, que
+       * de outro modo não entenderia por que não se acha na busca.
+       */}
+      {!provider.doc_verified && (
+        <Panel className="mb-5 border-warn/30 bg-warn/8">
+          <div className="flex items-start gap-3">
+            <ShieldAlert size={20} className="mt-0.5 flex-none text-warn" />
+            <div>
+              <h2 className="font-bold text-base">Perfil em análise</h2>
+              <p className="mt-1.5 text-muted text-sm leading-relaxed">
+                O documento deste profissional ainda não foi conferido pela
+                Lupa, então ele não aparece na busca de serviços. Se este perfil
+                é seu, envie documento e selfie em{" "}
+                <Link
+                  href="/perfil/editar"
+                  className="underline hover:text-ink"
+                >
+                  Editar perfil
+                </Link>
+                .
+              </p>
+            </div>
+          </div>
+        </Panel>
+      )}
 
       <Panel>
         <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">

@@ -346,6 +346,22 @@ export async function getRelatedJobs(
    Prestadores de serviço
    ============================================================ */
 
+/**
+ * A vitrine só mostra quem passou pela verificação.
+ *
+ * Virar prestador não basta para aparecer aqui: o documento vai para a
+ * fila que o admin decide, e só depois de aprovado o perfil entra na
+ * busca. Numa plataforma onde alguém abre a porta de casa para um
+ * desconhecido, anúncio não conferido na vitrine é o começo do golpe.
+ *
+ * **O filtro é da busca, não da view.** `provider_listings` também serve
+ * `getProviderById`, e filtrar lá esconderia o prestador do próprio
+ * perfil — a mesma armadilha que já derrubou quem acabava de virar
+ * prestador. Prestador não verificado não é segredo: é um anúncio ainda
+ * não conferido, e a tela dele diz isso. É diferente de
+ * `candidatos_disponiveis`, onde o `where` mora na view porque ali o
+ * risco é revelar quem não consentiu.
+ */
 export async function getProviders(
   filters: ProviderFilters = {},
 ): Promise<ProviderListing[]> {
@@ -355,6 +371,7 @@ export async function getProviders(
       let query = supabase
         .from("provider_listings")
         .select("*")
+        .eq("doc_verified", true)
         .order("avg_rating", { ascending: false });
 
       if (filters.city) query = query.eq("city", filters.city);
@@ -376,6 +393,9 @@ export async function getProviders(
   }
 
   const encontrados = MOCK_PROVIDERS.filter((p) => {
+    // Mesma regra do banco: as duas camadas não podem divergir, senão o
+    // que se demonstra deixa de ser o que roda.
+    if (!p.doc_verified) return false;
     if (filters.city && p.city !== filters.city) return false;
     if (filters.category && p.category.slug !== filters.category) return false;
     if (filters.min_rating && p.avg_rating < filters.min_rating) return false;

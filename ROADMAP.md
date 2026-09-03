@@ -83,6 +83,9 @@ Prestador:
 - Virar prestador completa o perfil que já existe, em vez de pedir conta
   nova — com aviso do que a troca de papel custa —
   [#112](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/112)
+- A busca de serviços só mostra quem passou pela verificação; o perfil
+  continua alcançável e diz que está em análise —
+  [#114](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/114)
 
 Perfil e vaga, o que cada um informa:
 
