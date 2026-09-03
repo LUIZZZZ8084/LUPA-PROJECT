@@ -146,20 +146,13 @@ describe("abas do perfil", () => {
  */
 describe("gerenciar trabalhos", () => {
   const semEfeito = async () => ({});
-  const removerNada = async () => {};
 
-  function montarGerenciador(
-    restantes: number,
-    publicar = semEfeito,
-    trabalhos = TRABALHOS,
-  ) {
+  function montarGerenciador(restantes: number, publicar = semEfeito) {
     return render(
       <GerenciarTrabalhos
-        trabalhos={trabalhos}
         restantes={restantes}
         limite={10}
         publicar={publicar}
-        arquivar={removerNada}
       />,
     );
   }
@@ -195,18 +188,15 @@ describe("gerenciar trabalhos", () => {
     expect(screen.queryByLabelText("Legenda")).toBeNull();
   });
 
-  it("lista o que já existe, com botão de remover nomeado", () => {
+  /**
+   * A lista de títulos abaixo da grade desenhava o mesmo item duas vezes, e
+   * a segunda vez sem foto. Reclamação do Luiz em 03/09/2026, com print:
+   * as ações foram para dentro da foto ampliada, e aqui não sobrou lista.
+   */
+  it("não desenha lista de títulos, que duplicava a grade", () => {
     montarGerenciador(7);
 
-    expect(
-      screen.getByRole("button", {
-        name: "Remover Quadro de disjuntores trocado",
-      }),
-    ).toBeTruthy();
-  });
-
-  it("sem trabalho nenhum, não desenha lista de remoção", () => {
-    montarGerenciador(10, semEfeito, []);
+    expect(screen.queryByText("Quadro de disjuntores trocado")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Remover/ })).toBeNull();
   });
 });
@@ -221,11 +211,9 @@ describe("gerenciar trabalhos: envio", () => {
   it("mostra o erro e mantém o formulário aberto", async () => {
     render(
       <GerenciarTrabalhos
-        trabalhos={[]}
         restantes={5}
         limite={10}
         publicar={async () => ({ erro: "Escolha uma foto." })}
-        arquivar={async () => {}}
       />,
     );
 
@@ -242,11 +230,9 @@ describe("gerenciar trabalhos: envio", () => {
   it("no sucesso, fecha o formulário", async () => {
     render(
       <GerenciarTrabalhos
-        trabalhos={[]}
         restantes={5}
         limite={10}
         publicar={async () => ({ ok: true })}
-        arquivar={async () => {}}
       />,
     );
 
@@ -256,5 +242,141 @@ describe("gerenciar trabalhos: envio", () => {
     fireEvent.submit(document.querySelector("form") as HTMLFormElement);
 
     await waitFor(() => expect(screen.queryByLabelText("Legenda")).toBeNull());
+  });
+});
+
+/**
+ * As ações do dono, dentro da foto ampliada.
+ *
+ * É para onde elas foram depois que a lista abaixo da grade se mostrou uma
+ * duplicata do mesmo item — a segunda vez sem foto. O dono já está olhando
+ * para a foto quando decide mexer nela.
+ */
+describe("ações do dono na foto ampliada", () => {
+  const dono = {
+    editar: async () => ({}),
+    excluir: async () => {},
+  };
+
+  function abrirPrimeira(comDono = true) {
+    render(
+      <AbasDoPerfil
+        sobre={<p>Descrição.</p>}
+        trabalhos={TRABALHOS}
+        vazio="Nada ainda."
+        dono={comDono ? dono : undefined}
+      />,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Serviços" }));
+    const painel = document.querySelector("#painel-servicos") as HTMLElement;
+    fireEvent.click(within(painel).getAllByRole("button")[0]);
+    return screen.getByRole("dialog");
+  }
+
+  it("o dono vê editar e remover ao abrir a foto", () => {
+    const dialogo = abrirPrimeira();
+
+    expect(
+      within(dialogo).getByRole("button", { name: "Editar" }),
+    ).toBeTruthy();
+    expect(
+      within(dialogo).getByRole("button", { name: "Remover" }),
+    ).toBeTruthy();
+  });
+
+  /** Quem visita vê o trabalho, não os controles de quem o publicou. */
+  it("quem não é dono vê só a foto e a legenda", () => {
+    const dialogo = abrirPrimeira(false);
+
+    expect(
+      within(dialogo).queryByRole("button", { name: "Editar" }),
+    ).toBeNull();
+    expect(
+      within(dialogo).queryByRole("button", { name: "Remover" }),
+    ).toBeNull();
+    expect(within(dialogo).getByText(/Jardim Botânico/)).toBeTruthy();
+  });
+
+  it("editar abre o formulário já preenchido", () => {
+    const dialogo = abrirPrimeira();
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Editar" }));
+
+    const titulo = screen.getByLabelText(
+      "O que é este trabalho",
+    ) as HTMLInputElement;
+    const legenda = screen.getByLabelText("Legenda") as HTMLTextAreaElement;
+
+    expect(titulo.value).toBe("Quadro de disjuntores trocado");
+    expect(legenda.value).toContain("Jardim Botânico");
+  });
+
+  /**
+   * Trocar a foto é opcional. O motivo comum de abrir isto é arrumar uma
+   * palavra da legenda, e reenviar a imagem por causa disso seria caro em
+   * dado móvel contado.
+   */
+  it("o campo de foto diz que dá para manter a atual", () => {
+    const dialogo = abrirPrimeira();
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Editar" }));
+
+    expect(screen.getByLabelText("Trocar a foto")).toBeTruthy();
+    expect(screen.getByText(/manter a que já está aqui/)).toBeTruthy();
+  });
+
+  /**
+   * "Remover" arquiva, não apaga — e a confirmação diz isso. Sem a frase, a
+   * pessoa hesita achando que vai perder o registro de um trabalho que fez.
+   */
+  it("remover pede confirmação e explica que nada é apagado", () => {
+    const dialogo = abrirPrimeira();
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Remover" }));
+
+    expect(screen.getByText(/nada é apagado/)).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /Tirar do perfil/ }),
+    ).toBeTruthy();
+  });
+
+  /**
+   * O card fecha sozinho depois de confirmar.
+   *
+   * O contador de espaços vem de fora e reage à revalidação; o card
+   * ampliado guarda o próprio trabalho num estado do pai que uma
+   * revalidação não recalcula. Sem fechar explicitamente depois do
+   * `excluir`, o item some da grade por trás e o card fica aberto
+   * mostrando um trabalho que já não existe mais na lista — a mesma
+   * armadilha de revalidação que este projeto já registrou outras vezes.
+   */
+  it("fecha o card depois de confirmar a remoção", async () => {
+    render(
+      <AbasDoPerfil
+        sobre={<p>Descrição.</p>}
+        trabalhos={TRABALHOS}
+        vazio="Nada ainda."
+        dono={{ editar: async () => ({}), excluir: async () => {} }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Serviços" }));
+    const painel = document.querySelector("#painel-servicos") as HTMLElement;
+    fireEvent.click(within(painel).getAllByRole("button")[0]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remover" }));
+    fireEvent.click(screen.getByRole("button", { name: /Tirar do perfil/ }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  /** Escape sai da edição antes de sair do card: o gesto tem dois níveis. */
+  it("Escape fecha a edição sem fechar a foto", () => {
+    const dialogo = abrirPrimeira();
+    fireEvent.click(within(dialogo).getByRole("button", { name: "Editar" }));
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByLabelText("Trocar a foto")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
