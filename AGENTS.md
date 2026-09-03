@@ -197,6 +197,30 @@ mostrava: quem avaliava via o formulário sumir, sem confirmação nenhuma.
 Mesma armadilha do 404 depois de virar prestador — estado de cliente não
 sobrevive à revalidação da própria rota.
 
+### O perfil em duas abas, e o bairro que sobrou
+
+Desenho do Luiz em 03/09/2026: "Sobre mim" e "Serviços", com as fotos do
+trabalho em grade de três por linha; o toque expande com a legenda.
+
+**A razão de ser aba, e não mais uma seção rolando para baixo:** no
+celular, o que decide a contratação são as fotos, e elas ficavam embaixo
+de descrição, bairros e redes sociais — longe de quem abriu o perfil
+justamente para ver trabalho.
+
+**O dono edita dentro da própria aba.** O atalho "Meus trabalhos" no
+perfil levava a uma tela separada só para isso — uma tela a mais entre a
+pessoa e a foto do trabalho dela, estando ela já olhando para o lugar onde
+a foto vai aparecer. O atalho saiu; sobrou "Como você aparece na busca".
+
+**"Bairros atendidos" saiu junto.** Era lista curada por cidade, e não
+existe lista pronta de bairro para os 142 municípios de MT — a mesma razão
+que já tinha derrubado o enum de bairro antes. O bairro que vale é o que a
+pessoa informou no cadastro, e ele já aparece na linha de localização.
+
+A grade e a expansão são travadas em teste de componente, não no e2e: no
+modo demonstração a vitrine é estática, e o prestador criado durante o
+teste não tem perfil público para visitar.
+
 ### O feed do prestador, e por que "remover" não apaga
 
 O backend de publicações existia inteiro — serviço, repositório, actions,

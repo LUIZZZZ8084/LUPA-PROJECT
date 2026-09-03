@@ -6,7 +6,6 @@ import {
   Pencil,
   ShieldCheck,
   UserRound,
-  Wrench,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -56,20 +55,6 @@ const ATALHOS: {
     descricao: "Acompanhe o status das vagas em que você se candidatou.",
     cor: "text-vagas",
     exige: "candidatura:ver_propria",
-  },
-  {
-    /*
-     * Apontava para `/servicos` — a busca pública — prometendo "edite
-     * categoria, preço e publicações". O prestador clicava para mexer no
-     * próprio anúncio e caía na vitrine de todo mundo. A tela que a
-     * descrição prometia não existia; agora existe.
-     */
-    href: "/perfil/publicacoes",
-    icon: Wrench,
-    titulo: "Meus trabalhos",
-    descricao: "Publique fotos dos serviços que você já fez.",
-    cor: "text-servicos",
-    exige: "publicacao:criar",
   },
   {
     href: "/empresa",
