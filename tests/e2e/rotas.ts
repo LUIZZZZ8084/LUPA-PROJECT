@@ -36,6 +36,13 @@ export const ROTAS: readonly RotaVarrida[] = [
   { path: "/perfil", nome: "Perfil" },
   { path: "/perfil/editar", nome: "Editar perfil" },
   { path: "/perfil/candidaturas", nome: "Minhas candidaturas" },
+  /*
+   * A conta compartilhada é candidata, e é ela quem pode ativar o lado
+   * prestador — a tela renderiza o formulário de verdade nesta varredura.
+   * Em demonstração não há Storage, então a exigência de foto não entra na
+   * frente: o que se mede é o formulário, não o aviso.
+   */
+  { path: "/perfil/virar-prestador", nome: "Virar prestador" },
 ] as const;
 
 /**
@@ -84,6 +91,8 @@ export const ROTAS_NAO_VARRIDAS: Record<string, string> = {
   "/candidatos/[id]":
     "depende de um candidato que tenha ligado 'quero ser encontrado', criado dentro do próprio teste — varrido em visivel-para-empresas.spec.ts",
   "/empresa/candidaturas/[id]": "id resolvido em ROTAS_PROFUNDAS_EMPRESA",
+  "/perfil/publicacoes":
+    "exige sessão de prestador, e as duas contas compartilhadas da suíte são candidata e empresa. Uma terceira custaria mais um cadastro no limite de 5 por origem em 15 minutos — apertado demais para segurar. A tela tem varredura de acessibilidade própria, dentro de feed-do-prestador.spec.ts, onde a conta já é prestador",
   "/empresa/vagas/[id]/editar": "id resolvido em ROTAS_PROFUNDAS_EMPRESA",
 };
 
