@@ -239,7 +239,16 @@ describe("camada de dados com Supabase ligado", () => {
       { ascending: false },
     ]);
     expect(chamadas.some((c) => c.metodo === "gte")).toBe(false);
-    expect(chamadas.some((c) => c.metodo === "eq")).toBe(false);
+
+    /*
+     * O único `eq` sem filtro pedido é a verificação — a vitrine só mostra
+     * quem passou pela fila do admin. Se este filtro sumir da consulta,
+     * prestador não conferido volta a aparecer na busca sem nada quebrar
+     * na tela, que é como esse tipo de regressão passa despercebido.
+     */
+    expect(
+      chamadas.filter((c) => c.metodo === "eq").map((c) => c.args),
+    ).toEqual([["doc_verified", true]]);
   });
 
   it("categoria de prestador filtra por slug, não pelo nome", async () => {
@@ -254,6 +263,7 @@ describe("camada de dados com Supabase ligado", () => {
       .map((c) => c.args);
 
     expect(pares).toEqual([
+      ["doc_verified", true],
       ["city", "Sinop"],
       ["category_slug", "eletricista"],
     ]);

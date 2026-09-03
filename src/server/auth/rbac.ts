@@ -70,6 +70,15 @@ export type Capacidade =
   | "publicacao:arquivar_propria"
   // Avaliações
   | "avaliacao:receber"
+  /*
+   * Avaliar um prestador.
+   *
+   * Vale para qualquer conta de gente — entrar já é pré-requisito para
+   * usar o app, e quem contratou pode ser candidato, outro prestador ou
+   * uma empresa. O admin fica de fora pela regra da casa: ele enxerga
+   * tudo e não age no lugar de ninguém, e reputação é ação com autor.
+   */
+  | "avaliacao:escrever"
   // Administração
   | "admin:painel"
   | "admin:metricas"
@@ -86,6 +95,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "candidatura:criar",
     "candidatura:ver_propria",
     "prestador:ativar",
+    "avaliacao:escrever",
   ],
 
   prestador_servico: [
@@ -105,6 +115,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "publicacao:editar_propria",
     "publicacao:arquivar_propria",
     "avaliacao:receber",
+    "avaliacao:escrever",
   ],
 
   empresa: [
@@ -119,6 +130,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "publicacao:criar",
     "publicacao:editar_propria",
     "publicacao:arquivar_propria",
+    "avaliacao:escrever",
   ],
 
   /*

@@ -173,13 +173,38 @@ describe("getRelatedJobs", () => {
 });
 
 describe("getProviders", () => {
-  it("coloca os verificados antes dos não verificados", async () => {
+  /**
+   * A vitrine só mostra quem foi conferido.
+   *
+   * Substituiu um teste que checava a *ordem* entre verificados e não
+   * verificados — ele passava por vazio depois desta mudança, porque não
+   * sobra nenhum não verificado na lista para ordenar. Teste que só passa
+   * porque o caso deixou de existir é pior que teste nenhum: dá a
+   * impressão de cobrir.
+   */
+  it("não mostra prestador sem documento aprovado", async () => {
     const lista = await getProviders();
-    const primeiroNaoVerificado = lista.findIndex((p) => !p.doc_verified);
-    if (primeiroNaoVerificado === -1) return;
-    expect(
-      lista.slice(primeiroNaoVerificado).every((p) => !p.doc_verified),
-    ).toBe(true);
+
+    expect(lista.length).toBeGreaterThan(0);
+    expect(lista.every((p) => p.doc_verified)).toBe(true);
+
+    const nomes = lista.map((p) => p.full_name);
+    expect(nomes).not.toContain("José Moreira");
+    expect(nomes).not.toContain("Pedro Alves");
+  });
+
+  /**
+   * Mas o perfil continua alcançável por link direto.
+   *
+   * Filtrar também aqui esconderia o prestador do próprio perfil, que é a
+   * armadilha que já derrubou quem acabava de virar prestador — e o que a
+   * decisão diz é "não aparece na busca", não "deixa de existir".
+   */
+  it("o perfil de quem não foi verificado continua abrindo", async () => {
+    const perfil = await getProviderById("prv-jose-moreira");
+
+    expect(perfil).not.toBeNull();
+    expect(perfil?.doc_verified).toBe(false);
   });
 
   it("filtra por categoria", async () => {

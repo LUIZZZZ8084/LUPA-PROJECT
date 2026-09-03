@@ -166,6 +166,84 @@ de ter virado prestador, que é exatamente o que a troca encerrou.
 **Voltar atrás é caso de suporte**, como a cidade e o CNPJ, e pela mesma
 razão: é troca de identidade dentro da plataforma, não correção de campo.
 
+### Avaliar um prestador: quem pode, e o que o banco garante
+
+O painel do perfil convidava — "foi atendido por ele? sua avaliação ajuda
+a próxima pessoa" — e não havia nada para clicar. A tabela `avaliacoes`
+existe desde o começo, com o trigger que mantém `nota_media` e
+`total_avaliacoes` do prestador, e nunca ninguém escreveu nela pela
+aplicação: as linhas de hoje vieram do seed.
+
+**Qualquer conta com sessão avalia.** Decisão do Luiz em 03/09/2026:
+entrar já é pré-requisito para usar o app inteiro, então não há portão a
+mais. O admin fica de fora pela regra da casa — ele enxerga tudo e não age
+no lugar de ninguém, e reputação é ação com autor.
+
+**Duas travas moram no banco, não na tela:** ninguém avalia a si mesmo
+(`check`) e cada pessoa avalia uma vez (índice único parcial). A checagem
+na aplicação existe para dar mensagem decente antes de tentar — dois
+envios simultâneos passariam os dois por ela.
+
+`avaliador_id` entrou por migração. Antes só havia `nome_avaliador`, texto
+solto: servia para popular o seed, não para receber gente autenticada —
+sem dono, a mesma pessoa avalia dez vezes e ninguém consegue mostrar a ela
+a própria avaliação depois. O nome continua sendo gravado junto, porque a
+tela lista sem consultar `usuarios`, que é fechada para `anon` — e porque
+a avaliação é o registro do que aconteceu naquele dia.
+
+**A confirmação é renderizada pelo servidor.** A action revalida a rota,
+e a revalidação desmonta o formulário levando junto o "enviado" que ele
+mostrava: quem avaliava via o formulário sumir, sem confirmação nenhuma.
+Mesma armadilha do 404 depois de virar prestador — estado de cliente não
+sobrevive à revalidação da própria rota.
+
+### O feed do prestador, e por que "remover" não apaga
+
+O backend de publicações existia inteiro — serviço, repositório, actions,
+tabela e trigger de limite — e **nenhuma tela o consumia**. O atalho do
+perfil apontava para `/servicos`, a busca pública, prometendo "edite
+categoria, preço e publicações": a pessoa clicava para mexer no próprio
+anúncio e caía na vitrine de todo mundo. Hoje o atalho leva a
+`/perfil/publicacoes`, que é a tela que aquela descrição sempre prometeu.
+
+Cada item é uma foto do trabalho com um texto. **Dez ativos**, o limite
+que já morava no banco — mantido por decisão do Luiz em 03/09/2026,
+depois de ele ter cogitado cinco.
+
+**"Remover" arquiva, não apaga.** O texto do botão diz o que a pessoa
+quer fazer; por baixo, o registro fica e volta pelo botão ao lado.
+Apagar de verdade tiraria dela um trabalho que ela teve — e arquivar já
+libera a vaga no feed, que é o efeito que ela procurava.
+
+**A foto tem caminho próprio, ao contrário do avatar.** `caminhoDoArquivo`
+usa caminho fixo por pessoa para avatar, logo e currículo, e é de
+propósito: trocar substitui, e o bucket não vira depósito de versões
+pagas. Aqui são até dez arquivos ao mesmo tempo, então a regra
+`publicacao` ganha um sufixo sorteado no servidor. Continua sem nada
+vindo do cliente: o id é da sessão, o sufixo é gerado aqui.
+
+O bucket é o `portfolio`, que já existia no `storage.sql` com leitura
+pública — criado para isto e nunca usado.
+
+### A vitrine só mostra prestador verificado
+
+Virar prestador não coloca ninguém na busca: o documento passa pela fila
+que o admin já opera, e só depois de aprovado o perfil entra em
+`/servicos`. Numa plataforma onde alguém abre a porta de casa para um
+desconhecido, anúncio não conferido na vitrine é o começo do golpe.
+
+**O filtro é da busca, não da view.** `provider_listings` serve a lista e
+o perfil individual; filtrar lá esconderia o prestador do próprio perfil —
+a mesma armadilha do 404 que já derrubou quem acabava de ativar. Por isso
+`getProviders` filtra e `getProviderById` não.
+
+Isso é o oposto do que vale para `candidatos_disponiveis`, e de propósito:
+lá o `where` mora na view porque o risco é revelar quem não consentiu —
+esquecer o filtro numa tela exporia uma pessoa. Aqui o não verificado não
+é segredo, é um anúncio ainda não conferido, e a tela dele diz isso com
+todas as letras — para o visitante, que merece saber, e para o dono, que
+de outro modo não entenderia por que não se acha na busca.
+
 ### CPF mora em `usuarios`, não em `perfis_prestador`
 
 Parece que o lugar simétrico ao CNPJ da empresa seria `perfis_prestador`.

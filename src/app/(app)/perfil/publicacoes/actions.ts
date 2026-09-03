@@ -8,6 +8,7 @@ import {
   arquivarPublicacao,
   criarPublicacao,
   editarPublicacao,
+  publicarTrabalho,
   reativarPublicacao,
 } from "@/server/publicacoes/servico";
 import { zTexto } from "@/server/validation";
@@ -40,6 +41,73 @@ export const publicar = criarAcao({
   },
 });
 
+/**
+ * O que o formulário do feed manda: a foto e o texto, num envio só.
+ *
+ * A foto é opcional no schema porque o modo demonstração não tem Storage.
+ * Onde ele existe, a tela é que exige — do mesmo jeito que o CPF da
+ * ativação: o banco aceita ausente, a interface cobra.
+ */
+export const publicarComFoto = criarAcao({
+  nome: "publicacao.publicar-trabalho",
+  entrada: z.object({
+    titulo: conteudo.titulo,
+    corpo: conteudo.corpo,
+    foto: z.instanceof(File).optional(),
+  }),
+  executar: async (dados) => {
+    const publicacao = await publicarTrabalho(await sessaoAtual(), dados);
+
+    revalidatePath("/perfil/publicacoes");
+    // O feed aparece no perfil público — sem isto, o trabalho novo só
+    // apareceria para quem chegasse depois do próximo deploy.
+    revalidatePath("/servicos", "layout");
+
+    return { id: publicacao.id };
+  },
+});
+
+export interface EstadoPublicacao {
+  ok?: boolean;
+  erro?: string;
+  campos?: Record<string, string>;
+}
+
+function paraEstado(resposta: {
+  ok: boolean;
+  mensagem?: string;
+  campos?: { campo: string; mensagem: string }[];
+}): EstadoPublicacao {
+  if (resposta.ok) return { ok: true };
+  return {
+    erro: resposta.mensagem,
+    campos: Object.fromEntries(
+      (resposta.campos ?? []).map((c) => [c.campo, c.mensagem]),
+    ),
+  };
+}
+
+export async function publicarComFotoComEstado(
+  _anterior: EstadoPublicacao,
+  formData: FormData,
+): Promise<EstadoPublicacao> {
+  return paraEstado(await publicarComFoto(formData));
+}
+
+export async function arquivarComEstado(
+  _anterior: EstadoPublicacao,
+  formData: FormData,
+): Promise<EstadoPublicacao> {
+  return paraEstado(await arquivar(formData));
+}
+
+export async function reativarComEstado(
+  _anterior: EstadoPublicacao,
+  formData: FormData,
+): Promise<EstadoPublicacao> {
+  return paraEstado(await reativar(formData));
+}
+
 export const editar = criarAcao({
   nome: "publicacao.editar",
   entrada: z.object({
@@ -61,6 +129,8 @@ export const arquivar = criarAcao({
   executar: async ({ id }) => {
     const publicacao = await arquivarPublicacao(await sessaoAtual(), id);
     revalidatePath("/perfil");
+    revalidatePath("/perfil/publicacoes");
+    revalidatePath("/servicos", "layout");
     return { id: publicacao.id, status: publicacao.status };
   },
 });
@@ -71,6 +141,8 @@ export const reativar = criarAcao({
   executar: async ({ id }) => {
     const publicacao = await reativarPublicacao(await sessaoAtual(), id);
     revalidatePath("/perfil");
+    revalidatePath("/perfil/publicacoes");
+    revalidatePath("/servicos", "layout");
     return { id: publicacao.id, status: publicacao.status };
   },
 });

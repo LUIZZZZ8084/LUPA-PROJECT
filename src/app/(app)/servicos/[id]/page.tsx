@@ -1,6 +1,7 @@
-import { Banknote, Briefcase, MapPin } from "lucide-react";
+import { Banknote, Briefcase, Check, MapPin, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
@@ -22,6 +23,11 @@ import {
   ratingBreakdown,
 } from "@/lib/data";
 import { formatStartingPrice } from "@/lib/format";
+import { sessaoAtual } from "@/server/auth/cookies";
+import { pode } from "@/server/auth/rbac";
+import { jaAvaliou } from "@/server/avaliacoes/servico";
+import { listarPublicacoes } from "@/server/publicacoes/servico";
+import { FormularioDeAvaliacao } from "./avaliar";
 
 /**
  * As avaliações ficam abaixo da dobra e crescem sem limite — um prestador
@@ -87,7 +93,28 @@ export default async function ProviderPage({
   const provider = await getProviderById(id);
   if (!provider) notFound();
 
+  const sessao = await sessaoAtual();
   const reviews = await getReviews(id);
+
+  /*
+   * Só o que está no feed. Arquivado é trabalho que o prestador tirou de
+   * exibição — mostrar aqui ignoraria a escolha dele.
+   */
+  const trabalhos = await listarPublicacoes(id, "ativa");
+
+  /*
+   * O formulário de avaliação só aparece para quem pode usá-lo.
+   *
+   * O painel logo abaixo já convidava a avaliar sem oferecer nada para
+   * clicar. Mostrar o formulário a quem não pode enviar seria o inverso do
+   * mesmo erro: promessa que a action recusa depois do clique.
+   */
+  const jaAvaliouEste = await jaAvaliou(sessao, provider.profile_id);
+
+  const podeAvaliar =
+    Boolean(sessao && pode(sessao.papel, "avaliacao:escrever")) &&
+    sessao?.usuarioId !== provider.profile_id &&
+    !jaAvaliouEste;
   const breakdown = ratingBreakdown(reviews);
 
   const similar = (
@@ -102,6 +129,38 @@ export default async function ProviderPage({
   return (
     <PageShell width="narrow">
       <BackLink href="/servicos" label="Voltar para serviços" />
+
+      {/*
+       * Perfil não verificado abre, mas diz o que é.
+       *
+       * A busca só mostra quem passou pela fila do admin — mas o perfil
+       * continua alcançável por link direto, e precisa ser honesto com as
+       * duas pessoas que chegam aqui: o visitante, que merece saber que
+       * ninguém conferiu este anúncio ainda; e o próprio prestador, que
+       * de outro modo não entenderia por que não se acha na busca.
+       */}
+      {!provider.doc_verified && (
+        <Panel className="mb-5 border-warn/30 bg-warn/8">
+          <div className="flex items-start gap-3">
+            <ShieldAlert size={20} className="mt-0.5 flex-none text-warn" />
+            <div>
+              <h2 className="font-bold text-base">Perfil em análise</h2>
+              <p className="mt-1.5 text-muted text-sm leading-relaxed">
+                O documento deste profissional ainda não foi conferido pela
+                Lupa, então ele não aparece na busca de serviços. Se este perfil
+                é seu, envie documento e selfie em{" "}
+                <Link
+                  href="/perfil/editar"
+                  className="underline hover:text-ink"
+                >
+                  Editar perfil
+                </Link>
+                .
+              </p>
+            </div>
+          </div>
+        </Panel>
+      )}
 
       <Panel>
         <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
@@ -219,6 +278,72 @@ export default async function ProviderPage({
           </p>
         </div>
       </Panel>
+
+      {/*
+       * Os trabalhos publicados.
+       *
+       * Vem antes das avaliações de propósito: quem procura um eletricista
+       * decide primeiro olhando o que ele já fez, e só depois lê o que os
+       * outros acharam.
+       */}
+      {trabalhos.length > 0 && (
+        <section className="mt-5">
+          <h2 className="mb-3 font-bold text-base">Trabalhos publicados</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {trabalhos.map((t) => (
+              <Panel key={t.id} className="overflow-hidden">
+                {t.imagemUrl && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  // biome-ignore lint/performance/noImgElement: mesma razão do feed — o host do Storage não está nos `remotePatterns`, e trocar isso é mudança de build.
+                  <img
+                    src={t.imagemUrl}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="-mx-5 -mt-5 mb-4 h-40 w-[calc(100%+2.5rem)] object-cover"
+                  />
+                )}
+                <h3 className="font-semibold text-sm">{t.titulo}</h3>
+                <p className="mt-1.5 whitespace-pre-line text-muted text-sm leading-relaxed">
+                  {t.corpo}
+                </p>
+              </Panel>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {podeAvaliar && (
+        <FormularioDeAvaliacao
+          prestadorId={provider.profile_id}
+          nomeDoPrestador={provider.full_name}
+        />
+      )}
+
+      {/*
+       * A confirmação vem do servidor, não do estado do formulário.
+       *
+       * A action revalida esta rota — a nota média muda —, e a revalidação
+       * desmonta o formulário junto com o "enviado" que ele mostrava. Quem
+       * acabava de avaliar via o formulário simplesmente sumir, sem
+       * confirmação nenhuma. É a mesma armadilha do 404 depois de virar
+       * prestador: estado de cliente não sobrevive à revalidação da
+       * própria rota.
+       */}
+      {jaAvaliouEste && (
+        <Panel className="mt-5 border-vagas/30 bg-vagas/8">
+          <div className="flex items-start gap-3">
+            <Check size={20} className="mt-0.5 flex-none text-vagas" />
+            <div>
+              <h2 className="font-bold text-base">Você já avaliou</h2>
+              <p className="mt-1.5 text-muted text-sm leading-relaxed">
+                Sua avaliação está na lista abaixo. Cada pessoa avalia uma vez —
+                é o que mantém a nota honesta.
+              </p>
+            </div>
+          </div>
+        </Panel>
+      )}
 
       {/* Avaliações — carregado sob demanda, ver ReviewsPanel */}
       <ReviewsPanel

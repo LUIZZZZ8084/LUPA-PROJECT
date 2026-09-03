@@ -1,3 +1,4 @@
+import { enviarArquivo, temArmazenamento } from "../arquivos/servico";
 import { type Autenticado, exigirCapacidade, exigirDono } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
@@ -74,6 +75,43 @@ export async function criarPublicacao(
   });
 
   return publicacao;
+}
+
+/**
+ * Publica um trabalho com a foto dele, num passo só.
+ *
+ * A foto vai para o Storage antes de a linha existir, e é de propósito: se
+ * o banco falhar depois, sobra um objeto órfão no bucket — invisível e
+ * barato. Na ordem inversa, a publicação apontaria para um arquivo que não
+ * existe e o feed mostraria imagem quebrada para quem abrisse o perfil. É
+ * o mesmo raciocínio já registrado para foto de perfil e currículo.
+ *
+ * Sem Storage — modo demonstração — a publicação nasce sem foto em vez de
+ * recusar: o feed continua demonstrável, e a tela diz que o envio de
+ * imagem depende do Supabase.
+ */
+export async function publicarTrabalho(
+  sessao: Autenticado | null,
+  dados: { titulo: string; corpo: string; foto?: File | null },
+): Promise<Publicacao> {
+  const autenticado = exigirCapacidade(sessao, "publicacao:criar");
+
+  let imagemUrl: string | null = null;
+
+  if (dados.foto && dados.foto.size > 0 && temArmazenamento) {
+    const { referencia } = await enviarArquivo(
+      autenticado.usuarioId,
+      "publicacao",
+      dados.foto,
+    );
+    imagemUrl = referencia;
+  }
+
+  return criarPublicacao(sessao, {
+    titulo: dados.titulo,
+    corpo: dados.corpo,
+    imagemUrl,
+  });
 }
 
 export async function editarPublicacao(
