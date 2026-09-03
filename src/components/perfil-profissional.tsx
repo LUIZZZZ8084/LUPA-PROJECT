@@ -1,4 +1,5 @@
 import { Award, Briefcase, Building2, Star, Wrench } from "lucide-react";
+import { SocialLinks } from "@/components/social-links";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
@@ -66,45 +67,6 @@ function Secao({
       </h2>
       <div className="mt-3">{children}</div>
     </Panel>
-  );
-}
-
-/**
- * Site, Instagram e Facebook — sempre os mesmos três, sempre nesta ordem.
- * Cada um só aparece se preenchido, e a linha inteira some se nenhum
- * estiver: o que não foi informado não deixa buraco na tela.
- */
-function LinksSociais({
-  site,
-  instagram,
-  facebook,
-}: {
-  site: string | null;
-  instagram: string | null;
-  facebook: string | null;
-}) {
-  if (!site && !instagram && !facebook) return null;
-
-  const links = [
-    { url: site, rotulo: "Site" },
-    { url: instagram, rotulo: "Instagram" },
-    { url: facebook, rotulo: "Facebook" },
-  ].filter((l) => l.url);
-
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-      {links.map(({ url, rotulo }) => (
-        <a
-          key={rotulo}
-          href={url ?? undefined}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-muted underline-offset-2 transition-colors hover:text-ink hover:underline"
-        >
-          {rotulo}
-        </a>
-      ))}
-    </div>
   );
 }
 
@@ -249,11 +211,9 @@ export function PerfilPrestador({
         </div>
       )}
 
-      <LinksSociais
-        site={null}
-        instagram={perfil.instagram}
-        facebook={perfil.facebook}
-      />
+      <div className="mt-3">
+        <SocialLinks instagram={perfil.instagram} facebook={perfil.facebook} />
+      </div>
 
       {/*
        * Se ainda não foi verificado, é aqui que ele descobre.
@@ -341,11 +301,13 @@ export function PerfilEmpresa({
         </Badge>
       </div>
 
-      <LinksSociais
-        site={empresa.site}
-        instagram={empresa.instagram}
-        facebook={empresa.facebook}
-      />
+      <div className="mt-3">
+        <SocialLinks
+          site={empresa.site}
+          instagram={empresa.instagram}
+          facebook={empresa.facebook}
+        />
+      </div>
 
       {/*
        * O convite para conferir o CNPJ, só para quem ainda não é

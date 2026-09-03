@@ -910,6 +910,12 @@ para manter sem ninguém pedindo ainda.
 - **Contraste:** todo par de cor e fundo precisa passar em WCAG AA (4,5:1).
   Há teste de acessibilidade cobrindo todas as rotas. Boa parte do público
   abre o app na rua, sob sol forte e em tela barata.
+- **Cor de marca de terceiro é exceção ao token por vertical.** WhatsApp,
+  Instagram e Facebook têm `--color-whatsapp`, `--color-instagram` e
+  `--color-facebook` próprios — identificam a rede, não uma vertical da
+  Lupa. As duas de rede social são a cor oficial clareada até passar no
+  contraste (#133): a original reprovava em WCAG AA contra `panel-3`,
+  do mesmo jeito que `--color-empresas` já tinha precisado de ajuste.
 - **Multi-cidade:** toda entidade tem `city`, e o app aceita os 142
   municípios de Mato Grosso — lista gerada do IBGE por
   `scripts/gerar-cidades.mjs`. `CIDADE_INICIAL` é Sinop, e é só isso: o

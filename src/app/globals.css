@@ -49,6 +49,20 @@
   --color-danger: #f56565;
   --color-star: #f5b544;
   --color-whatsapp: #25d366;
+  /*
+   * Instagram e Facebook: cor da marca, não do app.
+   *
+   * A regra da casa é token por vertical, nunca hex solto — mas essas
+   * duas identificam uma rede social de terceiro, não uma vertical da
+   * Lupa. Mesma exceção que já vale para `--color-whatsapp`.
+   */
+  /*
+   * Clareadas a partir da cor oficial da marca até passar em WCAG AA
+   * (4,5:1) contra `panel-3`, a superfície mais clara onde o link pode
+   * aparecer — a mesma conta que já vale para `--color-empresas`.
+   */
+  --color-instagram: #f0628f;
+  --color-facebook: #6fa5f6;
 
   /* Tipografia */
   --font-sans:
