@@ -102,18 +102,18 @@ describe("candidato", () => {
 
 describe("prestador", () => {
   it("sem anúncio, explica que não aparece na busca", () => {
-    render(<PerfilPrestador perfil={null} listagem={null} />);
+    render(<PerfilPrestador perfil={null} listagem={null} docVerificado />);
     expect(screen.getByText(/anúncio ainda não está no ar/i)).toBeTruthy();
   });
 
   it("mostra a nota com vírgula, como o público brasileiro lê", () => {
-    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} />);
+    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} docVerificado />);
     expect(screen.getByText("4,7")).toBeTruthy();
     expect(screen.getByText("(3)")).toBeTruthy();
   });
 
   it("mostra categoria, descrição, experiência e bairros", () => {
-    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} />);
+    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} docVerificado />);
     expect(screen.getByText("Eletricista")).toBeTruthy();
     expect(screen.getByText(/Instalações elétricas/)).toBeTruthy();
     expect(screen.getByText("7 anos")).toBeTruthy();
@@ -122,7 +122,7 @@ describe("prestador", () => {
 
   /** Ver o próprio anúncio como o cliente vê é o que revela o que falta. */
   it("leva ao próprio perfil público", () => {
-    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} />);
+    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} docVerificado />);
     expect(
       screen.getByRole("link", { name: /como o cliente vê/i }),
     ).toHaveAttribute("href", "/servicos/u2");
@@ -132,14 +132,14 @@ describe("prestador", () => {
     render(
       <PerfilPrestador
         perfil={{ ...ANUNCIO, precoInicial: null, anosExperiencia: null }}
-        listagem={LISTAGEM}
+        listagem={LISTAGEM} docVerificado
       />,
     );
     expect(screen.queryByText("Experiência")).toBeNull();
   });
 
   it("sem instagram nem facebook, não mostra nenhum link", () => {
-    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} />);
+    render(<PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} docVerificado />);
     expect(screen.queryByRole("link", { name: "Instagram" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Facebook" })).toBeNull();
   });
@@ -148,7 +148,7 @@ describe("prestador", () => {
     render(
       <PerfilPrestador
         perfil={{ ...ANUNCIO, instagram: "https://instagram.com/fulano" }}
-        listagem={LISTAGEM}
+        listagem={LISTAGEM} docVerificado
       />,
     );
     expect(screen.getByRole("link", { name: "Instagram" })).toHaveAttribute(

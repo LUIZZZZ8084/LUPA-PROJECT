@@ -116,6 +116,18 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "publicacao:arquivar_propria",
     "avaliacao:receber",
     "avaliacao:escrever",
+    /*
+     * Contratar também é coisa de prestador.
+     *
+     * Decisão do Luiz em 03/09/2026: a aba Empresa deixa de ser só de PJ.
+     * Produtor rural, autônomo e prestador contratam ajudante, e barrar
+     * isso deixava a barra inferior mostrando um item que dava 404.
+     *
+     * Só a leitura do painel entra agora. Publicar vaga exige um perfil de
+     * contratante, que hoje pede CNPJ — e passar a aceitar CPF é migração
+     * própria, na Issue seguinte.
+     */
+    "vaga:ver_candidaturas_proprias",
   ],
 
   empresa: [

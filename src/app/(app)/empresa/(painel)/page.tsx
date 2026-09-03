@@ -1,4 +1,11 @@
-import { FileText, Inbox, MessageCircle, Plus, UserSearch } from "lucide-react";
+import {
+  Building2,
+  FileText,
+  Inbox,
+  MessageCircle,
+  Plus,
+  UserSearch,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -94,8 +101,45 @@ export default async function EmpresaPage() {
    * propósito: ele enxerga tudo pelo `/admin/painel`, e uma empresa
    * própria é justamente o que ele não tem.
    */
-  if (!sessao || !pode(sessao.papel, "vaga:ver_candidaturas_proprias")) {
-    notFound();
+  if (!sessao) notFound();
+
+  /*
+   * Candidato não é barrado com 404 — recebe a explicação.
+   *
+   * A barra inferior mostra "Empresa" para todo mundo, e antes o toque
+   * dava página não encontrada. Não há segredo a proteger aqui: que exista
+   * um painel de quem contrata é evidente pela própria navegação. O que
+   * faltava era dizer o que é preciso para usá-lo.
+   */
+  if (!pode(sessao.papel, "vaga:ver_candidaturas_proprias")) {
+    return (
+      <PageShell width="narrow">
+        <PageTitle
+          title="Contratar pela Lupa"
+          accent="text-empresas"
+          description="Esta área é de quem contrata: publica vaga, recebe currículo e acompanha as candidaturas."
+        />
+        <Panel>
+          <div className="flex items-start gap-3">
+            <Building2 size={20} className="mt-0.5 flex-none text-empresas" />
+            <div>
+              <h2 className="font-bold text-base">
+                Sua conta ainda não contrata
+              </h2>
+              <p className="mt-1.5 text-muted text-sm leading-relaxed">
+                Contas de candidato usam a Lupa para procurar vaga e
+                profissional. Para contratar, é preciso um perfil de contratante
+                — empresa, produtor rural ou autônomo que emprega.
+              </p>
+              <p className="mt-3 text-faint text-sm leading-relaxed">
+                Ainda não dá para criar esse perfil por aqui. Fale com a gente e
+                resolvemos no suporte.
+              </p>
+            </div>
+          </div>
+        </Panel>
+      </PageShell>
+    );
   }
 
   const companyId = empresaDoPainel(sessao.usuarioId);

@@ -207,6 +207,7 @@ export default async function PerfilPage() {
         <PerfilPrestador
           perfil={perfil?.prestador ?? null}
           listagem={listagem}
+          docVerificado={Boolean(usuario?.docVerificado)}
         />
       )}
       {sessao?.papel === "empresa" && (
