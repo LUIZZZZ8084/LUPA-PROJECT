@@ -29,6 +29,7 @@ import type { Capacidade } from "@/server/auth/rbac";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
 import { perfilParaEditar } from "@/server/perfil/servico";
+import { VerificarCnpj } from "./verificar-cnpj";
 
 export const metadata: Metadata = {
   title: "Perfil",
@@ -196,7 +197,11 @@ export default async function PerfilPage() {
         />
       )}
       {sessao?.papel === "empresa" && (
-        <PerfilEmpresa empresa={perfil?.empresa ?? null} />
+        <PerfilEmpresa
+          empresa={perfil?.empresa ?? null}
+          docVerificado={Boolean(usuario?.docVerificado)}
+          verificarCnpj={<VerificarCnpj />}
+        />
       )}
 
       {atalhos.length > 0 && (

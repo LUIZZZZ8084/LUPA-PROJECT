@@ -303,8 +303,20 @@ export function PerfilPrestador({
 /** Empresa: o cartão que a candidata lê antes de se candidatar. */
 export function PerfilEmpresa({
   empresa,
+  docVerificado,
+  verificarCnpj,
 }: {
   empresa: PerfilEmpresaDados | null;
+  /** Verificada, a empresa não vê o convite para conferir o CNPJ. */
+  docVerificado: boolean;
+  /**
+   * O botão de conferência, injetado pela página.
+   *
+   * Vem de fora porque ele é um Client Component com server action, e este
+   * arquivo é lido por teste de componente — importá-lo aqui arrastaria a
+   * action para dentro do teste sem nenhum ganho.
+   */
+  verificarCnpj?: React.ReactNode;
 }) {
   if (!empresa) {
     return (
@@ -336,6 +348,18 @@ export function PerfilEmpresa({
         instagram={empresa.instagram}
         facebook={empresa.facebook}
       />
+
+      {/*
+       * O convite para conferir o CNPJ, só para quem ainda não é
+       * verificado.
+       *
+       * O CNPJ do cadastro passa por dígito verificador, o que prova que o
+       * número é bem formado e não que a empresa existe. A conferência na
+       * Receita é o que fecha essa brecha — e numa plataforma de emprego
+       * ela pesa: vaga falsa costuma virar golpe de taxa cobrada de quem
+       * está desempregado.
+       */}
+      {!docVerificado && empresa.cnpj && verificarCnpj}
 
       <div className="mt-4">
         <ButtonLink href="/empresa" variant="outline" size="sm">

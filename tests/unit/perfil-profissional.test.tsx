@@ -182,20 +182,22 @@ describe("prestador", () => {
 
 describe("empresa", () => {
   it("sem empresa, explica o papel do CNPJ na confiança", () => {
-    render(<PerfilEmpresa empresa={null} />);
+    render(<PerfilEmpresa empresa={null} docVerificado />);
     expect(screen.getByText(/Nenhuma empresa vinculada/i)).toBeTruthy();
     expect(screen.getByText(/anúncio falso/i)).toBeTruthy();
   });
 
   it("mostra razão social, CNPJ e plano", () => {
-    render(<PerfilEmpresa empresa={EMPRESA} />);
+    render(<PerfilEmpresa empresa={EMPRESA} docVerificado />);
     expect(screen.getByText("Agro Norte Ltda.")).toBeTruthy();
     expect(screen.getByText("11222333000181")).toBeTruthy();
     expect(screen.getByText("Plano mensal")).toBeTruthy();
   });
 
   it("plano de teste aparece como período de teste", () => {
-    render(<PerfilEmpresa empresa={{ ...EMPRESA, plano: "trial" }} />);
+    render(
+      <PerfilEmpresa empresa={{ ...EMPRESA, plano: "trial" }} docVerificado />,
+    );
     expect(screen.getByText("Período de teste")).toBeTruthy();
   });
 
@@ -208,6 +210,7 @@ describe("empresa", () => {
     render(
       <PerfilEmpresa
         empresa={{ ...EMPRESA, site: "https://agronorte.com.br" }}
+        docVerificado
       />,
     );
     expect(screen.getByRole("link", { name: "Site" })).toHaveAttribute(
@@ -217,9 +220,38 @@ describe("empresa", () => {
   });
 
   it("sem site, instagram nem facebook, não mostra nenhum link", () => {
-    render(<PerfilEmpresa empresa={EMPRESA} />);
+    render(<PerfilEmpresa empresa={EMPRESA} docVerificado />);
     expect(screen.queryByRole("link", { name: "Site" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Instagram" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Facebook" })).toBeNull();
+  });
+
+  /**
+   * O convite para conferir o CNPJ só aparece para quem ainda precisa.
+   *
+   * Ele é o caminho que troca a fila do admin por uma consulta à Receita.
+   * Deixá-lo à mostra depois de verificado convidaria ao clique que não
+   * faz nada — a armadilha do "botão que só recusa depois do clique" que
+   * este projeto já pagou mais de uma vez.
+   */
+  it("oferece a conferência do CNPJ só para quem não é verificado", () => {
+    const { unmount } = render(
+      <PerfilEmpresa
+        empresa={EMPRESA}
+        docVerificado={false}
+        verificarCnpj={<button type="button">Conferir CNPJ agora</button>}
+      />,
+    );
+    expect(screen.getByText("Conferir CNPJ agora")).toBeTruthy();
+    unmount();
+
+    render(
+      <PerfilEmpresa
+        empresa={EMPRESA}
+        docVerificado
+        verificarCnpj={<button type="button">Conferir CNPJ agora</button>}
+      />,
+    );
+    expect(screen.queryByText("Conferir CNPJ agora")).toBeNull();
   });
 });
