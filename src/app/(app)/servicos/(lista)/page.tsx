@@ -13,7 +13,9 @@ import { cidadeDaBusca, umParametro } from "@/lib/busca";
 import { CIDADES, ESTADO, SERVICE_CATEGORIES } from "@/lib/constants";
 import { getProviders } from "@/lib/data";
 import { pluralize } from "@/lib/format";
+import { sessaoAtual } from "@/server/auth/cookies";
 import { origemDoUsuario } from "@/server/auth/origem";
+import { pode } from "@/server/auth/rbac";
 import { contarBuscaSemResultado } from "@/server/buscas";
 
 /** Mesmo motivo do título de `/vagas`: quem filtra Sorriso não está em Sinop. */
@@ -52,6 +54,10 @@ export default async function ServicosPage({
   // Ordena, não filtra — o profissional mais perto aparece primeiro. Para
   // prestador, "perto" conta os bairros que ele atende, não onde ele mora.
   const perto = await origemDoUsuario();
+  const sessao = await sessaoAtual();
+  const podeVirarPrestador = Boolean(
+    sessao && pode(sessao.papel, "prestador:ativar"),
+  );
 
   // Mesma sobra que escondia vaga fora de Sinop em /vagas: sem cidade na
   // URL, a busca é de todo o estado, como o chip "Todo o MT" já promete.
@@ -148,21 +154,32 @@ export default async function ServicosPage({
         </div>
       )}
 
-      <div className="mt-8 rounded-[var(--radius-panel)] border border-servicos/25 bg-gradient-to-br from-servicos/8 to-transparent p-5 text-center">
-        <p className="font-semibold">Você presta algum desses serviços?</p>
-        <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">
-          Criar perfil na Lupa é gratuito. Apareça para quem está procurando na
-          sua região.
-        </p>
-        <ButtonLink
-          href="/cadastro?tipo=prestador_servico"
-          variant="servicos"
-          size="sm"
-          className="mt-4"
-        >
-          Criar meu perfil
-        </ButtonLink>
-      </div>
+      {/*
+       * O convite só para quem ainda pode aceitar.
+       *
+       * Ele mandava para `/cadastro?tipo=prestador_servico` — a tela de
+       * criar conta — e aparecia para todo mundo, inclusive para quem já
+       * tinha o perfil pronto. É o mesmo bug que a #112 corrigiu no card da
+       * home, e este passou batido: convite para fazer o que já está feito
+       * faz a pessoa duvidar do que ela mesma fez.
+       */}
+      {podeVirarPrestador && (
+        <div className="mt-8 rounded-[var(--radius-panel)] border border-servicos/25 bg-gradient-to-br from-servicos/8 to-transparent p-5 text-center">
+          <p className="font-semibold">Você presta algum desses serviços?</p>
+          <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">
+            Criar seu perfil é gratuito. Apareça para quem está procurando na
+            sua região.
+          </p>
+          <ButtonLink
+            href="/perfil/virar-prestador"
+            variant="servicos"
+            size="sm"
+            className="mt-4"
+          >
+            Criar meu perfil
+          </ButtonLink>
+        </div>
+      )}
     </PageShell>
   );
 }

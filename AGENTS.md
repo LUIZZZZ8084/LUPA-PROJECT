@@ -225,6 +225,28 @@ vindo do cliente: o id é da sessão, o sufixo é gerado aqui.
 O bucket é o `portfolio`, que já existia no `storage.sql` com leitura
 pública — criado para isto e nunca usado.
 
+### A aba Empresa deixou de ser só de PJ
+
+Ela era fechada no proxy por `vaga:ver_candidaturas_proprias`, que só a
+empresa tinha — e a barra inferior mostrava o item para toda conta com
+sessão. Tocar nele como candidato dava 404: link que aparece e devolve
+erro, a armadilha que este documento já registra duas vezes.
+
+Decisão do Luiz em 03/09/2026: **prestador passa a alcançar o painel**,
+porque quem contrata não é só pessoa jurídica — produtor rural e autônomo
+contratam ajudante. E **candidato recebe a explicação**, não o 404.
+
+`/empresa` saiu de `AREAS_FECHADAS` e quem decide passou a ser a página.
+Isso é diferente de `/admin`, que continua no proxy: lá, confirmar que a
+rota existe já é informação para quem sonda. Aqui não há segredo — que
+exista um painel de quem contrata é evidente pela própria navegação.
+
+Publicar vaga continua fechado para os dois. O perfil de contratante ainda
+exige CNPJ, e aceitar CPF é migração própria — `perfis_empresa.cnpj` é
+`not null unique` hoje, e o CNPJ é o que o `AGENTS.md` registra como o que
+separa vaga real de anúncio falso. Vaga publicada por pessoa física
+precisa de outro selo antes de existir.
+
 ### A vitrine só mostra prestador verificado
 
 Virar prestador não coloca ninguém na busca: o documento passa pela fila

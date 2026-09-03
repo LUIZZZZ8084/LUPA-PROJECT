@@ -55,11 +55,19 @@ const AREAS_FECHADAS: readonly AreaFechada[] = [
     capacidade: "vaga:publicar",
     semSessao: "login",
   },
-  {
-    prefixo: "/empresa",
-    capacidade: "vaga:ver_candidaturas_proprias",
-    semSessao: "login",
-  },
+  /*
+   * `/empresa` sai da lista de áreas fechadas.
+   *
+   * Ela era barrada por `vaga:ver_candidaturas_proprias`, que só a empresa
+   * tinha — e a barra inferior mostrava o item para todo mundo. Tocar nele
+   * como candidato dava 404: link que aparece e devolve erro, a armadilha
+   * que este arquivo já evita em outros lugares.
+   *
+   * Quem decide agora é a própria página: empresa e prestador veem o
+   * painel, candidato vê a explicação do que falta. Não há o que esconder
+   * — que exista um painel de contratante não é segredo, ao contrário da
+   * área de admin, que continua aqui.
+   */
   {
     prefixo: "/candidatos",
     capacidade: "candidato:buscar_disponiveis",

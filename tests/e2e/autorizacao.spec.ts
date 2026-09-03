@@ -29,8 +29,15 @@ import {
  */
 const COOKIE_DE_SESSAO = "lupa_sessao";
 
-/** Rotas que só quem tem a capacidade correspondente alcança. */
-const SO_DE_EMPRESA = ["/empresa", "/empresa/vagas/nova", "/candidatos"];
+/**
+ * O que exige capacidade que o candidato não tem.
+ *
+ * `/empresa` saiu desta lista em 03/09/2026: ela deixou de responder 404
+ * para candidato e passou a explicar o que falta para contratar — decisão
+ * do Luiz, porque a barra inferior mostra o item para todo mundo e tocar
+ * nele dava erro. Publicar vaga e buscar candidato continuam fechados.
+ */
+const SO_DE_EMPRESA = ["/empresa/vagas/nova", "/candidatos"];
 
 /** Rotas administrativas: ninguém além do admin as vê existir. */
 const SO_DE_ADMIN = ["/admin", "/admin/painel"];
@@ -52,7 +59,7 @@ test.beforeEach(({}, info) => {
 });
 
 test.describe("sessão de candidato", () => {
-  test("não alcança nada da empresa", async ({ page }) => {
+  test("não publica vaga nem busca candidato", async ({ page }) => {
     for (const rota of SO_DE_EMPRESA) {
       const resposta = await page.goto(rota);
       expect(
@@ -60,6 +67,24 @@ test.describe("sessão de candidato", () => {
         `${rota} devia responder 404 para candidato`,
       ).toBe(404);
     }
+  });
+
+  /**
+   * A aba Empresa abre e explica, em vez de dar 404.
+   *
+   * A barra inferior mostra "Empresa" para toda conta com sessão, e antes
+   * o toque devolvia página não encontrada — link que aparece e falha, a
+   * armadilha que este projeto já registrou duas vezes. Não há segredo a
+   * proteger: que exista um painel de quem contrata é evidente pela
+   * própria navegação.
+   */
+  test("a aba Empresa explica o que falta, sem 404", async ({ page }) => {
+    const resposta = await page.goto("/empresa");
+
+    expect(resposta?.status()).toBe(200);
+    await expect(
+      page.getByRole("heading", { name: /sua conta ainda não contrata/i }),
+    ).toBeVisible();
   });
 
   test("não alcança a área administrativa", async ({ page }) => {
@@ -73,10 +98,13 @@ test.describe("sessão de candidato", () => {
    * O 404 precisa ser indistinguível do de uma URL inventada, inclusive no
    * título da aba — foi por ali que a existência do painel de admin vazou
    * uma vez, com o metadata resolvido antes da guarda.
+   *
+   * Passou a medir `/empresa/vagas/nova`, que continua fechada, porque
+   * `/empresa` deixou de ser 404 de propósito.
    */
   test("o 404 não denuncia que a rota existe", async ({ page }) => {
-    await page.goto("/empresa");
-    await expect(page).not.toHaveTitle(/Empresa/i);
+    await page.goto("/empresa/vagas/nova");
+    await expect(page).not.toHaveTitle(/Publicar/i);
     await expect(page.getByText(/Não encontramos essa página/)).toBeVisible();
   });
 
