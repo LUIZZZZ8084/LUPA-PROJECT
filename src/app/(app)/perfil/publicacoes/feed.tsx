@@ -1,6 +1,7 @@
 "use client";
 
 import { ImagePlus, Loader2, RotateCcw, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
@@ -162,15 +163,15 @@ function Cartao({ publicacao }: { publicacao: Publicacao }) {
     <Panel className={arquivada ? "opacity-70" : undefined}>
       <div className="flex flex-col gap-4 sm:flex-row">
         {publicacao.imagemUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          // biome-ignore lint/performance/noImgElement: a foto vem do Storage do Supabase, host que não está nos `remotePatterns` do next/image — configurar isso é mudança de build, não desta tela. O `loading="lazy"` cobre o que mais importa aqui, que é não baixar dez fotos de uma vez em dado móvel contado.
-          <img
-            src={publicacao.imagemUrl}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-32 w-full flex-none rounded-xl object-cover sm:w-40"
-          />
+          <span className="relative block h-32 w-full flex-none overflow-hidden rounded-xl sm:w-40">
+            <Image
+              src={publicacao.imagemUrl}
+              alt=""
+              fill
+              sizes="(max-width: 640px) 100vw, 160px"
+              className="object-cover"
+            />
+          </span>
         ) : (
           <div className="flex h-32 w-full flex-none items-center justify-center rounded-xl bg-panel-2 text-faint sm:w-40">
             <ImagePlus size={22} />

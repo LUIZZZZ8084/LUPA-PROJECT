@@ -66,6 +66,9 @@ module.exports = {
           "(^|/)(next\\.config|postcss\\.config|eslint\\.config)\\.",
           // Convenções do App Router: o Next carrega por nome de arquivo.
           "^src/(proxy|instrumentation)\\.ts$",
+          // Quem importa é o `next.config.ts`, que fica fora de `src` e
+          // portanto fora da varredura. Órfão daqui, não do projeto.
+          "^src/lib/imagens\\.ts$",
           "^src/app/.*(page|layout|not-found|loading|error|manifest|icon|apple-icon|template|global-error)\\.tsx?$",
         ],
       },
