@@ -19,6 +19,7 @@ import { VerifiedMark } from "@/components/verified-badge";
 import { getJobById, getRelatedJobs } from "@/lib/data";
 import { formatSalaryRange, pluralize, timeAgo } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { pode } from "@/server/auth/rbac";
 import { contarVisualizacao } from "@/server/visualizacoes";
 
 export async function generateMetadata({
@@ -55,6 +56,9 @@ export default async function JobDetailPage({
    * público.
    */
   const sessao = await sessaoAtual();
+  const podeCandidatar = Boolean(
+    sessao && pode(sessao.papel, "candidatura:criar"),
+  );
   if (sessao?.usuarioId !== job.company_id) {
     after(() => contarVisualizacao(job.id));
   }
@@ -179,11 +183,26 @@ export default async function JobDetailPage({
         </div>
 
         <div className="mt-6 border-t border-line pt-5">
-          {job.status === "aberta" ? (
+          {job.status !== "aberta" ? (
+            <p className="text-center text-muted text-sm">
+              Esta vaga não está mais recebendo candidaturas.
+            </p>
+          ) : podeCandidatar ? (
             <ApplyButton jobId={job.id} />
           ) : (
-            <p className="text-center text-sm text-muted">
-              Esta vaga não está mais recebendo candidaturas.
+            /*
+             * Sem a capacidade, nada de botão.
+             *
+             * Ele aparecia para todo mundo e só recusava depois do clique
+             * — inclusive para empresa e para quem virou prestador. É a
+             * mesma armadilha que os atalhos do perfil já evitam:
+             * "mostrar um link que devolve sem permissão ao ser clicado é
+             * pior do que não mostrar; a pessoa conclui que o app está
+             * quebrado". Aqui era pior ainda, porque a tela de virar
+             * prestador promete que este botão some.
+             */
+            <p className="text-center text-muted text-sm">
+              Contas de prestador e de empresa não se candidatam a vagas.
             </p>
           )}
         </div>

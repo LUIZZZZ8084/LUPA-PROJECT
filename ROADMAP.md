@@ -78,6 +78,12 @@ Alcance:
   filtrada, em vez de dizer Sinop sempre —
   [#78](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/78)
 
+Prestador:
+
+- Virar prestador completa o perfil que já existe, em vez de pedir conta
+  nova — com aviso do que a troca de papel custa —
+  [#112](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/112)
+
 Perfil e vaga, o que cada um informa:
 
 - Endereço na vaga, aditivo ao bairro e fora do ranking —

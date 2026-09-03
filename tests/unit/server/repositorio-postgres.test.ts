@@ -80,6 +80,8 @@ describe("RepositorioPostgres", () => {
       senhaHash: LINHA.senha_hash,
       papel: "prestador_servico",
       nomeCompleto: "João Silva",
+      // Nulo para quem não é prestador — que é a esmagadora maioria.
+      cpf: null,
       telefone: "66999110001",
       cidade: "Sinop",
       bairro: "Centro",
