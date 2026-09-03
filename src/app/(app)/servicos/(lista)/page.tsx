@@ -149,7 +149,11 @@ export default async function ServicosPage({
       ) : (
         <div className="stagger grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {providers.map((provider) => (
-            <ProviderCard key={provider.profile_id} provider={provider} />
+            <ProviderCard
+              key={provider.profile_id}
+              provider={provider}
+              perto={perto}
+            />
           ))}
         </div>
       )}

@@ -181,7 +181,7 @@ export default async function VagasPage({
       ) : (
         <div className="stagger grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {jobs.map((job) => (
-            <JobCard key={job.id} job={job} />
+            <JobCard key={job.id} job={job} perto={perto} />
           ))}
         </div>
       )}
