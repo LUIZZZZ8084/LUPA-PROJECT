@@ -194,7 +194,7 @@ export function PerfilPrestador({
    * perfil, e mostrar como se fossem sugeriria que dá para editar.
    */
   listagem: ProviderListing | null;
-  /** Sem documento aprovado, o perfil não entra na busca (#114). */
+  /** Sem CPF confirmado, o perfil não entra na busca (#114, #133). */
   docVerificado: boolean;
 }) {
   if (!perfil) {
@@ -258,11 +258,17 @@ export function PerfilPrestador({
       {/*
        * Se ainda não foi verificado, é aqui que ele descobre.
        *
-       * A busca só mostra quem teve o documento aprovado (#114) — e isso
+       * A busca só mostra quem tem o CPF confirmado (#114, #133) — e isso
        * funcionando em silêncio é indistinguível de defeito: a pessoa
        * completa o perfil, se procura em `/servicos`, não se acha, e
        * conclui que o app quebrou. O perfil público já avisa quem abre por
        * link direto; faltava avisar quem procura, no lugar onde ela olha.
+       *
+       * Hoje `virarPrestador` confirma o CPF na mesma ação que ativa o
+       * papel, então este estado só existe para quem virou prestador antes
+       * dessa mudança. Por isso não tem botão: não há o que reenviar — o
+       * CPF já está gravado, só falta alguém regravar a confirmação, e
+       * isso é caso de suporte, como a correção de CNPJ e cidade.
        */}
       {!docVerificado && (
         <div className="mt-4 rounded-xl border border-warn/30 bg-warn/8 p-4">
@@ -270,18 +276,10 @@ export function PerfilPrestador({
             Seu perfil ainda não aparece na busca
           </p>
           <p className="mt-1 text-muted text-sm leading-relaxed">
-            Falta conferirmos seu documento. Envie documento e selfie em Editar
-            perfil — quem procura um profissional para entrar em casa precisa
-            saber que alguém conferiu quem ele é.
+            Sua conta ativou o perfil de prestador antes de confirmarmos o CPF
+            automaticamente. Fale com o suporte para regularizar — contas novas
+            já confirmam na hora, ao virar prestador.
           </p>
-          <ButtonLink
-            href="/perfil/editar"
-            variant="servicos"
-            size="sm"
-            className="mt-3"
-          >
-            Enviar documento
-          </ButtonLink>
         </div>
       )}
 

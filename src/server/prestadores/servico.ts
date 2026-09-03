@@ -143,6 +143,26 @@ export async function virarPrestador(
   if (!usuario.cpf) await repo.definirCpf(autenticado.usuarioId, cpf);
   await repo.atualizarPapel(autenticado.usuarioId, "prestador_servico");
 
+  /*
+   * CPF válido e único é a própria verificação, sem fila e sem foto.
+   *
+   * A tela chegou a prometer "envie documento e selfie" — e esse envio
+   * nunca existiu no app: não há campo de arquivo para isso em
+   * `perfil/editar`, `Especie` não tem `"documento"` nem `"selfie"`, e
+   * nada além do seed escreve em `pedidos_verificacao`. Fora da
+   * demonstração, todo prestador ficava preso sem saída, atrás de uma
+   * promessa que a tela não cumpria.
+   *
+   * A troca: já que virar prestador exige um CPF que passou por dígito
+   * verificador e por unicidade — a mesma dupla checagem que a #128 já
+   * usa para CNPJ —, esse CPF passa a ser o que libera a busca. É a
+   * mesma família de garantia da verificação automática de CNPJ, com o
+   * mesmo limite: prova que o documento existe e é único, não que é de
+   * quem digitou. Decisão do Luiz em 03/09/2026, depois de confirmar que
+   * a alternativa — documento e selfie — nunca funcionou de verdade.
+   */
+  await repo.definirDocVerificado(autenticado.usuarioId, true);
+
   log.info("conta virou prestador", {
     acao: "prestador.ativar",
     papel: autenticado.papel,
