@@ -12,6 +12,20 @@ import { expect, test } from "@playwright/test";
  * cadastro por origem é de 5 em 15 minutos, e esta suíte já gasta o que
  * pode.
  */
+/*
+ * Só no projeto desktop.
+ *
+ * Os dois projetos compartilham a mesma conta e o mesmo servidor, e
+ * avaliar é ação de uma vez só por pessoa e prestador. Rodando nos dois, o
+ * segundo encontra o formulário já ausente — que é a funcionalidade
+ * trabalhando, não um defeito. O que se mede aqui é regra de negócio, não
+ * largura de tela.
+ */
+// biome-ignore lint/correctness/noEmptyPattern: o Playwright exige o padrão de desestruturação no primeiro argumento e recusa o arquivo na coleta quando o parâmetro é nomeado.
+test.beforeEach(({}, info) => {
+  info.skip(info.project.name !== "desktop", "avaliar é ação de uma vez só");
+});
+
 test.describe("avaliar prestador", () => {
   const PRESTADOR = "/servicos/prv-joao-silva";
 
