@@ -618,9 +618,11 @@ para manter sem ninguém pedindo ainda.
   do schema (`candidato_clt`, `prestador_servico`, `empresa`). O código do
   servidor em `src/server/` usa português também, por ser onde a regra de
   negócio vive e ser lida por quem conhece o domínio.
-- **Cores por vertical:** verde `vagas` = emprego, azul `servicos` =
-  prestadores, roxo `empresas` = painel da empresa. Use as classes de token
-  (`text-vagas`, `bg-servicos/12`), nunca hex solto.
+- **Cores por vertical:** verde-limão `vagas` = emprego, laranja `servicos`
+  = prestadores, azul `empresas` = painel da empresa — paleta "Sinalização"
+  desde 02/09/2026 (Issue #106); os nomes dos tokens são por vertical, não
+  por cor, e sobreviveram à troca. Use as classes de token (`text-vagas`,
+  `bg-servicos/12`), nunca hex solto.
 - **Contraste:** todo par de cor e fundo precisa passar em WCAG AA (4,5:1).
   Há teste de acessibilidade cobrindo todas as rotas. Boa parte do público
   abre o app na rua, sob sol forte e em tela barata.

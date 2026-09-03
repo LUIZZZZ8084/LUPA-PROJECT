@@ -17,13 +17,13 @@ export default function AppleIcon() {
       }}
     >
       <svg width="124" height="124" viewBox="0 0 48 48" fill="none">
-        <circle cx="21" cy="21" r="14" stroke="#3ecf8e" strokeWidth="4" />
+        <circle cx="21" cy="21" r="14" stroke="#a8d94a" strokeWidth="4" />
         <line
           x1="31"
           y1="31"
           x2="43"
           y2="43"
-          stroke="#3ecf8e"
+          stroke="#a8d94a"
           strokeWidth="4"
           strokeLinecap="round"
         />

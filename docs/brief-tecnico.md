@@ -14,7 +14,7 @@
 - **Nome:** Lupa. Origem dupla e intencional: (1) combinação de Luiz (fundador) + Paulinho (cofundador técnico) — "LU" + "PA"; (2) "lupa" é uma palavra real do português (instrumento de busca/aumento), o que já comunica a proposta do produto — ajudar a pessoa a encontrar a vaga, o profissional ou o candidato certo.
 - **Ícone/logo:** referência visual de lupa (ícone de busca), reforça a metáfora de "encontrar" em qualquer tela.
 - **Tom:** direto, local, sem enrolação — "Encontre trabalho e profissionais perto de você."
-- **Tema visual:** dark theme, com três cores de destaque por vertical (verde = vagas/emprego, azul = serviços, roxo = empresas), conforme conceito visual já validado pelo fundador.
+- **Tema visual:** dark theme, com três cores de destaque por vertical. ~~(verde = vagas/emprego, azul = serviços, roxo = empresas), conforme conceito visual já validado pelo fundador.~~ **Trocado.** Paleta "Sinalização" desde a [#106](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/106): verde-limão = vagas/emprego, laranja = serviços, azul = empresas. Comparada contra três outras opções — contraste calculado e um protótipo navegável do app inteiro — antes de decidir.
 - **Cidade-piloto:** Sinop-MT (~300 mil habitantes). Arquitetura e dados já são multi-cidade desde o V0 (campo `city` em todas as entidades relevantes) para permitir expansão para outras cidades do interior sem retrabalho estrutural.
 
 ## 1. Visão geral do produto

@@ -27,13 +27,22 @@
   --color-muted: #8b97a5; /* 5.3:1 */
   --color-faint: #828b95; /* 4.6:1 */
 
-  /* Verticais */
-  --color-vagas: #3ecf8e;
-  --color-vagas-dim: #2aa871;
-  --color-servicos: #4d9fff;
-  --color-servicos-dim: #3a7fd4;
-  --color-empresas: #a879ff;
-  --color-empresas-dim: #8a5be0;
+  /*
+   * Verticais — paleta "Sinalização".
+   *
+   * Pega o vocabulário que o público já lê de longe sem pensar: colete de
+   * obra, cone de trânsito, placa de sinalização. Trocada em 02/09/2026
+   * (Issue #106), escolhida entre quatro alternativas comparadas por
+   * contraste calculado e psicologia das cores, num protótipo navegável
+   * do app inteiro. Verde e roxo saíram; laranja e azul entraram — os
+   * nomes dos tokens continuam por vertical, não por cor.
+   */
+  --color-vagas: #a8d94a;
+  --color-vagas-dim: #86ae3b;
+  --color-servicos: #ff7a33;
+  --color-servicos-dim: #cc6229;
+  --color-empresas: #6f9be6;
+  --color-empresas-dim: #597cb8;
 
   /* Semânticas */
   --color-warn: #f5b544;
