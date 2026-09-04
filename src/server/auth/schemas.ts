@@ -103,21 +103,37 @@ export const schemaPrestador = z.object({
 });
 
 /**
- * Empresa.
+ * Empresa — ou quem contrata sem ter aberto empresa.
  *
- * CNPJ é obrigatório e validado por dígito verificador. É o que separa uma
- * empresa real de alguém publicando vaga falsa — o risco mais concreto numa
- * plataforma de emprego, onde vaga falsa vira golpe de taxa de cadastro.
+ * CNPJ validado por dígito verificador é o que separa uma empresa real de
+ * alguém publicando vaga falsa — o risco mais concreto numa plataforma de
+ * emprego, onde vaga falsa vira golpe de taxa de cadastro.
+ *
+ * `tipoDocumento` existe porque nem todo contratante tem CNPJ: produtor
+ * rural e autônomo contratam ajudante sem ter aberto empresa. Decisão do
+ * Luiz em 03/09/2026 (#138, que reaproveita a #129). Os dois campos ficam
+ * opcionais aqui — qual dos dois é obrigatório depende de
+ * `tipoDocumento`, e isso é `servico.ts` quem decide, não o schema: um
+ * schema não consegue ficar discriminado por `papel` *e* validar
+ * cruzado por outro campo ao mesmo tempo.
  */
 export const schemaEmpresa = z.object({
   ...base,
   papel: z.literal("empresa"),
+  tipoDocumento: z.enum(["cnpj", "cpf"]).default("cnpj"),
   razaoSocial: z
     .string()
     .trim()
-    .min(2, "Informe o nome da empresa.")
+    .min(2, "Informe o nome.")
     .max(150, "Nome longo demais."),
-  cnpj: zCnpj,
+  cnpj: z
+    .union([zCnpj, z.literal("")])
+    .optional()
+    .transform((v) => (v ? v : undefined)),
+  cpf: z
+    .union([zCpf, z.literal("")])
+    .optional()
+    .transform((v) => (v ? v : undefined)),
   setor: z.string().trim().max(80).optional(),
   porte: z.enum(["MEI", "Micro", "Pequena", "Média", "Grande"]).optional(),
   site: z

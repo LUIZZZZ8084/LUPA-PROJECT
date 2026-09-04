@@ -224,11 +224,13 @@ describe("verificação automática", () => {
   });
 
   /**
-   * O prestador tem CPF, não CNPJ, e não há consulta pública gratuita para
-   * CPF — é a #120. A frase manda para o caminho que existe, em vez de
-   * deixar a pessoa num botão que nunca vai funcionar para ela.
+   * Um prestador não tem `perfis_empresa` — é o caso de quem chega aqui
+   * sem nunca ter passado pelo cadastro de empresa. Desde a #138, isto
+   * também é o caso de uma empresa que se cadastrou com CPF em vez de
+   * CNPJ (produtor rural): ela já está verificada na hora, sem nenhuma
+   * conferência automática de CNPJ para tentar aqui.
    */
-  it("sem CNPJ, manda para o envio de documento", async () => {
+  it("sem CNPJ, diz que não há o que conferir", async () => {
     const outro = await repo.criar({
       email: "prestador@teste.lupa",
       senhaHash: "hash",
@@ -245,7 +247,7 @@ describe("verificação automática", () => {
 
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.motivo).toContain("documento");
+    expect(r.motivo).toContain("CNPJ");
   });
 
   it("sem sessão, nem consulta", async () => {

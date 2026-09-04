@@ -352,14 +352,14 @@ causa dele, porque até agora não se provava nem a existência.
 **A consulta não entra no caminho do cadastro.** API de terceiro fora do ar
 não pode impedir ninguém de criar conta — a mesma razão que faz a lista de
 municípios ser versionada em vez de buscada no IBGE em execução. É ação de
-quem já tem conta, e toda falha cai de volta no envio de documento, que
-continua existindo.
+quem já tem conta, e uma falha aqui não tira o CNPJ do perfil nem derruba
+o que já verifica a conta.
 
-**Nada disso vale para o prestador**, que tem CPF. Não há consulta pública
-gratuita de CPF; é a
-[#120](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/120), presa a
-provedor pago. A mensagem diz isso e manda para o caminho que existe, em vez
-de deixar a pessoa num botão que nunca vai funcionar para ela.
+**O prestador tem CPF, não CNPJ**, e não há consulta pública gratuita de
+CPF — é a [#120](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/120),
+presa a provedor pago. O que verifica o prestador é o CPF em si, válido e
+único (#133) — quem também é MEI pode acrescentar o CNPJ depois, como
+selo extra (#138).
 
 **A comparação de razão social é tolerante de propósito.** A Receita grava
 em caixa alta e sem acento; quem digita escreve "Agro Norte Ltda." com
@@ -367,6 +367,51 @@ ponto e acento. Normaliza-se acento, caixa, pontuação e espaço — nunca
 palavra: "Agro Norte" e "Agro Norte Comércio" continuam sendo nomes
 diferentes. Verificação que reprova quem está certo ensina todo mundo a
 ignorá-la.
+
+### Nem todo prestador é só CPF, nem toda empresa é CNPJ
+
+Pedido do Luiz em 03/09/2026 (#138): "alguns prestadores são PF, outros
+MEI e etc", e na aba Empresa "às vezes a pessoa é um produtor rural". Duas
+mudanças, cada uma reaproveitando a verificação que já existia para o
+documento certo.
+
+**Prestador ganha CNPJ opcional, além do CPF.** O CPF continua sendo a
+verificação de base — obrigatório desde `c79ad63`, e é ele que libera a
+busca (#133). Quem também é MEI acrescenta o CNPJ depois, em
+`/perfil/editar`, num campo e botão próprios, separados do formulário do
+anúncio. Salvar e confirmar cabem no mesmo clique — ao contrário do CNPJ
+de empresa, que é fixo no cadastro e só *confirmável* depois, este é
+editável a qualquer momento, então cada tentativa já é a chance de
+corrigir o número. O que dá certo vira o selo "MEI confirmado" no perfil
+público; o que falha não tira ninguém da busca, porque o CPF já cobre
+isso — o CNPJ fica salvo, sem o selo, pronto para tentar de novo.
+
+A razão social comparada na Receita é o próprio nome completo da pessoa:
+um MEI é registrado no nome de quem abriu, não numa razão social
+separada.
+
+**Empresa pode nascer com CPF em vez de CNPJ.** Produtor rural e
+autônomo contratam sem ter aberto empresa — decisão já registrada na
+[#129](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/129). Um rádio
+no cadastro escolhe o documento; escolhendo CPF, ele é gravado em
+`usuarios` (nunca em `perfis_empresa`, que a chave anônima lê) e a conta
+nasce **verificada na hora**, sem chamada de rede — a mesma regra do
+prestador, e sem os riscos que justificam adiar a checagem de CNPJ para
+um botão à parte. A tela mostra "Pessoa física — CPF confirmado.", sem
+exibir documento nenhum.
+
+**Os dois "CNPJ" moram em tabelas que a chave anônima lê — de propósito,
+e com o mesmo cuidado.** `perfis_prestador.cnpj` e `perfis_empresa.cnpj`
+podem ser públicos porque CNPJ é registro público; nenhum dos dois pode
+virar `cpf`, e o teste de schema que varre toda tabela e view lida por
+`anon` continua sendo o que garante isso.
+
+**Um CNPJ não serve para dois perfis.** `cnpjEmUso` varre `perfis_empresa`
+*e* `perfis_prestador` — o mesmo número não pode ser ao mesmo tempo o
+CNPJ de uma empresa e o CNPJ de MEI de outro prestador. Postgres não tem
+constraint de unicidade entre tabelas diferentes; a garantia mora na
+camada de aplicação, checada nos dois pontos de entrada (cadastro de
+empresa e o campo de CNPJ do prestador).
 
 ### A vitrine só mostra prestador verificado
 
@@ -1063,6 +1108,30 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   base real antes de alguém notar. O `playwright.config.ts` agora zera as
   variáveis do Supabase à força, e `tests/e2e/demo-obrigatorio.spec.ts`
   falha barulhento se o modo demonstração não estiver ativo.
+
+- **Uma variável lida antes de uma gravação continua com o valor de
+  antes, mesmo depois da gravação acontecer.** `cadastrar()` criava a
+  empresa via CPF e, na sequência, marcava `doc_verificado = true` no
+  banco — mas devolvia o `usuario` capturado *antes* dessa gravação, que
+  continuava com `docVerificado: false`. A conta nascia verificada de
+  verdade; só a resposta da própria função de cadastro mentia sobre isso
+  por uma requisição. Foi um teste que pegou — `expect(criado
+  .docVerificado).toBe(true)` — não uma inspeção manual, que teria visto
+  o perfil certo na tela seguinte e concluído que estava tudo bem.
+  **Depois de gravar algo que muda um dado que uma variável local já
+  capturou, atualize a variável antes de devolvê-la** — ou releia do
+  repositório.
+
+- **O rótulo de um rádio que contém o nome de outro campo quebra
+  `getByLabel` por ambiguidade — e derruba a suíte inteira, não só o
+  teste daquele campo.** O rádio "Empresa registrada (CNPJ)" continha a
+  palavra "CNPJ", e o `getByLabel("CNPJ")` do ajudante de login passou a
+  casar com dois elementos: o rádio e o campo de texto. Como o
+  `auth.setup.ts` roda antes de tudo, os outros 408 testes da suíte nem
+  chegaram a rodar. A correção foi tirar o parêntese do rótulo do rádio
+  ("Empresa registrada", sem "(CNPJ)") — o campo que aparece embaixo já
+  diz qual documento é. **Rótulo de opção não deve conter o nome de um
+  campo que pode aparecer na mesma tela.**
 
 ### Sobre verificação
 

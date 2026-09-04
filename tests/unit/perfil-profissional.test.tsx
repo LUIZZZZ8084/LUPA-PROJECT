@@ -40,6 +40,8 @@ const ANUNCIO: DadosPrestador = {
   bairrosAtendidos: ["Centro", "Menezes"],
   instagram: null,
   facebook: null,
+  cnpj: null,
+  cnpjVerificado: false,
 };
 
 /** Só nota e contagem: o resto do anúncio vem do perfil. */
@@ -112,6 +114,28 @@ describe("prestador", () => {
     );
     expect(screen.getByText("4,7")).toBeTruthy();
     expect(screen.getByText("(3)")).toBeTruthy();
+  });
+
+  /**
+   * O selo é adicional ao CPF, que já verifica o prestador (#133) — só
+   * aparece para quem também confirmou CNPJ de MEI na Receita (#138).
+   */
+  it("com CNPJ de MEI confirmado, mostra o selo", () => {
+    render(
+      <PerfilPrestador
+        perfil={{ ...ANUNCIO, cnpj: "11222333000181", cnpjVerificado: true }}
+        listagem={LISTAGEM}
+        docVerificado
+      />,
+    );
+    expect(screen.getByText("MEI confirmado")).toBeTruthy();
+  });
+
+  it("sem CNPJ, ou ainda não confirmado, não mostra o selo", () => {
+    render(
+      <PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} docVerificado />,
+    );
+    expect(screen.queryByText("MEI confirmado")).toBeNull();
   });
 
   it("mostra categoria, descrição e experiência", () => {
@@ -216,6 +240,20 @@ describe("empresa", () => {
     expect(screen.getByText("Agro Norte Ltda.")).toBeTruthy();
     expect(screen.getByText("11222333000181")).toBeTruthy();
     expect(screen.getByText("Plano mensal")).toBeTruthy();
+  });
+
+  /**
+   * Produtor rural e autônomo contratam com CPF em vez de CNPJ — #129,
+   * #138. Sem CNPJ, a tela diz o que é sem mostrar documento nenhum: o
+   * CPF mora em `usuarios`, que este componente nunca recebe.
+   */
+  it("sem CNPJ, diz que é pessoa física sem mostrar documento", () => {
+    render(
+      <PerfilEmpresa empresa={{ ...EMPRESA, cnpj: null }} docVerificado />,
+    );
+    expect(screen.getByText(/Pessoa física/i)).toBeTruthy();
+    expect(screen.queryByText("11222333000181")).toBeNull();
+    expect(screen.queryByText("CNPJ")).toBeNull();
   });
 
   it("plano de teste aparece como período de teste", () => {

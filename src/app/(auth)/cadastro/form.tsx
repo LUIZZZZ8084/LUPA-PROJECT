@@ -2,7 +2,7 @@
 
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { cadastrarComEstado, type EstadoFormulario } from "@/app/conta/actions";
 import {
   CampoBairro,
@@ -26,6 +26,14 @@ const ACCENT: Record<Role, "vagas" | "servicos" | "empresas"> = {
 export function SignUpForm({ role }: { role: Role }) {
   const [state, action, pending] = useActionState(cadastrarComEstado, inicial);
   const [cidade, setCidade] = useCidade();
+  /*
+   * Nem todo contratante tem CNPJ. Produtor rural e autônomo contratam
+   * ajudante sem ter aberto empresa — decisão do Luiz em 03/09/2026
+   * (#138). O rádio decide qual dos dois campos é obrigatório; o backend
+   * aplica a verificação certa para cada um: Receita para CNPJ, CPF
+   * válido e único para o outro.
+   */
+  const [tipoDocumento, setTipoDocumento] = useState<"cnpj" | "cpf">("cnpj");
 
   if (state.ok) {
     return (
@@ -66,23 +74,81 @@ export function SignUpForm({ role }: { role: Role }) {
         </Field>
 
         {role === "empresa" ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Field
-              label="Nome da empresa"
-              required
-              error={state.campos?.razaoSocial}
-            >
-              <Input name="razaoSocial" required />
-            </Field>
-            <Field label="CNPJ" required error={state.campos?.cnpj}>
-              <Input
-                name="cnpj"
-                inputMode="numeric"
-                placeholder="00.000.000/0000-00"
+          <>
+            <fieldset className="space-y-2">
+              <legend className="font-medium text-sm">
+                Como você contrata
+              </legend>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {(
+                  [
+                    ["cnpj", "Empresa registrada"],
+                    ["cpf", "Produtor rural ou autônomo"],
+                  ] as const
+                ).map(([valor, rotulo]) => (
+                  <label
+                    key={valor}
+                    className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition-colors ${
+                      tipoDocumento === valor
+                        ? "border-empresas bg-empresas/8 text-ink"
+                        : "border-line text-muted hover:border-line-soft"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="tipoDocumento"
+                      value={valor}
+                      checked={tipoDocumento === valor}
+                      onChange={() => setTipoDocumento(valor)}
+                      className="accent-empresas"
+                    />
+                    {rotulo}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <Field
+                label={
+                  tipoDocumento === "cnpj"
+                    ? "Nome da empresa"
+                    : "Seu nome ou o da propriedade"
+                }
                 required
-              />
-            </Field>
-          </div>
+                error={state.campos?.razaoSocial}
+              >
+                <Input name="razaoSocial" required />
+              </Field>
+              {tipoDocumento === "cnpj" ? (
+                <Field label="CNPJ" required error={state.campos?.cnpj}>
+                  <Input
+                    key="cnpj"
+                    name="cnpj"
+                    inputMode="numeric"
+                    placeholder="00.000.000/0000-00"
+                    required
+                  />
+                </Field>
+              ) : (
+                <Field
+                  label="CPF"
+                  required
+                  error={state.campos?.cpf}
+                  hint="Não aparece no seu perfil público."
+                >
+                  <Input
+                    key="cpf"
+                    name="cpf"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="000.000.000-00"
+                    required
+                  />
+                </Field>
+              )}
+            </div>
+          </>
         ) : (
           /*
            * Pessoa física também tem documento. CNPJ identifica a empresa

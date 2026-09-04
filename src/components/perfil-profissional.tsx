@@ -1,4 +1,11 @@
-import { Award, Briefcase, Building2, Star, Wrench } from "lucide-react";
+import {
+  Award,
+  BadgeCheck,
+  Briefcase,
+  Building2,
+  Star,
+  Wrench,
+} from "lucide-react";
 import { SocialLinks } from "@/components/social-links";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -180,6 +187,16 @@ export function PerfilPrestador({
       <div className="flex flex-wrap items-center gap-3">
         {categoria && <Badge tone="servicos">{categoria.name}</Badge>}
         {/*
+         * Selo adicional ao CPF, que já verifica o perfil — este aparece
+         * só para quem também confirmou CNPJ de MEI na Receita (#138).
+         */}
+        {perfil.cnpjVerificado && (
+          <Badge tone="servicos">
+            <BadgeCheck size={12} />
+            MEI confirmado
+          </Badge>
+        )}
+        {/*
          * Sem listagem não há nota: quem acabou de criar o anúncio ainda
          * não foi avaliado, e mostrar "0,0" faria parecer nota ruim em vez
          * de ausência de nota.
@@ -292,8 +309,20 @@ export function PerfilEmpresa({
       icone={<Building2 size={16} className="text-empresas" />}
       titulo="Sua empresa"
     >
-      <Linha rotulo="Razão social" valor={empresa.razaoSocial} />
-      {empresa.cnpj && <Linha rotulo="CNPJ" valor={empresa.cnpj} />}
+      <Linha rotulo="Nome" valor={empresa.razaoSocial} />
+      {empresa.cnpj ? (
+        <Linha rotulo="CNPJ" valor={empresa.cnpj} />
+      ) : (
+        /*
+         * Sem CNPJ, o documento é o CPF em `usuarios` — nunca mostrado
+         * aqui, que é lido pela chave anônima. A tela diz o que é, sem
+         * mostrar documento nenhum: produtor rural e autônomo contratam
+         * sem ter aberto empresa (#129, #138).
+         */
+        <p className="mt-1 text-xs text-muted">
+          Pessoa física — CPF confirmado.
+        </p>
+      )}
       <div className="mt-3 flex items-center gap-2">
         <Award size={14} className="text-empresas" />
         <Badge tone={empresa.plano === "mensal" ? "empresas" : "neutral"}>

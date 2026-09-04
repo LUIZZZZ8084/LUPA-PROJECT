@@ -130,6 +130,9 @@ export async function virarPrestador(
     bairrosAtendidos: usuario.bairro ? [usuario.bairro] : [],
     instagram: null,
     facebook: null,
+    // MEI é declarado depois, em Editar perfil.
+    cnpj: null,
+    cnpjVerificado: false,
   });
 
   /*

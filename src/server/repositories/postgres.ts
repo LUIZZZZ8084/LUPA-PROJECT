@@ -205,6 +205,8 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       bairros_atendidos: perfil.bairrosAtendidos,
       instagram: perfil.instagram,
       facebook: perfil.facebook,
+      cnpj: perfil.cnpj,
+      cnpj_verificado: perfil.cnpjVerificado,
     });
 
     if (error)
@@ -237,16 +239,39 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     return [];
   }
 
-  async cnpjEmUso(cnpj: string): Promise<boolean> {
+  /**
+   * Confere nos dois perfis que podem ter CNPJ — empresa e prestador
+   * MEI —, porque o mesmo número não pode servir para dois papéis
+   * diferentes.
+   */
+  async cnpjEmUso(cnpj: string, exceto?: string): Promise<boolean> {
     const supabase = await cliente();
-    const { data, error } = await supabase
+
+    let consultaEmpresa = supabase
       .from("perfis_empresa")
       .select("usuario_id")
-      .eq("cnpj", cnpj)
-      .maybeSingle();
+      .eq("cnpj", cnpj);
+    if (exceto) consultaEmpresa = consultaEmpresa.neq("usuario_id", exceto);
 
-    if (error) throw erros.indisponivel(`consulta de CNPJ: ${error.message}`);
-    return Boolean(data);
+    let consultaPrestador = supabase
+      .from("perfis_prestador")
+      .select("usuario_id")
+      .eq("cnpj", cnpj);
+    if (exceto) {
+      consultaPrestador = consultaPrestador.neq("usuario_id", exceto);
+    }
+
+    const [empresa, prestador] = await Promise.all([
+      consultaEmpresa.maybeSingle(),
+      consultaPrestador.maybeSingle(),
+    ]);
+
+    if (empresa.error || prestador.error) {
+      const msg = (empresa.error ?? prestador.error)?.message;
+      throw erros.indisponivel(`consulta de CNPJ: ${msg}`);
+    }
+
+    return Boolean(empresa.data) || Boolean(prestador.data);
   }
 
   async cpfEmUso(cpf: string): Promise<boolean> {
@@ -283,6 +308,22 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     }
   }
 
+  async definirCnpjPrestador(
+    usuarioId: string,
+    cnpj: string | null,
+    verificado: boolean,
+  ): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("perfis_prestador")
+      .update({ cnpj, cnpj_verificado: verificado })
+      .eq("usuario_id", usuarioId);
+
+    if (error) {
+      throw erros.indisponivel(`CNPJ de prestador: ${error.message}`);
+    }
+  }
+
   /* ---------- Leitura de perfil, para a tela de edição ---------- */
 
   async perfilEmpresa(usuarioId: string): Promise<PerfilEmpresa | null> {
@@ -299,7 +340,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     return {
       usuarioId: String(data.usuario_id),
       razaoSocial: String(data.razao_social),
-      cnpj: String(data.cnpj),
+      cnpj: (data.cnpj as string | null) ?? null,
       setor: (data.setor as string | null) ?? null,
       porte: (data.porte as string | null) ?? null,
       site: (data.site as string | null) ?? null,
@@ -334,6 +375,8 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       bairrosAtendidos: (data.bairros_atendidos as string[] | null) ?? [],
       instagram: (data.instagram as string | null) ?? null,
       facebook: (data.facebook as string | null) ?? null,
+      cnpj: (data.cnpj as string | null) ?? null,
+      cnpjVerificado: Boolean(data.cnpj_verificado),
     };
   }
 

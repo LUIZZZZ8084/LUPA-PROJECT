@@ -189,6 +189,8 @@ describe("RepositorioPostgres", () => {
       bairrosAtendidos: [],
       instagram: null,
       facebook: null,
+      cnpj: null,
+      cnpjVerificado: false,
     });
     expect(chamadas.at(-1)?.tabela).toBe("perfis_prestador");
 

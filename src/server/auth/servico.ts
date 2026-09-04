@@ -57,19 +57,42 @@ export async function cadastrar(
     );
   }
 
-  if (dados.papel === "empresa" && (await repo.cnpjEmUso(dados.cnpj))) {
+  /*
+   * A empresa escolhe o documento; os dois outros papéis só têm CPF.
+   * `dados.papel !== "empresa"` é o que dá ao Zod a variante certa da
+   * união — só candidato e prestador têm `cpf` obrigatório.
+   *
+   * O que falta informar aparece antes de qualquer consulta ao banco:
+   * "informe o CNPJ" não devia esperar uma verificação de duplicidade
+   * que não faz sentido sem o número.
+   */
+  const empresaViaCpf =
+    dados.papel === "empresa" && dados.tipoDocumento === "cpf";
+  const empresaViaCnpj =
+    dados.papel === "empresa" && dados.tipoDocumento === "cnpj";
+
+  if (empresaViaCnpj && !dados.cnpj) {
+    throw erros.validacao([{ campo: "cnpj", mensagem: "Informe o CNPJ." }]);
+  }
+  if (empresaViaCpf && !dados.cpf) {
+    throw erros.validacao([{ campo: "cpf", mensagem: "Informe o CPF." }]);
+  }
+
+  if (empresaViaCnpj && dados.cnpj && (await repo.cnpjEmUso(dados.cnpj))) {
     throw erros.conflito(
       "Este CNPJ já está cadastrado. Entre com a conta existente.",
       "CNPJ duplicado",
     );
   }
 
-  /*
-   * Mesma regra do CNPJ, para as duas pessoas físicas: um CPF não abre
-   * uma segunda conta. `dados.papel !== "empresa"` é o que dá ao Zod a
-   * variante certa da união — só candidato e prestador têm `cpf`.
-   */
   if (dados.papel !== "empresa" && (await repo.cpfEmUso(dados.cpf))) {
+    throw erros.conflito(
+      "Este CPF já está cadastrado. Entre com a conta existente.",
+      "CPF duplicado",
+    );
+  }
+
+  if (empresaViaCpf && dados.cpf && (await repo.cpfEmUso(dados.cpf))) {
     throw erros.conflito(
       "Este CPF já está cadastrado. Entre com a conta existente.",
       "CPF duplicado",
@@ -78,12 +101,12 @@ export async function cadastrar(
 
   const senhaHash = await gerarHash(dados.senha);
 
-  const usuario = await repo.criar({
+  let usuario = await repo.criar({
     email: dados.email,
     senhaHash,
     papel: dados.papel,
     nomeCompleto: dados.nomeCompleto,
-    cpf: dados.papel === "empresa" ? null : dados.cpf,
+    cpf: dados.papel === "empresa" ? (dados.cpf ?? null) : dados.cpf,
     telefone: dados.telefone,
     cidade: dados.cidade ?? CIDADE_INICIAL,
     bairro: dados.bairro ?? null,
@@ -113,12 +136,15 @@ export async function cadastrar(
       bairrosAtendidos: dados.bairrosAtendidos ?? [],
       instagram: null,
       facebook: null,
+      // MEI é declarado depois, em Editar perfil — o cadastro já pede CPF.
+      cnpj: null,
+      cnpjVerificado: false,
     });
   } else {
     await repo.criarPerfilEmpresa({
       usuarioId: usuario.id,
       razaoSocial: dados.razaoSocial,
-      cnpj: dados.cnpj,
+      cnpj: empresaViaCnpj ? (dados.cnpj ?? null) : null,
       setor: dados.setor ?? null,
       porte: dados.porte ?? null,
       site: dados.site ?? null,
@@ -128,6 +154,22 @@ export async function cadastrar(
       logoUrl: null,
       plano: "trial",
     });
+
+    /*
+     * Quem contrata com CPF em vez de CNPJ é verificado na hora, sem
+     * chamada de rede — mesma regra que já vale para o prestador (#133):
+     * CPF válido e único é a verificação em si. O caminho do CNPJ
+     * continua sendo o botão "Conferir CNPJ agora" em `/perfil`, porque
+     * aquele sim depende da Receita responder.
+     */
+    if (empresaViaCpf) {
+      await repo.definirDocVerificado(usuario.id, true);
+      // `usuario` já foi lido antes desta gravação — sem atualizar a
+      // referência local, o retorno desta função mentiria dizendo
+      // `docVerificado: false` para uma conta que acabou de ser marcada
+      // como verificada.
+      usuario = { ...usuario, docVerificado: true };
+    }
   }
 
   log.info("conta criada", {
