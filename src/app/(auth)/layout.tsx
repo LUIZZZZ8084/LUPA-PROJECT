@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LupaLogo } from "@/components/brand/logo";
+import { AlternarTema } from "@/components/theme-toggle";
 
 /**
  * Entrar e criar conta, sem o resto do app em volta.
@@ -19,10 +20,11 @@ export default function AuthLayout({
 }) {
   return (
     <div className="flex flex-1 flex-col">
-      <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Link href="/" aria-label="Lupa — início" className="inline-flex">
           <LupaLogo size={26} />
         </Link>
+        <AlternarTema />
       </div>
       <div className="flex-1">{children}</div>
     </div>

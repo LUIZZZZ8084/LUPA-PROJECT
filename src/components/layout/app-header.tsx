@@ -8,6 +8,7 @@ import {
   MenuDoUsuario,
   type UsuarioDoMenu,
 } from "@/components/layout/menu-do-usuario";
+import { AlternarTema } from "@/components/theme-toggle";
 import { ButtonLink } from "@/components/ui/button";
 import { ESTADO_NOME, rotuloDaCidade } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -68,6 +69,7 @@ export function AppHeader({ usuario }: { usuario?: UsuarioDoMenu | null }) {
             <MapPin size={14} className="text-vagas" />
             {usuario ? rotuloDaCidade(usuario.cidade) : ESTADO_NOME}
           </span>
+          <AlternarTema />
           {usuario ? (
             <MenuDoUsuario usuario={usuario} />
           ) : (

@@ -14,8 +14,14 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#0b0f14",
-    theme_color: "#0b0f14",
+    /*
+     * Claro é o padrão da plataforma agora — a splash do PWA usa a mesma
+     * cor de fundo que a maioria vai ver ao abrir. Quem prefere escuro
+     * ainda sente um instante de claro aqui: a splash roda antes de
+     * qualquer JS, então não tem como ler a escolha salva.
+     */
+    background_color: "#f7f8fa",
+    theme_color: "#f7f8fa",
     lang: "pt-BR",
     categories: ["business", "productivity"],
     icons: [

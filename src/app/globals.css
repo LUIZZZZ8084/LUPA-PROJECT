@@ -2,67 +2,72 @@
 
 /* ============================================================
    LUPA — Design tokens
-   Dark theme com três cores por vertical:
-   verde = vagas/emprego · azul = serviços · roxo = empresas
+   Duas telas, os mesmos nomes: claro é o padrão da plataforma,
+   escuro é opção de quem prefere — ver [data-theme="dark"] abaixo.
+   Três cores por vertical: verde = vagas/emprego · laranja = serviços ·
+   azul = empresas
    ============================================================ */
 
 @theme {
+  /*
+   * Claro é quem carrega os valores "base": sem `data-theme` no `<html>`
+   * — script bloqueado, JS desligado, crawler — a plataforma já nasce no
+   * tema que é o foco dela, não no escuro escondido atrás de um
+   * `[data-theme="dark"]` que nunca chegou a aplicar.
+   */
+
   /* Superfícies */
-  --color-bg: #0b0f14;
-  --color-panel: #121821;
-  --color-panel-2: #161d28;
-  --color-panel-3: #1b2330;
-  --color-line: #232b38;
-  --color-line-soft: #1a212c;
+  --color-bg: #f7f8fa;
+  --color-panel: #ffffff;
+  --color-panel-2: #f1f3f5;
+  --color-panel-3: #e7eaee;
+  --color-line: #dfe3e8;
+  --color-line-soft: #eceef1;
 
   /* Texto */
   /*
-   * Contraste conferido contra os quatro fundos, mínimo WCAG AA (4.5:1).
-   * `faint` era #5d6875 e batia 2.78 sobre panel-3 — reprovado. Como ele
-   * carrega bairro, salário e "há 2h" (informação que a pessoa lê para
-   * decidir), foi clareado até passar. Boa parte do público abre o app na
-   * rua, sob sol forte e em tela barata.
+   * Contraste conferido contra os três fundos (bg, panel, panel-3),
+   * mínimo WCAG AA (4.5:1) — a mesma régua do tema escuro logo abaixo,
+   * porque quem lê bairro, salário e "há 2h" na rua e sob sol forte
+   * também usa o modo claro.
    */
-  --color-ink: #f2f5f8; /* 14.4:1 */
-  --color-muted: #8b97a5; /* 5.3:1 */
-  --color-faint: #828b95; /* 4.6:1 */
+  --color-ink: #12161b; /* 18.2:1 */
+  --color-muted: #5b6470; /* 6.0:1 */
+  --color-faint: #5e6772; /* 5.7:1 */
 
   /*
-   * Verticais — paleta "Sinalização".
+   * Verticais — paleta "Sinalização", versão clara.
    *
-   * Pega o vocabulário que o público já lê de longe sem pensar: colete de
-   * obra, cone de trânsito, placa de sinalização. Trocada em 02/09/2026
-   * (Issue #106), escolhida entre quatro alternativas comparadas por
-   * contraste calculado e psicologia das cores, num protótipo navegável
-   * do app inteiro. Verde e roxo saíram; laranja e azul entraram — os
-   * nomes dos tokens continuam por vertical, não por cor.
+   * Mesmo vocabulário do tema escuro (colete de obra, cone de trânsito,
+   * placa de sinalização), escurecido até passar 4.5:1 sobre fundo
+   * branco: a cor de destaque também é o texto de link e o rótulo de
+   * selo, então precisa valer como texto, não só como mancha de cor.
    */
-  --color-vagas: #a8d94a;
-  --color-vagas-dim: #86ae3b;
-  --color-servicos: #ff7a33;
-  --color-servicos-dim: #cc6229;
-  --color-empresas: #6f9be6;
-  --color-empresas-dim: #597cb8;
+  --color-vagas: #3f6810;
+  --color-vagas-dim: #2f4d0c;
+  --color-servicos: #a8480f;
+  --color-servicos-dim: #8a3a0c;
+  --color-empresas: #3868b8;
+  --color-empresas-dim: #2c5395;
 
   /* Semânticas */
-  --color-warn: #f5b544;
-  --color-danger: #f56565;
-  --color-star: #f5b544;
-  --color-whatsapp: #25d366;
+  --color-warn: #8a5a06;
+  --color-danger: #c53030;
+  --color-star: #8a5a06;
   /*
-   * Instagram e Facebook: cor da marca, não do app.
-   *
-   * A regra da casa é token por vertical, nunca hex solto — mas essas
-   * duas identificam uma rede social de terceiro, não uma vertical da
-   * Lupa. Mesma exceção que já vale para `--color-whatsapp`.
+   * Verde do WhatsApp de verdade (`#25d366`) não passa nem perto de
+   * 4.5:1 sobre branco — é cor pensada para ícone sobre fundo escuro do
+   * próprio app, não para texto de link aqui. Escurecido até valer como
+   * `text-whatsapp`, que é como `whatsapp-button.tsx` usa.
    */
+  --color-whatsapp: #0a7038;
   /*
-   * Clareadas a partir da cor oficial da marca até passar em WCAG AA
-   * (4,5:1) contra `panel-3`, a superfície mais clara onde o link pode
-   * aparecer — a mesma conta que já vale para `--color-empresas`.
+   * Instagram e Facebook: cor da marca, não do app — mesma exceção que
+   * já vale para `--color-whatsapp`, e mesma conta de contraste que
+   * escurece `--color-empresas` acima.
    */
-  --color-instagram: #f0628f;
-  --color-facebook: #6fa5f6;
+  --color-instagram: #ab2f66;
+  --color-facebook: #3767b3;
 
   /* Tipografia */
   --font-sans:
@@ -107,6 +112,45 @@
   --animate-shimmer: shimmer 1.6s linear infinite;
   --animate-progress: progress-sweep 1.1s var(--ease-out-soft) infinite;
   --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+}
+
+/*
+ * Escuro — opção, não padrão.
+ *
+ * `[data-theme="dark"]` no `<html>` é quem liga isto; `alternar-tema.tsx`
+ * grava a escolha e `tema-script.tsx` a aplica antes da primeira pintura,
+ * para trocar de tela sem flash. Sem o atributo — inclusive sem JS — a
+ * plataforma fica no claro do `@theme` acima, que é o padrão de verdade.
+ *
+ * Os valores aqui são os originais desta paleta, de antes do claro virar
+ * o foco: preservados porque já passavam pela mesma régua de contraste
+ * (4.5:1 mínimo) e continuam a mesma identidade visual, só invertida.
+ */
+:root[data-theme="dark"] {
+  --color-bg: #0b0f14;
+  --color-panel: #121821;
+  --color-panel-2: #161d28;
+  --color-panel-3: #1b2330;
+  --color-line: #232b38;
+  --color-line-soft: #1a212c;
+
+  --color-ink: #f2f5f8;
+  --color-muted: #8b97a5;
+  --color-faint: #828b95;
+
+  --color-vagas: #a8d94a;
+  --color-vagas-dim: #86ae3b;
+  --color-servicos: #ff7a33;
+  --color-servicos-dim: #cc6229;
+  --color-empresas: #6f9be6;
+  --color-empresas-dim: #597cb8;
+
+  --color-warn: #f5b544;
+  --color-danger: #f56565;
+  --color-star: #f5b544;
+  --color-whatsapp: #25d366;
+  --color-instagram: #f0628f;
+  --color-facebook: #6fa5f6;
 }
 
 @keyframes fade-up {
@@ -193,8 +237,18 @@
 
 html {
   background: var(--color-bg);
-  color-scheme: dark;
+  /*
+   * Diz ao navegador qual tema está ativo — controles nativos (data
+   * picker, scrollbar do Firefox, autofill) seguem isto, não uma
+   * suposição fixa. Claro é o valor sem atributo, pela mesma razão do
+   * `@theme`: é o padrão de verdade, não o `dark` disfarçado de default.
+   */
+  color-scheme: light;
   -webkit-tap-highlight-color: transparent;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
