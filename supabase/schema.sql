@@ -144,13 +144,23 @@ create table categorias_servico (
 );
 
 insert into categorias_servico (id, slug, nome) values
-  (1, 'eletricista', 'Eletricista'),
-  (2, 'diarista',    'Diarista'),
-  (3, 'pintor',      'Pintor'),
-  (4, 'encanador',   'Encanador'),
-  (5, 'pedreiro',    'Pedreiro'),
-  (6, 'jardineiro',  'Jardineiro'),
-  (7, 'cuidador',    'Cuidador(a)');
+  (1,  'eletricista',        'Eletricista'),
+  (2,  'diarista',           'Diarista'),
+  (3,  'pintor',             'Pintor'),
+  (4,  'encanador',          'Encanador'),
+  (5,  'pedreiro',           'Pedreiro'),
+  (6,  'jardineiro',         'Jardineiro'),
+  (7,  'cuidador',           'Cuidador(a)'),
+  (8,  'programador',        'Programador(a)'),
+  (9,  'designer',           'Designer Gráfico(a)'),
+  (10, 'tecnico-enfermagem', 'Técnico(a) de Enfermagem'),
+  (11, 'farmaceutico',       'Farmacêutico(a)'),
+  (12, 'fisioterapeuta',     'Fisioterapeuta'),
+  (13, 'cabeleireiro',       'Cabeleireiro(a)'),
+  (14, 'manicure',           'Manicure'),
+  (15, 'fotografo',          'Fotógrafo(a)'),
+  (16, 'personal-trainer',   'Personal Trainer'),
+  (17, 'mecanico',           'Mecânico(a)');
 
 select setval('categorias_servico_id_seq', (select max(id) from categorias_servico));
 

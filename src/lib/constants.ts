@@ -78,7 +78,18 @@ export function bairrosDe(
  */
 export const MAX_BAIRROS_ATENDIDOS = 20;
 
-/** Lista fixa inicial do V0 — expansível sem migração de schema. */
+/**
+ * As sete primeiras são o V0 — mão de obra manual, o público mais
+ * numeroso do piloto. As dez de 8 a 17 entraram em 03/09/2026, a pedido
+ * do Luiz: o prestador não é só quem trabalha com as mãos, e faltava
+ * espaço para programador, designer e a área de saúde autônoma.
+ *
+ * A lista é expansível sem migração de *schema* — a tabela já existe —,
+ * mas cada linha nova em produção precisa de uma migração de *dado*
+ * idempotente (`supabase/aplica-*.sql`), porque `categorias_servico` tem
+ * FK em `perfis_prestador.categoria_id`. O `id` aqui precisa bater com o
+ * `id` gravado lá; nunca reordene ou reaproveite um id já usado.
+ */
 export const SERVICE_CATEGORIES: ServiceCategory[] = [
   { id: 1, slug: "eletricista", name: "Eletricista" },
   { id: 2, slug: "diarista", name: "Diarista" },
@@ -87,9 +98,28 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
   { id: 5, slug: "pedreiro", name: "Pedreiro" },
   { id: 6, slug: "jardineiro", name: "Jardineiro" },
   { id: 7, slug: "cuidador", name: "Cuidador(a)" },
+  { id: 8, slug: "programador", name: "Programador(a)" },
+  { id: 9, slug: "designer", name: "Designer Gráfico(a)" },
+  { id: 10, slug: "tecnico-enfermagem", name: "Técnico(a) de Enfermagem" },
+  { id: 11, slug: "farmaceutico", name: "Farmacêutico(a)" },
+  { id: 12, slug: "fisioterapeuta", name: "Fisioterapeuta" },
+  { id: 13, slug: "cabeleireiro", name: "Cabeleireiro(a)" },
+  { id: 14, slug: "manicure", name: "Manicure" },
+  { id: 15, slug: "fotografo", name: "Fotógrafo(a)" },
+  { id: 16, slug: "personal-trainer", name: "Personal Trainer" },
+  { id: 17, slug: "mecanico", name: "Mecânico(a)" },
 ];
 
-/** Áreas das vagas CLT — refletem a economia de Sinop (agro, comércio, serviços). */
+/**
+ * Áreas das vagas CLT — setores amplos, não profissões específicas
+ * (o campo livre da vaga já diz o cargo). É `text` solto no banco, sem
+ * FK: ao contrário de `SERVICE_CATEGORIES`, adicionar item aqui é só
+ * mudar a constante.
+ *
+ * As dez últimas entraram em 03/09/2026 junto com a expansão de
+ * `SERVICE_CATEGORIES` — Sinop tem economia além de agro e comércio, e
+ * a lista original deixava de fora setores comuns no interior de MT.
+ */
 export const JOB_CATEGORIES = [
   "Agronegócio",
   "Comércio e Vendas",
@@ -102,6 +132,16 @@ export const JOB_CATEGORIES = [
   "Alimentação",
   "Tecnologia",
   "Serviços Gerais",
+  "Beleza e Estética",
+  "Segurança",
+  "Finanças e Contabilidade",
+  "Jurídico",
+  "Marketing e Comunicação",
+  "Turismo e Hotelaria",
+  "Meio Ambiente",
+  "Mineração",
+  "Telecomunicações",
+  "Frigorífico e Agroindústria",
 ] as const;
 
 export const CONTRACT_TYPES: ContractType[] = [
