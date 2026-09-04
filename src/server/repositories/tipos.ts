@@ -94,14 +94,23 @@ export interface PerfilPrestador {
   instagram: string | null;
   facebook: string | null;
   /**
-   * CNPJ de quem é MEI, além de pessoa física — opcional, desde
-   * 03/09/2026 (#138). O CPF em `usuarios` continua sendo a verificação
-   * de base de todo prestador; isto é selo adicional ("MEI confirmado"),
-   * nunca substituto. Pode morar aqui porque CNPJ é registro público.
+   * CNPJ de quem presta serviço por uma empresa — MEI, ME, EIRELI, LTDA,
+   * tanto faz (#138, corrigido na #140). O CPF em `usuarios` continua
+   * sendo a verificação de base de todo prestador; isto é divulgação a
+   * mais, nunca substituto. Pode morar aqui porque CNPJ é registro
+   * público.
    */
   cnpj: string | null;
-  /** Confirmado na Receita — existe, está ativa, o nome bate. */
+  /** Conferido na Receita: existe e está ativa. Não prova posse. */
   cnpjVerificado: boolean;
+  /**
+   * O nome que a Receita devolveu — não o que a pessoa digitou.
+   *
+   * É o que dá sentido ao número na tela: quem vai contratar lê o nome da
+   * empresa e julga se combina com o serviço anunciado. `null` enquanto o
+   * CNPJ não tiver sido conferido.
+   */
+  razaoSocial: string | null;
 }
 
 export interface PerfilCandidato {
@@ -225,17 +234,18 @@ export interface RepositorioUsuarios {
   definirDocVerificado(id: string, verificado: boolean): Promise<void>;
 
   /**
-   * Grava o CNPJ de MEI do prestador, com o resultado da verificação.
+   * Grava o CNPJ do prestador, com o que a Receita respondeu sobre ele.
    *
-   * `null` apaga o CNPJ — volta a ser só pessoa física. Os dois campos
-   * juntos porque o CNPJ sem o resultado da checagem não diz nada: é o
-   * mesmo raciocínio de `definirCpf` + `definirDocVerificado`, só que
-   * numa gravação só, já que aqui as duas sempre mudam juntas.
+   * `null` apaga os três — volta a ser só pessoa física. Vão juntos
+   * porque o número sem o resultado da conferência não diz nada, e o
+   * nome sem o número não tem a que se referir: é o mesmo raciocínio de
+   * `definirCpf` + `definirDocVerificado`, numa gravação só.
    */
   definirCnpjPrestador(
     usuarioId: string,
     cnpj: string | null,
     verificado: boolean,
+    razaoSocial: string | null,
   ): Promise<void>;
 
   /**

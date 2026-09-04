@@ -133,6 +133,7 @@ export async function virarPrestador(
     // MEI é declarado depois, em Editar perfil.
     cnpj: null,
     cnpjVerificado: false,
+    razaoSocial: null,
   });
 
   /*

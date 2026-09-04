@@ -139,6 +139,7 @@ export async function cadastrar(
       // MEI é declarado depois, em Editar perfil — o cadastro já pede CPF.
       cnpj: null,
       cnpjVerificado: false,
+      razaoSocial: null,
     });
   } else {
     await repo.criarPerfilEmpresa({

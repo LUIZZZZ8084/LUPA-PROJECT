@@ -164,6 +164,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     usuarioId: string,
     cnpj: string | null,
     verificado: boolean,
+    razaoSocial: string | null,
   ): Promise<void> {
     const perfil = this.prestadores.get(usuarioId);
     if (!perfil) return;
@@ -171,6 +172,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
       ...perfil,
       cnpj,
       cnpjVerificado: verificado,
+      razaoSocial,
     });
   }
 
@@ -223,6 +225,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
       usuarioId,
       cnpj: atual?.cnpj ?? null,
       cnpjVerificado: atual?.cnpjVerificado ?? false,
+      razaoSocial: atual?.razaoSocial ?? null,
       ...dados,
     });
   }

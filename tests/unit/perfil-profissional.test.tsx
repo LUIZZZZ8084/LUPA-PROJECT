@@ -42,6 +42,7 @@ const ANUNCIO: DadosPrestador = {
   facebook: null,
   cnpj: null,
   cnpjVerificado: false,
+  razaoSocial: null,
 };
 
 /** Só nota e contagem: o resto do anúncio vem do perfil. */
@@ -117,25 +118,35 @@ describe("prestador", () => {
   });
 
   /**
-   * O selo é adicional ao CPF, que já verifica o prestador (#133) — só
-   * aparece para quem também confirmou CNPJ de MEI na Receita (#138).
+   * Mostra o nome da empresa, não um selo sobre a pessoa: conferimos que
+   * o CNPJ existe e está ativa, não que é dela (#140). O nome é o que
+   * permite a quem contrata julgar se combina com o serviço anunciado.
    */
-  it("com CNPJ de MEI confirmado, mostra o selo", () => {
+  it("com CNPJ conferido, mostra a razão social da Receita", () => {
     render(
       <PerfilPrestador
-        perfil={{ ...ANUNCIO, cnpj: "11222333000181", cnpjVerificado: true }}
+        perfil={{
+          ...ANUNCIO,
+          cnpj: "11222333000181",
+          cnpjVerificado: true,
+          razaoSocial: "SILVA ELETRICA LTDA",
+        }}
         listagem={LISTAGEM}
         docVerificado
       />,
     );
-    expect(screen.getByText("MEI confirmado")).toBeTruthy();
+    expect(screen.getByText("SILVA ELETRICA LTDA")).toBeTruthy();
   });
 
-  it("sem CNPJ, ou ainda não confirmado, não mostra o selo", () => {
+  it("sem CNPJ, ou ainda não conferido, não mostra empresa nenhuma", () => {
     render(
-      <PerfilPrestador perfil={ANUNCIO} listagem={LISTAGEM} docVerificado />,
+      <PerfilPrestador
+        perfil={{ ...ANUNCIO, cnpj: "11222333000181", cnpjVerificado: false }}
+        listagem={LISTAGEM}
+        docVerificado
+      />,
     );
-    expect(screen.queryByText("MEI confirmado")).toBeNull();
+    expect(screen.queryByText("SILVA ELETRICA LTDA")).toBeNull();
   });
 
   it("mostra categoria, descrição e experiência", () => {

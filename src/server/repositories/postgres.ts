@@ -207,6 +207,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       facebook: perfil.facebook,
       cnpj: perfil.cnpj,
       cnpj_verificado: perfil.cnpjVerificado,
+      razao_social: perfil.razaoSocial,
     });
 
     if (error)
@@ -312,11 +313,16 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     usuarioId: string,
     cnpj: string | null,
     verificado: boolean,
+    razaoSocial: string | null,
   ): Promise<void> {
     const supabase = await cliente();
     const { error } = await supabase
       .from("perfis_prestador")
-      .update({ cnpj, cnpj_verificado: verificado })
+      .update({
+        cnpj,
+        cnpj_verificado: verificado,
+        razao_social: razaoSocial,
+      })
       .eq("usuario_id", usuarioId);
 
     if (error) {
@@ -377,6 +383,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       facebook: (data.facebook as string | null) ?? null,
       cnpj: (data.cnpj as string | null) ?? null,
       cnpjVerificado: Boolean(data.cnpj_verificado),
+      razaoSocial: (data.razao_social as string | null) ?? null,
     };
   }
 

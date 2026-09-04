@@ -133,19 +133,25 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
    * #138. Selo adicional ao CPF, que já verifica o prestador (#133); por
    * isso nasce `false`, e não bloqueia nada enquanto não for confirmado.
    */
-  it("prestador tem CNPJ opcional, com o selo desligado por padrão", async () => {
+  it("prestador tem CNPJ opcional, sem conferência por padrão", async () => {
     const id = await criarUsuario("prestador_servico", "mei@teste.lupa");
     await db.query(
       "insert into perfis_prestador (usuario_id, categoria_id) values ($1, 1)",
       [id],
     );
 
-    const r = await db.query<{ cnpj: string | null; verificado: boolean }>(
-      "select cnpj, cnpj_verificado as verificado from perfis_prestador where usuario_id = $1",
+    const r = await db.query<{
+      cnpj: string | null;
+      verificado: boolean;
+      razao: string | null;
+    }>(
+      `select cnpj, cnpj_verificado as verificado, razao_social as razao
+         from perfis_prestador where usuario_id = $1`,
       [id],
     );
     expect(r.rows[0].cnpj).toBeNull();
     expect(r.rows[0].verificado).toBe(false);
+    expect(r.rows[0].razao).toBeNull();
   });
 
   it("o mesmo CNPJ não pode servir a dois prestadores", async () => {
