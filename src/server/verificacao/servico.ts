@@ -34,17 +34,25 @@ export type ResultadoVerificacao =
   | { ok: false; motivo: string };
 
 /**
- * O núcleo da consulta, comum a empresa e a prestador MEI.
+ * O núcleo da consulta, comum à empresa e ao prestador.
  *
- * Recebe o CNPJ e o nome contra o qual comparar a razão social — para
- * empresa é a razão social declarada; para o MEI é o próprio nome
- * completo, porque na Receita a razão social de um MEI é o nome da
- * pessoa. Não grava nada: cada chamador decide onde persistir o
- * resultado, porque empresa e prestador guardam em tabelas diferentes.
+ * `nomeParaComparar` é opcional, e a diferença é de propósito:
+ *
+ * - **Empresa** declara a razão social no cadastro, e ela *é* a
+ *   identidade que aparece na vaga. Comparar fecha a brecha de digitar o
+ *   CNPJ de uma empresa ativa e se apresentar com outro nome.
+ * - **Prestador** não declara razão social nenhuma. Comparar com o nome
+ *   da pessoa só funcionaria para MEI, onde a razão social é o nome de
+ *   quem abriu — e reprovaria quem tem ME, EIRELI ou LTDA por estar
+ *   certo (#140). Aqui a conferência é só "existe e está ativa", e o
+ *   nome que a Receita devolve vai para a tela em vez de virar teste.
+ *
+ * Não grava nada: cada chamador decide onde persistir, porque empresa e
+ * prestador guardam em tabelas diferentes.
  */
 async function consultarEAvaliar(
   cnpj: string,
-  nomeParaComparar: string,
+  nomeParaComparar: string | null,
   buscar?: typeof fetch,
 ): Promise<
   | { ok: true; razaoSocial: string; naReceita: EmpresaNaReceita }
@@ -81,7 +89,10 @@ async function consultarEAvaliar(
     };
   }
 
-  if (!mesmaRazaoSocial(nomeParaComparar, naReceita.razaoSocial)) {
+  if (
+    nomeParaComparar !== null &&
+    !mesmaRazaoSocial(nomeParaComparar, naReceita.razaoSocial)
+  ) {
     /*
      * A razão social da Receita vai junto na mensagem, de propósito: é
      * dado público, e sem ela a pessoa não tem como saber o que corrigir
@@ -156,20 +167,23 @@ export async function verificarCnpjAutomatico(
 }
 
 /**
- * Salvar e conferir, num clique só, o CNPJ de MEI do prestador.
+ * Salvar e conferir, num clique só, o CNPJ da empresa do prestador.
  *
- * Selo adicional, não substituto: o CPF em `usuarios` já verifica o
- * prestador na hora de ativar (#133), e continua valendo mesmo se isto
- * falhar. O que muda ao dar certo é só um selo a mais no perfil público,
- * "MEI confirmado" — por isso salvar e confirmar cabem na mesma ação, ao
- * contrário do CNPJ de empresa: aquele é fixado no cadastro e só pode ser
- * *confirmado* depois, porque o número em si não muda mais. Este é
- * editável a qualquer momento em `/perfil/editar`, então cada tentativa
- * já é a chance de corrigir o número e confirmar de novo.
+ * Vale para qualquer natureza jurídica — MEI, ME, EIRELI, LTDA. O
+ * primeiro desenho (#138) comparava a razão social da Receita com o nome
+ * da pessoa, o que só bate para MEI: um eletricista com "Silva Elétrica
+ * Ltda" era reprovado por estar certo. A #140 tirou essa comparação.
  *
- * A razão social comparada é o próprio nome completo da pessoa: na
- * Receita, o MEI é registrado no nome de quem abriu — não existe "razão
- * social da empresa" separada dele.
+ * **É divulgação, não selo de confiança.** Conferimos que o CNPJ existe e
+ * está ativa, e guardamos o nome que a Receita devolveu para mostrar ao
+ * lado do número — quem vai contratar lê e julga se combina com o serviço
+ * anunciado. Não prova posse, e a tela não diz que prova.
+ *
+ * Nada disto substitui o CPF, que é o que verifica o prestador na hora de
+ * ativar (#133) e continua valendo mesmo se isto falhar. Por isso salvar
+ * e conferir cabem na mesma ação: ao contrário do CNPJ de empresa, fixado
+ * no cadastro, este é editável a qualquer momento — cada tentativa já é a
+ * chance de corrigir o número e conferir de novo.
  */
 export async function definirCnpjDoPrestador(
   sessao: Autenticado | null,
@@ -179,7 +193,7 @@ export async function definirCnpjDoPrestador(
   const autenticado = exigirCapacidade(sessao, "perfil:enviar_documento");
 
   if (autenticado.papel !== "prestador_servico") {
-    throw erros.semPermissao("CNPJ de MEI é só para prestador de serviço.");
+    throw erros.semPermissao("Este CNPJ é do perfil de prestador.");
   }
 
   const cnpj = onlyDigits(cnpjInformado);
@@ -196,27 +210,34 @@ export async function definirCnpjDoPrestador(
     };
   }
 
-  const usuario = await repo.porId(autenticado.usuarioId);
-  if (!usuario) throw erros.naoEncontrado("Usuário");
-
-  const avaliacao = await consultarEAvaliar(cnpj, usuario.nomeCompleto, buscar);
+  /*
+   * Sem nome para comparar: o prestador não declara razão social, e usar
+   * o nome dele só serviria para MEI — ver o comentário de
+   * `consultarEAvaliar`.
+   */
+  const avaliacao = await consultarEAvaliar(cnpj, null, buscar);
 
   if (!avaliacao.ok) {
     /*
      * Ao contrário da empresa, uma falha aqui não trava nada: o CPF já
-     * verificou o perfil. O número fica salvo, sem o selo — a próxima
-     * tentativa de salvar já tenta confirmar de novo.
+     * verificou o perfil. O número fica salvo, sem confirmação e sem
+     * nome — a próxima tentativa de salvar já tenta conferir de novo.
      */
-    await repo.definirCnpjPrestador(autenticado.usuarioId, cnpj, false);
+    await repo.definirCnpjPrestador(autenticado.usuarioId, cnpj, false, null);
     return {
       ok: false,
-      motivo: `${avaliacao.motivo} O CNPJ foi salvo; tente confirmar de novo mais tarde.`,
+      motivo: `${avaliacao.motivo} O CNPJ foi salvo; tente conferir de novo mais tarde.`,
     };
   }
 
-  await repo.definirCnpjPrestador(autenticado.usuarioId, cnpj, true);
+  await repo.definirCnpjPrestador(
+    autenticado.usuarioId,
+    cnpj,
+    true,
+    avaliacao.razaoSocial,
+  );
 
-  log.info("CNPJ de MEI conferido na Receita", {
+  log.info("CNPJ de prestador conferido na Receita", {
     acao: "verificacao.cnpj-prestador",
     cnpj: avaliacao.naReceita.cnpj,
     situacao: avaliacao.naReceita.situacao,

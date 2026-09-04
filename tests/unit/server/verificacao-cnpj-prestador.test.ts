@@ -58,6 +58,7 @@ describe("CNPJ de MEI do prestador", () => {
       facebook: null,
       cnpj: null,
       cnpjVerificado: false,
+      razaoSocial: null,
     });
     return usuario.id;
   }
@@ -150,17 +151,51 @@ describe("CNPJ de MEI do prestador", () => {
     );
   });
 
-  it("nome que não bate com a Receita: salva sem o selo", async () => {
+  /**
+   * O ponto da #140: prestador não é obrigatoriamente MEI.
+   *
+   * O primeiro desenho comparava a razão social da Receita com o nome da
+   * pessoa — o que só bate para MEI, onde a razão social *é* o nome de
+   * quem abriu. Um eletricista com "Silva Elétrica Ltda" era reprovado
+   * por estar certo. Este teste é o que impede a comparação de voltar.
+   */
+  it("razão social diferente do nome da pessoa é aceita", async () => {
     const r = await definir(
       sessao(),
       CNPJ_VALIDO,
-      respostaDaReceita(ATIVA_NO_NOME_DE("Outra Pessoa Qualquer")),
+      respostaDaReceita(ATIVA_NO_NOME_DE("Silva Eletrica e Manutencao Ltda")),
     );
 
-    expect(r.ok).toBe(false);
-    expect((await repo.perfilPrestador(prestadorId))?.cnpjVerificado).toBe(
-      false,
+    expect(r.ok).toBe(true);
+    const perfil = await repo.perfilPrestador(prestadorId);
+    expect(perfil?.cnpjVerificado).toBe(true);
+    expect(perfil?.razaoSocial).toBe("SILVA ELETRICA E MANUTENCAO LTDA");
+  });
+
+  /** O que a Receita respondeu é o que vai para a tela. */
+  it("guarda a razão social da Receita, não o que a pessoa digitou", async () => {
+    await definir(
+      sessao(),
+      CNPJ_VALIDO,
+      respostaDaReceita(ATIVA_NO_NOME_DE("Silva Eletrica Ltda")),
     );
+
+    expect((await repo.perfilPrestador(prestadorId))?.razaoSocial).toBe(
+      "SILVA ELETRICA LTDA",
+    );
+  });
+
+  /** Falhou a conferência, não sobra nome pela metade na tela. */
+  it("sem conferir, não guarda razão social nenhuma", async () => {
+    const receitaForaDoAr = (async () => {
+      throw new Error("timeout");
+    }) as unknown as typeof fetch;
+
+    await definir(sessao(), CNPJ_VALIDO, receitaForaDoAr);
+
+    const perfil = await repo.perfilPrestador(prestadorId);
+    expect(perfil?.cnpj).toBe(CNPJ_VALIDO);
+    expect(perfil?.razaoSocial).toBeNull();
   });
 
   it("CNPJ já usado por uma empresa é recusado, sem gravar nada", async () => {
@@ -200,7 +235,7 @@ describe("CNPJ de MEI do prestador", () => {
 
   it("CNPJ já usado por outro prestador é recusado", async () => {
     const outroId = await criarPrestador("Outro Prestador", "outro@teste.lupa");
-    await repo.definirCnpjPrestador(outroId, CNPJ_VALIDO, true);
+    await repo.definirCnpjPrestador(outroId, CNPJ_VALIDO, true, "OUTRA LTDA");
 
     const r = await definir(
       sessao(),

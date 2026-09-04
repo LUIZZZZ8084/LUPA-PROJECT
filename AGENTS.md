@@ -377,18 +377,34 @@ documento certo.
 
 **Prestador ganha CNPJ opcional, além do CPF.** O CPF continua sendo a
 verificação de base — obrigatório desde `c79ad63`, e é ele que libera a
-busca (#133). Quem também é MEI acrescenta o CNPJ depois, em
+busca (#133). Quem trabalha por uma empresa acrescenta o CNPJ depois, em
 `/perfil/editar`, num campo e botão próprios, separados do formulário do
-anúncio. Salvar e confirmar cabem no mesmo clique — ao contrário do CNPJ
+anúncio. Salvar e conferir cabem no mesmo clique — ao contrário do CNPJ
 de empresa, que é fixo no cadastro e só *confirmável* depois, este é
 editável a qualquer momento, então cada tentativa já é a chance de
-corrigir o número. O que dá certo vira o selo "MEI confirmado" no perfil
-público; o que falha não tira ninguém da busca, porque o CPF já cobre
-isso — o CNPJ fica salvo, sem o selo, pronto para tentar de novo.
+corrigir o número. Uma falha não tira ninguém da busca, porque o CPF já
+cobre isso: o número fica salvo, sem conferência, pronto para tentar de
+novo.
 
-A razão social comparada na Receita é o próprio nome completo da pessoa:
-um MEI é registrado no nome de quem abriu, não numa razão social
-separada.
+**E não é só de MEI.** O primeiro desenho (#138) comparava a razão
+social da Receita com o **nome da pessoa** — o que só bate para MEI,
+onde a razão social registrada *é* o nome de quem abriu. Um eletricista
+com "Silva Elétrica e Manutenção Ltda" era reprovado por estar certo,
+que é exatamente o que este documento já condena: *verificação que
+reprova quem está certo ensina todo mundo a ignorá-la*. A #140 tirou a
+comparação.
+
+**O que sobrou é divulgação, não selo de confiança.** Conferimos que o
+CNPJ existe e está ativa, guardamos a razão social **que a Receita
+devolveu** e mostramos esse nome ao lado do número. Quem vai contratar lê
+"SILVA ELETRICA LTDA" e julga se combina com o serviço anunciado — um
+número solto não informaria nada. Não prova posse, e a tela não diz que
+prova.
+
+Nada de pedir a razão social digitada: para um campo opcional, exigir que
+a pessoa acerte a grafia exata do próprio registro é atrito que não se
+paga, e a comparação tolerante não perdoa "Silva Elétrica" contra
+"SILVA ELETRICA E MANUTENCAO LTDA".
 
 **Empresa pode nascer com CPF em vez de CNPJ.** Produtor rural e
 autônomo contratam sem ter aberto empresa — decisão já registrada na
@@ -400,18 +416,19 @@ prestador, e sem os riscos que justificam adiar a checagem de CNPJ para
 um botão à parte. A tela mostra "Pessoa física — CPF confirmado.", sem
 exibir documento nenhum.
 
-**Os dois "CNPJ" moram em tabelas que a chave anônima lê — de propósito,
-e com o mesmo cuidado.** `perfis_prestador.cnpj` e `perfis_empresa.cnpj`
-podem ser públicos porque CNPJ é registro público; nenhum dos dois pode
-virar `cpf`, e o teste de schema que varre toda tabela e view lida por
-`anon` continua sendo o que garante isso.
+**CNPJ e razão social moram em tabelas que a chave anônima lê — de
+propósito, e com o mesmo cuidado.** `perfis_prestador.cnpj`,
+`perfis_prestador.razao_social` e `perfis_empresa.cnpj` podem ser
+públicos porque são registro público; nenhum deles pode virar `cpf`, e o
+teste de schema que varre toda tabela e view lida por `anon` continua
+sendo o que garante isso.
 
 **Um CNPJ não serve para dois perfis.** `cnpjEmUso` varre `perfis_empresa`
 *e* `perfis_prestador` — o mesmo número não pode ser ao mesmo tempo o
-CNPJ de uma empresa e o CNPJ de MEI de outro prestador. Postgres não tem
-constraint de unicidade entre tabelas diferentes; a garantia mora na
-camada de aplicação, checada nos dois pontos de entrada (cadastro de
-empresa e o campo de CNPJ do prestador).
+CNPJ de uma empresa e o de outro prestador. Postgres não tem constraint
+de unicidade entre tabelas diferentes; a garantia mora na camada de
+aplicação, checada nos dois pontos de entrada (cadastro de empresa e o
+campo de CNPJ do prestador).
 
 ### A vitrine só mostra prestador verificado
 
@@ -1108,6 +1125,18 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   base real antes de alguém notar. O `playwright.config.ts` agora zera as
   variáveis do Supabase à força, e `tests/e2e/demo-obrigatorio.spec.ts`
   falha barulhento se o modo demonstração não estiver ativo.
+
+- **Uma regra escrita olhando para um caso só reprova todos os outros.**
+  A conferência de CNPJ do prestador comparava a razão social da Receita
+  com o nome da pessoa. Funciona para MEI — onde a razão social *é* o
+  nome de quem abriu — e reprova ME, EIRELI e LTDA, que são prestadores
+  igualmente legítimos. O código estava certo para o exemplo que eu tinha
+  na cabeça, e errado para o resto do mundo; passou porque os testes que
+  escrevi usavam o mesmo exemplo. Foi o Luiz quem viu, lendo o PR: "o
+  CNPJ do prestador não precisa ser obrigatoriamente MEI". **Antes de
+  comparar dois campos, pergunte de quantos jeitos diferentes eles podem
+  ser preenchidos por gente que está certa** — e desconfie quando o
+  teste e a implementação partirem do mesmo exemplo.
 
 - **Uma variável lida antes de uma gravação continua com o valor de
   antes, mesmo depois da gravação acontecer.** `cadastrar()` criava a

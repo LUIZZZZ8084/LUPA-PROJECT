@@ -187,13 +187,17 @@ export function PerfilPrestador({
       <div className="flex flex-wrap items-center gap-3">
         {categoria && <Badge tone="servicos">{categoria.name}</Badge>}
         {/*
-         * Selo adicional ao CPF, que já verifica o perfil — este aparece
-         * só para quem também confirmou CNPJ de MEI na Receita (#138).
+         * O nome da empresa, não um selo sobre a pessoa.
+         *
+         * Conferimos na Receita que o CNPJ existe e está ativa — não que
+         * é dela (#140). Mostrar a razão social é o que permite a quem
+         * vai contratar julgar se aquilo combina com o serviço
+         * anunciado; um número solto não informa nada.
          */}
-        {perfil.cnpjVerificado && (
+        {perfil.cnpjVerificado && perfil.razaoSocial && (
           <Badge tone="servicos">
             <BadgeCheck size={12} />
-            MEI confirmado
+            {perfil.razaoSocial}
           </Badge>
         )}
         {/*

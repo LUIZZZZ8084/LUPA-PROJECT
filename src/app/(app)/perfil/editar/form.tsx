@@ -358,18 +358,18 @@ function Anuncio({ perfil }: { perfil: PerfilCompleto }) {
 }
 
 /**
- * CNPJ de MEI, fora do formulário do anúncio.
+ * O CNPJ da empresa do prestador, fora do formulário do anúncio.
  *
  * Campo e botão próprios, como já vale para os arquivos: se o CNPJ
  * estivesse dentro do formulário de "Seu anúncio", corrigir a descrição
  * resubmeteria o CNPJ a cada salvamento, e uma consulta à Receita rodaria
  * toda vez que a pessoa mexesse numa vírgula do texto.
  *
- * O CPF continua sendo a verificação de base do prestador — isto é selo
- * adicional, "MEI confirmado", para quem também tem CNPJ. Deixar em
- * branco e salvar remove o CNPJ e volta a ser só pessoa física.
+ * O CPF continua sendo a verificação de base do prestador — isto é
+ * divulgação a mais, para quem trabalha por uma empresa de qualquer
+ * natureza. Deixar em branco e salvar remove o CNPJ.
  */
-function CnpjDeMei({ perfil }: { perfil: PerfilCompleto }) {
+function CnpjDaEmpresa({ perfil }: { perfil: PerfilCompleto }) {
   const [estado, acao, pendente] = useActionState(
     salvarCnpjDoPrestador,
     inicialVerificacao,
@@ -380,11 +380,11 @@ function CnpjDeMei({ perfil }: { perfil: PerfilCompleto }) {
     <form action={acao}>
       <Panel className="mb-5 space-y-3">
         <div>
-          <h2 className="font-bold text-lg">CNPJ de MEI</h2>
+          <h2 className="font-bold text-lg">CNPJ da sua empresa</h2>
           <p className="mt-1 text-muted text-sm leading-relaxed">
-            Se você também é MEI, informe o CNPJ para ganhar o selo extra
-            &ldquo;MEI confirmado&rdquo; no seu perfil. Opcional — seu CPF já
-            verifica seu perfil, com ou sem isto.
+            Se você trabalha por uma empresa — MEI, ME, LTDA, qualquer uma —,
+            informe o CNPJ e mostramos o nome dela no seu perfil, conferido na
+            Receita. Opcional: seu CPF já verifica seu perfil, com ou sem isto.
           </p>
         </div>
 
@@ -400,8 +400,8 @@ function CnpjDeMei({ perfil }: { perfil: PerfilCompleto }) {
         {p?.cnpj && (
           <p className="text-xs text-muted">
             {p.cnpjVerificado
-              ? "CNPJ confirmado na Receita."
-              : "CNPJ salvo, ainda não confirmado."}
+              ? `Ativo na Receita: ${p.razaoSocial}`
+              : "CNPJ salvo, ainda não conferido na Receita."}
           </p>
         )}
 
@@ -597,7 +597,7 @@ export function FormularioDePerfil({
       {papel === "prestador_servico" && (
         <>
           <Anuncio perfil={perfil} />
-          <CnpjDeMei perfil={perfil} />
+          <CnpjDaEmpresa perfil={perfil} />
         </>
       )}
 

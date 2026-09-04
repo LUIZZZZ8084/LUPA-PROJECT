@@ -208,15 +208,24 @@ create table perfis_prestador (
   instagram         text,
   facebook          text,
   /*
-   * CNPJ é opcional, para quem é MEI além de pessoa física — decisão do
-   * Luiz em 03/09/2026 (#138). O CPF em `usuarios` continua sendo a
-   * verificação de base de todo prestador; isto é selo adicional, nunca
-   * substituto. Pode morar aqui, e não em `usuarios`, porque CNPJ é
-   * registro público — ao contrário do CPF, que esta tabela nunca pode
-   * receber: ela é lida pela chave anônima.
+   * CNPJ opcional de quem presta serviço por uma empresa — MEI, ME,
+   * EIRELI, LTDA, tanto faz (#138, corrigido na #140: o primeiro desenho
+   * só servia para MEI). O CPF em `usuarios` continua sendo a verificação
+   * de base de todo prestador; isto é divulgação a mais, nunca
+   * substituto.
+   *
+   * Pode morar aqui, e não em `usuarios`, porque CNPJ é registro público
+   * — ao contrário do CPF, que esta tabela nunca pode receber: ela é lida
+   * pela chave anônima.
+   *
+   * `razao_social` é o nome que a **Receita** devolveu, não o que a
+   * pessoa digitou: é o que permite a quem vai contratar ler o nome da
+   * empresa e julgar se faz sentido para o serviço anunciado. Sem ele, o
+   * perfil mostraria um número solto, que não informa nada.
    */
   cnpj              text,
   cnpj_verificado   boolean not null default false,
+  razao_social      text,
   -- Denormalizados e mantidos pelo trigger em `avaliacoes`: a busca ordena
   -- por nota e não pode agregar a cada consulta.
   nota_media        numeric(2,1) not null default 0,

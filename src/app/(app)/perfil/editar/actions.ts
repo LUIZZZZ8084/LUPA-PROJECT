@@ -113,6 +113,7 @@ export async function salvarCnpjDoPrestador(
       sessao.usuarioId,
       null,
       false,
+      null,
     );
     revalidatePath("/perfil");
     revalidatePath("/perfil/editar");

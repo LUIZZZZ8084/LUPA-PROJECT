@@ -191,6 +191,7 @@ describe("RepositorioPostgres", () => {
       facebook: null,
       cnpj: null,
       cnpjVerificado: false,
+      razaoSocial: null,
     });
     expect(chamadas.at(-1)?.tabela).toBe("perfis_prestador");
 
