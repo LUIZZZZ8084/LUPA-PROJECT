@@ -207,6 +207,16 @@ create table perfis_prestador (
   fotos_urls        text[] not null default '{}',
   instagram         text,
   facebook          text,
+  /*
+   * CNPJ é opcional, para quem é MEI além de pessoa física — decisão do
+   * Luiz em 03/09/2026 (#138). O CPF em `usuarios` continua sendo a
+   * verificação de base de todo prestador; isto é selo adicional, nunca
+   * substituto. Pode morar aqui, e não em `usuarios`, porque CNPJ é
+   * registro público — ao contrário do CPF, que esta tabela nunca pode
+   * receber: ela é lida pela chave anônima.
+   */
+  cnpj              text,
+  cnpj_verificado   boolean not null default false,
   -- Denormalizados e mantidos pelo trigger em `avaliacoes`: a busca ordena
   -- por nota e não pode agregar a cada consulta.
   nota_media        numeric(2,1) not null default 0,
@@ -215,12 +225,21 @@ create table perfis_prestador (
 
 create index perfis_prestador_categoria_idx on perfis_prestador (categoria_id);
 create index perfis_prestador_nota_idx on perfis_prestador (nota_media desc);
+create unique index perfis_prestador_cnpj_idx
+  on perfis_prestador (cnpj) where cnpj is not null;
 
 
 create table perfis_empresa (
   usuario_id   uuid primary key references usuarios(id) on delete cascade,
   razao_social text not null,
-  cnpj         text not null unique,
+  /*
+   * Opcional desde 03/09/2026 (#138): contratante pode ser produtor rural
+   * ou autônomo, com CPF em vez de CNPJ — decisão já registrada na #129.
+   * O CPF de quem escolhe essa via mora em `usuarios`, nunca aqui: esta
+   * tabela é lida pela chave anônima, e CNPJ pode ser público porque é
+   * registro público — CPF não.
+   */
+  cnpj         text,
   setor        text,
   porte        text,
   site         text,
@@ -230,6 +249,9 @@ create table perfis_empresa (
   logo_url     text,
   plano        plano_empresa not null default 'trial'
 );
+
+create unique index perfis_empresa_cnpj_idx
+  on perfis_empresa (cnpj) where cnpj is not null;
 
 -- ============================================================================
 -- 6. Vagas e candidaturas

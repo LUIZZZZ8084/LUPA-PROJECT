@@ -106,6 +106,69 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
     expect(Number(r.rows[0].total)).toBe(17);
   });
 
+  /**
+   * Produtor rural e autônomo contratam sem ter aberto empresa — #129,
+   * #138. `cnpj` deixou de ser `not null`, e duas empresas sem CNPJ não
+   * podem colidir uma com a outra: `null` não é igual a `null` para o
+   * índice único parcial.
+   */
+  it("empresa pode existir sem CNPJ — é quem contrata com CPF", async () => {
+    const a = await criarUsuario("empresa", "produtor-a@teste.lupa");
+    const b = await criarUsuario("empresa", "produtor-b@teste.lupa");
+
+    await db.query(
+      `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+       values ($1, 'Sítio A', null), ($2, 'Sítio B', null)`,
+      [a, b],
+    );
+
+    const r = await db.query<{ total: string }>(
+      "select count(*) as total from perfis_empresa where cnpj is null",
+    );
+    expect(Number(r.rows[0].total)).toBe(2);
+  });
+
+  /**
+   * CNPJ de MEI é opcional, e vem com o resultado da própria conferência —
+   * #138. Selo adicional ao CPF, que já verifica o prestador (#133); por
+   * isso nasce `false`, e não bloqueia nada enquanto não for confirmado.
+   */
+  it("prestador tem CNPJ opcional, com o selo desligado por padrão", async () => {
+    const id = await criarUsuario("prestador_servico", "mei@teste.lupa");
+    await db.query(
+      "insert into perfis_prestador (usuario_id, categoria_id) values ($1, 1)",
+      [id],
+    );
+
+    const r = await db.query<{ cnpj: string | null; verificado: boolean }>(
+      "select cnpj, cnpj_verificado as verificado from perfis_prestador where usuario_id = $1",
+      [id],
+    );
+    expect(r.rows[0].cnpj).toBeNull();
+    expect(r.rows[0].verificado).toBe(false);
+  });
+
+  it("o mesmo CNPJ não pode servir a dois prestadores", async () => {
+    const a = await criarUsuario("prestador_servico", "mei-a@teste.lupa");
+    const b = await criarUsuario("prestador_servico", "mei-b@teste.lupa");
+    await db.query(
+      "insert into perfis_prestador (usuario_id, categoria_id) values ($1, 1), ($2, 1)",
+      [a, b],
+    );
+
+    await db.query(
+      "update perfis_prestador set cnpj = '11222333000181' where usuario_id = $1",
+      [a],
+    );
+
+    await expect(
+      db.query(
+        "update perfis_prestador set cnpj = '11222333000181' where usuario_id = $1",
+        [b],
+      ),
+    ).rejects.toThrow();
+  });
+
   it("liga RLS em todas as tabelas", async () => {
     const r = await db.query<{ relname: string }>(
       `select relname from pg_class

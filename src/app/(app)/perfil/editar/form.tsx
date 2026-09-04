@@ -2,6 +2,7 @@
 
 import { Check, Loader2 } from "lucide-react";
 import { useActionState, useId } from "react";
+import type { EstadoVerificacao } from "@/app/(app)/perfil/actions";
 import { CampoBairro } from "@/components/cidade-e-bairro";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
@@ -17,6 +18,7 @@ import {
   removerFoto,
   removerLogo,
   salvarAnuncioComEstado,
+  salvarCnpjDoPrestador,
   salvarContaComEstado,
   salvarCurriculoComEstado,
   salvarEmpresaComEstado,
@@ -24,6 +26,7 @@ import {
 import { CampoDeArquivo, PreviaDeCurriculo, PreviaDeImagem } from "./arquivo";
 
 const inicial: EstadoEdicao = {};
+const inicialVerificacao: EstadoVerificacao = {};
 
 /**
  * Um formulário por assunto, cada um com o próprio botão.
@@ -354,6 +357,83 @@ function Anuncio({ perfil }: { perfil: PerfilCompleto }) {
   );
 }
 
+/**
+ * CNPJ de MEI, fora do formulário do anúncio.
+ *
+ * Campo e botão próprios, como já vale para os arquivos: se o CNPJ
+ * estivesse dentro do formulário de "Seu anúncio", corrigir a descrição
+ * resubmeteria o CNPJ a cada salvamento, e uma consulta à Receita rodaria
+ * toda vez que a pessoa mexesse numa vírgula do texto.
+ *
+ * O CPF continua sendo a verificação de base do prestador — isto é selo
+ * adicional, "MEI confirmado", para quem também tem CNPJ. Deixar em
+ * branco e salvar remove o CNPJ e volta a ser só pessoa física.
+ */
+function CnpjDeMei({ perfil }: { perfil: PerfilCompleto }) {
+  const [estado, acao, pendente] = useActionState(
+    salvarCnpjDoPrestador,
+    inicialVerificacao,
+  );
+  const p = perfil.prestador;
+
+  return (
+    <form action={acao}>
+      <Panel className="mb-5 space-y-3">
+        <div>
+          <h2 className="font-bold text-lg">CNPJ de MEI</h2>
+          <p className="mt-1 text-muted text-sm leading-relaxed">
+            Se você também é MEI, informe o CNPJ para ganhar o selo extra
+            &ldquo;MEI confirmado&rdquo; no seu perfil. Opcional — seu CPF já
+            verifica seu perfil, com ou sem isto.
+          </p>
+        </div>
+
+        <Field label="CNPJ">
+          <Input
+            name="cnpj"
+            inputMode="numeric"
+            defaultValue={p?.cnpj ?? ""}
+            placeholder="00.000.000/0000-00"
+          />
+        </Field>
+
+        {p?.cnpj && (
+          <p className="text-xs text-muted">
+            {p.cnpjVerificado
+              ? "CNPJ confirmado na Receita."
+              : "CNPJ salvo, ainda não confirmado."}
+          </p>
+        )}
+
+        {estado.mensagem && (
+          <p
+            role="status"
+            className={
+              estado.ok
+                ? "rounded-xl border border-vagas/30 bg-vagas/10 px-4 py-3 text-sm text-vagas"
+                : "rounded-xl border border-warn/30 bg-warn/10 px-4 py-3 text-sm text-warn"
+            }
+          >
+            {estado.mensagem}
+          </p>
+        )}
+
+        <div className="flex justify-end">
+          <Button
+            type="submit"
+            variant="servicos"
+            size="sm"
+            disabled={pendente}
+          >
+            {pendente && <Loader2 size={15} className="animate-spin" />}
+            Salvar CNPJ
+          </Button>
+        </div>
+      </Panel>
+    </form>
+  );
+}
+
 function Empresa({ perfil }: { perfil: PerfilCompleto }) {
   const [estado, acao, pendente] = useActionState(
     salvarEmpresaComEstado,
@@ -369,7 +449,7 @@ function Empresa({ perfil }: { perfil: PerfilCompleto }) {
         estado={estado}
         pendente={pendente}
       >
-        <Field label="Razão social" required error={estado.campos?.razaoSocial}>
+        <Field label="Nome" required error={estado.campos?.razaoSocial}>
           <Input
             name="razaoSocial"
             defaultValue={e?.razaoSocial ?? ""}
@@ -514,7 +594,12 @@ export function FormularioDePerfil({
         </>
       )}
 
-      {papel === "prestador_servico" && <Anuncio perfil={perfil} />}
+      {papel === "prestador_servico" && (
+        <>
+          <Anuncio perfil={perfil} />
+          <CnpjDeMei perfil={perfil} />
+        </>
+      )}
 
       {papel === "empresa" && (
         <>

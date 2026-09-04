@@ -67,7 +67,13 @@ export interface DadosNovoUsuario {
 export interface PerfilEmpresa {
   usuarioId: string;
   razaoSocial: string;
-  cnpj: string;
+  /**
+   * Opcional desde 03/09/2026 (#138): contratante pode ser produtor rural
+   * ou autônomo, com CPF em vez de CNPJ. `null` significa que o
+   * documento é o CPF em `usuarios` — nunca gravado aqui, que é lido pela
+   * chave anônima.
+   */
+  cnpj: string | null;
   setor: string | null;
   porte: string | null;
   site: string | null;
@@ -87,6 +93,15 @@ export interface PerfilPrestador {
   bairrosAtendidos: string[];
   instagram: string | null;
   facebook: string | null;
+  /**
+   * CNPJ de quem é MEI, além de pessoa física — opcional, desde
+   * 03/09/2026 (#138). O CPF em `usuarios` continua sendo a verificação
+   * de base de todo prestador; isto é selo adicional ("MEI confirmado"),
+   * nunca substituto. Pode morar aqui porque CNPJ é registro público.
+   */
+  cnpj: string | null;
+  /** Confirmado na Receita — existe, está ativa, o nome bate. */
+  cnpjVerificado: boolean;
 }
 
 export interface PerfilCandidato {
@@ -171,8 +186,14 @@ export interface RepositorioUsuarios {
   criarPerfilPrestador(perfil: PerfilPrestador): Promise<void>;
   criarPerfilCandidato(perfil: PerfilCandidato): Promise<void>;
 
-  /** Para o cadastro de empresa: CNPJ é único na plataforma. */
-  cnpjEmUso(cnpj: string): Promise<boolean>;
+  /**
+   * Para o cadastro de empresa e para o CNPJ de MEI do prestador: CNPJ é
+   * único na plataforma, não importa o papel de quem o declarou.
+   *
+   * `exceto` exclui um usuário da checagem — para quem está regravando o
+   * próprio CNPJ sem mudar o número, o que não pode contar como colisão.
+   */
+  cnpjEmUso(cnpj: string, exceto?: string): Promise<boolean>;
 
   /**
    * Mesma regra do CNPJ: um CPF, uma conta.
@@ -202,6 +223,20 @@ export interface RepositorioUsuarios {
    * Continua sendo escrita com dono — quem chama confere a sessão antes.
    */
   definirDocVerificado(id: string, verificado: boolean): Promise<void>;
+
+  /**
+   * Grava o CNPJ de MEI do prestador, com o resultado da verificação.
+   *
+   * `null` apaga o CNPJ — volta a ser só pessoa física. Os dois campos
+   * juntos porque o CNPJ sem o resultado da checagem não diz nada: é o
+   * mesmo raciocínio de `definirCpf` + `definirDocVerificado`, só que
+   * numa gravação só, já que aqui as duas sempre mudam juntas.
+   */
+  definirCnpjPrestador(
+    usuarioId: string,
+    cnpj: string | null,
+    verificado: boolean,
+  ): Promise<void>;
 
   /**
    * Candidatos que ligaram "quero que empresas me encontrem".

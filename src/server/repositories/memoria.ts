@@ -29,7 +29,6 @@ import type {
 export class RepositorioMemoria implements RepositorioUsuarios {
   private usuarios = new Map<string, Usuario>();
   private porEmailIndice = new Map<string, string>();
-  private cnpjs = new Set<string>();
   private cpfs = new Set<string>();
 
   private empresas = new Map<string, PerfilEmpresa>();
@@ -104,7 +103,6 @@ export class RepositorioMemoria implements RepositorioUsuarios {
 
   async criarPerfilEmpresa(perfil: PerfilEmpresa): Promise<void> {
     this.empresas.set(perfil.usuarioId, perfil);
-    this.cnpjs.add(perfil.cnpj);
   }
 
   async criarPerfilPrestador(perfil: PerfilPrestador): Promise<void> {
@@ -129,8 +127,20 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     return saida;
   }
 
-  async cnpjEmUso(cnpj: string): Promise<boolean> {
-    return this.cnpjs.has(cnpj);
+  /**
+   * Varre os dois perfis que podem ter CNPJ — empresa e prestador MEI —
+   * porque o mesmo número não pode servir para dois papéis diferentes.
+   */
+  async cnpjEmUso(cnpj: string, exceto?: string): Promise<boolean> {
+    for (const [usuarioId, perfil] of this.empresas) {
+      if (usuarioId === exceto) continue;
+      if (perfil.cnpj === cnpj) return true;
+    }
+    for (const [usuarioId, perfil] of this.prestadores) {
+      if (usuarioId === exceto) continue;
+      if (perfil.cnpj === cnpj) return true;
+    }
+    return false;
   }
 
   async cpfEmUso(cpf: string): Promise<boolean> {
@@ -148,6 +158,20 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     const usuario = this.usuarios.get(id);
     if (!usuario) return;
     this.usuarios.set(id, { ...usuario, docVerificado: verificado });
+  }
+
+  async definirCnpjPrestador(
+    usuarioId: string,
+    cnpj: string | null,
+    verificado: boolean,
+  ): Promise<void> {
+    const perfil = this.prestadores.get(usuarioId);
+    if (!perfil) return;
+    this.prestadores.set(usuarioId, {
+      ...perfil,
+      cnpj,
+      cnpjVerificado: verificado,
+    });
   }
 
   /* ---------- Leitura de perfil ---------- */
@@ -191,7 +215,16 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     usuarioId: string,
     dados: EdicaoPrestador,
   ): Promise<void> {
-    this.prestadores.set(usuarioId, { usuarioId, ...dados });
+    // O CNPJ de MEI não é campo deste formulário — tem ação própria
+    // (`definirCnpjPrestador`). Preservado aqui, ou toda edição de
+    // descrição apagaria o "MEI confirmado" sem ninguém ter pedido.
+    const atual = this.prestadores.get(usuarioId);
+    this.prestadores.set(usuarioId, {
+      usuarioId,
+      cnpj: atual?.cnpj ?? null,
+      cnpjVerificado: atual?.cnpjVerificado ?? false,
+      ...dados,
+    });
   }
 
   async salvarPerfilEmpresa(
@@ -234,7 +267,6 @@ export class RepositorioMemoria implements RepositorioUsuarios {
   limpar(): void {
     this.usuarios.clear();
     this.porEmailIndice.clear();
-    this.cnpjs.clear();
     this.cpfs.clear();
     this.empresas.clear();
     this.prestadores.clear();

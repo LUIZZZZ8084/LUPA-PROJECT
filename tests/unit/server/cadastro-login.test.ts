@@ -241,6 +241,79 @@ describe("cadastro e login", () => {
       expect(criado.cpf).toBeNull();
     });
 
+    /**
+     * Produtor rural e autônomo contratam sem ter aberto empresa — #129,
+     * #138. O rádio "Produtor rural ou autônomo (CPF)" troca qual
+     * documento é obrigatório, e o CPF válido e único já é a verificação
+     * em si, sem chamada de rede — a mesma regra que já vale para o
+     * prestador (#133).
+     */
+    describe("empresa com CPF em vez de CNPJ", () => {
+      const produtorRural = {
+        ...empresa,
+        email: "produtor@teste.lupa",
+        tipoDocumento: "cpf" as const,
+        cnpj: undefined,
+        cpf: "52998224725",
+      };
+
+      it("grava o CPF em usuarios, e nenhum CNPJ no perfil", async () => {
+        const criado = await cadastrar(validarOk(produtorRural));
+
+        expect(criado.cpf).toBe("52998224725");
+        expect(await repo.perfilEmpresa(criado.id)).toMatchObject({
+          cnpj: null,
+        });
+      });
+
+      /**
+       * Sem chamada à Receita envolvida — diferente do caminho do CNPJ,
+       * que só verifica quando alguém aperta "Conferir CNPJ agora".
+       */
+      it("já nasce verificada, sem passar pelo botão de conferir CNPJ", async () => {
+        const criado = await cadastrar(validarOk(produtorRural));
+        expect(criado.docVerificado).toBe(true);
+      });
+
+      it("sem CNPJ, o cadastro por CNPJ é recusado por faltar o número", async () => {
+        await expect(
+          cadastrar(
+            validarOk({
+              ...empresa,
+              email: "sememdocumento@teste.lupa",
+              cnpj: undefined,
+            }),
+          ),
+        ).rejects.toMatchObject({ codigo: "validacao" });
+      });
+
+      it("via CPF sem informar o CPF é recusado", async () => {
+        await expect(
+          cadastrar(
+            validarOk({
+              ...produtorRural,
+              email: "outro@teste.lupa",
+              cpf: undefined,
+            }),
+          ),
+        ).rejects.toMatchObject({ codigo: "validacao" });
+      });
+
+      it("CPF repetido é recusado, mesmo vindo de uma empresa", async () => {
+        await cadastrar(validarOk(candidato));
+
+        await expect(
+          cadastrar(
+            validarOk({
+              ...produtorRural,
+              email: "outra-empresa@teste.lupa",
+              cpf: candidato.cpf,
+            }),
+          ),
+        ).rejects.toMatchObject({ codigo: "conflito" });
+      });
+    });
+
     it("começa sem nenhuma verificação concluída", async () => {
       const criado = await cadastrar(validarOk(candidato));
       expect(criado.emailVerificado).toBe(false);

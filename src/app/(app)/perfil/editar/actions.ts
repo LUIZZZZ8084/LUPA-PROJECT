@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { EstadoVerificacao } from "@/app/(app)/perfil/actions";
 import { criarAcao } from "@/server/action";
 import {
   apagarArquivoDoPerfil,
@@ -17,6 +18,8 @@ import {
   schemaPrestador,
 } from "@/server/perfil/schemas";
 import { salvarBasicos, salvarPerfilDoPapel } from "@/server/perfil/servico";
+import { repositorioUsuarios } from "@/server/repositories";
+import { definirCnpjDoPrestador } from "@/server/verificacao/servico";
 
 /**
  * Salvar o próprio perfil.
@@ -79,6 +82,58 @@ export const salvarAnuncio = criarAcao({
     return { salvo: true };
   },
 });
+
+/**
+ * O CNPJ de MEI vive fora de `salvarAnuncio`, de propósito.
+ *
+ * `salvarPerfilPrestador` faz gravação completa do perfil de anúncio; se
+ * `cnpj` estivesse nesse mesmo formulário, editar a descrição resubmeteria
+ * o CNPJ todo salvamento, e uma consulta à Receita rodaria toda vez que a
+ * pessoa corrigisse uma vírgula no texto. Aqui é campo e botão próprios,
+ * como já vale para os arquivos.
+ *
+ * Não passa por `criarAcao` porque o retorno não é o par usual
+ * `{ salvo }` / erro de campo — é `{ ok, mensagem }`, o mesmo formato de
+ * `verificarCnpj`, porque cada recusa da Receita tem frase própria.
+ * Vazio quer dizer "remover o CNPJ, voltar a ser só CPF".
+ */
+export async function salvarCnpjDoPrestador(
+  _anterior: EstadoVerificacao,
+  formData: FormData,
+): Promise<EstadoVerificacao> {
+  const sessao = await quemEsta();
+  if (sessao.papel !== "prestador_servico") {
+    throw erros.semPermissao("CNPJ de MEI é só para prestador de serviço.");
+  }
+
+  const cnpj = String(formData.get("cnpj") ?? "").trim();
+
+  if (!cnpj) {
+    await repositorioUsuarios().definirCnpjPrestador(
+      sessao.usuarioId,
+      null,
+      false,
+    );
+    revalidatePath("/perfil");
+    revalidatePath("/perfil/editar");
+    revalidatePath("/servicos", "layout");
+    return {
+      ok: true,
+      mensagem: "CNPJ removido. Seu perfil continua com o CPF.",
+    };
+  }
+
+  const resultado = await definirCnpjDoPrestador(sessao, cnpj);
+  if (!resultado.ok) return { ok: false, mensagem: resultado.motivo };
+
+  revalidatePath("/perfil");
+  revalidatePath("/perfil/editar");
+  revalidatePath("/servicos", "layout");
+  return {
+    ok: true,
+    mensagem: `CNPJ confirmado na Receita: ${resultado.razaoSocial}.`,
+  };
+}
 
 export const salvarEmpresa = criarAcao({
   nome: "perfil.empresa",
