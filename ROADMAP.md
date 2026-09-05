@@ -167,6 +167,12 @@ Qualidade:
   mais clara que branco puro. Pego pela varredura de acessibilidade em
   `/empresa` —
   [#144](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/144)
+- `AlternarTema` chamava `setState` no corpo de um efeito para ler
+  `data-theme` no mount — legítimo (o componente roda no servidor sem
+  `document`), mas reprovado pela regra `react-hooks/set-state-in-effect`
+  e vermelho na CI desde o tema virar padrão claro. Reescrito com
+  `useSyncExternalStore`, sem estado próprio —
+  [#146](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/146)
 
 ## Pendente
 
