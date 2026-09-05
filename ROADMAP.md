@@ -92,6 +92,11 @@ Prestador:
 - Avaliar um prestador com nota e comentário — o convite que estava na
   tela desde o começo e não tinha botão —
   [#116](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/116)
+- Quem entrava direto como prestador pelo cadastro nunca tinha o CPF
+  confirmado e ficava fora de `/servicos` sem aviso de como corrigir —
+  a mesma verificação por CPF já valia para quem convertia a conta pela
+  ativação (#133), só faltava no cadastro direto —
+  [#142](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/142)
 
 Perfil e vaga, o que cada um informa:
 
