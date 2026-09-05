@@ -253,6 +253,13 @@ export function PerfilPrestador({
        * certo. Por isso não tem botão: não há o que reenviar — o CPF já
        * está gravado, só falta alguém regravar a confirmação, e isso é
        * caso de suporte, como a correção de CNPJ e cidade.
+       *
+       * A frase não nomeia por qual caminho a conta chegou aqui, e isso é
+       * deliberado: são dois, e quem lê pode ter vindo por qualquer um
+       * deles — inclusive pelo cadastro direto, que era a brecha. Uma
+       * versão anterior dizia "sua conta virou prestador", o nome de um
+       * fluxo só, e teria mandado ao suporte alguém dizendo "eu nunca
+       * fiz isso".
        */}
       {!docVerificado && (
         <div className="mt-4 rounded-xl border border-warn/30 bg-warn/8 p-4">
@@ -260,9 +267,9 @@ export function PerfilPrestador({
             Seu perfil ainda não aparece na busca
           </p>
           <p className="mt-1 text-muted text-sm leading-relaxed">
-            Sua conta virou prestador antes de confirmarmos o CPF
-            automaticamente. Fale com o suporte para regularizar — quem se
-            cadastra hoje já é confirmado na hora.
+            Sua conta passou a ser de prestador antes de confirmarmos o CPF
+            automaticamente. Fale com o suporte para regularizar — hoje a
+            confirmação acontece na hora, por qualquer caminho.
           </p>
         </div>
       )}
