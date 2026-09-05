@@ -245,11 +245,14 @@ export function PerfilPrestador({
        * conclui que o app quebrou. O perfil público já avisa quem abre por
        * link direto; faltava avisar quem procura, no lugar onde ela olha.
        *
-       * Hoje `virarPrestador` confirma o CPF na mesma ação que ativa o
-       * papel, então este estado só existe para quem virou prestador antes
-       * dessa mudança. Por isso não tem botão: não há o que reenviar — o
-       * CPF já está gravado, só falta alguém regravar a confirmação, e
-       * isso é caso de suporte, como a correção de CNPJ e cidade.
+       * Hoje os dois caminhos para o papel confirmam o CPF na mesma ação
+       * — `cadastrar()` e `virarPrestador()` —, então este estado só
+       * existe para conta anterior a essas mudanças. Só `virarPrestador`
+       * confirmava até a #148, e por isso este aviso chegou a aparecer
+       * para conta criada no mesmo dia, mandando ao suporte quem estava
+       * certo. Por isso não tem botão: não há o que reenviar — o CPF já
+       * está gravado, só falta alguém regravar a confirmação, e isso é
+       * caso de suporte, como a correção de CNPJ e cidade.
        */}
       {!docVerificado && (
         <div className="mt-4 rounded-xl border border-warn/30 bg-warn/8 p-4">
@@ -257,9 +260,9 @@ export function PerfilPrestador({
             Seu perfil ainda não aparece na busca
           </p>
           <p className="mt-1 text-muted text-sm leading-relaxed">
-            Sua conta ativou o perfil de prestador antes de confirmarmos o CPF
-            automaticamente. Fale com o suporte para regularizar — contas novas
-            já confirmam na hora, ao virar prestador.
+            Sua conta virou prestador antes de confirmarmos o CPF
+            automaticamente. Fale com o suporte para regularizar — quem se
+            cadastra hoje já é confirmado na hora.
           </p>
         </div>
       )}

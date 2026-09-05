@@ -434,9 +434,18 @@ campo de CNPJ do prestador).
 
 Virar prestador não coloca ninguém na busca sem verificação — só que a
 verificação, desde 03/09/2026, não é mais fila de admin: é o CPF, válido
-e único, confirmado na mesma ação que ativa o papel (#133). Numa
+e único, confirmado na mesma ação que põe a pessoa no papel (#133). Numa
 plataforma onde alguém abre a porta de casa para um desconhecido, anúncio
 não conferido na vitrine é o começo do golpe.
+
+**E há dois caminhos para esse papel, não um.** Este parágrafo dizia "a
+mesma ação que ativa o papel", e a #133 só instrumentou `virarPrestador`
+— quem se cadastrava direto como prestador nascia com CPF exigido,
+validado e único, e mesmo assim fora da vitrine. Ficou de pé até um
+prestador real precisar de `update` no banco à mão (#148). A frase estava
+certa sobre a regra e errada sobre onde ela valia: **quando uma condição
+vira requisito, procure todas as portas que levam ao estado que ela
+protege** — aqui eram duas, `cadastrar()` e `virarPrestador()`.
 
 **A fila do admin existe no banco e nunca teve porta de entrada.**
 `pedidos_verificacao` e a tela de decisão em `/admin` foram construídas

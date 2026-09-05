@@ -141,6 +141,21 @@ export async function cadastrar(
       cnpjVerificado: false,
       razaoSocial: null,
     });
+
+    /*
+     * CPF válido e único é a verificação em si (#133) — e o cadastro
+     * acabou de exigir os dois, com o mesmo rigor de `virarPrestador`.
+     *
+     * Sem esta linha, quem se cadastra direto como prestador nasce fora
+     * da vitrine: `getProviders` filtra por `doc_verificado`, e só a
+     * troca de papel marcava a flag. A #133 pôs a confirmação em
+     * `virarPrestador` supondo que fosse o único caminho para virar
+     * prestador — e o cadastro é o outro, o mais usado. A tela do perfil
+     * mandava essa pessoa falar com o suporte, prometendo que "contas
+     * novas já confirmam na hora"; era verdade para um caminho só.
+     */
+    await repo.definirDocVerificado(usuario.id, true);
+    usuario = { ...usuario, docVerificado: true };
   } else {
     await repo.criarPerfilEmpresa({
       usuarioId: usuario.id,

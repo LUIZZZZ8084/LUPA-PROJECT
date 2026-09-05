@@ -155,6 +155,39 @@ describe("cadastro e login", () => {
       });
     });
 
+    /**
+     * O prestador nasce dentro da vitrine, não fora dela (#148).
+     *
+     * `getProviders` filtra por `doc_verificado`, e a #133 pôs a
+     * confirmação do CPF só em `virarPrestador` — supondo que a troca de
+     * papel fosse o único caminho para virar prestador. O cadastro é o
+     * outro, e o mais usado: quem passava por ele ficava invisível em
+     * `/servicos` até alguém marcar a flag no banco à mão.
+     *
+     * As duas asserções são de propósito. A primeira cobre o que a função
+     * devolve, a segunda o que ficou gravado — é a diferença que deixou
+     * `cadastrar()` mentir sobre `docVerificado` por uma requisição
+     * inteira quando a empresa via CPF ganhou o mesmo tratamento.
+     */
+    it("prestador nasce com o CPF já confirmado, e devolve isso", async () => {
+      const criado = await cadastrar(validarOk(prestador));
+
+      expect(criado.docVerificado).toBe(true);
+      expect(await repo.porId(criado.id)).toMatchObject({
+        docVerificado: true,
+      });
+    });
+
+    /**
+     * Candidato também informa CPF, e continua não verificado: a flag
+     * libera a vitrine de prestadores, e ele não está nela. Marcar todo
+     * mundo seria a correção preguiçosa deste mesmo bug.
+     */
+    it("candidato não é marcado como verificado", async () => {
+      const criado = await cadastrar(validarOk(candidato));
+      expect(criado.docVerificado).toBe(false);
+    });
+
     it("cria o perfil certo para cada papel", async () => {
       const c = await cadastrar(validarOk(candidato));
       const e = await cadastrar(validarOk(empresa));
