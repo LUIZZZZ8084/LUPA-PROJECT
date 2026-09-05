@@ -58,9 +58,13 @@ export async function cadastrar(
   }
 
   /*
-   * A empresa escolhe o documento; os dois outros papéis só têm CPF.
-   * `dados.papel !== "empresa"` é o que dá ao Zod a variante certa da
-   * união — só candidato e prestador têm `cpf` obrigatório.
+   * A empresa escolhe se tem CNPJ; o CPF todo mundo informa.
+   *
+   * "CNPJ é CNPJ, e CPF é CPF" — decisão do Luiz em 05/09/2026 (#150).
+   * O CNPJ responde se *a empresa* existe e está ativa, e é o que separa
+   * vaga real de anúncio falso; o CPF responde *quem* está por trás da
+   * conta. Até aqui a empresa com CNPJ não informava pessoa nenhuma, e
+   * ninguém sabia com quem falar quando uma vaga virasse reclamação.
    *
    * O que falta informar aparece antes de qualquer consulta ao banco:
    * "informe o CNPJ" não devia esperar uma verificação de duplicidade
@@ -74,9 +78,6 @@ export async function cadastrar(
   if (empresaViaCnpj && !dados.cnpj) {
     throw erros.validacao([{ campo: "cnpj", mensagem: "Informe o CNPJ." }]);
   }
-  if (empresaViaCpf && !dados.cpf) {
-    throw erros.validacao([{ campo: "cpf", mensagem: "Informe o CPF." }]);
-  }
 
   if (empresaViaCnpj && dados.cnpj && (await repo.cnpjEmUso(dados.cnpj))) {
     throw erros.conflito(
@@ -85,14 +86,21 @@ export async function cadastrar(
     );
   }
 
-  if (dados.papel !== "empresa" && (await repo.cpfEmUso(dados.cpf))) {
-    throw erros.conflito(
-      "Este CPF já está cadastrado. Entre com a conta existente.",
-      "CPF duplicado",
-    );
-  }
-
-  if (empresaViaCpf && dados.cpf && (await repo.cpfEmUso(dados.cpf))) {
+  /*
+   * Uma checagem só, para os três papéis.
+   *
+   * Eram duas — uma para candidato e prestador, outra para empresa via
+   * CPF —, e a diferença entre elas existia só porque a empresa com CNPJ
+   * não tinha CPF para conferir. Agora tem, e duplicar a mesma pergunta
+   * em dois `if` é como se esquece de estender um deles depois.
+   *
+   * A consequência aceita de olhos abertos: uma pessoa tem uma conta só
+   * na Lupa. Quem já tem empresa cadastrada não abre também uma de
+   * candidato, nem com outro e-mail — o CPF é único em `usuarios`. É a
+   * mesma regra que já valia entre candidato e prestador, agora sem a
+   * brecha por onde a empresa passava.
+   */
+  if (await repo.cpfEmUso(dados.cpf)) {
     throw erros.conflito(
       "Este CPF já está cadastrado. Entre com a conta existente.",
       "CPF duplicado",
@@ -106,7 +114,8 @@ export async function cadastrar(
     senhaHash,
     papel: dados.papel,
     nomeCompleto: dados.nomeCompleto,
-    cpf: dados.papel === "empresa" ? (dados.cpf ?? null) : dados.cpf,
+    // Os três papéis informam CPF (#150) — o ternário por papel saiu.
+    cpf: dados.cpf,
     telefone: dados.telefone,
     cidade: dados.cidade ?? CIDADE_INICIAL,
     bairro: dados.bairro ?? null,

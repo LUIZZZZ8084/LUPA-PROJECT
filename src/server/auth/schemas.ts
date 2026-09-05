@@ -111,11 +111,22 @@ export const schemaPrestador = z.object({
  *
  * `tipoDocumento` existe porque nem todo contratante tem CNPJ: produtor
  * rural e autônomo contratam ajudante sem ter aberto empresa. Decisão do
- * Luiz em 03/09/2026 (#138, que reaproveita a #129). Os dois campos ficam
- * opcionais aqui — qual dos dois é obrigatório depende de
- * `tipoDocumento`, e isso é `servico.ts` quem decide, não o schema: um
- * schema não consegue ficar discriminado por `papel` *e* validar
- * cruzado por outro campo ao mesmo tempo.
+ * Luiz em 03/09/2026 (#138, que reaproveita a #129). O CNPJ fica opcional
+ * aqui — se ele é obrigatório depende de `tipoDocumento`, e isso é
+ * `servico.ts` quem decide, não o schema: um schema não consegue ficar
+ * discriminado por `papel` *e* validar cruzado por outro campo ao mesmo
+ * tempo.
+ *
+ * **O CPF, não.** Ele é obrigatório sempre, nos dois modos do rádio —
+ * decisão do Luiz em 05/09/2026 (#150): "CNPJ é CNPJ, e CPF é CPF".
+ * São perguntas diferentes e as duas precisam de resposta. O CNPJ diz se
+ * *a empresa* existe e está ativa, e é o que separa vaga real de anúncio
+ * falso; o CPF diz *quem responde pela conta* quando uma vaga vira
+ * reclamação. Até aqui a empresa com CNPJ não informava pessoa nenhuma.
+ *
+ * Ele não fica em `perfis_empresa`, que a chave anônima lê — vai para
+ * `usuarios`, junto com o hash de senha, pela mesma razão de sempre:
+ * CNPJ é registro público, CPF não é.
  */
 export const schemaEmpresa = z.object({
   ...base,
@@ -130,10 +141,7 @@ export const schemaEmpresa = z.object({
     .union([zCnpj, z.literal("")])
     .optional()
     .transform((v) => (v ? v : undefined)),
-  cpf: z
-    .union([zCpf, z.literal("")])
-    .optional()
-    .transform((v) => (v ? v : undefined)),
+  cpf: zCpf,
   setor: z.string().trim().max(80).optional(),
   porte: z.enum(["MEI", "Micro", "Pequena", "Média", "Grande"]).optional(),
   site: z

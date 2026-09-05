@@ -409,12 +409,44 @@ paga, e a comparação tolerante não perdoa "Silva Elétrica" contra
 **Empresa pode nascer com CPF em vez de CNPJ.** Produtor rural e
 autônomo contratam sem ter aberto empresa — decisão já registrada na
 [#129](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/129). Um rádio
-no cadastro escolhe o documento; escolhendo CPF, ele é gravado em
+no cadastro diz se ela tem CNPJ; não tendo, o CPF é gravado em
 `usuarios` (nunca em `perfis_empresa`, que a chave anônima lê) e a conta
 nasce **verificada na hora**, sem chamada de rede — a mesma regra do
 prestador, e sem os riscos que justificam adiar a checagem de CNPJ para
 um botão à parte. A tela mostra "Pessoa física — CPF confirmado.", sem
 exibir documento nenhum.
+
+**E o CPF é de todos, não só de quem não tem CNPJ.** "CNPJ é CNPJ, e CPF
+é CPF" — decisão do Luiz em 05/09/2026 (#150). O rádio escolhia *qual*
+dos dois documentos informar, como se fossem alternativas; não são, e
+respondem perguntas diferentes:
+
+- O **CNPJ** responde "esta empresa existe e está ativa?". É o que separa
+  vaga real de anúncio falso, e é conferido na Receita.
+- O **CPF** responde "quem responde por esta conta?". É com essa pessoa
+  que se fala quando uma vaga vira reclamação.
+
+Até aqui a empresa registrada informava só o CNPJ, e **ninguém sabia quem
+estava por trás dela**. Hoje informa os dois; sem CNPJ, informa só o CPF.
+
+Isso não muda quem é verificado: **empresa com CNPJ continua precisando
+apertar "Conferir CNPJ agora"**. O CPF identifica a pessoa, não prova que
+a empresa existe — confundir os dois esvaziaria justamente o que o CNPJ
+protege.
+
+**O preço, aceito de olhos abertos: uma pessoa tem uma conta só.** O CPF
+é único em `usuarios`, e a regra já valia entre candidato e prestador —
+a empresa era a brecha. Fechada ela, quem tem empresa cadastrada não abre
+também uma conta de candidato, nem com outro e-mail. O dono de comércio
+em Sinop que também procura emprego terá que escolher, e isso é decisão
+de produto, não limitação técnica.
+
+A checagem de duplicidade virou **uma só, para os três papéis**. Eram
+duas — uma para as pessoas físicas, outra para empresa via CPF — e a
+diferença existia só porque a empresa com CNPJ não tinha CPF para
+conferir. Duplicar a mesma pergunta em dois `if` é como se esquece de
+estender um deles depois; foi assim que o prestador ficou sem
+`doc_verificado` na #148.
 
 **CNPJ e razão social moram em tabelas que a chave anônima lê — de
 propósito, e com o mesmo cuidado.** `perfis_prestador.cnpj`,

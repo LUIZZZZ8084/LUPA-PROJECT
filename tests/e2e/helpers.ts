@@ -201,6 +201,10 @@ export async function entrarComoEmpresa(page: Page): Promise<string> {
   await page.getByLabel("Nome do responsável").fill("Responsável de Teste");
   await page.getByLabel("Nome da empresa").fill("Transportadora de Teste");
   await page.getByLabel("CNPJ").fill(cnpjDeTeste());
+  // Desde a #150 a empresa informa os dois documentos: o CNPJ diz que a
+  // empresa existe, o CPF diz quem responde pela conta. Único por conta,
+  // pelo mesmo motivo do CNPJ acima.
+  await page.getByLabel("CPF do responsável").fill(cpfDeTeste());
   await page.getByLabel("E-mail").fill(email);
   await page.getByLabel("WhatsApp").fill("66999999999");
   await page.getByLabel("Senha").fill(SENHA_DE_TESTE);

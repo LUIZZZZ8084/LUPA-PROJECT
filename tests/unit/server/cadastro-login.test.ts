@@ -14,6 +14,8 @@ const SENHA = "uma senha bem longa";
 /** Válidos pelo dígito verificador — a mesma exigência do schema. */
 const CPF_CANDIDATO = "52998224725";
 const CPF_PRESTADOR = "11144477735";
+/** Empresa também informa CPF: o do responsável pela conta (#150). */
+const CPF_EMPRESA = "39053344705";
 
 const candidato = {
   papel: "candidato_clt" as const,
@@ -49,6 +51,7 @@ const empresa = {
   cidade: "Sinop" as const,
   razaoSocial: "Agro Norte Ltda.",
   cnpj: "11222333000181",
+  cpf: CPF_EMPRESA,
   porte: "Média" as const,
 };
 
@@ -99,8 +102,29 @@ describe("cadastro e login", () => {
       }
     });
 
-    it("empresa não pede nem aceita CPF — CNPJ já identifica a empresa", () => {
-      expect(Object.keys(empresa)).not.toContain("cpf");
+    /**
+     * "CNPJ é CNPJ, e CPF é CPF" — decisão do Luiz em 05/09/2026 (#150).
+     *
+     * Este teste dizia o contrário: que a empresa "não pede nem aceita
+     * CPF, porque o CNPJ já identifica a empresa". A frase confundia duas
+     * perguntas. O CNPJ identifica *a empresa*; ninguém identificava *a
+     * pessoa* por trás da conta — e é com ela que se fala quando uma vaga
+     * vira reclamação.
+     */
+    it("empresa sem CPF é recusada, mesmo informando CNPJ", () => {
+      const { cpf: _, ...semCpf } = empresa;
+      const r = validar(schemaCadastro, semCpf);
+
+      expect(r.ok).toBe(false);
+      if (r.ok) return;
+      expect(r.erro.campos?.some((c) => c.campo === "cpf")).toBe(true);
+    });
+
+    it("empresa com CPF de dígito errado é recusada", () => {
+      const r = validar(schemaCadastro, { ...empresa, cpf: "52998224726" });
+      expect(r.ok).toBe(false);
+      if (r.ok) return;
+      expect(r.erro.campos?.some((c) => c.campo === "cpf")).toBe(true);
     });
 
     it("prestador sem descrição é recusado — o perfil é o anúncio", () => {
@@ -203,12 +227,47 @@ describe("cadastro e login", () => {
       });
     });
 
+    /**
+     * O CPF da segunda também muda, de propósito.
+     *
+     * Desde a #150 a empresa informa CPF, e ele é único: repetindo os
+     * dois documentos, este teste passaria pelo conflito de CPF e diria
+     * "CNPJ repetido é recusado" sem nunca ter chegado à checagem de
+     * CNPJ — verde pelo motivo errado.
+     */
     it("CNPJ repetido é recusado", async () => {
       await cadastrar(validarOk(empresa));
 
       await expect(
-        cadastrar(validarOk({ ...empresa, email: "outro@agronorte.teste" })),
-      ).rejects.toMatchObject({ codigo: "conflito" });
+        cadastrar(
+          validarOk({
+            ...empresa,
+            email: "outro@agronorte.teste",
+            cpf: "16899535009",
+          }),
+        ),
+      ).rejects.toMatchObject({
+        codigo: "conflito",
+        mensagem: expect.stringContaining("CNPJ"),
+      });
+    });
+
+    /** E o inverso: mesmo CPF, CNPJ diferente, continua sendo uma pessoa só. */
+    it("CPF repetido é recusado também para empresa", async () => {
+      await cadastrar(validarOk(empresa));
+
+      await expect(
+        cadastrar(
+          validarOk({
+            ...empresa,
+            email: "outro@agronorte.teste",
+            cnpj: "45997418000153",
+          }),
+        ),
+      ).rejects.toMatchObject({
+        codigo: "conflito",
+        mensagem: expect.stringContaining("CPF"),
+      });
     });
 
     /**
@@ -236,9 +295,20 @@ describe("cadastro e login", () => {
       expect(criado.cpf).toBe(CPF_CANDIDATO);
     });
 
-    it("empresa é criada sem CPF — ela tem CNPJ", async () => {
+    /**
+     * O CPF vai para `usuarios`; o CNPJ, para `perfis_empresa`. A divisão
+     * não é arrumação: `perfis_empresa` tem `grant select` para `anon`, a
+     * chave que roda no navegador. CNPJ pode ser público porque é registro
+     * público — CPF não é, e por isso mora na tabela que só a chave de
+     * serviço alcança, junto do hash de senha.
+     */
+    it("empresa guarda o CPF em usuarios, e o CNPJ no perfil", async () => {
       const criado = await cadastrar(validarOk(empresa));
-      expect(criado.cpf).toBeNull();
+
+      expect(criado.cpf).toBe(CPF_EMPRESA);
+      expect(await repo.perfilEmpresa(criado.id)).toMatchObject({
+        cnpj: "11222333000181",
+      });
     });
 
     /**
@@ -287,16 +357,24 @@ describe("cadastro e login", () => {
         ).rejects.toMatchObject({ codigo: "validacao" });
       });
 
-      it("via CPF sem informar o CPF é recusado", async () => {
-        await expect(
-          cadastrar(
-            validarOk({
-              ...produtorRural,
-              email: "outro@teste.lupa",
-              cpf: undefined,
-            }),
-          ),
-        ).rejects.toMatchObject({ codigo: "validacao" });
+      /**
+       * A recusa mudou de camada, não de existência.
+       *
+       * Antes da #150 o CPF era opcional no schema e `servico.ts` exigia
+       * quando `tipoDocumento === "cpf"` — por isso este teste chamava
+       * `cadastrar()`. Agora o CPF é obrigatório para empresa nos dois
+       * modos, então quem recusa é o Zod, antes de o serviço rodar.
+       */
+      it("via CPF sem informar o CPF é recusado, já na validação", () => {
+        const r = validar(schemaCadastro, {
+          ...produtorRural,
+          email: "outro@teste.lupa",
+          cpf: undefined,
+        });
+
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.erro.campos?.some((c) => c.campo === "cpf")).toBe(true);
       });
 
       it("CPF repetido é recusado, mesmo vindo de uma empresa", async () => {

@@ -120,7 +120,7 @@ export function SignUpForm({ role }: { role: Role }) {
               >
                 <Input name="razaoSocial" required />
               </Field>
-              {tipoDocumento === "cnpj" ? (
+              {tipoDocumento === "cnpj" && (
                 <Field label="CNPJ" required error={state.campos?.cnpj}>
                   <Input
                     key="cnpj"
@@ -130,23 +130,32 @@ export function SignUpForm({ role }: { role: Role }) {
                     required
                   />
                 </Field>
-              ) : (
-                <Field
-                  label="CPF"
-                  required
-                  error={state.campos?.cpf}
-                  hint="Não aparece no seu perfil público."
-                >
-                  <Input
-                    key="cpf"
-                    name="cpf"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="000.000.000-00"
-                    required
-                  />
-                </Field>
               )}
+              {/*
+               * O CPF vem nos dois modos do rádio, não só no de produtor
+               * rural (#150). O CNPJ identifica a empresa; o CPF, quem
+               * responde pela conta — e até aqui a empresa registrada não
+               * informava pessoa nenhuma.
+               *
+               * O rótulo diz "do responsável" porque, vindo logo abaixo de
+               * um campo de CNPJ, "CPF" sozinho faz a pessoa procurar um
+               * documento da empresa que não existe.
+               */}
+              <Field
+                label="CPF do responsável"
+                required
+                error={state.campos?.cpf}
+                hint="Quem responde pela conta. Não aparece no perfil público."
+              >
+                <Input
+                  key="cpf"
+                  name="cpf"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="000.000.000-00"
+                  required
+                />
+              </Field>
             </div>
           </>
         ) : (
