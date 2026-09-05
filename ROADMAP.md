@@ -156,6 +156,12 @@ Qualidade:
   investigação achou `/empresa` e `/empresa/vagas/nova` sem checagem de
   papel — qualquer conta autenticada abria as duas —
   [#104](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/104)
+- `AlternarTema` chamava `setState` no corpo de um efeito para ler
+  `data-theme` no mount — legítimo (o componente roda no servidor sem
+  `document`), mas reprovado pela regra `react-hooks/set-state-in-effect`
+  e vermelho na CI desde o tema virar padrão claro. Reescrito com
+  `useSyncExternalStore`, sem estado próprio —
+  [#146](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/146)
 
 ## Pendente
 

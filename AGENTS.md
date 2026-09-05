@@ -1162,6 +1162,26 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   diz qual documento é. **Rótulo de opção não deve conter o nome de um
   campo que pode aparecer na mesma tela.**
 
+- **`setState` no corpo de um efeito é reprovado mesmo quando o motivo é
+  legítimo.** `AlternarTema` nascia com estado `null` porque o servidor
+  não tem `document`, e um `useEffect([])` lia `data-theme` do DOM e
+  chamava `setEscuro` para corrigir isso no cliente — a razão estava
+  certa, o `useEffect` não. `react-hooks/set-state-in-effect` reprova o
+  padrão de qualquer forma, porque de fora não dá para distinguir "estou
+  sincronizando com algo externo no mount" de "estou usando o efeito
+  como se fosse um construtor". A troca foi `useSyncExternalStore`, que
+  existe exatamente para ler um valor externo ao React (aqui, um
+  atributo do DOM) sem manter cópia própria em estado: sem `setState`,
+  sem efeito, e o valor já correto na primeira renderização do cliente,
+  porque o script anti-flash já tinha ajustado o atributo antes da
+  hidratação. Ganho de brinde: como o valor deixou de morar num
+  `useState` local, duas instâncias do componente passaram a ficar
+  sincronizadas de graça — o `Set` de ouvintes do módulo é compartilhado
+  entre todas —, o que a versão antiga nunca fazia (#146). **Quando um
+  efeito só existe para ler algo do DOM/ambiente uma vez no mount e
+  gravar em estado, é sinal de que o valor deveria vir de
+  `useSyncExternalStore`, não de um efeito.**
+
 ### Sobre verificação
 
 **Verifique o que você diz que verificou.** Três episódios reais aqui:
