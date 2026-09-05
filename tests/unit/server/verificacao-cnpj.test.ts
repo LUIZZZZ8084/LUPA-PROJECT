@@ -15,7 +15,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Autenticado } from "@/server/auth/rbac";
-import { consultarCnpj, mesmaRazaoSocial } from "@/server/verificacao/cnpj";
+import { consultarCnpj } from "@/server/verificacao/cnpj";
 
 function respostaDaReceita(corpo: unknown, status = 200) {
   return (async () =>
@@ -92,33 +92,6 @@ describe("consulta à Receita", () => {
   });
 });
 
-/**
- * A comparação de nome é onde uma verificação boa vira ruim.
- *
- * A Receita grava em caixa alta e sem acento; quem digita escreve com
- * ponto, acento e caixa mista. Exigir igualdade literal reprovaria a
- * empresa certa — e verificação que reprova quem está certo ensina todo
- * mundo a ignorá-la.
- */
-describe("razão social", () => {
-  it("ignora acento, caixa e pontuação", () => {
-    expect(
-      mesmaRazaoSocial("Agro Norte Comércio Ltda.", "AGRO NORTE COMERCIO LTDA"),
-    ).toBe(true);
-  });
-
-  it("ignora espaço repetido", () => {
-    expect(mesmaRazaoSocial("Agro   Norte", "AGRO NORTE")).toBe(true);
-  });
-
-  /** Palavra a mais é nome diferente, e é isso que se quer enxergar. */
-  it("não ignora palavra", () => {
-    expect(mesmaRazaoSocial("Agro Norte", "AGRO NORTE COMERCIO LTDA")).toBe(
-      false,
-    );
-  });
-});
-
 describe("verificação automática", () => {
   let verificar: typeof import("@/server/verificacao/servico").verificarCnpjAutomatico;
   let repo: import("@/server/repositories").RepositorioMemoria;
@@ -171,7 +144,7 @@ describe("verificação automática", () => {
     return { usuarioId, papel: "empresa" };
   }
 
-  it("empresa ativa com o nome certo fica verificada, sem fila", async () => {
+  it("empresa ativa fica verificada, sem fila", async () => {
     const r = await verificar(sessao(), respostaDaReceita(ATIVA));
 
     expect(r.ok).toBe(true);
@@ -194,17 +167,54 @@ describe("verificação automática", () => {
     expect((await repo.porId(usuarioId))?.docVerificado).toBe(false);
   });
 
-  /** A razão social da Receita vai na mensagem: sem ela, nada a corrigir. */
-  it("nome divergente não verifica, e mostra o da Receita", async () => {
+  /**
+   * O nome da Receita substitui o digitado — não é comparado com ele
+   * (#130).
+   *
+   * A comparação existia para pegar quem digitasse o CNPJ de uma empresa
+   * alheia, e nunca pegou: razão social é dado público, então quem copia o
+   * número copia o nome junto. O que ela pegava era quem estava certo, por
+   * acento e caixa alta. Este teste é o que impede a comparação de voltar.
+   */
+  it("o nome da Receita substitui o digitado, sem reprovar ninguém", async () => {
     const r = await verificar(
       sessao(),
       respostaDaReceita({ ...ATIVA, razao_social: "OUTRA EMPRESA LTDA" }),
     );
 
-    expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.motivo).toContain("OUTRA EMPRESA LTDA");
-    expect((await repo.porId(usuarioId))?.docVerificado).toBe(false);
+    expect(r.ok).toBe(true);
+    expect((await repo.porId(usuarioId))?.docVerificado).toBe(true);
+    expect(await repo.perfilEmpresa(usuarioId)).toMatchObject({
+      razaoSocial: "OUTRA EMPRESA LTDA",
+    });
+  });
+
+  /**
+   * O resto do perfil sobrevive à gravação.
+   *
+   * `salvarPerfilEmpresa` recebe o objeto inteiro, então esquecer um campo
+   * aqui apagaria em silêncio o que a empresa preencheu — a mesma
+   * armadilha que `salvarPerfilPrestador` já teve com os campos de CNPJ.
+   */
+  it("preencher o nome não apaga setor, site nem descrição", async () => {
+    await repo.salvarPerfilEmpresa(usuarioId, {
+      razaoSocial: "Agro Norte Comércio de Insumos Ltda.",
+      setor: "Agronegócio",
+      porte: "Média",
+      site: "https://agronorte.com.br",
+      instagram: null,
+      facebook: null,
+      descricao: "Insumos agrícolas em Sinop.",
+    });
+
+    await verificar(sessao(), respostaDaReceita(ATIVA));
+
+    expect(await repo.perfilEmpresa(usuarioId)).toMatchObject({
+      setor: "Agronegócio",
+      porte: "Média",
+      site: "https://agronorte.com.br",
+      descricao: "Insumos agrícolas em Sinop.",
+    });
   });
 
   it("Receita fora do ar não verifica nem culpa quem está na tela", async () => {
