@@ -141,6 +141,23 @@ export async function cadastrar(
       cnpjVerificado: false,
       razaoSocial: null,
     });
+
+    /*
+     * CPF válido e único é a própria verificação (#133), sem fila e sem
+     * foto — a mesma regra que `virarPrestador` já aplica ao converter
+     * uma conta existente, e que `empresaViaCpf` logo abaixo também
+     * aplica. Faltava aqui: quem entrava direto como prestador, pelo
+     * cadastro e não pela conversão, nunca tinha o CPF confirmado e
+     * ficava para sempre fora de `/servicos` — a busca só lista quem tem
+     * `doc_verified` — sem nada além do aviso genérico do perfil
+     * explicando por quê (#142).
+     */
+    await repo.definirDocVerificado(usuario.id, true);
+    // Mesmo motivo do `usuario = { ...usuario, docVerificado: true }` logo
+    // abaixo, para empresa: sem atualizar a referência local, o retorno
+    // desta função mentiria "não verificado" para uma conta que acabou de
+    // ser marcada como verificada.
+    usuario = { ...usuario, docVerificado: true };
   } else {
     await repo.criarPerfilEmpresa({
       usuarioId: usuario.id,

@@ -92,6 +92,11 @@ Prestador:
 - Avaliar um prestador com nota e comentário — o convite que estava na
   tela desde o começo e não tinha botão —
   [#116](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/116)
+- Quem entrava direto como prestador pelo cadastro nunca tinha o CPF
+  confirmado e ficava fora de `/servicos` sem aviso de como corrigir —
+  a mesma verificação por CPF já valia para quem convertia a conta pela
+  ativação (#133), só faltava no cadastro direto —
+  [#142](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/142)
 
 Perfil e vaga, o que cada um informa:
 
@@ -156,6 +161,12 @@ Qualidade:
   investigação achou `/empresa` e `/empresa/vagas/nova` sem checagem de
   papel — qualquer conta autenticada abria as duas —
   [#104](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/104)
+- `--color-empresas` e `--color-danger`, no tema claro, passavam 4,5:1
+  contra branco e reprovavam contra o próprio selo e botão — que pintam
+  o texto na cor cheia sobre a mesma cor a 15% de opacidade, mistura
+  mais clara que branco puro. Pego pela varredura de acessibilidade em
+  `/empresa` —
+  [#144](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/144)
 - `AlternarTema` chamava `setState` no corpo de um efeito para ler
   `data-theme` no mount — legítimo (o componente roda no servidor sem
   `document`), mas reprovado pela regra `react-hooks/set-state-in-effect`

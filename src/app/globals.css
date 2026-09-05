@@ -42,17 +42,29 @@
    * placa de sinalização), escurecido até passar 4.5:1 sobre fundo
    * branco: a cor de destaque também é o texto de link e o rótulo de
    * selo, então precisa valer como texto, não só como mancha de cor.
+   *
+   * A régua contra branco sólido não bastava. `Badge` e o variant
+   * `danger` de `Button` pintam o texto na própria cor, sobre um fundo
+   * que é a mesma cor a 15% de opacidade (`bg-empresas/15`,
+   * `bg-danger/15`) — e essa mistura clareia o fundo *na direção* da
+   * cor do texto, o que aperta o contraste mais do que branco puro
+   * apertaria. `--color-empresas` e `--color-danger` passavam 4,5:1
+   * contra branco (5,85:1 e 6,05:1) e ainda assim reprovavam contra o
+   * próprio selo (4,45:1 e 4,34:1) — falha "serious" do axe-core em
+   * `/empresa`, pego pela varredura de acessibilidade. As outras três
+   * (`vagas`, `servicos`, `warn`) já passavam dos dois lados por
+   * coincidência de quanto tinham sido escurecidas antes.
    */
   --color-vagas: #3f6810;
   --color-vagas-dim: #2f4d0c;
   --color-servicos: #a8480f;
   --color-servicos-dim: #8a3a0c;
-  --color-empresas: #3868b8;
+  --color-empresas: #3664b0;
   --color-empresas-dim: #2c5395;
 
   /* Semânticas */
   --color-warn: #8a5a06;
-  --color-danger: #c53030;
+  --color-danger: #b92d2d;
   --color-star: #8a5a06;
   /*
    * Verde do WhatsApp de verdade (`#25d366`) não passa nem perto de

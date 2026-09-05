@@ -1162,6 +1162,40 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   diz qual documento é. **Rótulo de opção não deve conter o nome de um
   campo que pode aparecer na mesma tela.**
 
+- **Uma regra corrigida num caminho e esquecida no outro que leva ao
+  mesmo lugar.** A #133 trocou "documento e selfie" por "CPF válido e
+  único" como a verificação do prestador — mas só dentro de
+  `virarPrestador()`, o caminho de quem converte uma conta já existente.
+  Quem se cadastra **direto** como prestador passa por `cadastrar()`, uma
+  função irmã que grava o mesmo CPF na mesma tabela e nunca chamava
+  `definirDocVerificado`. As duas funções faziam a mesma promessa — CPF
+  válido e único libera a busca — e só uma das duas cumpria. Ninguém viu
+  porque o comentário que explicava a regra, em
+  `perfil-profissional.tsx`, presumia que "hoje `virarPrestador` confirma
+  o CPF" cobria os dois jeitos de alguém se tornar prestador; cobria só
+  um. Corrigido na #142, replicando em `cadastrar()` a mesma chamada que
+  `empresaViaCpf` já fazia logo abaixo, no mesmo arquivo — o exemplo
+  estava a poucas linhas de distância e não foi seguido. **Quando duas
+  funções produzem o mesmo tipo de conta por caminhos diferentes, uma
+  regra de negócio corrigida numa delas provavelmente falta na outra —
+  procure a irmã antes de fechar a Issue.**
+
+- **Passar 4,5:1 contra branco não prova que passa contra o próprio
+  fundo tingido.** `--color-empresas` e `--color-danger`, no tema claro,
+  foram escurecidos até o texto valer como link sobre branco — e
+  passavam, com folga (5,85:1 e 6,05:1). Mas `Badge` e o variant
+  `danger` de `Button` pintam esse mesmo texto sobre a mesma cor a 15%
+  de opacidade (`bg-empresas/15`, `bg-danger/15`), e essa mistura é mais
+  clara que o branco puro contra o qual a cor tinha sido calibrada —
+  4,45:1 e 4,34:1, abaixo do mínimo. As outras três cores da paleta
+  (`vagas`, `servicos`, `warn`) passavam nos dois testes por
+  coincidência de quanto já tinham sido escurecidas antes, não porque
+  alguém tivesse checado o par certo. Pego pela varredura de
+  acessibilidade em `/empresa`, que é a única rota com selo `tone`
+  colorido e botão `danger` na mesma tela (#144). **Toda cor que serve de
+  texto E de fundo tingido de si mesma precisa ser conferida contra as
+  duas combinações — a mais clara das duas é a que decide.**
+
 - **`setState` no corpo de um efeito é reprovado mesmo quando o motivo é
   legítimo.** `AlternarTema` nascia com estado `null` porque o servidor
   não tem `document`, e um `useEffect([])` lia `data-theme` do DOM e

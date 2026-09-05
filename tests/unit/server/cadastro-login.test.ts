@@ -155,6 +155,20 @@ describe("cadastro e login", () => {
       });
     });
 
+    /**
+     * Issue #142: quem entrava direto como prestador nunca tinha o CPF
+     * confirmado, e ficava fora de `/servicos` — que só lista quem tem
+     * `doc_verified` — sem passo nenhum para corrigir sozinho.
+     *
+     * `virarPrestador` (a conversão de uma conta existente) já confirmava
+     * na mesma ação desde a #133; faltava o cadastro direto, que é o
+     * caminho deste teste.
+     */
+    it("prestador já nasce verificado, pelo próprio CPF do cadastro", async () => {
+      const criado = await cadastrar(validarOk(prestador));
+      expect(criado.docVerificado).toBe(true);
+    });
+
     it("cria o perfil certo para cada papel", async () => {
       const c = await cadastrar(validarOk(candidato));
       const e = await cadastrar(validarOk(empresa));
