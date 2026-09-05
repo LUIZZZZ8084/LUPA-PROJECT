@@ -1162,6 +1162,22 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   diz qual documento é. **Rótulo de opção não deve conter o nome de um
   campo que pode aparecer na mesma tela.**
 
+- **Passar 4,5:1 contra branco não prova que passa contra o próprio
+  fundo tingido.** `--color-empresas` e `--color-danger`, no tema claro,
+  foram escurecidos até o texto valer como link sobre branco — e
+  passavam, com folga (5,85:1 e 6,05:1). Mas `Badge` e o variant
+  `danger` de `Button` pintam esse mesmo texto sobre a mesma cor a 15%
+  de opacidade (`bg-empresas/15`, `bg-danger/15`), e essa mistura é mais
+  clara que o branco puro contra o qual a cor tinha sido calibrada —
+  4,45:1 e 4,34:1, abaixo do mínimo. As outras três cores da paleta
+  (`vagas`, `servicos`, `warn`) passavam nos dois testes por
+  coincidência de quanto já tinham sido escurecidas antes, não porque
+  alguém tivesse checado o par certo. Pego pela varredura de
+  acessibilidade em `/empresa`, que é a única rota com selo `tone`
+  colorido e botão `danger` na mesma tela (#144). **Toda cor que serve de
+  texto E de fundo tingido de si mesma precisa ser conferida contra as
+  duas combinações — a mais clara das duas é a que decide.**
+
 ### Sobre verificação
 
 **Verifique o que você diz que verificou.** Três episódios reais aqui:
