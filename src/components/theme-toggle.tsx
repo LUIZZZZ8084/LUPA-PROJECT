@@ -1,9 +1,52 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { CHAVE_TEMA, type Tema } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+
+/**
+ * O tema atual, lido direto do DOM — sem estado próprio de React.
+ *
+ * `data-theme` no `<html>` já é a fonte da verdade: o script anti-flash
+ * de `lib/theme.ts` o define antes da primeira pintura, e este módulo só
+ * lê o que já está lá. `useSyncExternalStore` existe exatamente para
+ * isto — um valor externo ao React que precisa ser lido de forma
+ * diferente no servidor e no cliente, sem arriscar o "texto do servidor
+ * não bate com o do cliente" nem precisar de `setState` dentro de um
+ * efeito, que é o padrão que a regra `react-hooks/set-state-in-effect`
+ * passou a reprovar.
+ *
+ * Não existe evento de DOM para "atributo mudou" nativamente, e nada
+ * fora deste módulo altera `data-theme` — por isso `inscrever` não tem o
+ * que ouvir; quem dispara a atualização é a própria `alternar()`, que
+ * muda o atributo e chama `notificarMudanca()` na sequência.
+ */
+const ouvintes = new Set<() => void>();
+
+function inscrever(notificar: () => void): () => void {
+  ouvintes.add(notificar);
+  return () => ouvintes.delete(notificar);
+}
+
+function notificarMudanca(): void {
+  for (const notificar of ouvintes) notificar();
+}
+
+function lerTemaEscuro(): boolean {
+  return document.documentElement.getAttribute("data-theme") === "dark";
+}
+
+/**
+ * No servidor não existe `document`, e chutar "claro" esconderia por um
+ * instante o ícone certo de quem já escolheu escuro. `null` mantém os
+ * dois ícones sobrepostos e transparentes até o valor real do cliente
+ * assumir — que, com `data-theme` já certo antes da pintura, acontece
+ * junto da hidratação, sem o piscar que um `useEffect` posterior teria.
+ */
+function lerTemaNoServidor(): boolean | null {
+  return null;
+}
 
 /**
  * Alterna entre claro (o padrão da plataforma) e escuro (a opção).
@@ -11,26 +54,17 @@ import { cn } from "@/lib/utils";
  * Mexe direto no atributo do `<html>` e no `localStorage`, sem Context
  * nem Provider: é um interruptor binário, e o "antes da primeira
  * pintura" já está coberto pelo script de `lib/theme.ts`, injetado no
- * `<head>` em `layout.tsx` — este componente só precisa ler o que já
- * está no DOM e escrever a escolha de volta.
- *
- * O estado nasce `null` de propósito. Componente de cliente roda a mesma
- * função no servidor para gerar o HTML, e lá não existe `document` —
- * chutar "claro" esconderia por um instante o ícone certo de quem já
- * escolheu escuro. `null` renderiza os dois ícones sobrepostos e
- * transparentes até o efeito confirmar qual é o de verdade, o que troca
- * o problema por um piscar de ícone sozinho, não da tela inteira.
+ * `<head>` em `layout.tsx`.
  */
 export function AlternarTema({ className }: { className?: string }) {
-  const [escuro, setEscuro] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    setEscuro(document.documentElement.getAttribute("data-theme") === "dark");
-  }, []);
+  const escuro = useSyncExternalStore(
+    inscrever,
+    lerTemaEscuro,
+    lerTemaNoServidor,
+  );
 
   function alternar() {
     const proximo = !escuro;
-    setEscuro(proximo);
 
     if (proximo) {
       document.documentElement.setAttribute("data-theme", "dark");
@@ -45,6 +79,8 @@ export function AlternarTema({ className }: { className?: string }) {
       // Sem storage (aba anônima estrita, cota cheia) o toggle ainda
       // funciona para a sessão atual — só não sobrevive a um recarregar.
     }
+
+    notificarMudanca();
   }
 
   return (
