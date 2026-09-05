@@ -118,33 +118,3 @@ export async function consultarCnpj(
     return { tipo: "indisponivel" };
   }
 }
-
-/**
- * Compara razão social do jeito que uma pessoa compararia.
- *
- * A Receita grava em caixa alta e sem acento; quem digita escreve
- * "Agro Norte Ltda." com ponto, acento e caixa mista. Exigir igualdade
- * literal reprovaria a empresa certa — e uma verificação que reprova quem
- * está certo é pior que verificação nenhuma, porque ensina a ignorá-la.
- *
- * O que se normaliza é acento, caixa, pontuação e espaço repetido. O que
- * **não** se normaliza é palavra: "Agro Norte" e "Agro Norte Comércio"
- * continuam sendo nomes diferentes, e é justamente essa diferença que se
- * quer enxergar.
- */
-export function mesmaRazaoSocial(
-  informada: string,
-  daReceita: string,
-): boolean {
-  return normalizarNome(informada) === normalizarNome(daReceita);
-}
-
-function normalizarNome(valor: string): string {
-  return valor
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9 ]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
