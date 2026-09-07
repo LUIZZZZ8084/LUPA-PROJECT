@@ -233,6 +233,10 @@ function jobListingDaVaga(vaga: Vaga): JobListing {
       company_name: empresa?.company_name ?? "Empresa",
       logo_url: empresa?.logo_url ?? null,
       doc_verified: empresa?.doc_verified ?? false,
+      // Sem CNPJ, quem contrata é pessoa física (#129). A empresa de
+      // demonstração não encontrada cai em `false`: melhor não afirmar
+      // nada do que rotular de pessoa física uma vaga do seed.
+      pessoa_fisica: empresa ? empresa.cnpj === null : false,
       site: empresa?.site ?? null,
       instagram: empresa?.instagram ?? null,
       facebook: empresa?.facebook ?? null,

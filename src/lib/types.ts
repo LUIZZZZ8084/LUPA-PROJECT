@@ -146,6 +146,15 @@ export interface JobListing extends Job {
     "company_name" | "logo_url" | "site" | "instagram" | "facebook"
   > & {
     doc_verified: boolean;
+    /**
+     * Quem contrata é pessoa física, e não empresa registrada (#129).
+     *
+     * Derivado de `perfis_empresa.cnpj is null` na view — o documento em si
+     * nunca sai de `usuarios`. Opcional porque banco sem a migração
+     * aplicada não devolve o campo, e aí a tela não desenha selo nenhum em
+     * vez de afirmar o que não sabe.
+     */
+    pessoa_fisica?: boolean;
   };
   applicant_count: number;
 }

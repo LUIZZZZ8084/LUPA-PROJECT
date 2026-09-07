@@ -205,9 +205,25 @@ describe("RBAC", () => {
     expect(pode("candidato_clt", "admin:painel")).toBe(false);
   });
 
-  it("prestador publica no perfil, mas não publica vaga", () => {
+  /**
+   * O prestador contrata, e não se candidata (#129).
+   *
+   * As duas metades vêm de decisões diferentes e valem juntas: publicar
+   * vaga entrou porque produtor rural, autônomo e prestador contratam
+   * ajudante de verdade; `candidatura:criar` continua fora porque virar
+   * prestador é justamente deixar de se candidatar.
+   *
+   * As quatro capacidades de vaga andam em bloco. Publicar sem mover
+   * candidatura deixaria a pessoa recebendo currículo sem ter o que fazer
+   * com ele — tela sem saída, que é o defeito que a #122 tinha criado ao
+   * abrir só a leitura do painel.
+   */
+  it("prestador publica no perfil e contrata, mas não se candidata", () => {
     expect(pode("prestador_servico", "publicacao:criar")).toBe(true);
-    expect(pode("prestador_servico", "vaga:publicar")).toBe(false);
+    expect(pode("prestador_servico", "vaga:publicar")).toBe(true);
+    expect(pode("prestador_servico", "vaga:editar_propria")).toBe(true);
+    expect(pode("prestador_servico", "vaga:encerrar_propria")).toBe(true);
+    expect(pode("prestador_servico", "candidatura:mover_estagio")).toBe(true);
     expect(pode("prestador_servico", "candidatura:criar")).toBe(false);
   });
 

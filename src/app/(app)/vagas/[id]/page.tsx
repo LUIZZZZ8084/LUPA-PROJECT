@@ -87,6 +87,18 @@ export default async function JobDetailPage({
               {job.company.doc_verified && <VerifiedMark size={14} />}
             </p>
 
+            {/*
+             * No detalhe a frase é inteira, porque é aqui que a pessoa
+             * decide se se candidata (#129). Produtor rural e autônomo
+             * contratam de verdade — o que a frase faz é dizer o que a
+             * verificação alcançou, sem sugerir que a vaga vale menos.
+             */}
+            {job.company.pessoa_fisica && (
+              <p className="mt-1 text-xs text-faint">
+                Contratação por pessoa física, não por empresa registrada.
+              </p>
+            )}
+
             {(job.company.site ||
               job.company.instagram ||
               job.company.facebook) && (

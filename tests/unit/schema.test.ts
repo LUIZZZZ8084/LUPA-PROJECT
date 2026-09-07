@@ -460,6 +460,49 @@ describe("views devolvem o formato que a aplicação espera", () => {
     expect(Number(r.rows[0].applicant_count)).toBeGreaterThanOrEqual(0);
   });
 
+  /**
+   * Quem contrata é pessoa ou empresa, e a vaga diz qual (#129).
+   *
+   * O que vai na view é o booleano derivado do CNPJ, nunca o documento:
+   * `job_listings` é lida pela chave anônima, e o CPF de quem contrata como
+   * pessoa física mora em `usuarios`. A varredura que recusa a coluna `cpf`
+   * em tudo que `anon` lê continua sendo a garantia geral; este teste
+   * garante que o dado *certo* está presente.
+   */
+  it("job_listings diz se quem contrata é pessoa física, sem expor documento", async () => {
+    await db.query(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf)
+       values ('autonomo@lupa.test', 'h', 'prestador_servico', 'Quem Contrata',
+               '66999990009', '11144477735')`,
+    );
+    await db.query(
+      `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+       select id, 'Quem Contrata', null from usuarios
+        where email = 'autonomo@lupa.test'`,
+    );
+    await db.query(
+      `insert into vagas (empresa_id, titulo, descricao, categoria, cidade,
+                          tipo_contrato)
+       select id, 'Ajudante de lavoura', 'Diária na colheita.', 'Agronegócio',
+              'Sinop', 'CLT'
+         from usuarios where email = 'autonomo@lupa.test'`,
+    );
+
+    const r = await db.query<{ company: Record<string, unknown> }>(
+      `select company from job_listings
+        where company->>'company_name' = 'Quem Contrata'`,
+    );
+
+    expect(r.rows[0].company).toMatchObject({ pessoa_fisica: true });
+    expect(Object.keys(r.rows[0].company)).not.toContain("cpf");
+
+    const daEmpresa = await db.query<{ company: { pessoa_fisica: boolean } }>(
+      `select company from job_listings
+        where company->>'company_name' <> 'Quem Contrata' limit 1`,
+    );
+    expect(daEmpresa.rows[0].company.pessoa_fisica).toBe(false);
+  });
+
   it("metricas_totais responde com números", async () => {
     const r = await db.query<{ usuarios: string; vagas_abertas: string }>(
       "select * from metricas_totais",

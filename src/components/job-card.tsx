@@ -64,9 +64,23 @@ export function JobCard({
 
         {/* O truncate precisa ficar no texto, não no contêiner flex: em flex
             o ellipsis não se aplica e o nowrap trava a largura do card. */}
+        {/*
+         * "Pessoa física" fica ao lado do nome, não escondido no detalhe.
+         *
+         * Quem procura emprego decide se abre a vaga olhando o card, e
+         * saber se está tratando com uma empresa registrada ou com uma
+         * pessoa muda o que dá para conferir antes de ir a uma entrevista
+         * (#129). Não é aviso de risco — produtor rural e autônomo
+         * contratam de verdade —, é a informação que faltava.
+         */}
         <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-muted">
           <span className="truncate">{job.company.company_name}</span>
           {job.company.doc_verified && <VerifiedMark size={13} />}
+          {job.company.pessoa_fisica && (
+            <span className="flex-none text-[11px] text-faint">
+              · Pessoa física
+            </span>
+          )}
         </p>
 
         <p className="mt-2 text-sm font-semibold text-vagas">

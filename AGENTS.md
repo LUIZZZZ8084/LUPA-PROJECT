@@ -322,11 +322,40 @@ Isso é diferente de `/admin`, que continua no proxy: lá, confirmar que a
 rota existe já é informação para quem sonda. Aqui não há segredo — que
 exista um painel de quem contrata é evidente pela própria navegação.
 
-Publicar vaga continua fechado para os dois. O perfil de contratante ainda
-exige CNPJ, e aceitar CPF é migração própria — `perfis_empresa.cnpj` é
-`not null unique` hoje, e o CNPJ é o que o `AGENTS.md` registra como o que
-separa vaga real de anúncio falso. Vaga publicada por pessoa física
-precisa de outro selo antes de existir.
+**E o prestador passou a publicar vaga (#129).** Este parágrafo dizia que
+publicar continuava fechado, porque `perfis_empresa.cnpj` era `not null` e
+"vaga de pessoa física precisa de outro selo antes de existir". As duas
+coisas mudaram: a coluna virou opcional junto com a #138, e o selo passou a
+existir — desde a #133, CPF válido e único é a verificação do prestador.
+
+**O selo que faltava já estava lá, e ninguém tinha percebido.** A Issue
+pedia uma migração que já tinha entrado de carona noutra. Vale como aviso:
+Issue que descreve trabalho de banco envelhece rápido, e o schema é a fonte
+da verdade — confira a coluna antes de escrever a migração.
+
+**São quatro capacidades, não uma.** `vaga:publicar` sozinha deixaria a
+pessoa recebendo currículo sem poder mover a candidatura — a mesma tela sem
+saída que a #122 tinha criado ao abrir só a leitura do painel.
+
+**O perfil de contratante nasce na primeira vaga.** `job_listings` faz
+*inner join* com `perfis_empresa`: sem essa linha a vaga é gravada e some
+da busca, e a pessoa vê "publicada", não se acha em `/vagas` e conclui que
+o app engoliu o anúncio dela. A razão social é o nome da pessoa e o CNPJ
+fica nulo — o formato do produtor rural da #139. Criar ali, e não numa tela
+à parte, é decisão de atrito: uma tela a mais não perguntaria nada que a
+sessão já não responda.
+
+A criação é feita **só para `prestador_servico`**. A conta de empresa ganha
+o perfil no cadastro, e consultar o banco para os dois papéis seria uma
+consulta a mais em toda publicação para responder o que já se sabe.
+
+**A vaga diz se quem contrata é pessoa ou empresa**, e a view carrega o
+booleano derivado de `cnpj is null` — nunca o documento. `job_listings` é
+lida pela chave anônima; o CPF de quem contrata como pessoa física fica em
+`usuarios` e não sai de lá. Quem procura emprego tem direito de saber com
+quem está tratando: muda o que dá para conferir antes de ir a uma
+entrevista. Não é aviso de risco — produtor rural e autônomo contratam de
+verdade —, é a informação que faltava.
 
 ### O CNPJ é conferido na Receita, e o que isso prova
 

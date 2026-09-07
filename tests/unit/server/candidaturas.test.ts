@@ -135,11 +135,24 @@ describe("candidaturas", () => {
       expect(erro.codigo).toBe("sem_permissao");
     });
 
-    it("prestador não tem a capacidade", async () => {
+    /**
+     * O prestador ganhou a capacidade na #129, e continua barrado aqui —
+     * por outro portão.
+     *
+     * As duas perguntas do RBAC são independentes: "este papel pode fazer
+     * isto" passa agora, e "este registro é desta pessoa" continua
+     * reprovando. Por isso o código muda de `sem_permissao` para
+     * `nao_encontrado`: 404 e não 403, porque um 403 confirmaria que a
+     * candidatura existe para quem estivesse sondando ids.
+     */
+    it("prestador move a própria, não a de outro contratante", async () => {
+      const vaga = await publicarVaga(empresa, DADOS_VAGA);
+      const candidatura = await candidatarSe(candidato, vaga.id);
+
       const erro = await capturar(() =>
-        moverCandidatura(prestador, "candidatura-1", "entrevista"),
+        moverCandidatura(prestador, candidatura.id, "entrevista"),
       );
-      expect(erro.codigo).toBe("sem_permissao");
+      expect(erro.codigo).toBe("nao_encontrado");
     });
 
     it("id inexistente é 'não encontrado'", async () => {

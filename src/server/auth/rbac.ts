@@ -138,11 +138,18 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
      * Produtor rural, autônomo e prestador contratam ajudante, e barrar
      * isso deixava a barra inferior mostrando um item que dava 404.
      *
-     * Só a leitura do painel entra agora. Publicar vaga exige um perfil de
-     * contratante, que hoje pede CNPJ — e passar a aceitar CPF é migração
-     * própria, na Issue seguinte.
+     * A Issue seguinte (#129) era essa migração, e ela já tinha entrado
+     * junto com a #138: `perfis_empresa.cnpj` é opcional desde então.
+     * Restava dar as capacidades — e são as quatro, não só publicar: quem
+     * publica e não consegue mover a candidatura recebe currículo e não
+     * tem o que fazer com ele, que é a mesma classe de tela sem saída que
+     * este arquivo já registrou duas vezes.
      */
+    "vaga:publicar",
+    "vaga:editar_propria",
+    "vaga:encerrar_propria",
     "vaga:ver_candidaturas_proprias",
+    "candidatura:mover_estagio",
   ],
 
   empresa: [
