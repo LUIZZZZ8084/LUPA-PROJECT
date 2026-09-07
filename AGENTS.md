@@ -839,6 +839,72 @@ confere, para dar mensagem decente antes de gravar — mas duas requisições
 simultâneas passariam pela checagem e criariam a décima primeira. O banco é
 o único lugar onde essa corrida não existe.
 
+### O aviso de vaga guarda o que a pessoa pediu, e nada mais
+
+Push por cidade e categoria (#48). Numa plataforma que saiu da busca do
+Google, ninguém chega sozinho: uma vaga só é vista por quem resolver abrir
+o app naquele dia, e vaga boa em Sinop some em dois dias. O aviso é o que
+devolve a pessoa ao app sem ela ter de lembrar.
+
+**É Web Push, com chaves VAPID — de graça.** Ao contrário do SMS da #120,
+não depende de provedor pago. `scripts/gerar-vapid.mjs` gera o par e
+imprime uma vez, como o `criar-admin.mjs`: a privada é credencial e nunca
+leva prefixo `NEXT_PUBLIC_`. Sem as chaves o recurso não existe e a tela
+diz isso — mesma degradação do Storage sem Supabase.
+
+**Guardar preferência é o oposto do que a tabela de buscas decidiu, e é
+deliberado.** `buscas_sem_resultado` não liga termo a pessoa porque, em
+Sinop, saber que alguém pesquisou "vaga de motorista" três vezes diz que
+ela quer sair do emprego atual. A preferência de aviso é essa mesma
+informação — com a diferença de que a pessoa **pediu**, e ela é o mínimo
+necessário para cumprir o pedido.
+
+O que se recusa guardar junto é o **histórico de envio**. "Avisamos fulano
+sobre estas doze vagas" reconstruiria exatamente o que a outra tabela
+evita. Nenhuma das duas tabelas tem grant para `anon` nem para
+`authenticated`, e o teste de schema varre as duas.
+
+**Desligar apaga tudo** — preferência e aparelhos. Meia desativação, que
+para de avisar e guarda o que a pessoa procurava, seria manter justamente
+o dado que este bloco existe para limitar.
+
+**A permissão do navegador só se pede uma vez.** Negada, não há como
+perguntar de novo — nem no mesmo aparelho, nem depois de a pessoa mudar de
+ideia. Por isso o pedido vem *depois* de ela escolher cidade e área e
+apertar o botão, quando já sabe o que está aceitando; e por isso a
+preferência é gravada **antes** do pedido, para que negar não custe a
+escolha. Pedir ao abrir a tela queimaria a única chance com quem ainda não
+entendeu a oferta.
+
+**Ninguém é avisado da própria vaga.** Parece óbvio e não é: quem publica
+está na mesma cidade e quase sempre na mesma categoria, então sem essa
+linha a primeira notificação que a pessoa recebe é a dela mesma — e a
+conclusão dela é que o aviso está quebrado.
+
+**Vaga sem categoria alcança só quem pediu a cidade inteira.** O campo é
+opcional em `vagas`, e nesse caso não há como saber se ela interessa a quem
+escolheu "Agronegócio". Avisar mesmo assim ensinaria a ignorar o balão — e
+aviso ignorado não entrega nem a vaga certa.
+
+**Aparelho que responde 404 ou 410 sai da tabela.** É a única forma de
+saber que alguém desinstalou ou trocou de telefone; o navegador não avisa
+ninguém. Qualquer outra falha não apaga nada: sumir com a inscrição de quem
+estava sem sinal é pior que deixar de avisar uma vez.
+
+**Bairro ficou fora**, decisão de 26/08/2026: não existe catálogo de bairro
+para os 142 municípios, só para Sinop. Notificar por bairro funcionaria bem
+numa cidade e mal nas outras 141.
+
+**O envio sai por `after()`**, depois da resposta — quem publicou quer a
+vaga no ar, e o aviso é consequência. Mesma disciplina do registro de
+visualização.
+
+**O service worker não faz cache**, e isso é escolha. O app é todo atrás de
+login: cache mal desenhado aqui mostra a vaga de ontem como se fosse a de
+hoje, ou o conteúdo da sessão de outra pessoa no mesmo aparelho. Ele existe
+para receber push e para ser o requisito de instalação no iPhone, que é do
+que o APK/TWA depende.
+
 ### Busca sem resultado é vocabulário, não histórico de pessoa
 
 `buscas_sem_resultado` guarda termo, dia, tela e contagem — quatro colunas,

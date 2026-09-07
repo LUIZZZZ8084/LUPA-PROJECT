@@ -24,6 +24,7 @@ Base:
 - Busca de vagas e de prestadores, com filtro por cidade, bairro e
   categoria
 - Candidatura a vaga, e acompanhamento em "Minhas candidaturas"
+- Aviso de vaga nova por cidade e categoria, via Web Push (#48)
 - Publicações no perfil do prestador, com limite de 10 ativas
 - Painel administrativo: fila de verificação manual, métricas básicas
 - Schema único (`supabase/schema.sql`), executado por teste contra
@@ -180,14 +181,6 @@ Qualidade:
 Luiz em 01/09/2026, que reúne numa etapa só o que antes estava espalhado.
 Nada aqui está bloqueado por código.
 
-- [ ] Notificação push por cidade e categoria —
-      [#48](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/48)
-
-      Espera o APK por razão técnica: o caminho é PWA → Capacitor
-      (`docs/brief-tecnico.md`, seção 12), e no Android o Capacitor usa
-      Firebase Cloud Messaging. Fazer agora com Web Push puro seria
-      construir duas vezes.
-
 - [ ] Cobrança via Mercado Pago (planos trial/mensal) —
       [#46](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/46)
 
@@ -202,7 +195,6 @@ Nada aqui está bloqueado por código.
 | O que | Quem decide | Por que está parado |
 |---|---|---|
 | Conta do Mercado Pago | Luiz | Sem credencial não há como integrar |
-| Provedor de push (#48) | Luiz | Resolvido junto com o APK: Firebase, que o Capacitor usa no Android |
 | Cloudflare | Luiz | Só com abuso real medido — o passo antes é o #67 |
 | Busca vetorial | Luiz | Só com o dado do #66 na mão |
 
