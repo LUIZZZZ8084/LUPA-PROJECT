@@ -8,6 +8,7 @@ import {
 } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
+import { repositorioUsuarios } from "../repositories";
 import { repositorioVagas } from "./index";
 import type { DadosNovaVaga, EdicaoVaga, Vaga } from "./tipos";
 
@@ -44,11 +45,66 @@ async function vagaDaEmpresa(sessao: Autenticado, id: string): Promise<Vaga> {
   return atual;
 }
 
+/**
+ * Quem contrata sem ter aberto empresa ganha o perfil de contratante na
+ * primeira vaga que publica (#129).
+ *
+ * `job_listings` faz **inner join** com `perfis_empresa`: sem essa linha, a
+ * vaga é gravada e some da busca — o pior desfecho possível, porque a
+ * pessoa vê "vaga publicada", não se acha em `/vagas` e conclui que o app
+ * engoliu o anúncio dela. É a mesma família do padrão de cidade que
+ * escondia vaga de quem tinha acabado de publicar.
+ *
+ * A razão social é o nome da pessoa, e o CNPJ fica nulo — exatamente o
+ * formato do produtor rural da #139. O CPF **não** vem para cá: esta tabela
+ * é lida pela chave anônima, e o documento continua em `usuarios`. Quem
+ * olha a vaga sabe que é pessoa física porque não há CNPJ, não porque
+ * mostramos documento nenhum.
+ *
+ * Criar aqui, e não numa tela à parte, é decisão de atrito: uma tela a mais
+ * entre a pessoa e a vaga dela seria mais um lugar para desistir, e não
+ * perguntaria nada que a sessão já não responda.
+ */
+async function garantirPerfilDeContratante(sessao: Autenticado): Promise<void> {
+  /*
+   * Só o prestador chega aqui sem perfil de contratante.
+   *
+   * A conta de empresa ganha o dela em `cadastrar()`, na mesma passada que
+   * cria o usuário. Consultar o banco para os dois papéis seria uma
+   * consulta a mais em toda publicação de vaga, para responder uma pergunta
+   * cuja resposta já se conhece — e faria este serviço depender do
+   * repositório de usuários num caminho onde ele não precisa.
+   */
+  if (sessao.papel !== "prestador_servico") return;
+
+  const repo = repositorioUsuarios();
+  if (await repo.perfilEmpresa(sessao.usuarioId)) return;
+
+  const usuario = await repo.porId(sessao.usuarioId);
+  if (!usuario) throw erros.naoEncontrado("Usuário");
+
+  await repo.criarPerfilEmpresa({
+    usuarioId: sessao.usuarioId,
+    razaoSocial: usuario.nomeCompleto,
+    cnpj: null,
+    setor: null,
+    porte: null,
+    site: null,
+    instagram: null,
+    facebook: null,
+    descricao: null,
+    logoUrl: null,
+    plano: "trial",
+  });
+}
+
 export async function publicarVaga(
   sessao: Autenticado | null,
   dados: Omit<DadosNovaVaga, "empresaId" | "cidade"> & { cidade: string },
 ): Promise<Vaga> {
   const autenticado = exigirCapacidade(sessao, "vaga:publicar");
+
+  await garantirPerfilDeContratante(autenticado);
 
   const vaga = await repositorioVagas().criar({
     ...dados,

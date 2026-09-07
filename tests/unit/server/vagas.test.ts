@@ -17,6 +17,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import type { Autenticado } from "@/server/auth/rbac";
 import { ehAppError } from "@/server/errors";
+import { RepositorioMemoria, usarRepositorio } from "@/server/repositories";
 import { RepositorioVagasMemoria, usarRepositorioVagas } from "@/server/vagas";
 import {
   editarVaga,
@@ -71,6 +72,80 @@ describe("vagas do painel da empresa", () => {
     it("sem sessão é 401, não 403", async () => {
       const erro = await capturar(() => publicarVaga(null, DADOS));
       expect(erro.codigo).toBe("nao_autenticado");
+    });
+  });
+
+  /**
+   * Contratar sem ter aberto empresa (#129).
+   *
+   * Decisão do Luiz em 03/09/2026: produtor rural, autônomo e prestador
+   * contratam ajudante, e barrar isso deixava a aba Empresa mostrando um
+   * painel onde não dava para fazer nada.
+   */
+  describe("prestador contrata como pessoa física", () => {
+    let restaurarUsuarios: () => void;
+    let repoUsuarios: RepositorioMemoria;
+    let prestador: Autenticado;
+
+    beforeEach(async () => {
+      repoUsuarios = new RepositorioMemoria();
+      restaurarUsuarios = usarRepositorio(repoUsuarios);
+
+      const usuario = await repoUsuarios.criar({
+        email: "eletricista@teste.lupa",
+        senhaHash: "hash",
+        papel: "prestador_servico",
+        nomeCompleto: "João da Silva",
+        telefone: "66999110001",
+        cidade: "Sinop",
+      });
+      prestador = { usuarioId: usuario.id, papel: "prestador_servico" };
+    });
+
+    afterEach(() => restaurarUsuarios());
+
+    /**
+     * `job_listings` faz inner join com `perfis_empresa`: sem essa linha a
+     * vaga é gravada e **some da busca**. A pessoa veria "publicada", não
+     * se acharia em `/vagas`, e concluiria que o app engoliu o anúncio —
+     * a mesma família do padrão de cidade que escondia vaga recém-criada.
+     */
+    it("ganha o perfil de contratante na primeira vaga", async () => {
+      expect(await repoUsuarios.perfilEmpresa(prestador.usuarioId)).toBeNull();
+
+      const vaga = await publicarVaga(prestador, DADOS);
+
+      expect(vaga.empresaId).toBe(prestador.usuarioId);
+      expect(
+        await repoUsuarios.perfilEmpresa(prestador.usuarioId),
+      ).toMatchObject({ razaoSocial: "João da Silva", cnpj: null });
+    });
+
+    /** O CPF fica em `usuarios`; `perfis_empresa` é lida pela chave anônima. */
+    it("o documento não vai para o perfil de contratante", async () => {
+      await publicarVaga(prestador, DADOS);
+
+      const perfil = await repoUsuarios.perfilEmpresa(prestador.usuarioId);
+      expect(Object.keys(perfil ?? {})).not.toContain("cpf");
+    });
+
+    it("a segunda vaga não recria o perfil", async () => {
+      await publicarVaga(prestador, DADOS);
+      await repoUsuarios.salvarPerfilEmpresa(prestador.usuarioId, {
+        razaoSocial: "João da Silva — Elétrica",
+        setor: null,
+        porte: null,
+        site: null,
+        instagram: null,
+        facebook: null,
+        descricao: null,
+      });
+
+      await publicarVaga(prestador, { ...DADOS, titulo: "Ajudante" });
+
+      expect(
+        await repoUsuarios.perfilEmpresa(prestador.usuarioId),
+      ).toMatchObject({ razaoSocial: "João da Silva — Elétrica" });
     });
   });
 

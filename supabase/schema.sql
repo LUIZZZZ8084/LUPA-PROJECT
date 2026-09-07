@@ -741,6 +741,19 @@ select
     'company_name', e.razao_social,
     'logo_url',     e.logo_url,
     'doc_verified', u.doc_verificado,
+    /*
+     * Quem contrata é pessoa ou empresa (#129).
+     *
+     * Vai o booleano derivado do CNPJ, nunca o documento: esta view é
+     * lida pela chave anônima. CNPJ pode ser público porque é registro
+     * público; o CPF de quem contrata como pessoa física mora em
+     * `usuarios` e não sai de lá.
+     *
+     * Quem procura emprego tem direito de saber se está tratando com uma
+     * empresa registrada ou com uma pessoa — muda o que ela pode
+     * conferir antes de ir a uma entrevista.
+     */
+    'pessoa_fisica', (e.cnpj is null),
     'site',         e.site,
     'instagram',    e.instagram,
     'facebook',     e.facebook
