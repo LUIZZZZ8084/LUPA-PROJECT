@@ -65,10 +65,12 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "buscas_sem_resultado",
       "candidaturas",
       "categorias_servico",
+      "inscricoes_push",
       "pedidos_verificacao",
       "perfis_candidato",
       "perfis_empresa",
       "perfis_prestador",
+      "preferencias_notificacao",
       "publicacoes",
       "tentativas_de_acesso",
       "usuarios",
@@ -547,6 +549,15 @@ describe("grants de anon e authenticated", () => {
     "perfis_candidato",
     "candidaturas",
     "pedidos_verificacao",
+    /*
+     * Saber quem está de olho em vaga de motorista é a mesma classe de
+     * informação que o currículo — numa cidade do tamanho de Sinop, diz
+     * que a pessoa quer sair do emprego atual (#48). E `inscricoes_push`
+     * guarda as chaves que cifram a mensagem até o aparelho: quem as tiver
+     * manda notificação em nome da Lupa.
+     */
+    "preferencias_notificacao",
+    "inscricoes_push",
     "company_applications",
     "candidate_applications",
     "verification_queue",
@@ -789,7 +800,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(14);
+    expect(tabelas.rows).toHaveLength(16);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
