@@ -1118,3 +1118,28 @@ revoke select on usuarios         from anon, authenticated;
 revoke select on admins           from anon, authenticated;
 revoke select on perfis_candidato from anon, authenticated;
 revoke select on candidaturas     from anon, authenticated;
+
+/*
+ * `pedidos_verificacao` guarda documento e selfie de gente de verdade até
+ * o admin decidir. Faltava aqui desde sempre — a RLS barrava (zero
+ * policies nega tudo), então nunca vazou, mas era só uma camada.
+ */
+revoke select on pedidos_verificacao from anon, authenticated;
+
+/*
+ * E as duas dos avisos (#48), pelo mesmo raciocínio.
+ *
+ * `preferencias_notificacao` diz o que a pessoa está procurando — a mesma
+ * classe de informação que o currículo, e o motivo de
+ * `buscas_sem_resultado` não guardar quem buscou. `inscricoes_push` guarda
+ * as chaves que cifram a mensagem até o aparelho: quem as tiver manda
+ * notificação em nome da Lupa.
+ *
+ * Estas duas linhas faltaram quando as tabelas nasceram, e a varredura de
+ * grants não pegou: no PGlite não existem os grants padrão que o Supabase
+ * concede, então `has_table_privilege` já respondia `false` sem `revoke`
+ * nenhum. O teste passava pelo motivo errado, e produção ficou com o
+ * `select` aberto até alguém conferir o banco de verdade.
+ */
+revoke select on preferencias_notificacao from anon, authenticated;
+revoke select on inscricoes_push          from anon, authenticated;
