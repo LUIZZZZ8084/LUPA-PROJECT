@@ -28,9 +28,10 @@ export function VerificarCnpj() {
           Sua empresa ainda não é verificada
         </p>
         <p className="mt-1 text-muted text-sm leading-relaxed">
-          Podemos conferir o CNPJ direto na Receita, agora. Se a empresa estiver
-          ativa e a razão social bater, você é verificado na hora — sem enviar
-          documento.
+          Podemos conferir o CNPJ direto na Receita, agora. Estando a empresa
+          ativa, você é verificado na hora — sem enviar documento. O nome que
+          aparece nas suas vagas passa a ser o que está registrado lá, para não
+          depender de digitação.
         </p>
 
         {estado.mensagem && (

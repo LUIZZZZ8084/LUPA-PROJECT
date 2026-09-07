@@ -361,12 +361,30 @@ presa a provedor pago. O que verifica o prestador é o CPF em si, válido e
 único (#133) — quem também é MEI pode acrescentar o CNPJ depois, como
 selo extra (#138).
 
-**A comparação de razão social é tolerante de propósito.** A Receita grava
-em caixa alta e sem acento; quem digita escreve "Agro Norte Ltda." com
-ponto e acento. Normaliza-se acento, caixa, pontuação e espaço — nunca
-palavra: "Agro Norte" e "Agro Norte Comércio" continuam sendo nomes
-diferentes. Verificação que reprova quem está certo ensina todo mundo a
-ignorá-la.
+**Não se compara razão social: preenche-se com a da Receita.** Decisão do
+Luiz em 05/09/2026 (#130), fechando o degrau que a #127 tinha deixado em
+aberto — e fechando-o para baixo, tirando a comparação em vez de somar uma
+prova de posse.
+
+Havia uma comparação tolerante a acento, caixa e pontuação, e ela existia
+para pegar quem digitasse o CNPJ de uma empresa que não é sua. **Nunca
+pegou ninguém, e não podia pegar:** CNPJ e razão social são os dois
+públicos, então quem copia o número copia o nome junto. O que ela pegava
+era quem estava certo e escreveu "Ltda." com ponto.
+
+Hoje o nome **vem** da Receita e substitui o digitado no perfil. Erro de
+digitação deixa de ser uma categoria de falha, e o nome que aparece na
+vaga é o do registro — que é o que interessa a quem vai se candidatar.
+
+A mesma lição vale duas vezes neste arquivo, e é a mesma da #140 no CNPJ
+do prestador: **antes de comparar dois campos, pergunte o que a comparação
+realmente pega.** Se ela só reprova quem errou a grafia, ela não é uma
+verificação — é um obstáculo com aparência de rigor.
+
+O que continua não provado é a **posse**: alguém pode digitar o CNPJ de
+uma empresa alheia e sair verificado com o nome dela. Isso não piorou com
+a mudança — era exatamente assim antes, só que com uma etapa a mais que
+dava impressão de estar barrando algo.
 
 ### Nem todo prestador é só CPF, nem toda empresa é CNPJ
 

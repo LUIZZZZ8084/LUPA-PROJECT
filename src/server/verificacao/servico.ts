@@ -6,7 +6,7 @@ import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
 import { cnpjValido } from "../validation";
-import { consultarCnpj, type EmpresaNaReceita, mesmaRazaoSocial } from "./cnpj";
+import { consultarCnpj, type EmpresaNaReceita } from "./cnpj";
 
 /**
  * Conferir o CNPJ da empresa na Receita, sem fila.
@@ -18,11 +18,16 @@ import { consultarCnpj, type EmpresaNaReceita, mesmaRazaoSocial } from "./cnpj";
  * taxa de cadastro cobrada de quem está desempregado.
  *
  * **O que isto prova, e o que não prova.** Prova que a empresa existe e
- * está ativa, e que a razão social informada é a dela. Não prova que quem
- * se cadastrou é dono dela: razão social é dado público, e alguém pode
- * digitar o CNPJ de uma empresa de verdade que não é sua. Provar posse é
- * outro problema — e não vale travar este por causa dele, porque hoje não
- * se prova nem a existência.
+ * está ativa. Não prova que quem se cadastrou é dono dela: razão social é
+ * dado público, e alguém pode digitar o CNPJ de uma empresa de verdade que
+ * não é sua. Provar posse é outro problema — e não vale travar este por
+ * causa dele, porque hoje não se prova nem a existência.
+ *
+ * Houve uma comparação com o nome digitado, e ela saiu na #130. Não fechava
+ * a brecha que parecia fechar — quem copia o CNPJ de outra empresa copia o
+ * nome junto, porque os dois são públicos —, e reprovava quem estava certo,
+ * por acento e caixa alta. Hoje o nome **vem** da Receita em vez de ser
+ * conferido contra ela: erro de digitação deixa de existir como categoria.
  *
  * Nada disto entra no caminho do cadastro. É ação de quem já tem conta, e
  * a API de terceiro fora do ar não pode impedir ninguém de criar a dela.
@@ -36,23 +41,17 @@ export type ResultadoVerificacao =
 /**
  * O núcleo da consulta, comum à empresa e ao prestador.
  *
- * `nomeParaComparar` é opcional, e a diferença é de propósito:
- *
- * - **Empresa** declara a razão social no cadastro, e ela *é* a
- *   identidade que aparece na vaga. Comparar fecha a brecha de digitar o
- *   CNPJ de uma empresa ativa e se apresentar com outro nome.
- * - **Prestador** não declara razão social nenhuma. Comparar com o nome
- *   da pessoa só funcionaria para MEI, onde a razão social é o nome de
- *   quem abriu — e reprovaria quem tem ME, EIRELI ou LTDA por estar
- *   certo (#140). Aqui a conferência é só "existe e está ativa", e o
- *   nome que a Receita devolve vai para a tela em vez de virar teste.
+ * Uma pergunta só, para os dois: **este CNPJ existe e está ativo?** O nome
+ * que a Receita devolve vem junto na resposta, para o chamador guardar — e
+ * não para ser comparado com nada. O prestador já era assim desde a #140;
+ * a empresa passou a ser na #130, pelo mesmo motivo, que este arquivo
+ * registra logo acima.
  *
  * Não grava nada: cada chamador decide onde persistir, porque empresa e
  * prestador guardam em tabelas diferentes.
  */
 async function consultarEAvaliar(
   cnpj: string,
-  nomeParaComparar: string | null,
   buscar?: typeof fetch,
 ): Promise<
   | { ok: true; razaoSocial: string; naReceita: EmpresaNaReceita }
@@ -86,21 +85,6 @@ async function consultarEAvaliar(
     return {
       ok: false,
       motivo: `Na Receita, este CNPJ está como ${naReceita.situacao.toLowerCase()}.`,
-    };
-  }
-
-  if (
-    nomeParaComparar !== null &&
-    !mesmaRazaoSocial(nomeParaComparar, naReceita.razaoSocial)
-  ) {
-    /*
-     * A razão social da Receita vai junto na mensagem, de propósito: é
-     * dado público, e sem ela a pessoa não tem como saber o que corrigir
-     * — ficaria tentando adivinhar a grafia certa.
-     */
-    return {
-      ok: false,
-      motivo: `O nome não bate com o da Receita, que registra "${naReceita.razaoSocial}".`,
     };
   }
 
@@ -140,13 +124,44 @@ export async function verificarCnpjAutomatico(
     return { ok: true, razaoSocial: empresa.razaoSocial };
   }
 
-  const avaliacao = await consultarEAvaliar(
-    empresa.cnpj,
-    empresa.razaoSocial,
-    buscar,
-  );
+  /*
+   * `null`: não comparamos com o nome digitado, preenchemos com o da
+   * Receita (#130).
+   *
+   * A comparação existia para pegar quem digitasse o CNPJ de uma empresa
+   * que não é sua. Nunca pegou — razão social é dado público, então quem
+   * copia o número copia o nome junto. O que ela pegava era **quem estava
+   * certo**: a Receita grava em caixa alta e sem acento, e ninguém digita
+   * o próprio registro com a grafia exata. É a mesma armadilha que a #140
+   * já tinha tirado do CNPJ do prestador, e que este arquivo condena por
+   * escrito — verificação que reprova quem está certo ensina todo mundo a
+   * ignorá-la.
+   *
+   * Sem comparar, o erro de digitação deixa de existir como categoria: o
+   * nome passa a vir da fonte, não do teclado.
+   */
+  const avaliacao = await consultarEAvaliar(empresa.cnpj, buscar);
 
   if (!avaliacao.ok) return avaliacao;
+
+  /*
+   * O nome oficial substitui o digitado, e é ele que aparece na vaga.
+   *
+   * Gravado antes de marcar como verificada de propósito: verificada é o
+   * estado que a tela mostra e a busca lê, então ele só passa a valer
+   * depois que tudo o mais deu certo. Na ordem inversa, uma falha aqui
+   * deixaria uma empresa verificada exibindo o nome que ela mesma digitou,
+   * sem ninguém saber que a Receita dizia outro.
+   */
+  await repositorioUsuarios().salvarPerfilEmpresa(autenticado.usuarioId, {
+    razaoSocial: avaliacao.razaoSocial,
+    setor: empresa.setor,
+    porte: empresa.porte,
+    site: empresa.site,
+    instagram: empresa.instagram,
+    facebook: empresa.facebook,
+    descricao: empresa.descricao,
+  });
 
   await repositorioUsuarios().definirDocVerificado(autenticado.usuarioId, true);
 
@@ -215,7 +230,7 @@ export async function definirCnpjDoPrestador(
    * o nome dele só serviria para MEI — ver o comentário de
    * `consultarEAvaliar`.
    */
-  const avaliacao = await consultarEAvaliar(cnpj, null, buscar);
+  const avaliacao = await consultarEAvaliar(cnpj, buscar);
 
   if (!avaliacao.ok) {
     /*
