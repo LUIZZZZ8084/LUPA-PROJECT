@@ -23,7 +23,7 @@ function construtor() {
     then: (r: (v: { data: unknown[]; error: null }) => unknown) =>
       Promise.resolve({ data: [], error: null }).then(r),
   };
-  for (const metodo of ["select", "eq", "gte", "order", "limit"]) {
+  for (const metodo of ["select", "eq", "gt", "gte", "order", "limit"]) {
     builder[metodo] = () => builder;
   }
   builder.or = (expressao: string) => {

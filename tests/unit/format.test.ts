@@ -8,7 +8,9 @@ import {
   initials,
   onlyDigits,
   pluralize,
+  prazoDaVaga,
   timeAgo,
+  vagaExpirada,
   whatsappLink,
 } from "@/lib/format";
 
@@ -154,6 +156,44 @@ describe("timeAgo", () => {
 
   it("usa singular para um mês", () => {
     expect(timeAgo(ago(35 * 86_400_000))).toBe("há 1 mês");
+  });
+});
+
+describe("vagaExpirada", () => {
+  const em = (ms: number) => new Date(Date.now() + ms).toISOString();
+
+  it("falso quando o prazo ainda não chegou", () => {
+    expect(vagaExpirada(em(86_400_000))).toBe(false);
+  });
+
+  it("verdadeiro quando o prazo já passou", () => {
+    expect(vagaExpirada(em(-86_400_000))).toBe(true);
+  });
+
+  it("verdadeiro no exato instante do prazo", () => {
+    const agora = new Date().toISOString();
+    expect(vagaExpirada(agora)).toBe(true);
+  });
+});
+
+describe("prazoDaVaga", () => {
+  const em = (ms: number) => new Date(Date.now() + ms).toISOString();
+
+  it("conta os dias que faltam", () => {
+    expect(prazoDaVaga(em(5 * 86_400_000))).toBe("Expira em 5 dias");
+  });
+
+  it("avisa quando falta cerca de um dia", () => {
+    expect(prazoDaVaga(em(86_400_000))).toBe("Expira amanhã");
+  });
+
+  it("avisa quando expira dentro do próprio dia", () => {
+    expect(prazoDaVaga(em(3_600_000))).toBe("Expira hoje");
+  });
+
+  it("conta os dias desde que expirou, no singular e no plural", () => {
+    expect(prazoDaVaga(em(-86_400_000))).toBe("Expirou há 1 dia");
+    expect(prazoDaVaga(em(-5 * 86_400_000))).toBe("Expirou há 5 dias");
   });
 });
 

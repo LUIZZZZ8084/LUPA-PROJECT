@@ -118,6 +118,8 @@ export interface Job {
   skills: string[];
   status: JobStatus;
   created_at: string;
+  /** 30 dias após publicar, ou após a última reativação manual. */
+  expires_at: string;
 }
 
 export interface Application {

@@ -50,6 +50,13 @@ export type Capacidade =
   | "vaga:publicar"
   | "vaga:editar_propria"
   | "vaga:encerrar_propria"
+  /*
+   * Reativar vaga que passou dos 30 dias — nunca a que foi encerrada à
+   * mão. Renova só o prazo, de graça; quem só tem `vaga:publicar` mas não
+   * é dono não chega perto, porque `exigirDono` continua sendo a segunda
+   * pergunta.
+   */
+  | "vaga:reativar_propria"
   | "vaga:ver_candidaturas_proprias"
   // Candidaturas
   | "candidatura:criar"
@@ -148,6 +155,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "vaga:publicar",
     "vaga:editar_propria",
     "vaga:encerrar_propria",
+    "vaga:reativar_propria",
     "vaga:ver_candidaturas_proprias",
     "candidatura:mover_estagio",
   ],
@@ -158,6 +166,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "vaga:publicar",
     "vaga:editar_propria",
     "vaga:encerrar_propria",
+    "vaga:reativar_propria",
     "vaga:ver_candidaturas_proprias",
     "candidatura:mover_estagio",
     "candidato:buscar_disponiveis",

@@ -49,6 +49,36 @@ export function timeAgo(iso: string): string {
   return `há ${Math.floor(days / 365)}a`;
 }
 
+/**
+ * Se `expiraEm` já passou.
+ *
+ * "Expirada" nunca é guardada — é sempre calculada daqui, a partir da
+ * coluna `expira_em`/`expires_at`. Guardar como um terceiro valor de
+ * `status` exigiria um job agendado para o estado ficar certo; calculando
+ * na hora, a correção mora na própria consulta, e nunca atrasa.
+ */
+export function vagaExpirada(expiraEm: string): boolean {
+  return new Date(expiraEm).getTime() <= Date.now();
+}
+
+/**
+ * "Expira em 12 dias", "Expira hoje" ou "Expirou há 3 dias".
+ *
+ * Arredonda para o dia mais próximo, não para baixo: 20 horas para o
+ * prazo lê "hoje", não "amanhã" — o que importa aqui é a urgência que a
+ * pessoa sente, não a contagem exata de horas.
+ */
+export function prazoDaVaga(expiraEm: string): string {
+  const dias = Math.round(
+    (new Date(expiraEm).getTime() - Date.now()) / (24 * 60 * 60 * 1000),
+  );
+  if (dias >= 2) return `Expira em ${dias} dias`;
+  if (dias === 1) return "Expira amanhã";
+  if (dias === 0) return "Expira hoje";
+  const passados = Math.abs(dias);
+  return `Expirou há ${passados} ${passados === 1 ? "dia" : "dias"}`;
+}
+
 /** Só os dígitos — o que o wa.me espera. */
 export function onlyDigits(value: string): string {
   return value.replace(/\D/g, "");

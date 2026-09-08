@@ -462,6 +462,38 @@ describe("views devolvem o formato que a aplicação espera", () => {
     expect(Number(r.rows[0].applicant_count)).toBeGreaterThanOrEqual(0);
   });
 
+  it("vaga nova expira 30 dias depois, e job_listings expõe o prazo", async () => {
+    const existente = await db.query<{ empresa_id: string }>(
+      "select empresa_id from vagas limit 1",
+    );
+    const empresaId = existente.rows[0].empresa_id;
+
+    const r = await db.query<{
+      id: string;
+      expira_em: string;
+      criado_em: string;
+    }>(
+      `insert into vagas (empresa_id, titulo, descricao)
+       values ($1, 'Teste de prazo', 'Descrição de teste para o prazo de expiração.')
+       returning id, expira_em, criado_em`,
+      [empresaId],
+    );
+    const vaga = r.rows[0];
+    const dias =
+      (new Date(vaga.expira_em).getTime() -
+        new Date(vaga.criado_em).getTime()) /
+      (24 * 60 * 60 * 1000);
+    expect(dias).toBeCloseTo(30, 1);
+
+    const view = await db.query<{ expires_at: string }>(
+      "select expires_at from job_listings where id = $1",
+      [vaga.id],
+    );
+    expect(new Date(view.rows[0].expires_at).getTime()).toBe(
+      new Date(vaga.expira_em).getTime(),
+    );
+  });
+
   /**
    * Quem contrata é pessoa ou empresa, e a vaga diz qual (#129).
    *

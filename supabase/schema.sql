@@ -305,6 +305,16 @@ create table vagas (
   visualizacoes int not null default 0,
   criado_em     timestamptz not null default now(),
 
+  /*
+   * Toda vaga expira 30 dias depois de publicada. Expirada some da busca
+   * e da home, mas a empresa reativa de graça, na hora que quiser —
+   * reativar só estende esta coluna, nunca muda `status`. "Expirada" é
+   * sempre calculado daqui (`vagaExpirada`, em src/lib/format.ts), nunca
+   * guardado como um terceiro valor de `status`: a correção mora na
+   * consulta, não num job agendado que pode atrasar.
+   */
+  expira_em     timestamptz not null default (now() + interval '30 days'),
+
   constraint salario_coerente check (
     salario_min is null or salario_max is null or salario_max >= salario_min
   )
@@ -825,7 +835,8 @@ select
     'instagram',    e.instagram,
     'facebook',     e.facebook
   ) as company,
-  (select count(*) from candidaturas c where c.vaga_id = v.id) as applicant_count
+  (select count(*) from candidaturas c where c.vaga_id = v.id) as applicant_count,
+  v.expira_em                 as expires_at
 from vagas v
 join perfis_empresa e on e.usuario_id = v.empresa_id
 join usuarios u on u.id = e.usuario_id;
