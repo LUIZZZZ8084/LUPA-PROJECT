@@ -21,7 +21,7 @@ import { marcarComoVisualizada } from "@/server/candidaturas/ficha";
 import { candidatarSe, moverCandidatura } from "@/server/candidaturas/servico";
 import { ehAppError } from "@/server/errors";
 import { RepositorioVagasMemoria, usarRepositorioVagas } from "@/server/vagas";
-import { publicarVaga } from "@/server/vagas/servico";
+import { encerrarVaga, publicarVaga } from "@/server/vagas/servico";
 
 const empresa: Autenticado = { usuarioId: "empresa-1", papel: "empresa" };
 const outraEmpresa: Autenticado = { usuarioId: "empresa-2", papel: "empresa" };
@@ -92,6 +92,30 @@ describe("candidaturas", () => {
     it("sem sessão é 401, não 403", async () => {
       const erro = await capturar(() => candidatarSe(null, "vaga-1"));
       expect(erro.codigo).toBe("nao_autenticado");
+    });
+
+    /*
+     * O botão já some da tela para vaga fechada ou expirada — isto cobre
+     * quem chama a action direto, sem passar por ela.
+     */
+    it("não se candidata a vaga encerrada", async () => {
+      const vaga = await publicarVaga(empresa, DADOS_VAGA);
+      await encerrarVaga(empresa, vaga.id);
+
+      const erro = await capturar(() => candidatarSe(candidato, vaga.id));
+      expect(erro.codigo).toBe("conflito");
+    });
+
+    it("não se candidata a vaga que passou dos 30 dias", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const vaga = await publicarVaga(empresa, DADOS_VAGA);
+
+      vi.setSystemTime(new Date("2026-02-05T00:00:00Z"));
+      const erro = await capturar(() => candidatarSe(candidato, vaga.id));
+      vi.useRealTimers();
+
+      expect(erro.codigo).toBe("conflito");
     });
   });
 

@@ -26,6 +26,9 @@ export interface Vaga {
   habilidades: string[];
   status: StatusVaga;
   criadoEm: string;
+  /** 30 dias após publicar, ou após a última reativação manual. Nunca é
+   * lido sozinho — sempre junto de `status`, por `vagaExpirada`. */
+  expiraEm: string;
 }
 
 export interface DadosNovaVaga {
@@ -66,4 +69,7 @@ export interface RepositorioVagas {
   criar(dados: DadosNovaVaga): Promise<Vaga>;
   atualizar(id: string, campos: EdicaoVaga): Promise<Vaga>;
   encerrar(id: string): Promise<Vaga>;
+  /** Renova o prazo por mais 30 dias. Não mexe em `status` — só quem
+   * ficou "aberta" e passou do prazo tinha o que reativar. */
+  reativar(id: string): Promise<Vaga>;
 }

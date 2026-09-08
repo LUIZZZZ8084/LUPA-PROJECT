@@ -108,7 +108,12 @@ const companyRef = (id: string) => {
    Vagas
    ============================================================ */
 
-export const MOCK_JOBS: JobListing[] = [
+/**
+ * `expires_at` é computado a partir de agora, não digitado por entrada —
+ * vaga de demonstração nunca deveria nascer expirada só porque alguém
+ * escreveu uma data fixa que ficou velha com o tempo.
+ */
+const MOCK_JOBS_BASE: Omit<JobListing, "expires_at">[] = [
   {
     id: "job-operador-maquinas",
     company_id: "cmp-agro-norte",
@@ -341,6 +346,11 @@ export const MOCK_JOBS: JobListing[] = [
     applicant_count: 4,
   },
 ];
+
+export const MOCK_JOBS: JobListing[] = MOCK_JOBS_BASE.map((job) => ({
+  ...job,
+  expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+}));
 
 /* ============================================================
    Prestadores de serviço

@@ -26,7 +26,13 @@ import {
   getCompanyJobs,
   getCompanyStats,
 } from "@/lib/data";
-import { pluralize, timeAgo, whatsappLink } from "@/lib/format";
+import {
+  pluralize,
+  prazoDaVaga,
+  timeAgo,
+  vagaExpirada,
+  whatsappLink,
+} from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import {
@@ -41,6 +47,7 @@ import {
 } from "@/server/visualizacoes/servico";
 import { EncerrarVagaButton } from "../encerrar-vaga-button";
 import { MoverCandidaturaSelect } from "../mover-candidatura-select";
+import { ReativarVagaButton } from "../reativar-vaga-button";
 import { SerieGrafico } from "../serie-grafico";
 import { Recomendados } from "./recomendados";
 
@@ -261,45 +268,67 @@ export default async function EmpresaPage() {
           />
         ) : (
           <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
-            {jobs.map((job) => (
-              <li
-                key={job.id}
-                className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
-              >
-                <Link
-                  href={`/vagas/${job.id}`}
-                  className="flex min-w-0 flex-1 items-center gap-3"
+            {jobs.map((job) => {
+              const expirada =
+                job.status === "aberta" && vagaExpirada(job.expires_at);
+              return (
+                <li
+                  key={job.id}
+                  className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">
-                      {job.title}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-muted">
-                      {pluralize(
-                        job.applicant_count,
-                        "candidato",
-                        "candidatos",
-                      )}{" "}
-                      · {timeAgo(job.created_at)}
-                    </p>
-                  </div>
-                  <Badge tone={job.status === "aberta" ? "vagas" : "neutral"}>
-                    {job.status === "aberta" ? "Ativa" : "Encerrada"}
-                  </Badge>
-                </Link>
-                {job.status === "aberta" && (
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Link
-                      href={`/empresa/vagas/${job.id}/editar`}
-                      className="text-xs font-semibold text-muted underline-offset-2 hover:text-ink hover:underline"
+                  <Link
+                    href={`/vagas/${job.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">
+                        {job.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted">
+                        {pluralize(
+                          job.applicant_count,
+                          "candidato",
+                          "candidatos",
+                        )}{" "}
+                        · {timeAgo(job.created_at)}
+                        {job.status === "aberta" &&
+                          ` · ${prazoDaVaga(job.expires_at)}`}
+                      </p>
+                    </div>
+                    <Badge
+                      tone={
+                        expirada
+                          ? "warn"
+                          : job.status === "aberta"
+                            ? "vagas"
+                            : "neutral"
+                      }
                     >
-                      Editar
-                    </Link>
-                    <EncerrarVagaButton id={job.id} titulo={job.title} />
-                  </div>
-                )}
-              </li>
-            ))}
+                      {expirada
+                        ? "Expirada"
+                        : job.status === "aberta"
+                          ? "Ativa"
+                          : "Encerrada"}
+                    </Badge>
+                  </Link>
+                  {job.status === "aberta" && (
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Link
+                        href={`/empresa/vagas/${job.id}/editar`}
+                        className="text-xs font-semibold text-muted underline-offset-2 hover:text-ink hover:underline"
+                      >
+                        Editar
+                      </Link>
+                      {expirada ? (
+                        <ReativarVagaButton id={job.id} />
+                      ) : (
+                        <EncerrarVagaButton id={job.id} titulo={job.title} />
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

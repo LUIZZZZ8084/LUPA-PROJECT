@@ -6,6 +6,10 @@ import type {
   Vaga,
 } from "./tipos";
 
+function em30Dias(): string {
+  return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+}
+
 /**
  * Repositório de vagas em memória, para o modo demonstração.
  *
@@ -55,6 +59,7 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
       habilidades: dados.habilidades ?? [],
       status: "aberta",
       criadoEm: new Date().toISOString(),
+      expiraEm: em30Dias(),
     };
 
     this.itens.set(vaga.id, vaga);
@@ -75,6 +80,15 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
     if (!atual) throw erros.naoEncontrado("Vaga");
 
     const nova: Vaga = { ...atual, status: "fechada" };
+    this.itens.set(id, nova);
+    return nova;
+  }
+
+  async reativar(id: string): Promise<Vaga> {
+    const atual = this.itens.get(id);
+    if (!atual) throw erros.naoEncontrado("Vaga");
+
+    const nova: Vaga = { ...atual, expiraEm: em30Dias() };
     this.itens.set(id, nova);
     return nova;
   }

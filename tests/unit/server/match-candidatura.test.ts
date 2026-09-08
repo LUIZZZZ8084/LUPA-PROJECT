@@ -29,6 +29,7 @@ function vaga(over: Partial<JobListing> = {}): JobListing {
     skills: ["Colheitadeira", "CNH D", "Manutenção básica"],
     status: "aberta",
     created_at: "2026-08-20T12:00:00.000Z",
+    expires_at: "2026-09-19T12:00:00.000Z",
     company: {
       company_name: "Agro Norte",
       logo_url: null,

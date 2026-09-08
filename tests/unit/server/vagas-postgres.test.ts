@@ -19,7 +19,7 @@ function construtor(tabela: string) {
       Promise.resolve(resposta).then(resolver),
   };
 
-  for (const metodo of ["select", "eq", "insert", "update", "order"]) {
+  for (const metodo of ["select", "eq", "gt", "insert", "update", "order"]) {
     builder[metodo] = (...args: unknown[]) => {
       chamadas.push({ tabela, metodo, args });
       return builder;
@@ -56,6 +56,7 @@ const LINHA = {
   habilidades: ["Colheitadeira"],
   status: "aberta",
   criado_em: "2026-08-20T00:00:00.000Z",
+  expira_em: "2026-09-19T00:00:00.000Z",
 };
 
 describe("RepositorioVagasPostgres", () => {
@@ -86,6 +87,7 @@ describe("RepositorioVagasPostgres", () => {
       habilidades: ["Colheitadeira"],
       status: "aberta",
       criadoEm: LINHA.criado_em,
+      expiraEm: LINHA.expira_em,
     });
   });
 
@@ -141,6 +143,24 @@ describe("RepositorioVagasPostgres", () => {
     expect(vaga.status).toBe("fechada");
     const atualizacao = chamadas.find((c) => c.metodo === "update");
     expect(atualizacao?.args[0]).toEqual({ status: "fechada" });
+  });
+
+  it("reativar renova o prazo, sem mexer no status", async () => {
+    const novoPrazo = "2026-10-19T00:00:00.000Z";
+    resposta = { data: { ...LINHA, expira_em: novoPrazo }, error: null };
+    const vaga = await repo.reativar(LINHA.id);
+
+    expect(vaga.expiraEm).toBe(novoPrazo);
+    expect(vaga.status).toBe("aberta");
+    const atualizacao = chamadas.find((c) => c.metodo === "update");
+    expect(Object.keys(atualizacao?.args[0] as object)).toEqual(["expira_em"]);
+  });
+
+  it("reativar vaga inexistente é 'não encontrado'", async () => {
+    resposta = { data: null, error: { message: "no rows", code: "PGRST116" } };
+    await expect(repo.reativar("nao-existe")).rejects.toMatchObject({
+      codigo: "nao_encontrado",
+    });
   });
 
   it("atualizar só envia os campos informados", async () => {
@@ -248,6 +268,7 @@ describe("quando a consulta falha", () => {
   it.each([
     ["atualizar", () => repo.atualizar("x", { titulo: "Novo" })],
     ["encerrar", () => repo.encerrar("x")],
+    ["reativar", () => repo.reativar("x")],
   ])("%s com banco fora do ar não vira não-encontrado", async (_n, chamar) => {
     resposta = { data: null, error: QUEDA };
     await expect(chamar()).rejects.toMatchObject({ codigo: "indisponivel" });
@@ -256,6 +277,7 @@ describe("quando a consulta falha", () => {
   it.each([
     ["atualizar", () => repo.atualizar("abc", { titulo: "Novo" })],
     ["encerrar", () => repo.encerrar("abc")],
+    ["reativar", () => repo.reativar("abc")],
   ])("%s com id torto é não-encontrado", async (_n, chamar) => {
     resposta = { data: null, error: ID_TORTO };
     await expect(chamar()).rejects.toMatchObject({ codigo: "nao_encontrado" });

@@ -23,6 +23,7 @@ import {
   editarVaga,
   encerrarVaga,
   publicarVaga,
+  reativarVaga,
   vagaParaEditar,
 } from "@/server/vagas/servico";
 
@@ -233,6 +234,53 @@ describe("vagas do painel da empresa", () => {
       await expect(encerrarVaga(empresa, vaga.id)).resolves.toMatchObject({
         status: "fechada",
       });
+    });
+  });
+
+  describe("reativar", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("reativa vaga que passou dos 30 dias, renovando o prazo", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const vaga = await publicarVaga(empresa, DADOS);
+
+      vi.setSystemTime(new Date("2026-02-05T00:00:00Z")); // 35 dias depois
+      const reativada = await reativarVaga(empresa, vaga.id);
+
+      expect(reativada.status).toBe("aberta");
+      expect(new Date(reativada.expiraEm).getTime()).toBeGreaterThan(
+        Date.now(),
+      );
+    });
+
+    it("recusa reativar vaga que ainda não expirou", async () => {
+      const vaga = await publicarVaga(empresa, DADOS);
+      const erro = await capturar(() => reativarVaga(empresa, vaga.id));
+      expect(erro.codigo).toBe("conflito");
+    });
+
+    it("recusa reativar vaga encerrada manualmente — não é o mesmo que expirar", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const vaga = await publicarVaga(empresa, DADOS);
+      await encerrarVaga(empresa, vaga.id);
+
+      vi.setSystemTime(new Date("2026-02-05T00:00:00Z"));
+      const erro = await capturar(() => reativarVaga(empresa, vaga.id));
+      expect(erro.codigo).toBe("conflito");
+    });
+
+    it("ninguém reativa a vaga expirada de outra empresa", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const dela = await publicarVaga(empresa, DADOS);
+
+      vi.setSystemTime(new Date("2026-02-05T00:00:00Z"));
+      const erro = await capturar(() => reativarVaga(outraEmpresa, dela.id));
+      expect(erro.codigo).toBe("nao_encontrado");
     });
   });
 

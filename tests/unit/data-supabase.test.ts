@@ -26,7 +26,7 @@ function criarQueryBuilder(resposta: RespostaFalsa) {
     maybeSingle: vi.fn(async () => resposta),
   };
 
-  for (const metodo of ["select", "eq", "gte", "or", "order"]) {
+  for (const metodo of ["select", "eq", "gt", "gte", "or", "order"]) {
     builder[metodo] = vi.fn((...args: unknown[]) => {
       chamadas.push({ metodo, args });
       return builder;

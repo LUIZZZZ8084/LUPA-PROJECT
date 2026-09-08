@@ -26,7 +26,12 @@ function paraVaga(linha: Record<string, unknown>): Vaga {
     habilidades: (linha.habilidades as string[] | null) ?? [],
     status: linha.status as StatusVaga,
     criadoEm: String(linha.criado_em),
+    expiraEm: String(linha.expira_em),
   };
+}
+
+function em30Dias(): string {
+  return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 }
 
 async function cliente() {
@@ -173,6 +178,24 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
     const { data, error } = await supabase
       .from("vagas")
       .update({ status: "fechada" })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116" || ehIdInvalido(error)) {
+        throw erros.naoEncontrado("Vaga");
+      }
+      throw erros.indisponivel(error.message);
+    }
+    return paraVaga(data);
+  }
+
+  async reativar(id: string): Promise<Vaga> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("vagas")
+      .update({ expira_em: em30Dias() })
       .eq("id", id)
       .select("*")
       .single();

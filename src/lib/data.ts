@@ -9,6 +9,7 @@ import type { Candidatura } from "@/server/candidaturas/tipos";
 import { repositorioUsuarios } from "@/server/repositories";
 import { RepositorioVagasMemoria, repositorioVagas } from "@/server/vagas";
 import type { Vaga } from "@/server/vagas/tipos";
+import { vagaExpirada } from "./format";
 import {
   DEMO_COMPANY_ID,
   MOCK_APPLICATIONS,
@@ -209,6 +210,7 @@ function vagaDoMock(job: JobListing): Vaga {
     habilidades: job.skills,
     status: job.status,
     criadoEm: job.created_at,
+    expiraEm: job.expires_at,
   };
 }
 
@@ -229,6 +231,7 @@ function jobListingDaVaga(vaga: Vaga): JobListing {
     skills: vaga.habilidades,
     status: vaga.status,
     created_at: vaga.criadoEm,
+    expires_at: vaga.expiraEm,
     company: {
       company_name: empresa?.company_name ?? "Empresa",
       logo_url: empresa?.logo_url ?? null,
@@ -262,6 +265,10 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
         .from("job_listings")
         .select("*")
         .eq("status", "aberta")
+        // Vaga expirada continua "aberta" no banco até a empresa
+        // reativar — sem este filtro ela vazaria para a busca pública
+        // mesmo sem ninguém ter olhado o painel dela ainda.
+        .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false });
 
       if (filters.city) query = query.eq("city", filters.city);
@@ -286,6 +293,7 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
   const encontradas = jobs
     .filter((job) => {
       if (job.status !== "aberta") return false;
+      if (vagaExpirada(job.expires_at)) return false;
       if (filters.city && job.city !== filters.city) return false;
       if (filters.category && job.category !== filters.category) return false;
       if (filters.contract_type && job.contract_type !== filters.contract_type)
@@ -750,7 +758,11 @@ export async function getMyApplications(
 
 export async function getCompanyStats(companyId: string) {
   const jobs = await getCompanyJobs(companyId);
-  const open = jobs.filter((j) => j.status === "aberta");
+  // Vaga expirada é "aberta" no banco até a empresa reativar — não conta
+  // como ativa, senão o número mentiria sobre o que ainda recebe candidato.
+  const open = jobs.filter(
+    (j) => j.status === "aberta" && !vagaExpirada(j.expires_at),
+  );
   return {
     active_jobs: open.length,
     applications: jobs.reduce((sum, j) => sum + j.applicant_count, 0),

@@ -1,4 +1,5 @@
 import { empresaDoPainel } from "@/lib/data";
+import { vagaExpirada } from "@/lib/format";
 import { type Autenticado, exigirCapacidade, exigirDono } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
@@ -20,6 +21,18 @@ export async function candidatarSe(
   vagaId: string,
 ): Promise<Candidatura> {
   const autenticado = exigirCapacidade(sessao, "candidatura:criar");
+
+  /*
+   * O botão já some da tela para vaga fechada ou expirada — mas quem
+   * chama a action direto não passa pela tela. Sem esta checagem, dava
+   * para se candidatar a uma vaga que nem aparece mais em `/vagas`, o
+   * oposto do que o prazo de 30 dias existe para evitar.
+   */
+  const vaga = await repositorioVagas().porId(vagaId);
+  if (!vaga) throw erros.naoEncontrado("Vaga");
+  if (vaga.status !== "aberta" || vagaExpirada(vaga.expiraEm)) {
+    throw erros.conflito("Esta vaga não está mais recebendo candidaturas.");
+  }
 
   const candidatura = await repositorioCandidaturas().criar({
     vagaId,

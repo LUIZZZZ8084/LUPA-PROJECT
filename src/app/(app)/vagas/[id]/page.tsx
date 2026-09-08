@@ -17,7 +17,12 @@ import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { VerifiedMark } from "@/components/verified-badge";
 import { getJobById, getRelatedJobs } from "@/lib/data";
-import { formatSalaryRange, pluralize, timeAgo } from "@/lib/format";
+import {
+  formatSalaryRange,
+  pluralize,
+  timeAgo,
+  vagaExpirada,
+} from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { contarVisualizacao } from "@/server/visualizacoes";
@@ -64,6 +69,7 @@ export default async function JobDetailPage({
   }
 
   const related = await getRelatedJobs(job);
+  const expirada = job.status === "aberta" && vagaExpirada(job.expires_at);
 
   return (
     <PageShell width="narrow">
@@ -173,6 +179,7 @@ export default async function JobDetailPage({
           {job.status === "fechada" && (
             <Badge tone="danger">Vaga fechada</Badge>
           )}
+          {expirada && <Badge tone="neutral">Vaga expirada</Badge>}
         </div>
 
         {job.address && (
@@ -195,7 +202,7 @@ export default async function JobDetailPage({
         </div>
 
         <div className="mt-6 border-t border-line pt-5">
-          {job.status !== "aberta" ? (
+          {job.status !== "aberta" || expirada ? (
             <p className="text-center text-muted text-sm">
               Esta vaga não está mais recebendo candidaturas.
             </p>

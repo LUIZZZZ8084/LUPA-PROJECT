@@ -1,4 +1,5 @@
 import { empresaDoPainel } from "@/lib/data";
+import { vagaExpirada } from "@/lib/format";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   type Autenticado,
@@ -161,6 +162,37 @@ export async function encerrarVaga(
   const vaga = await repositorioVagas().encerrar(id);
   log.info("vaga encerrada", {
     acao: "vaga.encerrar",
+    papel: autenticado.papel,
+  });
+  return vaga;
+}
+
+/**
+ * Reativa vaga que passou dos 30 dias — nunca a que foi encerrada à mão.
+ *
+ * "Encerrar" é decisão do dono; "expirar" é só o tempo passando. Reativar
+ * desfaz a segunda, não a primeira: vaga com `status: "fechada"` continua
+ * fechada até que exista algum jeito de reabrir isso, que hoje não existe.
+ *
+ * Gratuito e sem limite de vezes — não é "publicar de novo", então não
+ * mexe em crédito de postagem nenhum.
+ */
+export async function reativarVaga(
+  sessao: Autenticado | null,
+  id: string,
+): Promise<Vaga> {
+  const autenticado = exigirCapacidade(sessao, "vaga:reativar_propria");
+  const atual = await vagaDaEmpresa(autenticado, id);
+
+  if (atual.status !== "aberta" || !vagaExpirada(atual.expiraEm)) {
+    throw erros.conflito(
+      "Esta vaga não está expirada — não há o que reativar.",
+    );
+  }
+
+  const vaga = await repositorioVagas().reativar(id);
+  log.info("vaga reativada", {
+    acao: "vaga.reativar",
     papel: autenticado.papel,
   });
   return vaga;
