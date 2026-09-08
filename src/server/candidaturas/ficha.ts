@@ -79,7 +79,7 @@ export async function fichaDaCandidatura(
  */
 export async function marcarComoVisualizada(id: string): Promise<void> {
   const atual = await repositorioCandidaturas().porId(id);
-  if (!atual || atual.status !== "enviada") return;
+  if (atual?.status !== "enviada") return;
 
   await repositorioCandidaturas().moverEstagio(id, "visualizada");
 }
