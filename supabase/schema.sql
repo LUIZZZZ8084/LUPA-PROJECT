@@ -56,6 +56,16 @@ create type plano_empresa as enum ('trial', 'mensal');
 
 create type status_publicacao as enum ('ativa', 'arquivada');
 
+/*
+ * Nasce só com 'prestador_mensalidade', o primeiro uso real da cobrança.
+ * Vaga avulsa, planos de empresa e o gerador de currículo pago ganham o
+ * próprio valor quando cada um tiver uma tela que o use.
+ */
+create type tipo_pagamento as enum ('prestador_mensalidade');
+
+create type status_pagamento as enum
+  ('pendente', 'aprovado', 'rejeitado', 'cancelado', 'estornado');
+
 -- ============================================================================
 -- 2. Função compartilhada
 -- ============================================================================
@@ -229,7 +239,16 @@ create table perfis_prestador (
   -- Denormalizados e mantidos pelo trigger em `avaliacoes`: a busca ordena
   -- por nota e não pode agregar a cada consulta.
   nota_media        numeric(2,1) not null default 0,
-  total_avaliacoes  int not null default 0
+  total_avaliacoes  int not null default 0,
+
+  /*
+   * Mensalidade de prestador. `null` até a primeira cobrança aprovada;
+   * quando o prazo passa, o perfil some da vitrine de `/servicos` — o
+   * filtro mora em `getProviders`, não aqui, pela mesma razão de
+   * `doc_verified`: filtrar na view esconderia o prestador do próprio
+   * perfil.
+   */
+  mensalidade_valida_ate timestamptz
 );
 
 create index perfis_prestador_categoria_idx on perfis_prestador (categoria_id);
@@ -762,6 +781,39 @@ alter table preferencias_notificacao enable row level security;
 alter table inscricoes_push enable row level security;
 
 -- ============================================================================
+-- 9e. Pagamentos
+--
+-- Toda cobrança que a Lupa cria, avulsa ou recorrente, com o que o
+-- Mercado Pago respondeu. Sem grant para `anon`/`authenticated` — mesmo
+-- tratamento de `usuarios`, porque é dado financeiro e só o servidor, com
+-- a chave de serviço, precisa alcançar.
+-- ============================================================================
+
+create table pagamentos (
+  id               uuid primary key default gen_random_uuid(),
+  usuario_id       uuid not null references usuarios(id) on delete cascade,
+  tipo             tipo_pagamento not null,
+  valor_centavos   int not null check (valor_centavos > 0),
+  status           status_pagamento not null default 'pendente',
+  mp_preference_id text,
+  mp_payment_id    text,
+  metadata         jsonb not null default '{}',
+  criado_em        timestamptz not null default now(),
+  atualizado_em    timestamptz not null default now()
+);
+
+create index pagamentos_usuario_idx on pagamentos (usuario_id, criado_em desc);
+
+create unique index pagamentos_mp_payment_idx
+  on pagamentos (mp_payment_id) where mp_payment_id is not null;
+
+create trigger pagamentos_atualizado_em
+  before update on pagamentos
+  for each row execute function tocar_atualizado_em();
+
+alter table pagamentos enable row level security;
+
+-- ============================================================================
 -- 10. Views que a aplicação consulta
 --
 -- `security_invoker = false` de propósito: as views rodam com a permissão do
@@ -791,7 +843,8 @@ select
   u.telefone_verificado                  as phone_verified,
   u.doc_verificado                       as doc_verified,
   c.slug                                 as category_slug,
-  jsonb_build_object('id', c.id, 'slug', c.slug, 'name', c.nome) as category
+  jsonb_build_object('id', c.id, 'slug', c.slug, 'name', c.nome) as category,
+  pp.mensalidade_valida_ate              as subscription_valid_until
 from perfis_prestador pp
 join usuarios u on u.id = pp.usuario_id
 join categorias_servico c on c.id = pp.categoria_id
@@ -1129,3 +1182,4 @@ revoke select on usuarios         from anon, authenticated;
 revoke select on admins           from anon, authenticated;
 revoke select on perfis_candidato from anon, authenticated;
 revoke select on candidaturas     from anon, authenticated;
+revoke select on pagamentos       from anon, authenticated;

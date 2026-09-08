@@ -59,6 +59,7 @@ describe("CNPJ de MEI do prestador", () => {
       cnpj: null,
       cnpjVerificado: false,
       razaoSocial: null,
+      mensalidadeValidaAte: null,
     });
     return usuario.id;
   }

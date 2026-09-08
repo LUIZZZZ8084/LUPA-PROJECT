@@ -176,6 +176,15 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     });
   }
 
+  async definirMensalidadeValidaAte(
+    usuarioId: string,
+    ate: string,
+  ): Promise<void> {
+    const perfil = this.prestadores.get(usuarioId);
+    if (!perfil) return;
+    this.prestadores.set(usuarioId, { ...perfil, mensalidadeValidaAte: ate });
+  }
+
   /* ---------- Leitura de perfil ---------- */
 
   async perfilEmpresa(usuarioId: string): Promise<PerfilEmpresa | null> {
@@ -226,6 +235,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
       cnpj: atual?.cnpj ?? null,
       cnpjVerificado: atual?.cnpjVerificado ?? false,
       razaoSocial: atual?.razaoSocial ?? null,
+      mensalidadeValidaAte: atual?.mensalidadeValidaAte ?? null,
       ...dados,
     });
   }

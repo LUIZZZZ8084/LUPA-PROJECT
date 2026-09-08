@@ -366,7 +366,17 @@ export const MOCK_JOBS: JobListing[] = MOCK_JOBS_BASE.map((job) => ({
  * com o número daqui, alcançando quem o tivesse de verdade em Sinop.
  * O fallback foi corrigido; o número não pode voltar a ser discável.
  */
-export const MOCK_PROVIDERS: ProviderListing[] = [
+/**
+ * `subscription_valid_until` é computado a partir de agora, não digitado
+ * por entrada — mesma razão de `expires_at` em `MOCK_JOBS`: prestador de
+ * demonstração nunca deveria sumir da vitrine só porque uma data fixa
+ * ficou velha com o tempo.
+ */
+type ProviderBase = Omit<ProviderListing, "subscription_valid_until"> & {
+  /** Só para o item cuja mensalidade precisa nascer vencida, de propósito. */
+  subscription_valid_until?: string;
+};
+const MOCK_PROVIDERS_BASE: ProviderBase[] = [
   {
     profile_id: "prv-joao-silva",
     full_name: "João Silva",
@@ -564,7 +574,39 @@ export const MOCK_PROVIDERS: ProviderListing[] = [
     instagram: null,
     facebook: null,
   },
+  /*
+   * Verificado, mas com a mensalidade vencida — de propósito, para o
+   * teste que garante que ela some da vitrine sem sumir do próprio
+   * perfil (mesma regra de `doc_verified`).
+   */
+  {
+    profile_id: "prv-mensalidade-vencida",
+    full_name: "Roberto Alencar",
+    phone: "66000000099",
+    city: "Sinop",
+    neighborhood: "Centro",
+    avatar_url: null,
+    phone_verified: true,
+    doc_verified: true,
+    category_id: cat("eletricista").id,
+    category: cat("eletricista"),
+    description: "Perfil de teste com mensalidade vencida.",
+    starting_price: 100,
+    years_experience: 3,
+    service_area: ["Centro"],
+    photo_urls: [],
+    avg_rating: 0,
+    review_count: 0,
+    instagram: null,
+    facebook: null,
+    subscription_valid_until: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+  },
 ];
+
+export const MOCK_PROVIDERS: ProviderListing[] = MOCK_PROVIDERS_BASE.map((provider) => ({
+  ...provider,
+  subscription_valid_until: provider.subscription_valid_until ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+}));
 
 /* ============================================================
    Avaliações

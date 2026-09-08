@@ -9,7 +9,7 @@ import type { Candidatura } from "@/server/candidaturas/tipos";
 import { repositorioUsuarios } from "@/server/repositories";
 import { RepositorioVagasMemoria, repositorioVagas } from "@/server/vagas";
 import type { Vaga } from "@/server/vagas/tipos";
-import { vagaExpirada } from "./format";
+import { passouDoPrazo, vagaExpirada } from "./format";
 import {
   DEMO_COMPANY_ID,
   MOCK_APPLICATIONS,
@@ -411,6 +411,10 @@ export async function getProviders(
         .from("provider_listings")
         .select("*")
         .eq("doc_verified", true)
+        // Sem mensalidade em dia, o perfil não aparece na busca — os
+        // dados continuam salvos, e a página do próprio perfil não
+        // filtra por isto (mesma razão de `doc_verified`).
+        .gt("subscription_valid_until", new Date().toISOString())
         .order("avg_rating", { ascending: false });
 
       if (filters.city) query = query.eq("city", filters.city);
@@ -435,6 +439,11 @@ export async function getProviders(
     // Mesma regra do banco: as duas camadas não podem divergir, senão o
     // que se demonstra deixa de ser o que roda.
     if (!p.doc_verified) return false;
+    if (
+      !p.subscription_valid_until ||
+      passouDoPrazo(p.subscription_valid_until)
+    )
+      return false;
     if (filters.city && p.city !== filters.city) return false;
     if (filters.category && p.category.slug !== filters.category) return false;
     if (filters.min_rating && p.avg_rating < filters.min_rating) return false;

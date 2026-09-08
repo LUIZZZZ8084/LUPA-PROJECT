@@ -208,6 +208,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       cnpj: perfil.cnpj,
       cnpj_verificado: perfil.cnpjVerificado,
       razao_social: perfil.razaoSocial,
+      mensalidade_valida_ate: perfil.mensalidadeValidaAte,
     });
 
     if (error)
@@ -330,6 +331,21 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     }
   }
 
+  async definirMensalidadeValidaAte(
+    usuarioId: string,
+    ate: string,
+  ): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("perfis_prestador")
+      .update({ mensalidade_valida_ate: ate })
+      .eq("usuario_id", usuarioId);
+
+    if (error) {
+      throw erros.indisponivel(`mensalidade de prestador: ${error.message}`);
+    }
+  }
+
   /* ---------- Leitura de perfil, para a tela de edição ---------- */
 
   async perfilEmpresa(usuarioId: string): Promise<PerfilEmpresa | null> {
@@ -384,6 +400,8 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       cnpj: (data.cnpj as string | null) ?? null,
       cnpjVerificado: Boolean(data.cnpj_verificado),
       razaoSocial: (data.razao_social as string | null) ?? null,
+      mensalidadeValidaAte:
+        (data.mensalidade_valida_ate as string | null) ?? null,
     };
   }
 

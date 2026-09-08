@@ -207,6 +207,25 @@ describe("getProviders", () => {
     expect(perfil?.doc_verified).toBe(false);
   });
 
+  /**
+   * A mensalidade em dia também é pré-requisito para aparecer na busca —
+   * mesmo tratamento de `doc_verified`, e pela mesma razão: os dados
+   * continuam salvos, só o anúncio some.
+   */
+  it("não mostra prestador com mensalidade vencida, mesmo verificado", async () => {
+    const lista = await getProviders();
+
+    expect(lista.length).toBeGreaterThan(0);
+    expect(lista.map((p) => p.full_name)).not.toContain("Roberto Alencar");
+  });
+
+  it("o perfil de quem está com a mensalidade vencida continua abrindo", async () => {
+    const perfil = await getProviderById("prv-mensalidade-vencida");
+
+    expect(perfil).not.toBeNull();
+    expect(perfil?.doc_verified).toBe(true);
+  });
+
   it("filtra por categoria", async () => {
     const lista = await getProviders({ category: "eletricista" });
     expect(lista.length).toBeGreaterThan(0);

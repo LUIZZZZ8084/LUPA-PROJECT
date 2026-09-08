@@ -46,6 +46,14 @@ export type Capacidade =
    * a vagas. Voltar atrás é caso de suporte, como a cidade e o CNPJ.
    */
   | "prestador:ativar"
+  /*
+   * Ver e pagar a própria mensalidade.
+   *
+   * Só quem já é prestador tem — candidato ainda nem ativou o papel, e
+   * quem contrata (empresa) nunca é cobrado. Capacidade própria, e não
+   * um `if` de papel na tela, pelo mesmo motivo de `prestador:ativar`.
+   */
+  | "prestador:gerenciar_assinatura"
   // Vagas
   | "vaga:publicar"
   | "vaga:editar_propria"
@@ -123,6 +131,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
   prestador_servico: [
     "perfil:editar_proprio",
     "perfil:enviar_documento",
+    "prestador:gerenciar_assinatura",
     /*
      * Ver as candidaturas antigas, sem poder criar novas.
      *

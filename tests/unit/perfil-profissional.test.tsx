@@ -43,6 +43,7 @@ const ANUNCIO: DadosPrestador = {
   cnpj: null,
   cnpjVerificado: false,
   razaoSocial: null,
+  mensalidadeValidaAte: null,
 };
 
 /** Só nota e contagem: o resto do anúncio vem do perfil. */

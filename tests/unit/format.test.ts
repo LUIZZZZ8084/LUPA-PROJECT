@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatCnpj,
   formatPhone,
+  formatPrecoBRL,
   formatRating,
   formatSalaryRange,
   formatStartingPrice,
@@ -37,6 +38,13 @@ describe("formatSalaryRange", () => {
 
   it("trata zero como ausência de valor, não como salário zerado", () => {
     expect(formatSalaryRange(0, 0)).toBe("A combinar");
+  });
+});
+
+describe("formatPrecoBRL", () => {
+  it("mantém os centavos, ao contrário de formatMoneyBRL", () => {
+    expect(formatPrecoBRL(24.9)).toBe(`R$${NB}24,90`);
+    expect(formatPrecoBRL(69.9)).toBe(`R$${NB}69,90`);
   });
 });
 

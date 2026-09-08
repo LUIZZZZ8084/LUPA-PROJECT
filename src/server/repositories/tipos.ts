@@ -111,6 +111,13 @@ export interface PerfilPrestador {
    * CNPJ não tiver sido conferido.
    */
   razaoSocial: string | null;
+  /**
+   * Até quando a mensalidade vale. `null` até a primeira cobrança
+   * aprovada; passado o prazo, o perfil some da vitrine de `/servicos` —
+   * o filtro mora em `getProviders`, não aqui, mesma razão de
+   * `docVerified`.
+   */
+  mensalidadeValidaAte: string | null;
 }
 
 export interface PerfilCandidato {
@@ -247,6 +254,14 @@ export interface RepositorioUsuarios {
     verificado: boolean,
     razaoSocial: string | null,
   ): Promise<void>;
+
+  /**
+   * Grava a nova validade da mensalidade. Quem decide a data — hoje mais
+   * 30 dias, ou o prazo que já valia mais 30, para quem renova antes de
+   * vencer não perder dias já pagos — é o serviço; o repositório só
+   * grava o que chegou pronto.
+   */
+  definirMensalidadeValidaAte(usuarioId: string, ate: string): Promise<void>;
 
   /**
    * Candidatos que ligaram "quero que empresas me encontrem".
