@@ -16,10 +16,11 @@ import { entrarComoTeste } from "./helpers";
  * dizer que renova sozinha. Cada elo já tem teste de unidade; o que nenhum
  * deles responde é se eles estão ligados.
  *
- * E, desde a #170, protege também as duas saídas — cancelar a renovação,
- * que **mantém** os dias já pagos, e a devolução, que só vale na primeira
- * cobrança e derruba tudo na hora. São coisas diferentes, e a diferença
- * entre elas é a única que a pessoa precisa entender nesta tela.
+ * E protege a saída, que agora é uma só: cancelar. Dentro do teste
+ * grátis ela sai da busca na hora e não custa nada; depois de a primeira
+ * cobrança acontecer, ela para o futuro e mantém os dias já pagos. A
+ * devolução self-service saiu junto com os 30 dias — o teste grátis é a
+ * janela para desistir, e duas janelas confundiam mais do que protegiam.
  *
  * **Sem Mercado Pago no caminho.** A suíte roda em demonstração por
  * construção, e sem `MERCADO_PAGO_ACCESS_TOKEN` a cobrança é aprovada na
@@ -73,10 +74,15 @@ test.describe("assinatura do prestador", () => {
   test("mostra o preço e o teste grátis, sem carência nenhuma", async () => {
     await page.goto("/perfil/assinatura");
 
-    await expect(page.getByText("R$ 19,90")).toBeVisible();
+    /*
+     * `.first()` nos dois: o preço aparece no texto que explica quando a
+     * cobrança acontece **e** no número grande; "15 dias grátis" aparece
+     * no texto e no rótulo do botão. Repetir é proposital — quem lê só o
+     * botão e quem lê só o parágrafo precisam sair sabendo a mesma coisa.
+     */
+    await expect(page.getByText("R$ 19,90").first()).toBeVisible();
     await expect(page.getByText("/mês")).toBeVisible();
     await expect(page.getByText("Inativa", { exact: true })).toBeVisible();
-    // Aparece duas vezes — no texto e no rótulo do botão — daí o `.first()`.
     await expect(page.getByText(/15 dias grátis/i).first()).toBeVisible();
   });
 
@@ -208,41 +214,6 @@ test.describe("assinatura do prestador", () => {
       "cancelar não pode encurtar o mês que a pessoa já pagou",
     ).toBe(antes);
     await expect(page.getByText("Ativa", { exact: true })).toBeVisible();
-  });
-
-  /**
-   * Pedir a devolução pela Lupa, sem entrar no Mercado Pago (#168).
-   *
-   * O prestador acabou de assinar, então está na primeira cobrança e
-   * dentro dos 30 dias — e o botão só existe nessa janela, decidido no
-   * servidor. A confirmação é um segundo clique porque a devolução tira a
-   * vitrine na hora.
-   */
-  test("pede a devolução e a mensalidade cai na hora", async () => {
-    await page.goto("/perfil/assinatura");
-
-    await expect(page.getByText("Ativa", { exact: true })).toBeVisible();
-
-    await page.getByRole("button", { name: /pedir devolução/i }).click();
-    /*
-     * O aviso diz, antes do segundo clique, as duas coisas que a pessoa
-     * precisa saber: que a mensalidade cai na hora e que esta chance não
-     * se repete. "Sai da busca" sozinho não serviria de âncora — a
-     * própria descrição da mensalidade vencida usa essa frase.
-     */
-    await expect(page.getByText(/só nesta primeira cobrança/i)).toBeVisible();
-
-    await page.getByRole("button", { name: /confirmar devolução/i }).click();
-
-    await expect(
-      page.getByText("Inativa", { exact: true }),
-      "a mensalidade tinha de cair junto com a devolução",
-    ).toBeVisible({ timeout: 15_000 });
-
-    // E o botão some: não há mais o que devolver.
-    await expect(
-      page.getByRole("button", { name: /pedir devolução/i }),
-    ).toHaveCount(0);
   });
 
   /**

@@ -12,7 +12,6 @@ import { estadoDaAssinatura } from "@/server/pagamentos/servico";
 import { repositorioUsuarios } from "@/server/repositories";
 import { AssinarButton } from "./assinar-button";
 import { CancelarRenovacaoButton } from "./cancelar-button";
-import { EstornarButton } from "./estornar-button";
 
 export const metadata: Metadata = {
   title: "Assinatura",
@@ -27,13 +26,7 @@ export default async function AssinaturaPage() {
   const perfil = await repositorioUsuarios().perfilPrestador(sessao.usuarioId);
   if (!perfil) notFound();
 
-  /*
-   * Quem decide o que a tela oferece é o servidor, não o botão. Mostrar a
-   * devolução fora do prazo — ou fora da primeira cobrança — e recusar
-   * depois do clique é o "botão que só recusa depois do clique" que este
-   * projeto já registra duas vezes.
-   */
-  const { assinatura, podeEstornar } = await estadoDaAssinatura(sessao);
+  const { assinatura, emTesteGratis } = await estadoDaAssinatura(sessao);
 
   const ate = perfil.mensalidadeValidaAte;
   const emDia = Boolean(ate) && !passouDoPrazo(ate as string);
@@ -59,76 +52,103 @@ export default async function AssinaturaPage() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-base">Mensalidade de prestador</h2>
-              <Badge tone={emDia ? "vagas" : "neutral"}>
-                {emDia ? "Ativa" : "Inativa"}
+              <Badge
+                tone={emTesteGratis ? "servicos" : emDia ? "vagas" : "neutral"}
+              >
+                {emTesteGratis ? "Teste grátis" : emDia ? "Ativa" : "Inativa"}
               </Badge>
             </div>
 
-            <p className="mt-1.5 text-sm leading-relaxed text-muted">
-              {renova ? (
+            {/*
+              Cada estado diz três coisas, na mesma ordem: onde a pessoa
+              está, o que acontece sozinho, e o que ela faz se não quiser.
+              Sem isso a mesma tela já confundiu — "nada é devolvido" para
+              quem ainda não pagou nada soa como ameaça.
+            */}
+            <div className="mt-1.5 space-y-2 text-muted text-sm leading-relaxed">
+              {emTesteGratis ? (
                 <>
-                  Renova sozinha todo mês. A próxima cobrança sai por volta de{" "}
-                  <strong className="text-ink">{validaAte}</strong>, e você pode
-                  cancelar quando quiser.
+                  <p>
+                    Seu perfil já está na busca, e{" "}
+                    <strong className="text-ink">
+                      você ainda não pagou nada
+                    </strong>
+                    .
+                  </p>
+                  <p>
+                    O teste vai até{" "}
+                    <strong className="text-ink">{validaAte}</strong>. Se não
+                    cancelar até essa data, cobramos {preco} no seu cartão e a
+                    assinatura passa a renovar todo mês. Cancelando antes,{" "}
+                    <strong className="text-ink">não é cobrado nada</strong>.
+                  </p>
                 </>
+              ) : renova ? (
+                <p>
+                  Renova sozinha todo mês. A próxima cobrança de {preco} sai por
+                  volta de <strong className="text-ink">{validaAte}</strong>, e
+                  você pode cancelar quando quiser.
+                </p>
               ) : cartaoRecusado ? (
-                <>
+                <p>
                   O Mercado Pago não conseguiu cobrar a última mensalidade — em
-                  geral é o cartão. Assine de novo para voltar a renovar.
-                </>
+                  geral é o cartão. Assine de novo para voltar a aparecer na
+                  busca.
+                </p>
               ) : comecouENaoTerminou ? (
-                <>
-                  Você começou a assinar e não terminou. Continue de onde parou
-                  para autorizar a cobrança mensal.
-                </>
+                <p>
+                  Você começou e não terminou. Continue de onde parou para
+                  autorizar o cartão e começar os {DIAS_TESTE_GRATIS} dias de
+                  teste.
+                </p>
               ) : emDia ? (
-                <>
+                <p>
                   Sua mensalidade vale até{" "}
                   <strong className="text-ink">{validaAte}</strong>, e{" "}
                   <strong className="text-ink">não renova sozinha</strong>.
-                  Depois dessa data o perfil sai da busca de{" "}
-                  <span className="font-medium">/servicos</span> — os dados
-                  continuam salvos.
-                </>
+                  Depois dessa data o perfil sai da busca — os dados continuam
+                  salvos.
+                </p>
               ) : (
                 <>
-                  Sem mensalidade ativa, seu perfil não aparece na busca de quem
-                  procura profissional. Autorize o cartão e teste{" "}
-                  <strong className="text-ink">
-                    {DIAS_TESTE_GRATIS} dias grátis
-                  </strong>
-                  ; se não cancelar antes, cobra sozinho quando o prazo
-                  terminar.
+                  <p>
+                    Sem assinatura, seu perfil{" "}
+                    <strong className="text-ink">não aparece na busca</strong>{" "}
+                    de quem procura profissional.
+                  </p>
+                  <p>
+                    Você autoriza o cartão e testa{" "}
+                    <strong className="text-ink">
+                      {DIAS_TESTE_GRATIS} dias grátis
+                    </strong>
+                    . A primeira cobrança de {preco} só acontece depois disso —
+                    e se cancelar antes, não pagou nada.
+                  </p>
                 </>
               )}
-            </p>
+            </div>
 
-            <p className="mt-3 text-2xl font-bold text-servicos">
+            <p className="mt-3 font-bold text-2xl text-servicos">
               {preco}
-              <span className="ml-1 text-sm font-normal text-muted">/mês</span>
+              <span className="ml-1 font-normal text-muted text-sm">/mês</span>
             </p>
 
             {renova && validaAte ? (
-              <CancelarRenovacaoButton validaAte={validaAte} />
+              <CancelarRenovacaoButton
+                validaAte={validaAte}
+                emTesteGratis={emTesteGratis}
+              />
             ) : (
               <AssinarButton
                 rotulo={
                   comecouENaoTerminou
-                    ? "Continuar assinatura"
+                    ? "Continuar"
                     : emDia
                       ? "Ativar renovação automática"
                       : `Testar ${DIAS_TESTE_GRATIS} dias grátis`
                 }
               />
             )}
-
-            {/*
-              A devolução não depende de a renovação estar ligada. Quem
-              cancelou no dia seguinte à primeira cobrança e ainda quer o
-              dinheiro de volta está dentro da regra — esconder o botão
-              ali mandaria essa pessoa ao suporte por nada.
-            */}
-            {podeEstornar && <EstornarButton />}
           </div>
         </div>
       </Panel>

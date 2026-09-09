@@ -17,19 +17,6 @@ export type StatusPagamento =
   | "cancelado"
   | "estornado";
 
-/**
- * Os dois estados em que uma cobrança já mexeu no dinheiro de alguém.
- *
- * É o que decide se uma cobrança é "a primeira" da pessoa (#170): quem
- * pediu devolução uma vez tem uma linha `estornado` no histórico, e a
- * próxima cobrança dela é a segunda — senão bastaria pedir devolução e
- * assinar de novo para ter primeira cobrança para sempre.
- */
-export const STATUS_LIQUIDADOS: readonly StatusPagamento[] = [
-  "aprovado",
-  "estornado",
-];
-
 export interface Pagamento {
   id: string;
   usuarioId: string;
@@ -116,15 +103,6 @@ export interface RepositorioPagamentos {
   porId(id: string): Promise<Pagamento | null>;
 
   /**
-   * A cobrança aprovada mais recente da pessoa, ou `null`.
-   *
-   * É o que a tela de assinatura precisa para saber se há algo a estornar,
-   * e o serviço para saber *o quê* estornar — sem nunca receber um id do
-   * formulário, que deixaria alguém pedir o estorno da cobrança de outro.
-   */
-  ultimoAprovado(usuarioId: string): Promise<Pagamento | null>;
-
-  /**
    * A cobrança pelo id que o Mercado Pago usa, e não pelo nosso.
    *
    * É o que permite reconhecer uma parcela da recorrência quando o
@@ -137,14 +115,15 @@ export interface RepositorioPagamentos {
   porMpPaymentId(mpPaymentId: string): Promise<Pagamento | null>;
 
   /**
-   * Quantas cobranças da pessoa já mexeram no dinheiro dela — aprovadas
-   * mais estornadas (`STATUS_LIQUIDADOS`).
+   * Alguma parcela desta assinatura já foi cobrada de verdade?
    *
-   * A devolução vale só na primeira (#170), e "primeira" é `1` aqui.
-   * Contar só as aprovadas deixaria quem já pediu devolução voltar à casa
-   * de partida a cada assinatura nova.
+   * É o que separa "está no teste grátis" de "já está pagando" — e a
+   * tela precisa da diferença para não dizer a frase errada. Durante o
+   * teste, "nada é devolvido" soa como ameaça a quem não pagou nada
+   * ainda; depois da primeira cobrança, é a informação que evita a
+   * pessoa achar que cancelar apaga o mês que ela pagou.
    */
-  contarLiquidadas(usuarioId: string): Promise<number>;
+  temParcelaAprovada(assinaturaId: string): Promise<boolean>;
 
   criar(dados: DadosNovaCobranca): Promise<Pagamento>;
 

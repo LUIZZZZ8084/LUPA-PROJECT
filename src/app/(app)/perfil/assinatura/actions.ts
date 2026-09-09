@@ -6,11 +6,7 @@ import { z } from "zod";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { erros } from "@/server/errors";
-import {
-  assinar,
-  cancelarRenovacao,
-  pedirEstorno,
-} from "@/server/pagamentos/servico";
+import { assinar, cancelarRenovacao } from "@/server/pagamentos/servico";
 
 /**
  * Assina a mensalidade de prestador, com renovação automática.
@@ -57,32 +53,6 @@ export const cancelarRenovacaoMensal = criarAcao({
       throw erros.validacao([
         { campo: "renovacao", mensagem: resultado.motivo },
       ]);
-
-    revalidatePath("/perfil/assinatura");
-    revalidatePath("/perfil");
-    return {};
-  },
-});
-
-/**
- * Devolve o dinheiro da primeira cobrança, a pedido de quem pagou (#168,
- * com o prazo e o alcance revistos na #170).
- *
- * Não recebe o id da cobrança: ele sai da sessão, no serviço. Aceitar um
- * id daqui deixaria alguém mandar estornar a cobrança de outra pessoa.
- *
- * O resultado volta para a tela em vez de redirecionar: a pessoa está
- * olhando para o próprio estado de assinatura, e é ali que a mudança
- * precisa aparecer.
- */
-export const estornarMensalidade = criarAcao({
-  nome: "prestador.estornar_mensalidade",
-  entrada: z.object({}),
-  executar: async () => {
-    const resultado = await pedirEstorno(await sessaoAtual());
-
-    if (!resultado.ok)
-      throw erros.validacao([{ campo: "estorno", mensagem: resultado.motivo }]);
 
     revalidatePath("/perfil/assinatura");
     revalidatePath("/perfil");

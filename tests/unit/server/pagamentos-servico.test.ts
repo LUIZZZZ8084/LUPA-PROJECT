@@ -243,9 +243,14 @@ describe("cancelarRenovacao", () => {
   });
 
   /**
-   * O que separa cancelar de estornar: **os dias já pagos continuam
-   * valendo**. Revogar a mensalidade aqui tiraria da vitrine alguém que
-   * pagou pelo mês inteiro e só não quer o mês seguinte.
+   * Quem **já pagou** o mês fica até o fim dele.
+   *
+   * Em demonstração `assinar` já grava a primeira parcela aprovada, então
+   * esta conta está na situação "pagou": revogar aqui tiraria da vitrine
+   * alguém que pagou pelo mês inteiro e só não quer o mês seguinte. O
+   * caso oposto — cancelar dentro do teste grátis, que sai da busca na
+   * hora — mora em `pagamentos-renovacao.test.ts`, onde há assinatura
+   * ativa sem nenhuma cobrança.
    */
   it("não revoga a mensalidade — quem pagou o mês fica até o fim dele", async () => {
     await ctx.servico.assinar(sessao, "prestador_mensalidade");

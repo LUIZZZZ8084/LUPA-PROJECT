@@ -13,7 +13,7 @@ import type {
   StatusPagamento,
   TipoPagamento,
 } from "./tipos";
-import { STATUS_ASSINATURA_VIVA, STATUS_LIQUIDADOS } from "./tipos";
+import { STATUS_ASSINATURA_VIVA } from "./tipos";
 
 function paraPagamento(linha: Record<string, unknown>): Pagamento {
   return {
@@ -74,6 +74,18 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
       throw erros.indisponivel(error.message);
     }
     return data ? paraPagamento(data) : null;
+  }
+
+  async temParcelaAprovada(assinaturaId: string): Promise<boolean> {
+    const supabase = await cliente();
+    const { count, error } = await supabase
+      .from("pagamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("assinatura_id", assinaturaId)
+      .eq("status", "aprovado");
+
+    if (error) throw erros.indisponivel(error.message);
+    return (count ?? 0) > 0;
   }
 
   async criar(dados: DadosNovaCobranca): Promise<Pagamento> {
@@ -140,33 +152,6 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
 
     if (error) throw erros.indisponivel(error.message);
     return data ? paraPagamento(data) : null;
-  }
-
-  async ultimoAprovado(usuarioId: string): Promise<Pagamento | null> {
-    const supabase = await cliente();
-    const { data, error } = await supabase
-      .from("pagamentos")
-      .select("*")
-      .eq("usuario_id", usuarioId)
-      .eq("status", "aprovado")
-      .order("criado_em", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) throw erros.indisponivel(error.message);
-    return data ? paraPagamento(data) : null;
-  }
-
-  async contarLiquidadas(usuarioId: string): Promise<number> {
-    const supabase = await cliente();
-    const { count, error } = await supabase
-      .from("pagamentos")
-      .select("id", { count: "exact", head: true })
-      .eq("usuario_id", usuarioId)
-      .in("status", [...STATUS_LIQUIDADOS]);
-
-    if (error) throw erros.indisponivel(error.message);
-    return count ?? 0;
   }
 
   async aprovar(

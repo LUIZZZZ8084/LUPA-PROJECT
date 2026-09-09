@@ -81,60 +81,6 @@ export async function consultarPagamento(
   }
 }
 
-/**
- * Pede o estorno total de um pagamento aprovado.
- *
- * `POST /v1/payments/{id}/refunds` sem corpo devolve o valor inteiro — com
- * `{ amount }` seria parcial, e a decisão do Luiz em 08/09/2026 é devolver
- * tudo.
- *
- * O retorno é explícito, como o resto deste arquivo: aqui é dinheiro, e um
- * erro de rede não pode virar "deu certo" por omissão. Quem chama só
- * revoga a mensalidade quando isto responde `ok` — se o estorno não
- * aconteceu, o dinheiro não voltou, e tirar a vitrine seria o pior dos dois
- * mundos para quem pediu.
- */
-export async function estornarPagamento(
-  mpPaymentId: string,
-  buscar: typeof fetch = fetch,
-): Promise<{ ok: true } | { ok: false; motivo: string }> {
-  try {
-    const resposta = await buscar(
-      `${BASE}/v1/payments/${mpPaymentId}/refunds`,
-      {
-        method: "POST",
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${token()}`,
-          /*
-           * O Mercado Pago exige chave de idempotência no estorno. Sem ela,
-           * dois cliques no mesmo botão viram duas devoluções — e a segunda
-           * sai do bolso de quem recebeu.
-           */
-          "X-Idempotency-Key": `estorno-${mpPaymentId}`,
-        },
-        cache: "no-store",
-      },
-    );
-
-    if (!resposta.ok) {
-      const corpo = await resposta.text().catch(() => "");
-      return {
-        ok: false,
-        motivo: `O Mercado Pago recusou o estorno (${resposta.status}). ${corpo}`,
-      };
-    }
-
-    return { ok: true };
-  } catch {
-    return {
-      ok: false,
-      motivo: "Não foi possível falar com o Mercado Pago agora.",
-    };
-  }
-}
-
 // ── Assinaturas recorrentes: `preapproval` (#170) ─────────────────────────
 //
 // O Checkout Pro acima cobra uma vez. O `preapproval` é a autorização que

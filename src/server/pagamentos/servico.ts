@@ -16,7 +16,6 @@ import {
   consultarPagamento,
   consultarParcelaDaAssinatura,
   criarAssinaturaRecorrente,
-  estornarPagamento,
   temMercadoPagoConfigurado,
 } from "./mercadopago";
 import {
@@ -69,16 +68,28 @@ async function aplicarEfeito(pagamento: Pagamento): Promise<void> {
  * motivo: um `TipoPagamento` novo que ganhe efeito e não ganhe reversão
  * quebra o build aqui, e não em produção com um estorno sem consequência.
  */
-async function desfazerEfeito(pagamento: Pagamento): Promise<void> {
-  switch (pagamento.tipo) {
+async function desfazerEfeitoDoTipo(
+  tipo: TipoPagamento,
+  usuarioId: string,
+): Promise<void> {
+  switch (tipo) {
     case "prestador_mensalidade":
-      await revogarMensalidade(pagamento.usuarioId);
+      await revogarMensalidade(usuarioId);
       return;
     default: {
-      const _exaustivo: never = pagamento.tipo;
+      const _exaustivo: never = tipo;
       throw erros.interno(`tipo de pagamento sem reversão: ${_exaustivo}`);
     }
   }
+}
+
+/**
+ * A mesma reversão, a partir de uma cobrança — o caso do estorno e do
+ * chargeback, que chegam apontando para o pagamento e não para a
+ * assinatura.
+ */
+async function desfazerEfeito(pagamento: Pagamento): Promise<void> {
+  await desfazerEfeitoDoTipo(pagamento.tipo, pagamento.usuarioId);
 }
 
 // ── Assinar ───────────────────────────────────────────────────────────────
@@ -311,6 +322,14 @@ export async function cancelarRenovacao(
     return { ok: false, motivo: "Não há renovação automática para cancelar." };
   }
 
+  /*
+   * Antes de encerrar, pergunta se já houve dinheiro — depois de
+   * `definirStatusAssinatura` a resposta continuaria a mesma, mas ler
+   * aqui deixa explícito que a decisão é sobre o estado de *antes* do
+   * cancelamento.
+   */
+  const jaPagou = await repo.temParcelaAprovada(assinatura.id);
+
   const encerrada = await encerrarNoMercadoPago(assinatura, buscar);
   if (!encerrada.ok) {
     log.warn("Mercado Pago recusou o cancelamento da assinatura", {
@@ -321,173 +340,82 @@ export async function cancelarRenovacao(
 
   await repo.definirStatusAssinatura(assinatura.id, "cancelada");
 
+  /*
+   * Cancelar no meio do teste grátis tira da vitrine na hora; cancelar
+   * depois de pagar não tira nada.
+   *
+   * A diferença é o que a pessoa comprou. Quem pagou o mês tem direito ao
+   * mês — encurtar ali seria cobrar por 30 dias e entregar 12. Quem está
+   * no teste não pagou nada e acabou de dizer que não quer: manter o
+   * perfil na busca até o fim dos `DIAS_TESTE_GRATIS` seria entregar o
+   * teste inteiro a quem desistiu dele, que é justamente o uso de graça
+   * que o fim da carência veio fechar.
+   *
+   * A tela promete exatamente isto ("seu perfil sai da busca agora"), e
+   * promessa na tela é contrato.
+   */
+  if (!jaPagou) {
+    await desfazerEfeitoDoTipo(assinatura.tipo, assinatura.usuarioId);
+  }
+
   log.info("renovação automática cancelada pela pessoa", {
     acao: "pagamentos.cancelar_renovacao",
     tipo: assinatura.tipo,
+    jaPagou,
   });
 
   return { ok: true };
 }
 
-// ── Devolver o dinheiro ───────────────────────────────────────────────────
-
-/**
- * Trinta dias, contados da cobrança — e só da primeira.
- *
- * Decisão do Luiz em 09/09/2026 (#170), substituindo os sete dias com que
- * a #168 nasceu. A primeira cobrança é a porta de entrada: quem
- * experimentou e não gostou tem um mês inteiro para desistir sem custo.
- */
-export const PRAZO_ESTORNO_MS = 30 * 24 * 60 * 60 * 1000;
-
-export function dentroDoPrazoDeEstorno(pagamento: Pagamento): boolean {
-  return Date.now() - new Date(pagamento.criadoEm).getTime() < PRAZO_ESTORNO_MS;
-}
-
-/**
- * A cobrança que a pessoa ainda pode mandar estornar, se houver.
- *
- * Duas condições, e a segunda é a que a #170 acrescentou: **tem de ser a
- * primeira cobrança dela**. Da segunda em diante a pessoa já sabia o que
- * estava contratando, e o que ela precisa é de uma saída para o futuro
- * (`cancelarRenovacao`), não do dinheiro do mês corrente de volta.
- *
- * "Primeira" conta aprovadas **e** estornadas (`STATUS_LIQUIDADOS`):
- * contar só as aprovadas devolveria a casa de partida a cada assinatura
- * nova, e quem quisesse usar de graça bastaria pedir devolução e assinar
- * outra vez, todo mês — que é exatamente o buraco que esta regra fecha.
- */
-export async function cobrancaEstornavel(
-  sessao: Autenticado | null,
-): Promise<Pagamento | null> {
-  if (!sessao) return null;
-
-  const repo = repositorioPagamentos();
-  const ultimo = await repo.ultimoAprovado(sessao.usuarioId);
-  if (!ultimo || !dentroDoPrazoDeEstorno(ultimo)) return null;
-
-  const liquidadas = await repo.contarLiquidadas(sessao.usuarioId);
-  return liquidadas === 1 ? ultimo : null;
-}
-
-/**
- * Devolve o dinheiro da primeira cobrança, a pedido de quem pagou.
- *
- * Automático, sem fila: decisão do Luiz em 08/09/2026 (#168), com o prazo
- * e o alcance revistos em 09/09 (#170) — trinta dias, e só a primeira
- * cobrança.
- *
- * **A cobrança vem da sessão, nunca do formulário.** Aceitar um id daqui
- * deixaria alguém mandar estornar a cobrança de outra pessoa.
- *
- * **A renovação é cancelada antes de o dinheiro voltar, e não depois.**
- * Se a ordem fosse a inversa e o cancelamento falhasse, a pessoa teria o
- * dinheiro de volta e uma cobrança nova programada para o mês seguinte —
- * e não haveria como desfazer o estorno para consertar. Cancelando
- * primeiro, a pior falha possível é uma assinatura encerrada sem
- * devolução: recuperável, porque assinar de novo está a um clique, e os
- * dias já pagos não são tocados.
- *
- * **O efeito é aplicado aqui, e não esperando o webhook.** Quem apertou o
- * botão precisa ver o resultado; o `refunded` chega depois e encontra a
- * cobrança já `estornado` — `estornar` parte de `aprovado` e devolve
- * `null`, então nada acontece duas vezes.
- *
- * **Falha do Mercado Pago não revoga nada.** Se o estorno não aconteceu, o
- * dinheiro não voltou: tirar a vitrine ali seria o pior dos dois mundos
- * para quem pediu.
- */
-export async function pedirEstorno(
-  sessao: Autenticado | null,
-  buscar?: typeof fetch,
-): Promise<{ ok: true } | { ok: false; motivo: string }> {
-  if (!sessao) throw erros.naoAutenticado("sem sessão");
-
-  const repo = repositorioPagamentos();
-  const pagamento = await repo.ultimoAprovado(sessao.usuarioId);
-
-  if (!pagamento) {
-    return { ok: false, motivo: "Não há pagamento a estornar." };
-  }
-
-  if (!dentroDoPrazoDeEstorno(pagamento)) {
-    return {
-      ok: false,
-      motivo:
-        "O prazo de 30 dias para devolução já passou. Você pode cancelar a renovação para não ser cobrado de novo.",
-    };
-  }
-
-  /*
-   * A tela já não oferece o botão fora da primeira cobrança — mas tela
-   * não é portão, e esta função é alcançável direto pela action.
-   */
-  if ((await repo.contarLiquidadas(sessao.usuarioId)) !== 1) {
-    return {
-      ok: false,
-      motivo:
-        "A devolução vale só para a primeira cobrança. Você pode cancelar a renovação para não ser cobrado de novo.",
-    };
-  }
-
-  const assinatura = await repo.assinaturaViva(sessao.usuarioId);
-  if (assinatura) {
-    const encerrada = await encerrarNoMercadoPago(assinatura, buscar);
-    if (!encerrada.ok) {
-      log.warn("estorno abortado: não deu para cancelar a renovação antes", {
-        acao: "pagamentos.estornar",
-      });
-      return {
-        ok: false,
-        motivo:
-          "Não conseguimos interromper a renovação agora, e por isso não devolvemos o valor. Tente de novo em alguns minutos.",
-      };
-    }
-    await repo.definirStatusAssinatura(assinatura.id, "cancelada");
-  }
-
-  /*
-   * Em demonstração não há o que pedir ao Mercado Pago: a cobrança foi
-   * aprovada sem ele. O efeito vale igual, que é o que a tela precisa
-   * mostrar — mesma regra do `assinar`.
-   */
-  if (temMercadoPagoConfigurado && pagamento.mpPaymentId) {
-    const resultado = await estornarPagamento(pagamento.mpPaymentId, buscar);
-    if (!resultado.ok) {
-      log.warn("Mercado Pago recusou o estorno", {
-        acao: "pagamentos.estornar",
-      });
-      return resultado;
-    }
-  }
-
-  const estornado = await repo.estornar(pagamento.id, pagamento.mpPaymentId);
-  if (estornado) await desfazerEfeito(estornado);
-
-  log.info("estorno pedido pela pessoa", {
-    acao: "pagamentos.estornar",
-    tipo: pagamento.tipo,
-  });
-
-  return { ok: true };
-}
+// ── Devolver o dinheiro: nao existe mais porta aqui ───────────────
+//
+// A #168 tinha construido devolucao self-service, e a #170 chegou a
+// restringi-la a primeira cobranca em 30 dias. As duas sairam em
+// 09/09/2026, quando o teste gratis passou a ser a janela unica: cancelou
+// dentro dos DIAS_TESTE_GRATIS, nada foi cobrado e nao ha o que devolver;
+// passou disso, a cobranca vale e a saida e cancelar a renovacao, que para
+// o futuro sem mexer no mes corrente.
+//
+// **Duas janelas para desistir confundiam mais do que protegiam** — a
+// pessoa precisava entender teste, prazo de devolucao e cancelamento ao
+// mesmo tempo, tres coisas para uma decisao so. E a que sobrou e a mais
+// honesta das tres: ninguem paga para depois pedir de volta.
+//
+// Devolver continua possivel como **caso de suporte**, pelo painel do
+// Mercado Pago. Quando o Luiz devolve por la, o webhook `refunded` chega
+// aqui e `confirmarPagamento` revoga a mensalidade e encerra a renovacao
+// — o mesmo caminho que ja trata chargeback. O que saiu foi o botao, nao
+// a reacao ao estorno.
 
 // ── O que a tela mostra ───────────────────────────────────────────────────
 
 export interface EstadoDaAssinatura {
   assinatura: Assinatura | null;
-  /** Já calculado no servidor: o botão não decide o que ele mesmo pode. */
-  podeEstornar: boolean;
+  /**
+   * Autorizada, mas ainda sem nenhuma cobrança de verdade — o teste
+   * grátis está correndo.
+   *
+   * Quem decide isto é o servidor, não a tela: é a diferença entre
+   * "cancele e não paga nada" e "cancele e fica até o fim do mês que
+   * você pagou", e dizer a frase errada em qualquer das duas direções é
+   * o tipo de confusão que faz a pessoa não clicar em nada.
+   */
+  emTesteGratis: boolean;
 }
 
 export async function estadoDaAssinatura(
   sessao: Autenticado | null,
 ): Promise<EstadoDaAssinatura> {
-  if (!sessao) return { assinatura: null, podeEstornar: false };
+  if (!sessao) return { assinatura: null, emTesteGratis: false };
+
+  const repo = repositorioPagamentos();
+  const assinatura = await repo.assinaturaViva(sessao.usuarioId);
 
   return {
-    assinatura: await repositorioPagamentos().assinaturaViva(sessao.usuarioId),
-    podeEstornar: Boolean(await cobrancaEstornavel(sessao)),
+    assinatura,
+    emTesteGratis:
+      assinatura?.status === "ativa" &&
+      !(await repo.temParcelaAprovada(assinatura.id)),
   };
 }
 

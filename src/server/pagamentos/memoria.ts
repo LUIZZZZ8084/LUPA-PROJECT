@@ -9,7 +9,7 @@ import type {
   StatusAssinatura,
   StatusPagamento,
 } from "./tipos";
-import { STATUS_ASSINATURA_VIVA, STATUS_LIQUIDADOS } from "./tipos";
+import { STATUS_ASSINATURA_VIVA } from "./tipos";
 
 /** Repositório de pagamentos em memória, para o modo demonstração. */
 export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
@@ -27,17 +27,10 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
     );
   }
 
-  async ultimoAprovado(usuarioId: string): Promise<Pagamento | null> {
-    const dele = [...this.itens.values()]
-      .filter((p) => p.usuarioId === usuarioId && p.status === "aprovado")
-      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
-    return dele[0] ?? null;
-  }
-
-  async contarLiquidadas(usuarioId: string): Promise<number> {
-    return [...this.itens.values()].filter(
-      (p) => p.usuarioId === usuarioId && STATUS_LIQUIDADOS.includes(p.status),
-    ).length;
+  async temParcelaAprovada(assinaturaId: string): Promise<boolean> {
+    return [...this.itens.values()].some(
+      (p) => p.assinaturaId === assinaturaId && p.status === "aprovado",
+    );
   }
 
   async criar(dados: DadosNovaCobranca): Promise<Pagamento> {

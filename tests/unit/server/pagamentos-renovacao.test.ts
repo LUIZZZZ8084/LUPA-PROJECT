@@ -159,6 +159,43 @@ describe("renovação automática", () => {
       expect(estender).not.toHaveBeenCalled();
     });
 
+    /**
+     * Cancelar dentro do teste tira da busca **na hora**, e é o oposto do
+     * que vale para quem já pagou.
+     *
+     * A diferença é o que a pessoa comprou. Quem pagou o mês tem direito
+     * ao mês; quem está no teste não pagou nada e acabou de dizer que não
+     * quer — manter o perfil até o fim dos 15 dias seria entregar o teste
+     * inteiro a quem desistiu dele, o uso de graça que o fim da carência
+     * veio fechar. E é o que a tela promete, com todas as letras.
+     */
+    it("cancelar dentro do teste grátis tira da busca na hora", async () => {
+      await assinaturaPendente();
+      await ctx.servico.confirmarAssinatura(
+        "pre-1",
+        respostaJson({ id: "pre-1", status: "authorized" }),
+      );
+      revogar.mockClear();
+
+      await ctx.servico.cancelarRenovacao(sessao, respostaJson({}));
+
+      expect(revogar).toHaveBeenCalledWith("prestador-1");
+    });
+
+    /** Já cobrado, a regra se inverte: o mês pago não é encurtado. */
+    it("cancelar depois da primeira cobrança não tira da busca", async () => {
+      await assinaturaPendente();
+      await ctx.servico.confirmarParcelaDaAssinatura(
+        "auth-1",
+        faturaCobrada("mp-100"),
+      );
+      revogar.mockClear();
+
+      await ctx.servico.cancelarRenovacao(sessao, respostaJson({}));
+
+      expect(revogar).not.toHaveBeenCalled();
+    });
+
     it("aviso repetido de authorized não concede o teste duas vezes", async () => {
       await assinaturaPendente();
       const aviso = respostaJson({ id: "pre-1", status: "authorized" });
@@ -289,8 +326,8 @@ describe("renovação automática", () => {
         "ativa",
       );
 
-      const parcela = await ctx.repo.ultimoAprovado(sessao.usuarioId);
-      expect(parcela?.mpPaymentId).toBe("mp-100");
+      const parcela = await ctx.repo.porMpPaymentId("mp-100");
+      expect(parcela?.status).toBe("aprovado");
       expect(parcela?.assinaturaId).toBe(assinatura.id);
       expect(parcela?.valorCentavos).toBe(1990);
     });
@@ -389,9 +426,9 @@ describe("renovação automática", () => {
       );
 
       expect(estender).toHaveBeenCalledWith("prestador-1");
-      expect(
-        (await ctx.repo.ultimoAprovado(sessao.usuarioId))?.mpPaymentId,
-      ).toBe("mp-100");
+      expect((await ctx.repo.porMpPaymentId("mp-100"))?.status).toBe(
+        "aprovado",
+      );
     });
 
     it("pagamento recusado de uma assinatura não estende nada", async () => {

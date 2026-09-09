@@ -175,14 +175,6 @@ describe("RepositorioPagamentosPostgres", () => {
     expect(parcela, "aviso repetido não é erro, é 'nada a fazer'").toBeNull();
   });
 
-  it("contarLiquidadas conta aprovadas e estornadas — não só as aprovadas", async () => {
-    resposta = { data: null, error: null, count: 3 };
-    expect(await repo.contarLiquidadas(LINHA.usuario_id)).toBe(3);
-
-    const filtro = chamadas.find((c) => c.metodo === "in");
-    expect(filtro?.args).toEqual(["status", ["aprovado", "estornado"]]);
-  });
-
   it("definirStatusAssinatura não sai de 'cancelada' nem regrava o mesmo status", async () => {
     resposta = { data: { ...ASSINATURA, status: "ativa" }, error: null };
     await repo.definirStatusAssinatura(ASSINATURA.id, "ativa");
@@ -349,9 +341,6 @@ describe("RepositorioPagamentosPostgres", () => {
       ).rejects.toMatchObject({ codigo: "indisponivel" });
       await expect(
         repo.definirStatusAssinatura(ASSINATURA.id, "ativa"),
-      ).rejects.toMatchObject({ codigo: "indisponivel" });
-      await expect(
-        repo.contarLiquidadas(LINHA.usuario_id),
       ).rejects.toMatchObject({ codigo: "indisponivel" });
       await expect(
         repo.registrarLiquidada({
