@@ -1348,6 +1348,25 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
 Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
 último em `tests/unit/cidades.test.ts` — os três varrem o código-fonte.
 
+- **Teste que passa porque o ambiente de teste é mais limpo que a
+  produção não está testando nada.** A varredura de grants perguntava ao
+  banco `has_table_privilege('anon', tabela, 'SELECT')` e passava — no
+  PGlite, que é um Postgres limpo onde ninguém concedeu nada. O
+  **Supabase concede `select` a `anon` e `authenticated` por padrão** nas
+  tabelas do schema público, então a pergunta certa nunca era "o banco de
+  teste nega?" e sim "o `revoke` está escrito?". `preferencias_notificacao`
+  e `inscricoes_push` (#48) nasceram com o `select` aberto em produção,
+  com a suíte verde — e a mesma varredura, uma vez consertada, achou
+  `pedidos_verificacao` na mesma situação **desde sempre**, guardando
+  documento e selfie de gente real. Nenhuma das três vazou, porque RLS
+  ligada sem policy nega tudo; o que faltava era a segunda camada, que
+  existe justamente para o dia em que alguém criar uma policy por engano.
+  Hoje há um teste que lê o texto do `schema.sql` e exige o `revoke`
+  escrito para cada tabela da lista. **Quando um teste faz uma pergunta ao
+  ambiente, pergunte se o ambiente de teste responde igual ao de
+  produção** — e, quando a resposta é "não", teste o artefato que viaja
+  para produção, não o comportamento local.
+
 - **Suíte e2e não pode falar com banco de verdade.** `npm start` carrega o
   `.env.local`, e quem tem credenciais reais ali roda o e2e contra
   produção sem aviso. Aconteceu: o ajudante de login criou 213 contas na

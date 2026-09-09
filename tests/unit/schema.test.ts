@@ -631,6 +631,32 @@ describe("grants de anon e authenticated", () => {
   });
 
   /**
+   * As duas varreduras acima passam pelo motivo errado, e por isso esta
+   * existe.
+   *
+   * O PGlite é um Postgres limpo: ninguém concedeu `select` a `anon`, então
+   * `has_table_privilege` responde `false` mesmo sem `revoke` nenhum no
+   * schema. O **Supabase concede por padrão** nas tabelas do schema
+   * público — e foi assim que `preferencias_notificacao` e `inscricoes_push`
+   * nasceram legíveis pela chave anônima em produção, com a suíte verde.
+   *
+   * Aqui se lê o texto do `schema.sql`, e não o banco: o que importa é que
+   * a revogação esteja **escrita**, porque é ela que viaja para produção.
+   */
+  it.each(NUNCA_PUBLICAS)("schema.sql revoga explicitamente %s", (nome) => {
+    const revogados = new Set(
+      [...SCHEMA.matchAll(/revoke\s+select\s+on\s+([^;]+?)\s+from\s+anon/gi)]
+        .flatMap((m) => m[1].split(","))
+        .map((n) => n.trim()),
+    );
+
+    expect(
+      revogados,
+      `falta \`revoke select on ${nome} from anon, authenticated;\` no schema.sql`,
+    ).toContain(nome);
+  });
+
+  /**
    * O CPF é o documento de quem oferece serviço, e mora em `usuarios`.
    *
    * O lugar simétrico ao CNPJ seria `perfis_prestador` — e é justamente
