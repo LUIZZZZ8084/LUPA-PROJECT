@@ -83,6 +83,14 @@ create index if not exists inscricoes_push_usuario_idx on inscricoes_push (usuar
 alter table preferencias_notificacao enable row level security;
 alter table inscricoes_push enable row level security;
 
+-- O Supabase concede `select` a `anon` e `authenticated` por padrão nas
+-- tabelas do schema público. A RLS já barra (nenhuma policy = nega tudo),
+-- mas o `revoke` é a segunda camada: policy criada por engano, ou um
+-- `disable row level security` esquecido depois de depurar, abriria a
+-- tabela inteira.
+revoke select on preferencias_notificacao from anon, authenticated;
+revoke select on inscricoes_push          from anon, authenticated;
+
 commit;
 
 -- Confirme: as três colunas devem vir `true`.
