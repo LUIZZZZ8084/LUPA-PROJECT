@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { ROTAS_PROFUNDAS_EMPRESA } from "./rotas";
 
 /** Onde a sessão compartilhada dos testes fica guardada. */
@@ -247,4 +247,25 @@ export async function rotasProfundasDaEmpresa(
 /** O e-mail da conta que o setup criou para aquele papel. */
 export function emailDaConta(papel: "candidato" | "empresa"): string {
   return JSON.parse(readFileSync(arquivoDeCredencial(papel), "utf8")).email;
+}
+
+/**
+ * Compra crédito de vaga pela própria tela, em modo demonstração.
+ *
+ * Publicar passou a custar crédito (#172), e a suíte roda sempre em
+ * demonstração — onde a compra é aprovada na hora, sem Mercado Pago e sem
+ * dinheiro. Então o caminho honesto é o mesmo que a empresa percorre:
+ * abrir `/empresa/creditos` e comprar.
+ *
+ * Semear crédito por baixo seria mais rápido e pior: o teste passaria com
+ * a tela de compra quebrada, que é exatamente o tipo de coisa que este
+ * projeto já registra ter deixado passar.
+ */
+export async function comprarCreditoDeVaga(page: Page): Promise<void> {
+  await page.goto("/empresa/creditos");
+  await page.getByRole("button", { name: /comprar 15 vagas/i }).click();
+  await page.waitForURL(/\/pagamento\/retorno/, { timeout: 20_000 });
+  await expect(
+    page.getByRole("heading", { name: "Pagamento aprovado" }),
+  ).toBeVisible({ timeout: 30_000 });
 }

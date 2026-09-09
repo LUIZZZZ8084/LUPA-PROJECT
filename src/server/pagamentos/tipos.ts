@@ -1,14 +1,23 @@
 /**
  * Cobrança via Mercado Pago.
  *
- * `tipo` nasce só com `"prestador_mensalidade"`, o primeiro uso real desta
- * infraestrutura. Vaga avulsa, planos de empresa e o gerador de currículo
- * pago ganham o próprio valor quando cada um tiver uma tela que o use —
- * um tipo aceito pelo banco sem nenhum efeito implementado seria promessa
- * sem a outra ponta construída.
+ * Cada valor de `tipo` só existe quando tem tela que o venda e efeito
+ * implementado — um tipo aceito pelo banco sem a outra ponta construída
+ * seria a mesma promessa vazia que derrubou a fila de verificação manual.
+ * A trava de exaustividade do `switch` em `aplicarEfeito` é o que cobra
+ * isso: acrescentar um valor aqui sem tratá-lo lá quebra o build.
+ *
+ * O gerador de currículo pago (#47) continua de fora pelo mesmo motivo.
  */
 
-export type TipoPagamento = "prestador_mensalidade";
+export type TipoPagamento =
+  | "prestador_mensalidade"
+  /** Publicar vaga (#172): três compras únicas que viram crédito… */
+  | "empresa_vaga_avulsa"
+  | "empresa_pacote_5"
+  | "empresa_pacote_15"
+  /** …e uma assinatura mensal, que dispensa crédito enquanto vale. */
+  | "empresa_mensal";
 
 export type StatusPagamento =
   | "pendente"
@@ -23,6 +32,8 @@ export interface Pagamento {
   tipo: TipoPagamento;
   valorCentavos: number;
   status: StatusPagamento;
+  /** Só nas compras únicas: a recorrência não passa por preferência. */
+  mpPreferenceId: string | null;
   mpPaymentId: string | null;
   /** Nulo em cobrança avulsa; preenchido nas parcelas da recorrência. */
   assinaturaId: string | null;
@@ -127,6 +138,8 @@ export interface RepositorioPagamentos {
 
   criar(dados: DadosNovaCobranca): Promise<Pagamento>;
 
+  definirPreferencia(id: string, mpPreferenceId: string): Promise<Pagamento>;
+
   /**
    * Grava uma parcela da recorrência, que já nasce aprovada.
    *
@@ -173,13 +186,20 @@ export interface RepositorioPagamentos {
   // ── Assinaturas recorrentes (#170) ────────────────────────────────────
 
   /**
-   * A assinatura que ainda vale alguma coisa — pendente, ativa ou pausada
-   * (`STATUS_ASSINATURA_VIVA`), a mais recente.
+   * A assinatura **daquele tipo** que ainda vale alguma coisa — pendente,
+   * ativa ou pausada (`STATUS_ASSINATURA_VIVA`), a mais recente.
    *
-   * É quem responde "esta pessoa já assinou?" sem consultar o Mercado Pago
-   * a cada abertura da tela.
+   * O tipo não é detalhe: desde a #172 a mesma pessoa pode ter duas
+   * assinaturas vivas ao mesmo tempo — a mensalidade de prestador, que
+   * põe o perfil na vitrine, e o plano mensal de vagas, que deixa
+   * publicar sem gastar crédito. Um prestador que contrata ajudante tem
+   * as duas, e procurar só por `usuario_id` devolveria uma no lugar da
+   * outra: cancelar o plano de vagas cancelaria a vitrine.
    */
-  assinaturaViva(usuarioId: string): Promise<Assinatura | null>;
+  assinaturaViva(
+    usuarioId: string,
+    tipo: TipoPagamento,
+  ): Promise<Assinatura | null>;
 
   assinaturaPorId(id: string): Promise<Assinatura | null>;
 

@@ -39,6 +39,7 @@ drop table if exists inscricoes_push cascade;
 drop table if exists preferencias_notificacao cascade;
 drop table if exists pagamentos cascade;
 drop table if exists assinaturas cascade;
+drop table if exists carteiras_vaga cascade;
 drop table if exists tentativas_de_acesso cascade;
 drop table if exists buscas_sem_resultado cascade;
 drop table if exists visualizacoes_vaga cascade;
@@ -63,6 +64,9 @@ drop function if exists registrar_busca_sem_resultado(text, text) cascade;
 drop function if exists registrar_visualizacao(uuid) cascade;
 drop function if exists conferir_limite_publicacoes() cascade;
 drop function if exists atualizar_nota_prestador() cascade;
+drop function if exists estender_mensalidade_vaga(uuid, integer) cascade;
+drop function if exists consumir_credito_vaga(uuid) cascade;
+drop function if exists creditar_vaga(uuid, integer) cascade;
 drop function if exists tocar_atualizado_em() cascade;
 
 -- Os tipos enum por último: as colunas que os usavam já se foram.

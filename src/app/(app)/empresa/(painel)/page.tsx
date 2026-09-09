@@ -4,6 +4,7 @@ import {
   Inbox,
   MessageCircle,
   Plus,
+  Ticket,
   UserSearch,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -40,6 +41,7 @@ import {
   matchPorCandidatura,
 } from "@/server/candidaturas/match";
 import { recomendadosParaEmpresa } from "@/server/candidaturas/recomendados";
+import { direitoDePublicar } from "@/server/carteiras/servico";
 import {
   serieDoPainel,
   temPainelDeEmpresa,
@@ -163,6 +165,7 @@ export default async function EmpresaPage() {
     ]);
   const totais = totaisDaSerie(serie);
   const match = matchPorCandidatura(applications, jobs);
+  const direito = await direitoDePublicar(sessao.usuarioId);
 
   if (!company) {
     return (
@@ -247,6 +250,54 @@ export default async function EmpresaPage() {
         <SerieGrafico serie={serie} />
       </Panel>
 
+      {/*
+        Dois atalhos que estavam escondidos.
+
+        "Candidatos" existia só como um botão pequeno no cabeçalho, ao
+        lado de "Publicar nova vaga" — e a busca inteira da #83 passava
+        despercebida por quem não sabia que ela existia. Aqui os dois
+        ganham espaço, e cada um diz o que a pessoa encontra do outro
+        lado: atalho sem explicação é atalho que ninguém clica.
+      */}
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link
+          href="/empresa/creditos"
+          className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
+        >
+          <div className="flex items-center gap-2">
+            <Ticket size={18} className="flex-none text-empresas" />
+            <h2 className="font-bold text-sm">
+              {direito.mensalAtivo
+                ? "Plano mensal ativo"
+                : direito.creditos === 1
+                  ? "1 crédito de vaga"
+                  : `${direito.creditos} créditos de vaga`}
+            </h2>
+          </div>
+          <p className="mt-1 text-muted text-sm leading-relaxed">
+            {direito.mensalAtivo
+              ? "Publique quantas vagas quiser, sem gastar crédito."
+              : direito.creditos === 0
+                ? "Compre um crédito para publicar sua próxima vaga."
+                : "Cada crédito publica uma vaga por 30 dias. Toque para comprar mais."}
+          </p>
+        </Link>
+
+        <Link
+          href="/candidatos"
+          className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
+        >
+          <div className="flex items-center gap-2">
+            <UserSearch size={18} className="flex-none text-empresas" />
+            <h2 className="font-bold text-sm">Buscar candidatos</h2>
+          </div>
+          <p className="mt-1 text-muted text-sm leading-relaxed">
+            Procure por habilidade e área entre quem pediu para ser encontrado —
+            sem esperar alguém se candidatar.
+          </p>
+        </Link>
+      </div>
+
       {/* Vagas publicadas */}
       <section className="mt-6">
         <h2 className="mb-3 text-base font-bold">Vagas publicadas</h2>
@@ -254,7 +305,7 @@ export default async function EmpresaPage() {
           <EmptyState
             icon={<FileText size={22} />}
             title="Você ainda não publicou nenhuma vaga"
-            description="A primeira publicação é gratuita. Leva menos de dois minutos."
+            description="Publicar leva menos de dois minutos, e custa um crédito de vaga."
             action={
               <ButtonLink
                 href="/empresa/vagas/nova"

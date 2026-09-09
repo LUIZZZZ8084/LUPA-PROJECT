@@ -26,7 +26,10 @@ export default async function AssinaturaPage() {
   const perfil = await repositorioUsuarios().perfilPrestador(sessao.usuarioId);
   if (!perfil) notFound();
 
-  const { assinatura, emTesteGratis } = await estadoDaAssinatura(sessao);
+  const { assinatura, emTesteGratis } = await estadoDaAssinatura(
+    sessao,
+    "prestador_mensalidade",
+  );
 
   const ate = perfil.mensalidadeValidaAte;
   const emDia = Boolean(ate) && !passouDoPrazo(ate as string);

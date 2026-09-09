@@ -22,6 +22,7 @@ function paraPagamento(linha: Record<string, unknown>): Pagamento {
     tipo: linha.tipo as TipoPagamento,
     valorCentavos: Number(linha.valor_centavos),
     status: linha.status as StatusPagamento,
+    mpPreferenceId: (linha.mp_preference_id as string | null) ?? null,
     mpPaymentId: (linha.mp_payment_id as string | null) ?? null,
     assinaturaId: (linha.assinatura_id as string | null) ?? null,
     metadata: (linha.metadata as Record<string, unknown> | null) ?? {},
@@ -154,6 +155,27 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
     return data ? paraPagamento(data) : null;
   }
 
+  async definirPreferencia(
+    id: string,
+    mpPreferenceId: string,
+  ): Promise<Pagamento> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("pagamentos")
+      .update({ mp_preference_id: mpPreferenceId })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116" || ehIdInvalido(error)) {
+        throw erros.naoEncontrado("Pagamento");
+      }
+      throw erros.indisponivel(error.message);
+    }
+    return paraPagamento(data);
+  }
+
   async aprovar(
     id: string,
     mpPaymentId: string | null,
@@ -192,12 +214,16 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
 
   // ── Assinaturas recorrentes ───────────────────────────────────────────
 
-  async assinaturaViva(usuarioId: string): Promise<Assinatura | null> {
+  async assinaturaViva(
+    usuarioId: string,
+    tipo: TipoPagamento,
+  ): Promise<Assinatura | null> {
     const supabase = await cliente();
     const { data, error } = await supabase
       .from("assinaturas")
       .select("*")
       .eq("usuario_id", usuarioId)
+      .eq("tipo", tipo)
       .in("status", [...STATUS_ASSINATURA_VIVA])
       .order("criado_em", { ascending: false })
       .limit(1)

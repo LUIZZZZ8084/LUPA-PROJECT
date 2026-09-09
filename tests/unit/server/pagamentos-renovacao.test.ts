@@ -177,7 +177,11 @@ describe("renovação automática", () => {
       );
       revogar.mockClear();
 
-      await ctx.servico.cancelarRenovacao(sessao, respostaJson({}));
+      await ctx.servico.cancelarRenovacao(
+        sessao,
+        "prestador_mensalidade",
+        respostaJson({}),
+      );
 
       expect(revogar).toHaveBeenCalledWith("prestador-1");
     });
@@ -191,7 +195,11 @@ describe("renovação automática", () => {
       );
       revogar.mockClear();
 
-      await ctx.servico.cancelarRenovacao(sessao, respostaJson({}));
+      await ctx.servico.cancelarRenovacao(
+        sessao,
+        "prestador_mensalidade",
+        respostaJson({}),
+      );
 
       expect(revogar).not.toHaveBeenCalled();
     });

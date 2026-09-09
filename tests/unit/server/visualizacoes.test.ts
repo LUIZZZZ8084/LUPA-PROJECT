@@ -21,6 +21,7 @@ import {
   usarRepositorioCandidaturas,
 } from "@/server/candidaturas";
 import { candidatarSe } from "@/server/candidaturas/servico";
+import { usarRepositorioCarteiras } from "@/server/carteiras";
 import { ehAppError } from "@/server/errors";
 import { RepositorioVagasMemoria, usarRepositorioVagas } from "@/server/vagas";
 import { publicarVaga } from "@/server/vagas/servico";
@@ -35,6 +36,7 @@ import {
   totaisDaSerie,
 } from "@/server/visualizacoes/servico";
 import { diasAte, montarSerie } from "@/server/visualizacoes/tipos";
+import { carteiraInfinita } from "./carteira-de-teste";
 
 const empresa: Autenticado = { usuarioId: "empresa-1", papel: "empresa" };
 const outraEmpresa: Autenticado = { usuarioId: "empresa-2", papel: "empresa" };
@@ -54,6 +56,18 @@ const DADOS_VAGA = {
 };
 
 const hoje = () => new Date().toISOString().slice(0, 10);
+
+/*
+ * Publicar vaga custa crédito desde a #172, e este arquivo publica como
+ * preparação — o que ele mede é outra coisa. A carteira infinita deixa
+ * isso explícito; quem mede a carteira é `carteira-de-vagas.test.ts`, e
+ * quem mede o portão da publicação é `vagas.test.ts`.
+ */
+let restaurarCarteiraDoArquivo: () => void;
+beforeEach(() => {
+  restaurarCarteiraDoArquivo = usarRepositorioCarteiras(carteiraInfinita());
+});
+afterEach(() => restaurarCarteiraDoArquivo());
 
 describe("visualizações de vaga", () => {
   let restaurar: Array<() => void> = [];

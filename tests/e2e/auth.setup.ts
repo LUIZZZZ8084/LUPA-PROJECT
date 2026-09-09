@@ -4,6 +4,7 @@ import {
   ARQUIVO_SESSAO,
   ARQUIVO_SESSAO_EMPRESA,
   arquivoDeCredencial,
+  comprarCreditoDeVaga,
   entrarComoEmpresa,
   entrarComoTeste,
 } from "./helpers";
@@ -41,9 +42,17 @@ setup("cria a sessão compartilhada", async ({ page }) => {
  * não tem. Criar a conta dentro de cada um deles estourava o limite de
  * cadastro por origem no meio da execução — ver o comentário em
  * `ARQUIVO_SESSAO_EMPRESA`.
+ *
+ * **A conta já compra crédito aqui** (#172): publicar deixou de ser
+ * gratuito, e sem isto os quatro arquivos que publicam vaga falhariam
+ * todos pelo mesmo motivo, que não é o que nenhum deles mede. A compra
+ * passa pela tela de verdade — em demonstração ela é aprovada na hora,
+ * sem Mercado Pago e sem dinheiro —, então este setup também é a prova de
+ * que a tela de compra funciona.
  */
 setup("cria a sessão de empresa", async ({ page }) => {
   const email = await entrarComoEmpresa(page);
+  await comprarCreditoDeVaga(page);
   await page.context().storageState({ path: ARQUIVO_SESSAO_EMPRESA });
   guardarCredencial("empresa", email);
 });

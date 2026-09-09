@@ -2,6 +2,12 @@ import "server-only";
 
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Autenticado } from "../auth/rbac";
+import {
+  creditarVagas,
+  debitarVagas,
+  estenderPlanoMensal,
+  revogarPlanoMensal,
+} from "../carteiras/servico";
 import { erros } from "../errors";
 import { log } from "../logger";
 import {
@@ -16,11 +22,14 @@ import {
   consultarPagamento,
   consultarParcelaDaAssinatura,
   criarAssinaturaRecorrente,
+  criarPreferencia,
   temMercadoPagoConfigurado,
 } from "./mercadopago";
 import {
+  CREDITOS_POR_COMPRA,
   DESCRICAO_PAGAMENTO,
-  DIAS_TESTE_GRATIS,
+  diasDeTeste,
+  ehRecorrente,
   PRECO_CENTAVOS,
 } from "./planos";
 import type {
@@ -51,6 +60,26 @@ async function aplicarEfeito(pagamento: Pagamento): Promise<void> {
     case "prestador_mensalidade":
       await estenderMensalidade(pagamento.usuarioId);
       return;
+
+    /*
+     * As três compras únicas de vaga viram crédito, e a quantidade sai de
+     * `CREDITOS_POR_COMPRA` — nunca de um número escrito aqui. Preço e
+     * quantidade moram no mesmo arquivo de propósito: é lá que se
+     * confere se "5 vagas por R$ 100" continua sendo cinco.
+     */
+    case "empresa_vaga_avulsa":
+    case "empresa_pacote_5":
+    case "empresa_pacote_15":
+      await creditarVagas(
+        pagamento.usuarioId,
+        CREDITOS_POR_COMPRA[pagamento.tipo] ?? 0,
+      );
+      return;
+
+    case "empresa_mensal":
+      await estenderPlanoMensal(pagamento.usuarioId);
+      return;
+
     default: {
       // Exaustividade: se `TipoPagamento` ganhar um novo valor sem que
       // este switch seja atualizado, o build quebra aqui — não em
@@ -76,6 +105,24 @@ async function desfazerEfeitoDoTipo(
     case "prestador_mensalidade":
       await revogarMensalidade(usuarioId);
       return;
+
+    /*
+     * Estorno de pacote tira os créditos que sobraram, e para em zero.
+     * A vaga que já foi publicada continua publicada: desfazer aquilo
+     * seria apagar o anúncio de uma empresa que talvez já esteja
+     * recebendo currículo, por uma contestação que ela pode nem ter
+     * feito. O que se recupera é o que ainda não foi usado.
+     */
+    case "empresa_vaga_avulsa":
+    case "empresa_pacote_5":
+    case "empresa_pacote_15":
+      await debitarVagas(usuarioId, CREDITOS_POR_COMPRA[tipo] ?? 0);
+      return;
+
+    case "empresa_mensal":
+      await revogarPlanoMensal(usuarioId);
+      return;
+
     default: {
       const _exaustivo: never = tipo;
       throw erros.interno(`tipo de pagamento sem reversão: ${_exaustivo}`);
@@ -154,7 +201,7 @@ export async function assinar(
   }
 
   const repo = repositorioPagamentos();
-  const viva = await repo.assinaturaViva(sessao.usuarioId);
+  const viva = await repo.assinaturaViva(sessao.usuarioId, tipo);
 
   if (viva?.status === "ativa") {
     throw erros.validacao([
@@ -244,7 +291,7 @@ export async function assinar(
       referenciaExterna: assinatura.id,
       emailPagador: usuario.email,
       urlRetorno: `${urlBase()}/pagamento/retorno?assinatura=${assinatura.id}`,
-      diasTeste: DIAS_TESTE_GRATIS,
+      diasTeste: diasDeTeste(tipo),
     },
     opcoes.buscar,
   );
@@ -273,6 +320,105 @@ export async function assinar(
     assinatura: vinculada,
     pagamento: null,
     checkoutUrl: resultado.assinatura.initPoint,
+  };
+}
+
+// ── Comprar uma vez ───────────────────────────────────────────────────────
+
+export interface CompraIniciada {
+  pagamento: Pagamento;
+  /** `null` em modo demonstração — a compra já nasce aprovada. */
+  checkoutUrl: string | null;
+}
+
+/**
+ * Uma compra que acontece uma vez e acabou — vaga avulsa e os pacotes
+ * (#172).
+ *
+ * É o oposto de `assinar`: aqui não há autorização guardada nem cobrança
+ * futura, e por isso não há teste grátis. O que a pessoa compra é
+ * crédito, e crédito não expira — o efeito é aplicado quando o Mercado
+ * Pago confirma, pelo mesmo `aplicarEfeito` da recorrência.
+ *
+ * **Recusa tipo recorrente**, em vez de fazer a coisa errada em silêncio:
+ * `empresa_mensal` e `prestador_mensalidade` passam por `assinar`, e
+ * mandar um deles por aqui criaria uma cobrança única que ninguém
+ * renovaria — a pessoa pagaria um mês achando que assinou.
+ */
+export async function comprar(
+  sessao: Autenticado | null,
+  tipo: TipoPagamento,
+  opcoes: { buscar?: typeof fetch } = {},
+): Promise<CompraIniciada> {
+  if (!sessao) throw erros.naoAutenticado("sem sessão");
+
+  if (ehRecorrente(tipo)) {
+    throw erros.interno(`${tipo} é assinatura — use assinar()`);
+  }
+
+  // Mesma razão de `assinar`: com banco de verdade e sem token, isto é
+  // configuração faltando, e "todo mundo passa" é o pior modo de falha
+  // possível numa cobrança.
+  if (!temMercadoPagoConfigurado && isSupabaseConfigured) {
+    throw erros.indisponivel(
+      "MERCADO_PAGO_ACCESS_TOKEN ausente em ambiente com banco real",
+    );
+  }
+
+  const repo = repositorioPagamentos();
+  const pagamento = await repo.criar({
+    usuarioId: sessao.usuarioId,
+    tipo,
+    valorCentavos: PRECO_CENTAVOS[tipo],
+  });
+
+  if (!temMercadoPagoConfigurado) {
+    // Só nasceu, então está "pendente" — `aprovar` não devolve null aqui.
+    const aprovado = await repo.aprovar(pagamento.id, null);
+    if (aprovado) await aplicarEfeito(aprovado);
+
+    log.info("compra aprovada em modo demonstração", {
+      acao: "pagamentos.comprar",
+      tipo,
+    });
+
+    return { pagamento: aprovado ?? pagamento, checkoutUrl: null };
+  }
+
+  const resultado = await criarPreferencia(
+    {
+      titulo: DESCRICAO_PAGAMENTO[tipo],
+      valorCentavos: pagamento.valorCentavos,
+      referenciaExterna: pagamento.id,
+      urlRetorno: `${urlBase()}/pagamento/retorno?compra=${pagamento.id}`,
+      urlWebhook: `${urlBase()}/api/webhooks/mercado-pago`,
+    },
+    opcoes.buscar,
+  );
+
+  if (!resultado.ok) {
+    log.warn("falha ao criar preferência no Mercado Pago", {
+      acao: "pagamentos.comprar",
+      tipo,
+      motivo: resultado.motivo,
+      detalhe: resultado.detalhe,
+    });
+    throw erros.indisponivel(resultado.motivo);
+  }
+
+  const comPreferencia = await repo.definirPreferencia(
+    pagamento.id,
+    resultado.preferencia.id,
+  );
+
+  log.info("preferência criada no Mercado Pago", {
+    acao: "pagamentos.comprar",
+    tipo,
+  });
+
+  return {
+    pagamento: comPreferencia,
+    checkoutUrl: resultado.preferencia.initPoint,
   };
 }
 
@@ -311,12 +457,13 @@ async function encerrarNoMercadoPago(
  */
 export async function cancelarRenovacao(
   sessao: Autenticado | null,
+  tipo: TipoPagamento,
   buscar?: typeof fetch,
 ): Promise<{ ok: true } | { ok: false; motivo: string }> {
   if (!sessao) throw erros.naoAutenticado("sem sessão");
 
   const repo = repositorioPagamentos();
-  const assinatura = await repo.assinaturaViva(sessao.usuarioId);
+  const assinatura = await repo.assinaturaViva(sessao.usuarioId, tipo);
 
   if (!assinatura) {
     return { ok: false, motivo: "Não há renovação automática para cancelar." };
@@ -405,11 +552,12 @@ export interface EstadoDaAssinatura {
 
 export async function estadoDaAssinatura(
   sessao: Autenticado | null,
+  tipo: TipoPagamento,
 ): Promise<EstadoDaAssinatura> {
   if (!sessao) return { assinatura: null, emTesteGratis: false };
 
   const repo = repositorioPagamentos();
-  const assinatura = await repo.assinaturaViva(sessao.usuarioId);
+  const assinatura = await repo.assinaturaViva(sessao.usuarioId, tipo);
 
   return {
     assinatura,
@@ -484,8 +632,18 @@ export async function confirmarAssinatura(
   const eraPendente = assinatura.status === "pendente";
   const mudou = await repo.definirStatusAssinatura(assinatura.id, status);
   if (mudou) {
-    if (status === "ativa" && eraPendente) {
-      await estenderMensalidade(mudou.usuarioId, DIAS_TESTE_GRATIS);
+    /*
+     * Só a mensalidade de prestador tem teste grátis, e só ela ganha
+     * algo aqui.
+     *
+     * O plano mensal de vagas não tem: quem contrata publica a vaga no
+     * primeiro dia e teria o resultado inteiro do mês antes de qualquer
+     * cobrança — `diasDeTeste` devolve zero para ele, e o efeito só vem
+     * quando a primeira parcela é cobrada de verdade.
+     */
+    const dias = diasDeTeste(mudou.tipo);
+    if (status === "ativa" && eraPendente && dias > 0) {
+      await estenderMensalidade(mudou.usuarioId, dias);
     }
     log.info("assinatura mudou de estado", {
       acao: "pagamentos.confirmar_assinatura",

@@ -47,7 +47,10 @@ export const cancelarRenovacaoMensal = criarAcao({
   nome: "prestador.cancelar_renovacao",
   entrada: z.object({}),
   executar: async () => {
-    const resultado = await cancelarRenovacao(await sessaoAtual());
+    const resultado = await cancelarRenovacao(
+      await sessaoAtual(),
+      "prestador_mensalidade",
+    );
 
     if (!resultado.ok)
       throw erros.validacao([

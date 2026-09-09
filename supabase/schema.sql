@@ -61,7 +61,16 @@ create type status_publicacao as enum ('ativa', 'arquivada');
  * Vaga avulsa, planos de empresa e o gerador de currículo pago ganham o
  * próprio valor quando cada um tiver uma tela que o use.
  */
-create type tipo_pagamento as enum ('prestador_mensalidade');
+create type tipo_pagamento as enum (
+  'prestador_mensalidade',
+  -- Publicar vaga, para empresa e para quem contrata como pessoa fisica
+  -- (#172). Os tres primeiros sao pagamento unico e viram credito; o
+  -- ultimo e assinatura mensal e nao consome credito nenhum.
+  'empresa_vaga_avulsa',
+  'empresa_pacote_5',
+  'empresa_pacote_15',
+  'empresa_mensal'
+);
 
 create type status_pagamento as enum
   ('pendente', 'aprovado', 'rejeitado', 'cancelado', 'estornado');
@@ -797,6 +806,97 @@ alter table preferencias_notificacao enable row level security;
 alter table inscricoes_push enable row level security;
 
 -- ============================================================================
+-- 9d2. Carteira de quem publica vaga
+--
+-- Creditos de vaga e validade do plano mensal (#172). Tabela propria, e
+-- nao colunas em `perfis_empresa`, por um motivo so: aquela tabela e
+-- lida pela chave anonima, e quantos creditos uma empresa tem e dado
+-- comercial dela — nao registro publico como o CNPJ. Mesmo raciocinio
+-- que mantem o CPF em `usuarios`.
+--
+-- A chave e `usuario_id` e nao `empresa_id` de proposito: desde a #129
+-- quem publica vaga tambem pode ser prestador contratando ajudante, e ele
+-- nao tem perfil de empresa quando compra o primeiro credito.
+-- ============================================================================
+
+create table carteiras_vaga (
+  usuario_id             uuid primary key references usuarios(id) on delete cascade,
+  /*
+   * Nunca negativo, e a garantia e do banco. O consumo e um `update ...
+   * where creditos_vaga > 0`, condicional na propria instrucao: duas
+   * publicacoes simultaneas com um credito so nao podem passar as duas,
+   * e "le, decide, grava" deixaria passar — a mesma corrida que o limite
+   * de publicacoes ja resolve no banco.
+   */
+  creditos_vaga          int not null default 0 check (creditos_vaga >= 0),
+  /** Enquanto valer, publica quantas quiser e nao gasta credito. */
+  mensalidade_valida_ate timestamptz,
+  criado_em              timestamptz not null default now(),
+  atualizado_em          timestamptz not null default now()
+);
+
+create trigger carteiras_vaga_atualizado_em
+  before update on carteiras_vaga
+  for each row execute function tocar_atualizado_em();
+
+alter table carteiras_vaga enable row level security;
+
+/*
+ * As tres operacoes da carteira vivem no banco, e nao na aplicacao, pelo
+ * mesmo motivo do contador de tentativas e do limite de publicacoes:
+ * "le, decide, grava" perde a corrida. Duas cobrancas aprovadas quase
+ * juntas creditariam o mesmo total, e duas publicacoes simultaneas com um
+ * credito so passariam as duas.
+ */
+
+-- Soma (ou subtrai, com quantidade negativa) creditos, criando a carteira
+-- se ainda nao existir. Nunca abaixo de zero: quem ja gastou o que
+-- comprou e depois contestou a cobranca para em zero, nao fica devendo.
+create or replace function creditar_vaga(p_usuario uuid, p_quantidade int)
+returns setof carteiras_vaga language sql as $$
+  insert into carteiras_vaga (usuario_id, creditos_vaga)
+  values (p_usuario, greatest(0, p_quantidade))
+  on conflict (usuario_id) do update
+    set creditos_vaga = greatest(0, carteiras_vaga.creditos_vaga + p_quantidade)
+  returning *;
+$$;
+
+-- Gasta um credito, e so se houver. Zero linhas devolvidas quer dizer
+-- "nao tinha" — quem chama le isso como recusa, nao como erro.
+create or replace function consumir_credito_vaga(p_usuario uuid)
+returns setof carteiras_vaga language sql as $$
+  update carteiras_vaga
+  set creditos_vaga = creditos_vaga - 1
+  where usuario_id = p_usuario and creditos_vaga > 0
+  returning *;
+$$;
+
+-- Estende o plano mensal a partir do maior entre agora e o que ja valia.
+-- `p_dias` nulo revoga: e o caminho do estorno e do chargeback.
+create or replace function estender_mensalidade_vaga(
+  p_usuario uuid,
+  p_dias int
+)
+returns setof carteiras_vaga language sql as $$
+  insert into carteiras_vaga (usuario_id, mensalidade_valida_ate)
+  values (
+    p_usuario,
+    case when p_dias is null then null
+         else now() + make_interval(days => p_dias) end
+  )
+  on conflict (usuario_id) do update
+    set mensalidade_valida_ate = case
+      when p_dias is null then null
+      else greatest(
+        now(),
+        coalesce(carteiras_vaga.mensalidade_valida_ate, now())
+      ) + make_interval(days => p_dias)
+    end
+  returning *;
+$$;
+
+
+-- ============================================================================
 -- 9e. Assinaturas recorrentes
 --
 -- Uma linha por `preapproval` do Mercado Pago: a autorização que ele
@@ -858,6 +958,9 @@ create table pagamentos (
   tipo             tipo_pagamento not null,
   valor_centavos   int not null check (valor_centavos > 0),
   status           status_pagamento not null default 'pendente',
+  -- Preferência do Checkout Pro, nas compras únicas (#172). Nula nas
+  -- parcelas da recorrência, que não passam por preferência nenhuma.
+  mp_preference_id text,
   mp_payment_id    text,
   -- Nulo em cobrança avulsa; preenchido em toda parcela gerada pela
   -- recorrência. `on delete set null` porque a cobrança aconteceu de
@@ -1280,3 +1383,4 @@ revoke select on inscricoes_push          from anon, authenticated;
  */
 revoke select on pagamentos       from anon, authenticated;
 revoke select on assinaturas      from anon, authenticated;
+revoke select on carteiras_vaga   from anon, authenticated;

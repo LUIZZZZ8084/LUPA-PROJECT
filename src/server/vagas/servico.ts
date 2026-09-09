@@ -7,6 +7,7 @@ import {
   exigirDono,
   pode,
 } from "../auth/rbac";
+import { devolverCredito, gastarParaPublicar } from "../carteiras/servico";
 import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
@@ -99,6 +100,17 @@ async function garantirPerfilDeContratante(sessao: Autenticado): Promise<void> {
   });
 }
 
+/**
+ * Publicar custa um crédito, ou nada se o plano mensal estiver ativo
+ * (#172).
+ *
+ * **A cobrança vem antes da gravação**, e não depois. Na ordem inversa, a
+ * vaga entraria no ar e um erro na carteira a deixaria publicada de graça
+ * — e "de graça por acidente" é o tipo de coisa que ninguém descobre até
+ * conferir a receita no fim do mês. Se a gravação falhar depois de
+ * cobrado, o crédito volta: perder um crédito por uma falha nossa é pior
+ * do que a conta não fechar por um instante.
+ */
 export async function publicarVaga(
   sessao: Autenticado | null,
   dados: Omit<DadosNovaVaga, "empresaId" | "cidade"> & { cidade: string },
@@ -107,10 +119,23 @@ export async function publicarVaga(
 
   await garantirPerfilDeContratante(autenticado);
 
-  const vaga = await repositorioVagas().criar({
-    ...dados,
-    empresaId: idDaEmpresa(autenticado),
-  });
+  if (!(await gastarParaPublicar(autenticado.usuarioId))) {
+    throw erros.validacao(
+      [{ campo: "creditos", mensagem: "Você não tem créditos de vaga." }],
+      "Para publicar, compre um crédito de vaga ou assine o plano mensal.",
+    );
+  }
+
+  let vaga: Vaga;
+  try {
+    vaga = await repositorioVagas().criar({
+      ...dados,
+      empresaId: idDaEmpresa(autenticado),
+    });
+  } catch (e) {
+    await devolverCredito(autenticado.usuarioId);
+    throw e;
+  }
 
   log.info("vaga publicada", {
     acao: "vaga.publicar",
@@ -174,8 +199,16 @@ export async function encerrarVaga(
  * desfaz a segunda, não a primeira: vaga com `status: "fechada"` continua
  * fechada até que exista algum jeito de reabrir isso, que hoje não existe.
  *
- * Gratuito e sem limite de vezes — não é "publicar de novo", então não
- * mexe em crédito de postagem nenhum.
+ * **Reativar custa um crédito, como publicar** — decisão do Luiz em
+ * 09/09/2026 (#172), revertendo o "gratuito e sem limite de vezes" com
+ * que a #157 nasceu. Aquela decisão foi tomada quando publicar não
+ * custava nada; com crédito por vaga, reativar de graça seria o caminho
+ * óbvio para não pagar: publica uma vaga e a renova para sempre. Vaga
+ * fantasma paga uma vez.
+ *
+ * O que continua valendo da #157: reativar não é "publicar de novo" no
+ * sentido de estado — só estende `expira_em`, sem mexer em `status`, e
+ * não serve para vaga que o dono encerrou.
  */
 export async function reativarVaga(
   sessao: Autenticado | null,
@@ -190,7 +223,21 @@ export async function reativarVaga(
     );
   }
 
-  const vaga = await repositorioVagas().reativar(id);
+  if (!(await gastarParaPublicar(autenticado.usuarioId))) {
+    throw erros.validacao(
+      [{ campo: "creditos", mensagem: "Você não tem créditos de vaga." }],
+      "Reativar uma vaga custa um crédito, como publicar. Compre um crédito ou assine o plano mensal.",
+    );
+  }
+
+  let vaga: Vaga;
+  try {
+    vaga = await repositorioVagas().reativar(id);
+  } catch (e) {
+    await devolverCredito(autenticado.usuarioId);
+    throw e;
+  }
+
   log.info("vaga reativada", {
     acao: "vaga.reativar",
     papel: autenticado.papel,
