@@ -161,6 +161,35 @@ test.describe("assinatura do prestador", () => {
   });
 
   /**
+   * Pedir a devolução pela Lupa, sem entrar no Mercado Pago (#168).
+   *
+   * O prestador acabou de assinar, então está dentro dos sete dias — e o
+   * botão só existe nessa janela, decidido no servidor. A confirmação é um
+   * segundo clique porque a devolução tira a vitrine na hora.
+   */
+  test("pede a devolução e a mensalidade cai na hora", async () => {
+    await page.goto("/perfil/assinatura");
+
+    await expect(page.getByText("Ativa", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: /pedir devolução/i }).click();
+    // O aviso diz o que se perde antes de perguntar de novo.
+    await expect(page.getByText(/sai da busca/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /confirmar devolução/i }).click();
+
+    await expect(
+      page.getByText("Inativa", { exact: true }),
+      "a mensalidade tinha de cair junto com a devolução",
+    ).toBeVisible({ timeout: 15_000 });
+
+    // E o botão some: não há mais o que devolver.
+    await expect(
+      page.getByRole("button", { name: /pedir devolução/i }),
+    ).toHaveCount(0);
+  });
+
+  /**
    * A vitrine é o efeito que a mensalidade compra, e é onde a pessoa vai
    * conferir se valeu. Sem isto, o teste acima provaria só que uma data
    * mudou no banco.

@@ -14,6 +14,13 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
     return this.itens.get(id) ?? null;
   }
 
+  async ultimoAprovado(usuarioId: string): Promise<Pagamento | null> {
+    const dele = [...this.itens.values()]
+      .filter((p) => p.usuarioId === usuarioId && p.status === "aprovado")
+      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+    return dele[0] ?? null;
+  }
+
   async criar(dados: DadosNovaCobranca): Promise<Pagamento> {
     const agora = new Date().toISOString();
     const pagamento: Pagamento = {

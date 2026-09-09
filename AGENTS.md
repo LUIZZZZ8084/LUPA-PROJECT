@@ -1032,6 +1032,34 @@ nasce só com `'prestador_mensalidade'`
 cobrança nova ganha o próprio valor, por `alter type ... add value`,
 quando tiver uma tela de verdade.
 
+**A devolução se pede pela Lupa, não pelo Mercado Pago.** Decisão do Luiz
+em 08/09/2026 (#168): automático, sete dias, devolve tudo. A pessoa
+assinou aqui; mandá-la a um serviço que ela não escolheu, e onde não tem
+conta, é empurrar o problema para fora.
+
+O circuito fecha com o que já existia: o botão chama
+`POST /v1/payments/{id}/refunds`, o Mercado Pago devolve e manda o webhook
+`refunded`, e o `refunded` revoga a mensalidade. **O efeito é aplicado na
+hora, sem esperar o webhook** — quem apertou precisa ver o resultado —, e o
+webhook que chega depois encontra a cobrança já `estornado`, com `estornar`
+devolvendo `null`. A idempotência é o que permite as duas portas.
+
+**Falha do Mercado Pago não revoga nada.** Se o estorno não aconteceu, o
+dinheiro não voltou: tirar a vitrine ali seria o pior dos dois mundos, e do
+jeito mais difícil de perceber, porque a tela diria que deu certo. É o caso
+que decide se a funcionalidade está certa ou perigosa, e tem teste próprio
+em `pagamentos-estorno-que-falha.test.ts` — em arquivo separado porque
+`temMercadoPagoConfigurado` é constante de importação.
+
+**A janela é decidida no servidor, e o botão só aparece dentro dela.**
+Mostrar a opção fora dos sete dias e recusar depois do clique é o "botão
+que só recusa depois do clique" que este arquivo já registra duas vezes.
+
+**Cancelar e estornar não são a mesma coisa**, e hoje só existe a segunda.
+O modelo é pagamento avulso: não renova sozinho, então não há cobrança
+futura a cancelar. "Cancelar assinatura" só passa a significar algo quando
+a cobrança virar `preapproval` — e aí é outra Issue.
+
 **Estorno e chargeback tiram a mensalidade na hora.** Decisão do Luiz em
 08/09/2026, escolhendo entre isso e encurtar a validade até a data do
 estorno. O caso que manda é o chargeback fraudulento: quem contesta a

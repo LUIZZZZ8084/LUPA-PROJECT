@@ -39,6 +39,15 @@ export interface DadosNovaCobranca {
 
 export interface RepositorioPagamentos {
   porId(id: string): Promise<Pagamento | null>;
+
+  /**
+   * A cobrança aprovada mais recente da pessoa, ou `null`.
+   *
+   * É o que a tela de assinatura precisa para saber se há algo a estornar,
+   * e o serviço para saber *o quê* estornar — sem nunca receber um id do
+   * formulário, que deixaria alguém pedir o estorno da cobrança de outro.
+   */
+  ultimoAprovado(usuarioId: string): Promise<Pagamento | null>;
   criar(dados: DadosNovaCobranca): Promise<Pagamento>;
   definirPreferencia(id: string, mpPreferenceId: string): Promise<Pagamento>;
   /**
