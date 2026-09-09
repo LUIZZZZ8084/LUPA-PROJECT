@@ -8,8 +8,10 @@ import { formatPrecoBRL, passouDoPrazo } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
+import { cobrancaEstornavel } from "@/server/pagamentos/servico";
 import { repositorioUsuarios } from "@/server/repositories";
 import { AssinarButton } from "./assinar-button";
+import { EstornarButton } from "./estornar-button";
 
 export const metadata: Metadata = {
   title: "Assinatura",
@@ -27,6 +29,13 @@ export default async function AssinaturaPage() {
   const ate = perfil.mensalidadeValidaAte;
   const ativa = Boolean(ate) && !passouDoPrazo(ate as string);
   const preco = formatPrecoBRL(PRECO_CENTAVOS.prestador_mensalidade / 100);
+
+  /*
+   * Quem decide se há devolução a pedir é o servidor, não o botão. Mostrar
+   * a opção fora do prazo e recusar depois do clique é o "botão que só
+   * recusa depois do clique" que este projeto já registra duas vezes.
+   */
+  const podeEstornar = Boolean(await cobrancaEstornavel(sessao));
 
   return (
     <PageShell width="narrow">
@@ -72,6 +81,7 @@ export default async function AssinaturaPage() {
             </p>
 
             <AssinarButton renovar={ativa} />
+            {podeEstornar && <EstornarButton />}
           </div>
         </div>
       </Panel>

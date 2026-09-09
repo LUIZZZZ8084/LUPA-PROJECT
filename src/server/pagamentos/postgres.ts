@@ -90,6 +90,21 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
     return paraPagamento(data);
   }
 
+  async ultimoAprovado(usuarioId: string): Promise<Pagamento | null> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("pagamentos")
+      .select("*")
+      .eq("usuario_id", usuarioId)
+      .eq("status", "aprovado")
+      .order("criado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw erros.indisponivel(error.message);
+    return data ? paraPagamento(data) : null;
+  }
+
   async aprovar(
     id: string,
     mpPaymentId: string | null,

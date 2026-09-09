@@ -12,6 +12,7 @@ import { repositorioPagamentos } from "./index";
 import {
   consultarPagamento,
   criarPreferencia,
+  estornarPagamento,
   temMercadoPagoConfigurado,
 } from "./mercadopago";
 import { DESCRICAO_PAGAMENTO, PRECO_CENTAVOS } from "./planos";
@@ -174,6 +175,93 @@ export async function criarCobranca(
     pagamento: atualizado,
     checkoutUrl: resultado.preferencia.initPoint,
   };
+}
+
+/** Sete dias do Código de Defesa do Consumidor, em milissegundos. */
+export const PRAZO_ESTORNO_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function dentroDoPrazoDeEstorno(pagamento: Pagamento): boolean {
+  return Date.now() - new Date(pagamento.criadoEm).getTime() < PRAZO_ESTORNO_MS;
+}
+
+/** A cobrança que a pessoa ainda pode mandar estornar, se houver. */
+export async function cobrancaEstornavel(
+  sessao: Autenticado | null,
+): Promise<Pagamento | null> {
+  if (!sessao) return null;
+  const ultimo = await repositorioPagamentos().ultimoAprovado(sessao.usuarioId);
+  return ultimo && dentroDoPrazoDeEstorno(ultimo) ? ultimo : null;
+}
+
+/**
+ * Devolve o dinheiro, a pedido de quem pagou (#168).
+ *
+ * Automático, sem fila: decisão do Luiz em 08/09/2026. O prazo é o do
+ * arrependimento em compra online, contado da compra — passados sete dias
+ * o botão some da tela e devolver vira caso de suporte.
+ *
+ * **A cobrança vem da sessão, nunca do formulário.** Aceitar um id daqui
+ * deixaria alguém mandar estornar a cobrança de outra pessoa.
+ *
+ * **O efeito é aplicado aqui, e não esperando o webhook.** Quem apertou o
+ * botão precisa ver o resultado; o `refunded` chega depois e encontra a
+ * cobrança já `estornado` — `estornar` parte de `aprovado` e devolve
+ * `null`, então nada acontece duas vezes. A idempotência que a #166
+ * construiu é o que permite isto.
+ *
+ * **Falha do Mercado Pago não revoga nada.** Se o estorno não aconteceu, o
+ * dinheiro não voltou: tirar a vitrine ali seria o pior dos dois mundos
+ * para quem pediu.
+ */
+export async function pedirEstorno(
+  sessao: Autenticado | null,
+  buscar?: typeof fetch,
+): Promise<{ ok: true } | { ok: false; motivo: string }> {
+  if (!sessao) throw erros.naoAutenticado("sem sessão");
+
+  const pagamento = await repositorioPagamentos().ultimoAprovado(
+    sessao.usuarioId,
+  );
+
+  if (!pagamento) {
+    return { ok: false, motivo: "Não há pagamento a estornar." };
+  }
+
+  if (!dentroDoPrazoDeEstorno(pagamento)) {
+    return {
+      ok: false,
+      motivo:
+        "O prazo de sete dias para devolução já passou. Fale com o suporte.",
+    };
+  }
+
+  /*
+   * Em demonstração não há o que pedir ao Mercado Pago: a cobrança foi
+   * aprovada sem ele. O efeito vale igual, que é o que a tela precisa
+   * mostrar — mesma regra do `criarCobranca`.
+   */
+  if (temMercadoPagoConfigurado && pagamento.mpPaymentId) {
+    const resultado = await estornarPagamento(pagamento.mpPaymentId, buscar);
+    if (!resultado.ok) {
+      log.warn("Mercado Pago recusou o estorno", {
+        acao: "pagamentos.estornar",
+      });
+      return resultado;
+    }
+  }
+
+  const estornado = await repositorioPagamentos().estornar(
+    pagamento.id,
+    pagamento.mpPaymentId,
+  );
+  if (estornado) await desfazerEfeito(estornado);
+
+  log.info("estorno pedido pela pessoa", {
+    acao: "pagamentos.estornar",
+    tipo: pagamento.tipo,
+  });
+
+  return { ok: true };
 }
 
 /**
