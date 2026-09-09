@@ -5,7 +5,9 @@ import type { TipoPagamento } from "./tipos";
  * compra e o servidor nunca divergirem sobre quanto custa cada coisa.
  */
 export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
-  prestador_mensalidade: 2490,
+  // R$ 19,90 — decisão do Luiz em 08/09/2026, que também é quem reverteu
+  // a espera por demanda antes de cobrar (decidida em 25/08).
+  prestador_mensalidade: 1990,
 };
 
 export const DESCRICAO_PAGAMENTO: Record<TipoPagamento, string> = {
