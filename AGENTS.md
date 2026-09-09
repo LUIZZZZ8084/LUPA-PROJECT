@@ -1367,6 +1367,32 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   produção** — e, quando a resposta é "não", teste o artefato que viaja
   para produção, não o comportamento local.
 
+- **Repositório em memória numa variável de módulo não atravessa
+  bundles.** Server action e route handler viram bundles diferentes no
+  build de produção, e cada um recebe a própria cópia do módulo — logo, o
+  próprio `Map`. Em demonstração, a cobrança criada e aprovada pela action
+  não existia para `/api/pagamentos/[id]`, que a tela de retorno consulta
+  em laço: o efeito era aplicado, a mensalidade estendia, e a tela girava
+  em "Confirmando o pagamento" até desistir (#164). É a mesma família do
+  contador de limite que "valia por instância", logo acima — só que ali a
+  saída foi o banco, e aqui não pode ser, porque o ponto da demonstração é
+  não ter banco. A saída é `globalThis`, que os dois bundles compartilham
+  dentro do mesmo processo. **Repositório em memória alcançado por mais de
+  um tipo de entrada — action e rota — precisa de estado compartilhado
+  explicitamente**; os outros deste projeto nunca precisaram porque só
+  actions e páginas os leem.
+
+- **Rota que a varredura pula fica sem qualquer cobertura, e a razão da
+  exclusão não diz isso.** `/perfil/assinatura` e `/pagamento/retorno`
+  entraram em `ROTAS_NAO_VARRIDAS` com uma razão verdadeira — exigem
+  sessão de prestador, e as contas compartilhadas da suíte são candidata e
+  empresa. Só que "não é varrida por contraste" foi lido como "está
+  coberta em outro lugar", e não estava: o fluxo de cobrança inteiro
+  nasceu sem nenhum teste de ponta a ponta, e o defeito acima passou. A
+  lista de exclusões responde por *varredura*, não por *cobertura* —
+  quando excluir uma rota, diga onde ela é exercitada, ou admita que não
+  é.
+
 - **Suíte e2e não pode falar com banco de verdade.** `npm start` carrega o
   `.env.local`, e quem tem credenciais reais ali roda o e2e contra
   produção sem aviso. Aconteceu: o ajudante de login criou 213 contas na

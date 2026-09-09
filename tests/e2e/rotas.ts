@@ -95,9 +95,9 @@ export const ROTAS_NAO_VARRIDAS: Record<string, string> = {
     "exige sessão de prestador, e as duas contas compartilhadas da suíte são candidata e empresa. Uma terceira custaria mais um cadastro no limite de 5 por origem em 15 minutos — apertado demais para segurar. A tela tem varredura de acessibilidade própria, dentro de feed-do-prestador.spec.ts, onde a conta já é prestador",
   "/empresa/vagas/[id]/editar": "id resolvido em ROTAS_PROFUNDAS_EMPRESA",
   "/perfil/assinatura":
-    "exige sessão de prestador, mesma razão de /perfil/publicacoes: as duas contas compartilhadas da suíte são candidata e empresa, e uma terceira custaria mais um cadastro no limite de 5 por origem em 15 minutos",
+    "exige sessão de prestador, mesma razão de /perfil/publicacoes. A conta é criada em assinatura-do-prestador.spec.ts, que exercita a tela lá dentro — o fluxo de cobrança ficou sem teste de ponta a ponta enquanto esta linha dizia só que a rota não era varrida, e foi assim que o retorno quebrado em demonstração passou (#164)",
   "/pagamento/retorno":
-    "o `id` na URL é de um pagamento criado em tempo de execução, dono da sessão que assinou — mesma razão de /candidatos/[id], que também depende de algo criado dentro do próprio teste",
+    "o `id` na URL é de um pagamento criado em tempo de execução, dono da sessão que assinou — mesma razão de /candidatos/[id]. Coberto em assinatura-do-prestador.spec.ts, que assina e segue o retorno até 'Pagamento aprovado'",
 };
 
 /**
