@@ -46,6 +46,19 @@ create trigger pagamentos_atualizado_em
 
 alter table pagamentos enable row level security;
 
+/*
+ * E o `revoke`, que faltava — a conferência no fim deste arquivo pergunta
+ * exatamente isto e responderia `false` sem esta linha.
+ *
+ * O Supabase concede `select` a `anon` e `authenticated` por padrão nas
+ * tabelas do schema público, então uma tabela nova nasce legível mesmo com
+ * RLS ligada. A RLS sem policy já nega tudo; o `revoke` é a segunda
+ * camada, para o dia em que alguém criar uma policy por engano ou deixar
+ * um `disable row level security` ligado depois de depurar. Mesmo buraco
+ * que `preferencias_notificacao` e `inscricoes_push` tiveram em produção.
+ */
+revoke select on pagamentos from anon, authenticated;
+
 -- Mensalidade do prestador — quando expira, o perfil sai da vitrine.
 alter table perfis_prestador
   add column if not exists mensalidade_valida_ate timestamptz;
