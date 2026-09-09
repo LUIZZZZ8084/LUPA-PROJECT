@@ -194,8 +194,15 @@ function leAssinatura(corpo: {
  * `status: "pending"` é o modelo sem meio de pagamento definido na
  * criação: o Mercado Pago devolve um `init_point`, a pessoa escolhe o
  * cartão lá, e a assinatura vira `authorized` — o que chega de volta como
- * webhook `subscription_preapproval`. A primeira cobrança sai na hora da
- * autorização.
+ * webhook `subscription_preapproval`.
+ *
+ * **Com `diasTeste`, o cartão é autorizado na hora e a primeira cobrança
+ * sai só depois desse tanto de dias** — é o `free_trial` do
+ * `auto_recurring`, e não um campo separado: sem ele, o Mercado Pago cobra
+ * assim que a pessoa autoriza. Decisão do Luiz em 09/09/2026 (#170): virar
+ * prestador deixou de dar carência sem cartão, e passou a exigir o cartão
+ * na hora, com teste grátis antes da primeira cobrança de verdade — quem
+ * cancela dentro do prazo nunca chegou a ser cobrado.
  */
 export async function criarAssinaturaRecorrente(
   dados: {
@@ -205,6 +212,8 @@ export async function criarAssinaturaRecorrente(
     referenciaExterna: string;
     emailPagador: string;
     urlRetorno: string;
+    /** Sem isto (ou `0`), a primeira cobrança sai na hora da autorização. */
+    diasTeste?: number;
   },
   buscar: typeof fetch = fetch,
 ): Promise<ResultadoAssinatura> {
@@ -227,6 +236,14 @@ export async function criarAssinaturaRecorrente(
           frequency_type: "months",
           transaction_amount: dados.valorCentavos / 100,
           currency_id: "BRL",
+          ...(dados.diasTeste
+            ? {
+                free_trial: {
+                  frequency: dados.diasTeste,
+                  frequency_type: "days",
+                },
+              }
+            : {}),
         },
       }),
       cache: "no-store",

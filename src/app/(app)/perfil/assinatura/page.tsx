@@ -7,7 +7,7 @@ import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL, passouDoPrazo } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
-import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
+import { DIAS_TESTE_GRATIS, PRECO_CENTAVOS } from "@/server/pagamentos/planos";
 import { estadoDaAssinatura } from "@/server/pagamentos/servico";
 import { repositorioUsuarios } from "@/server/repositories";
 import { AssinarButton } from "./assinar-button";
@@ -93,7 +93,12 @@ export default async function AssinaturaPage() {
               ) : (
                 <>
                   Sem mensalidade ativa, seu perfil não aparece na busca de quem
-                  procura profissional. Assinar leva menos de um minuto.
+                  procura profissional. Autorize o cartão e teste{" "}
+                  <strong className="text-ink">
+                    {DIAS_TESTE_GRATIS} dias grátis
+                  </strong>
+                  ; se não cancelar antes, cobra sozinho quando o prazo
+                  terminar.
                 </>
               )}
             </p>
@@ -112,7 +117,7 @@ export default async function AssinaturaPage() {
                     ? "Continuar assinatura"
                     : emDia
                       ? "Ativar renovação automática"
-                      : "Assinar"
+                      : `Testar ${DIAS_TESTE_GRATIS} dias grátis`
                 }
               />
             )}

@@ -13,3 +13,16 @@ export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
 export const DESCRICAO_PAGAMENTO: Record<TipoPagamento, string> = {
   prestador_mensalidade: "Mensalidade de prestador — Lupa",
 };
+
+/**
+ * Dias de teste grátis antes da primeira cobrança da assinatura —
+ * decisão do Luiz em 09/09/2026 (#170), substituindo os 30 dias de
+ * carência sem cartão que `virarPrestador` dava antes de existir
+ * assinatura recorrente.
+ *
+ * A diferença que importa: aqui o cartão já foi autorizado quando o teste
+ * começa. Quem cancela dentro do prazo nunca chegou a ser cobrado — não
+ * há dinheiro para devolver, e por isso não é a mesma coisa que a
+ * carência antiga, que não pedia cartão nenhum.
+ */
+export const DIAS_TESTE_GRATIS = 15;

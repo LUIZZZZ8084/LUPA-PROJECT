@@ -58,7 +58,8 @@ test.describe("feed do prestador", () => {
       .getByLabel("Sobre o seu trabalho")
       .fill("Instalações elétricas residenciais e comerciais em Sinop.");
     await page.getByRole("button", { name: /virar prestador/i }).click();
-    await page.waitForURL(/\/perfil$/, { timeout: 15_000 });
+    // Sem carência (#170): a ativação manda direto para a assinatura.
+    await page.waitForURL(/\/perfil\/assinatura$/, { timeout: 15_000 });
   });
 
   test.afterAll(async () => {

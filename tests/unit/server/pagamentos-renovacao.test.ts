@@ -22,10 +22,10 @@ import type { Autenticado } from "@/server/auth/rbac";
 
 vi.mock("@/lib/supabase/config", () => ({ isSupabaseConfigured: false }));
 
-const estender = vi.fn(async (_usuarioId: string) => {});
+const estender = vi.fn(async (_usuarioId: string, _dias?: number) => {});
 const revogar = vi.fn(async (_usuarioId: string) => {});
 vi.mock("@/server/prestadores/servico", () => ({
-  estenderMensalidade: (...args: [string]) => estender(...args),
+  estenderMensalidade: (...args: [string, number?]) => estender(...args),
   revogarMensalidade: (...args: [string]) => revogar(...args),
 }));
 
@@ -114,6 +114,59 @@ describe("renovação automática", () => {
       expect((await ctx.repo.assinaturaPorId(assinatura.id))?.status).toBe(
         "ativa",
       );
+    });
+
+    /**
+     * A primeira vez que vira `ativa` é o início do teste grátis (#170).
+     * O cartão acabou de ser autorizado, e a cobrança de verdade só sai
+     * `DIAS_TESTE_GRATIS` depois — mas a vitrine precisa liberar o
+     * perfil desde já, senão o teste grátis não seria grátis.
+     */
+    it("authorized concede o teste grátis, não a extensão normal de 30 dias", async () => {
+      await assinaturaPendente();
+
+      await ctx.servico.confirmarAssinatura(
+        "pre-1",
+        respostaJson({ id: "pre-1", status: "authorized" }),
+      );
+
+      expect(estender).toHaveBeenCalledWith("prestador-1", 15);
+    });
+
+    /**
+     * `pausada → ativa` não é um teste novo — é o Mercado Pago
+     * confirmando que voltou a cobrar depois de arrumar o cartão. Já
+     * tinha passado pelo teste na primeira autorização; conceder de novo
+     * aqui devolveria dias de graça a cada soluço de cartão.
+     */
+    it("pausada → ativa não concede um novo teste grátis", async () => {
+      await assinaturaPendente();
+      await ctx.servico.confirmarAssinatura(
+        "pre-1",
+        respostaJson({ id: "pre-1", status: "authorized" }),
+      );
+      await ctx.servico.confirmarAssinatura(
+        "pre-1",
+        respostaJson({ id: "pre-1", status: "paused" }),
+      );
+      estender.mockClear();
+
+      await ctx.servico.confirmarAssinatura(
+        "pre-1",
+        respostaJson({ id: "pre-1", status: "authorized" }),
+      );
+
+      expect(estender).not.toHaveBeenCalled();
+    });
+
+    it("aviso repetido de authorized não concede o teste duas vezes", async () => {
+      await assinaturaPendente();
+      const aviso = respostaJson({ id: "pre-1", status: "authorized" });
+
+      await ctx.servico.confirmarAssinatura("pre-1", aviso);
+      await ctx.servico.confirmarAssinatura("pre-1", aviso);
+
+      expect(estender).toHaveBeenCalledTimes(1);
     });
 
     it("paused marca pausada — cartão recusado não é cancelamento", async () => {

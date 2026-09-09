@@ -93,6 +93,37 @@ describe("criarAssinaturaRecorrente", () => {
     expect(corpoEnviado.status).toBe("pending");
   });
 
+  /**
+   * O teste grátis (#170) é o `free_trial` do `auto_recurring`, não um
+   * campo à parte — sem ele, o Mercado Pago cobra assim que a pessoa
+   * autoriza o cartão.
+   */
+  it("com diasTeste, manda free_trial em dias", async () => {
+    let corpoEnviado: Record<string, unknown> = {};
+    const espiao = (async (_url: string, init: RequestInit) => {
+      corpoEnviado = JSON.parse(String(init.body));
+      return new Response(
+        JSON.stringify({
+          id: "pre-1",
+          init_point: "https://x",
+          status: "pending",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }) as unknown as typeof fetch;
+
+    await criarAssinaturaRecorrente({ ...DADOS, diasTeste: 15 }, espiao);
+
+    const autoRecurring = corpoEnviado.auto_recurring as Record<
+      string,
+      unknown
+    >;
+    expect(autoRecurring.free_trial).toEqual({
+      frequency: 15,
+      frequency_type: "days",
+    });
+  });
+
   it("recusa quando a resposta vem sem link de autorização", async () => {
     const resultado = await criarAssinaturaRecorrente(
       DADOS,

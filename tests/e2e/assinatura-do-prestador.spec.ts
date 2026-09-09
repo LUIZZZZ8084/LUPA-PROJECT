@@ -57,7 +57,8 @@ test.describe("assinatura do prestador", () => {
       .getByLabel("Sobre o seu trabalho")
       .fill("Instalações elétricas residenciais e comerciais em Sinop.");
     await page.getByRole("button", { name: /virar prestador/i }).click();
-    await page.waitForURL(/\/perfil$/, { timeout: 15_000 });
+    // Sem carência (#170): a ativação manda direto para a assinatura.
+    await page.waitForURL(/\/perfil\/assinatura$/, { timeout: 15_000 });
   });
 
   test.afterAll(async () => {
@@ -65,17 +66,18 @@ test.describe("assinatura do prestador", () => {
   });
 
   /**
-   * Quem acabou de virar prestador ganha 30 dias de carência, e a tela
-   * precisa dizer isso — senão a pessoa assina de novo sem precisar.
+   * Quem acabou de virar prestador não ganha mais nada de graça sem
+   * autorizar o cartão (#170): a tela mostra "Inativa" e oferece o teste
+   * de 15 dias, não uma data que já vale sozinha.
    */
-  test("mostra o preço, a carência, e que ela ainda não renova sozinha", async () => {
+  test("mostra o preço e o teste grátis, sem carência nenhuma", async () => {
     await page.goto("/perfil/assinatura");
 
     await expect(page.getByText("R$ 19,90")).toBeVisible();
     await expect(page.getByText("/mês")).toBeVisible();
-    await expect(page.getByText("Ativa", { exact: true })).toBeVisible();
-    await expect(page.getByText(/vale até/i)).toBeVisible();
-    await expect(page.getByText(/não renova sozinha/i)).toBeVisible();
+    await expect(page.getByText("Inativa", { exact: true })).toBeVisible();
+    // Aparece duas vezes — no texto e no rótulo do botão — daí o `.first()`.
+    await expect(page.getByText(/15 dias grátis/i).first()).toBeVisible();
   });
 
   /**
@@ -110,14 +112,14 @@ test.describe("assinatura do prestador", () => {
     const antes = await validadeNaTela(page);
 
     /*
-     * O rótulo muda com o estado — "Assinar", "Ativar renovação
-     * automática" ou "Continuar assinatura" —, e por isso ele é listado
-     * inteiro em vez de um `/renova/i` frouxo: esse padrão casaria também
-     * com "Cancelar renovação", que é o botão oposto.
+     * O rótulo muda com o estado — "Testar 15 dias grátis", "Ativar
+     * renovação automática" ou "Continuar assinatura" —, e por isso ele é
+     * listado inteiro em vez de um `/renova/i` frouxo: esse padrão
+     * casaria também com "Cancelar renovação", que é o botão oposto.
      */
     await page
       .getByRole("button", {
-        name: /^(assinar|ativar renovação automática|continuar assinatura)$/i,
+        name: /^(testar \d+ dias grátis|ativar renovação automática|continuar assinatura)$/i,
       })
       .click();
     await page.waitForURL(/\/pagamento\/retorno/, { timeout: 20_000 });

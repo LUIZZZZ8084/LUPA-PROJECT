@@ -19,7 +19,11 @@ import {
   estornarPagamento,
   temMercadoPagoConfigurado,
 } from "./mercadopago";
-import { DESCRICAO_PAGAMENTO, PRECO_CENTAVOS } from "./planos";
+import {
+  DESCRICAO_PAGAMENTO,
+  DIAS_TESTE_GRATIS,
+  PRECO_CENTAVOS,
+} from "./planos";
 import type {
   Assinatura,
   Pagamento,
@@ -229,6 +233,7 @@ export async function assinar(
       referenciaExterna: assinatura.id,
       emailPagador: usuario.email,
       urlRetorno: `${urlBase()}/pagamento/retorno?assinatura=${assinatura.id}`,
+      diasTeste: DIAS_TESTE_GRATIS,
     },
     opcoes.buscar,
   );
@@ -511,6 +516,13 @@ function statusDaAssinatura(statusRemoto: string): StatusAssinatura | null {
  * Como em toda confirmação deste arquivo, o status vem de uma nova
  * consulta à API: a assinatura HMAC do webhook prova que a notificação
  * veio do Mercado Pago, não o que ela diz.
+ *
+ * **A primeira vez que vira `ativa` é o início do teste grátis.** O
+ * cartão acabou de ser autorizado, e a cobrança de verdade só acontece
+ * `DIAS_TESTE_GRATIS` depois — mas a vitrine precisa mostrar o perfil
+ * desde já, senão o teste grátis não seria grátis coisa nenhuma. Por
+ * isso a transição *pendente → ativa*, e só ela, concede o acesso; uma
+ * reautorização depois de `pausada` não é um teste novo.
  */
 export async function confirmarAssinatura(
   mpPreapprovalId: string,
@@ -541,8 +553,12 @@ export async function confirmarAssinatura(
   const status = statusDaAssinatura(remota.status);
   if (!status) return;
 
+  const eraPendente = assinatura.status === "pendente";
   const mudou = await repo.definirStatusAssinatura(assinatura.id, status);
   if (mudou) {
+    if (status === "ativa" && eraPendente) {
+      await estenderMensalidade(mudou.usuarioId, DIAS_TESTE_GRATIS);
+    }
     log.info("assinatura mudou de estado", {
       acao: "pagamentos.confirmar_assinatura",
       status,

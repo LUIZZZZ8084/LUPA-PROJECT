@@ -102,9 +102,9 @@ export function AtivarPrestadorForm({
    *
    * A action revalida o layout — o papel decide o menu inteiro —, e isso
    * re-renderiza esta rota no servidor, onde a página manda quem já é
-   * prestador para `/perfil`. Um `router.replace` junto disputaria a
-   * mesma navegação, e foi assim que a primeira versão deixou quem
-   * acabava de ativar olhando para um 404.
+   * prestador para `/perfil/assinatura`. Um `router.replace` junto
+   * disputaria a mesma navegação, e foi assim que a primeira versão
+   * deixou quem acabava de ativar olhando para um 404.
    */
 
   if (precisaDeFoto) return <FaltaFoto />;

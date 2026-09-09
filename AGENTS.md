@@ -1209,12 +1209,58 @@ uma cobrança aprovada e nenhum efeito aplicado.
 
 **A mensalidade estende a partir do maior entre "agora" e o que já
 valia**, nunca de "agora" sozinho — quem renova antes de vencer não perde
-os dias já pagos. Virar prestador já dá 30 dias de carência
-(`daquiA(30)`, o mesmo helper que a vaga usa) antes da primeira cobrança,
-para montar o perfil sem precisar assinar no mesmo minuto em que ativa; e
-prestador já verificado antes desta migração ganha a mesma carência a
-partir do deploy — a mesma lógica de não tirar ninguém do ar no dia da
-mudança que já vale para o prazo de vaga.
+os dias já pagos. `estenderMensalidade(usuarioId, dias)` recebe esse
+`dias` de dois lugares com sentidos diferentes: 30, a cada parcela
+aprovada; e `DIAS_TESTE_GRATIS`, no início do teste — os dois parágrafos
+abaixo.
+
+### Sem carência: cartão logo depois do cadastro, com teste grátis (#170)
+
+Virar prestador dava 30 dias de vitrine **sem pedir cartão nenhum** —
+carência de verdade, para montar o perfil antes de decidir se valia
+assinar. Revisão do Luiz em 09/09/2026: essa carência sem cartão saiu, e
+foi exatamente o que permitia empilhar com a devolução da primeira
+cobrança e ficar até 60 dias na vitrine sem pagar nada, repetidamente por
+conta (ver a seção de estorno, acima). Hoje `virarPrestador()` e o
+cadastro direto como prestador (a irmã em `src/server/auth/servico.ts`,
+mesma lição da #142: duas funções que produzem o mesmo tipo de conta
+precisam da mesma regra) gravam `mensalidadeValidaAte: null` — sem
+assinatura, sem vitrine, ponto final.
+
+**O que substitui a carência é um teste grátis de verdade, com o cartão
+já autorizado.** `criarAssinaturaRecorrente` manda `free_trial` dentro de
+`auto_recurring` — `{ frequency: DIAS_TESTE_GRATIS, frequency_type:
+"days" }` — que é como o `preapproval` autoriza o cartão na hora e adia a
+cobrança de verdade por esse tanto de dias. A diferença que importa
+contra a carência antiga: **quem cancela dentro do teste nunca chegou a
+ser cobrado**. Não há dinheiro para devolver, e por isso não é a mesma
+categoria de risco que a devolução da primeira cobrança — ali o dinheiro
+já tinha entrado.
+
+**A vitrine libera no aviso de autorização, não na cobrança.** O webhook
+`subscription_preapproval` chegando com `authorized` é só "o cartão foi
+aceito" — a primeira cobrança de verdade só sai `DIAS_TESTE_GRATIS`
+depois. Se a vitrine esperasse a cobrança, o teste grátis não seria
+grátis coisa nenhuma: a pessoa pagaria para só então aparecer. Por isso
+`confirmarAssinatura` concede `DIAS_TESTE_GRATIS` de mensalidade **na
+primeira vez** que a assinatura vira `ativa` — checado comparando o
+status antes e depois de `definirStatusAssinatura`, porque uma
+reautorização depois de `pausada` (cartão recusado, arrumado depois) não
+é um teste novo. Sem essa guarda, cada soluço de cartão devolveria mais
+dias de graça.
+
+**A ativação redireciona para `/perfil/assinatura`, não para `/perfil`.**
+Sem carência, ir para o perfil deixaria a pessoa sem saber que falta um
+passo — o perfil existe, mas não aparece em lugar nenhum até o cartão ser
+autorizado.
+
+**O buraco que sobrou, de olhos abertos:** o teste grátis (sem risco de
+dinheiro) mais a devolução da primeira cobrança (com risco, até 30 dias)
+somam até 45 dias de graça — uma vez por conta, porque devolução não
+volta a valer numa segunda cobrança (`STATUS_LIQUIDADOS`). Menor que os
+60 dias de antes, e a metade que restou não envolve dinheiro indo e
+voltando; ainda assim é uma decisão consciente, não uma lacuna
+despercebida.
 
 **A vitrine só mostra quem está com a mensalidade em dia**, mesma família
 de regra que `doc_verified`: o filtro mora em `getProviders`

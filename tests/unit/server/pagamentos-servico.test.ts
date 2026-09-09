@@ -89,6 +89,8 @@ describe("assinar — sem Mercado Pago configurado (demonstração)", () => {
     expect(checkoutUrl).toBeNull();
     expect(assinatura.status).toBe("ativa");
     expect(pagamento?.status).toBe("aprovado");
+    // Em demonstração não há teste grátis: a assinatura já nasce cobrada,
+    // e o efeito usa a extensão normal de 30 dias — não os 15 do teste.
     expect(estenderMensalidadeMock).toHaveBeenCalledWith("prestador-1");
   });
 

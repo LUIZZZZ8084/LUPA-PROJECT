@@ -188,6 +188,10 @@ Qualidade:
   primeira cobrança, em até 30 dias. Antes disto era pagamento avulso —
   o perfil sumia da vitrine no dia 31, sem cobrança nova e sem aviso —
   [#170](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/170)
+- Sem carência: virar prestador não dá mais 30 dias de vitrine de graça
+  sem cartão. O cartão é autorizado logo depois do cadastro, com 15 dias
+  de teste grátis antes da primeira cobrança de verdade —
+  [#170](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/170)
 
 ## Pendente
 
