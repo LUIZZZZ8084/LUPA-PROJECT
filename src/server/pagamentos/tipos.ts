@@ -52,4 +52,24 @@ export interface RepositorioPagamentos {
    */
   aprovar(id: string, mpPaymentId: string | null): Promise<Pagamento | null>;
   rejeitar(id: string, mpPaymentId: string | null): Promise<Pagamento | null>;
+
+  /** Cobrança que o comprador desistiu antes de pagar. */
+  cancelar(id: string, mpPaymentId: string | null): Promise<Pagamento | null>;
+
+  /**
+   * Estorno ou chargeback — e este parte de `"aprovado"`, não de
+   * `"pendente"`.
+   *
+   * É a diferença que faz esta operação existir separada: os outros três
+   * desfechos resolvem uma cobrança que ainda estava em aberto, e por isso
+   * a guarda deles é `status = 'pendente'`. Estorno acontece **depois** de
+   * o dinheiro ter entrado, sobre uma cobrança já aprovada — a mesma
+   * guarda ali recusaria a transição e o dinheiro voltaria sem ninguém
+   * saber.
+   *
+   * Continua condicional pelo mesmo motivo dos outros: o Mercado Pago
+   * reenvia webhook, e a reversão do efeito não pode acontecer duas vezes.
+   * `null` quando outra notificação já resolveu.
+   */
+  estornar(id: string, mpPaymentId: string | null): Promise<Pagamento | null>;
 }

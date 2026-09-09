@@ -1032,6 +1032,32 @@ nasce só com `'prestador_mensalidade'`
 cobrança nova ganha o próprio valor, por `alter type ... add value`,
 quando tiver uma tela de verdade.
 
+**Estorno e chargeback tiram a mensalidade na hora.** Decisão do Luiz em
+08/09/2026, escolhendo entre isso e encurtar a validade até a data do
+estorno. O caso que manda é o chargeback fraudulento: quem contesta a
+cobrança e continua anunciando fica com o serviço de graça, e a vitrine
+passa a ter alguém que o app não consegue cobrar. O preço aceito é que
+quem pede estorno legítimo no dia 29 de 30 perde o dia que faltava.
+
+**`estornar` parte de `aprovado`, não de `pendente`** — e é a única das
+quatro transições que faz isso. As outras resolvem uma cobrança ainda em
+aberto; estorno chega depois de o dinheiro ter entrado. Usar a guarda de
+`pendente` ali recusaria a transição em silêncio e devolveria `null`, que
+quem chama lê como "outra notificação já resolveu".
+
+**Os cinco valores de `status_pagamento` agora têm produtor.** `estornado`
+e `cancelado` existiam no enum e no tipo do TypeScript sem que nada no
+código os gravasse: `refunded` e `charged_back` caíam num ramo de "nada
+muda ainda", e `cancelled` virava `rejeitado`. Estado declarado sem
+produtor é a mesma armadilha do `pedidos_verificacao` sem tela de envio —
+**parece tratado, e o teste que existe passa, porque ninguém escreveu o
+caso que nunca acontece.** Foi achado lendo a tabela de cartões de teste do
+Mercado Pago para montar a matriz de testes: os cartões cobrem aprovado,
+pendente e cinco recusas, e nenhum cobre estorno, que só acontece depois da
+compra. **Quando um enum tem valor que nenhum caminho produz, ou falta
+código ou sobra valor** — as duas respostas são aceitáveis, fingir que está
+resolvido não é.
+
 **Mercado Pago, Checkout Pro — sem `auto_return`.** Ele exige uma
 `back_url.success` alcançável pela internet, e recusa a preferência
 inteira ("back_url.success must be defined") quando a URL é `localhost` —

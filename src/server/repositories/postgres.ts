@@ -333,7 +333,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
 
   async definirMensalidadeValidaAte(
     usuarioId: string,
-    ate: string,
+    ate: string | null,
   ): Promise<void> {
     const supabase = await cliente();
     const { error } = await supabase

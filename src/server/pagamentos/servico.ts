@@ -4,7 +4,10 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Autenticado } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
-import { estenderMensalidade } from "../prestadores/servico";
+import {
+  estenderMensalidade,
+  revogarMensalidade,
+} from "../prestadores/servico";
 import { repositorioPagamentos } from "./index";
 import {
   consultarPagamento,
@@ -41,6 +44,25 @@ async function aplicarEfeito(pagamento: Pagamento): Promise<void> {
       // produção, com uma cobrança aprovada e nenhum efeito aplicado.
       const _exaustivo: never = pagamento.tipo;
       throw erros.interno(`tipo de pagamento sem efeito: ${_exaustivo}`);
+    }
+  }
+}
+
+/**
+ * Desfaz o que um pagamento aprovado tinha mudado.
+ *
+ * Espelha `aplicarEfeito`, e com o mesmo `switch` exaustivo pelo mesmo
+ * motivo: um `TipoPagamento` novo que ganhe efeito e não ganhe reversão
+ * quebra o build aqui, e não em produção com um estorno sem consequência.
+ */
+async function desfazerEfeito(pagamento: Pagamento): Promise<void> {
+  switch (pagamento.tipo) {
+    case "prestador_mensalidade":
+      await revogarMensalidade(pagamento.usuarioId);
+      return;
+    default: {
+      const _exaustivo: never = pagamento.tipo;
+      throw erros.interno(`tipo de pagamento sem reversão: ${_exaustivo}`);
     }
   }
 }
@@ -203,13 +225,53 @@ export async function confirmarPagamento(
     return;
   }
 
-  if (infoRemota.status === "rejected" || infoRemota.status === "cancelled") {
+  if (infoRemota.status === "rejected") {
     await repo.rejeitar(pagamento.id, infoRemota.id);
     log.info("pagamento rejeitado", {
       acao: "pagamentos.confirmar",
       tipo: pagamento.tipo,
       status: infoRemota.status,
     });
+    return;
+  }
+
+  if (infoRemota.status === "cancelled") {
+    await repo.cancelar(pagamento.id, infoRemota.id);
+    log.info("pagamento cancelado", {
+      acao: "pagamentos.confirmar",
+      tipo: pagamento.tipo,
+    });
+    return;
+  }
+
+  /*
+   * Estorno e chargeback desfazem o que a aprovação comprou.
+   *
+   * Estes dois chegam **depois** de o dinheiro ter entrado, sobre uma
+   * cobrança já `aprovado` — por isso `estornar` parte de "aprovado" e não
+   * de "pendente", como os outros três.
+   *
+   * Sem este ramo, os dois caíam no "nada muda ainda" logo abaixo: o
+   * prestador pagava, ganhava 30 dias, pedia estorno e continuava na
+   * vitrine com o dinheiro de volta. Os valores `estornado` e `cancelado`
+   * existiam no enum sem que nada no código os produzisse — estado
+   * declarado sem produtor, que é a armadilha do `pedidos_verificacao` sem
+   * tela de envio (#166).
+   */
+  if (
+    infoRemota.status === "refunded" ||
+    infoRemota.status === "charged_back"
+  ) {
+    const estornado = await repo.estornar(pagamento.id, infoRemota.id);
+    // `null`: outra notificação já estornou, e o efeito já foi desfeito.
+    if (estornado) {
+      await desfazerEfeito(estornado);
+      log.info("pagamento estornado", {
+        acao: "pagamentos.confirmar",
+        tipo: pagamento.tipo,
+        status: infoRemota.status,
+      });
+    }
     return;
   }
 

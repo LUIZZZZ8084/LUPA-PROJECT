@@ -210,3 +210,31 @@ export async function estenderMensalidade(usuarioId: string): Promise<void> {
     acao: "prestador.mensalidade",
   });
 }
+
+/**
+ * Estorno tira a mensalidade na hora.
+ *
+ * Decisão do Luiz em 08/09/2026, escolhendo entre "perde tudo agora" e
+ * "encurta até a data do estorno": **perde tudo na hora**. O caso que
+ * manda é o chargeback fraudulento — quem contesta a cobrança e continua
+ * anunciando fica com o serviço de graça, e a vitrine passa a ter alguém
+ * que o app não consegue cobrar.
+ *
+ * O preço aceito, de olhos abertos: quem pediu estorno legítimo no dia 29
+ * de 30 perde o dia que faltava. É pouco, e o contrário — deixar rodando
+ * enquanto o dinheiro volta — é o erro caro.
+ *
+ * Não apaga o perfil nem os dados: só a validade. Reativar é assinar de
+ * novo, como qualquer mensalidade vencida.
+ */
+export async function revogarMensalidade(usuarioId: string): Promise<void> {
+  const repo = repositorioUsuarios();
+  const perfil = await repo.perfilPrestador(usuarioId);
+  if (!perfil) throw erros.naoEncontrado("Perfil de prestador");
+
+  await repo.definirMensalidadeValidaAte(usuarioId, null);
+
+  log.info("mensalidade de prestador revogada", {
+    acao: "prestador.mensalidade_revogada",
+  });
+}
