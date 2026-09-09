@@ -103,6 +103,28 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
   ): Promise<Pagamento | null> {
     return mudarStatusSePendente(id, "rejeitado", mpPaymentId);
   }
+
+  async cancelar(
+    id: string,
+    mpPaymentId: string | null,
+  ): Promise<Pagamento | null> {
+    return mudarStatusSePendente(id, "cancelado", mpPaymentId);
+  }
+
+  /**
+   * Parte de `aprovado`, não de `pendente`.
+   *
+   * Estorno acontece depois de o dinheiro ter entrado. Usar a guarda de
+   * `pendente` aqui recusaria a transição em silêncio — a cobrança
+   * continuaria `aprovado`, o prestador continuaria na vitrine, e o
+   * `null` devolvido seria lido como "outra notificação já resolveu".
+   */
+  async estornar(
+    id: string,
+    mpPaymentId: string | null,
+  ): Promise<Pagamento | null> {
+    return mudarStatusSe(id, "aprovado", "estornado", mpPaymentId);
+  }
 }
 
 /**
@@ -118,6 +140,15 @@ async function mudarStatusSePendente(
   status: StatusPagamento,
   mpPaymentId: string | null,
 ): Promise<Pagamento | null> {
+  return mudarStatusSe(id, "pendente", status, mpPaymentId);
+}
+
+async function mudarStatusSe(
+  id: string,
+  de: StatusPagamento,
+  status: StatusPagamento,
+  mpPaymentId: string | null,
+): Promise<Pagamento | null> {
   const supabase = await cliente();
   const { data, error } = await supabase
     .from("pagamentos")
@@ -126,7 +157,7 @@ async function mudarStatusSePendente(
       ...(mpPaymentId !== null ? { mp_payment_id: mpPaymentId } : {}),
     })
     .eq("id", id)
-    .eq("status", "pendente")
+    .eq("status", de)
     .select("*")
     .maybeSingle();
 

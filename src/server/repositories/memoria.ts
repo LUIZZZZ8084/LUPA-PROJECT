@@ -178,7 +178,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
 
   async definirMensalidadeValidaAte(
     usuarioId: string,
-    ate: string,
+    ate: string | null,
   ): Promise<void> {
     const perfil = this.prestadores.get(usuarioId);
     if (!perfil) return;

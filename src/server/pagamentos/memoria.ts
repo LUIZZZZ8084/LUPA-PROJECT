@@ -3,6 +3,7 @@ import type {
   DadosNovaCobranca,
   Pagamento,
   RepositorioPagamentos,
+  StatusPagamento,
 } from "./tipos";
 
 /** Repositório de pagamentos em memória, para o modo demonstração. */
@@ -61,14 +62,39 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
     return this.mudarStatusSePendente(id, "rejeitado", mpPaymentId);
   }
 
+  async cancelar(
+    id: string,
+    mpPaymentId: string | null,
+  ): Promise<Pagamento | null> {
+    return this.mudarStatusSe(id, "pendente", "cancelado", mpPaymentId);
+  }
+
+  /** Parte de `aprovado`: estorno acontece depois de o dinheiro entrar. */
+  async estornar(
+    id: string,
+    mpPaymentId: string | null,
+  ): Promise<Pagamento | null> {
+    return this.mudarStatusSe(id, "aprovado", "estornado", mpPaymentId);
+  }
+
   private mudarStatusSePendente(
     id: string,
     status: "aprovado" | "rejeitado",
     mpPaymentId: string | null,
   ): Pagamento | null {
+    return this.mudarStatusSe(id, "pendente", status, mpPaymentId);
+  }
+
+  private mudarStatusSe(
+    id: string,
+    de: StatusPagamento,
+    para: StatusPagamento,
+    mpPaymentId: string | null,
+  ): Pagamento | null {
     const atual = this.itens.get(id);
     if (!atual) throw erros.naoEncontrado("Pagamento");
-    if (atual.status !== "pendente") return null;
+    if (atual.status !== de) return null;
+    const status = para;
 
     const novo: Pagamento = {
       ...atual,

@@ -261,7 +261,15 @@ export interface RepositorioUsuarios {
    * vencer não perder dias já pagos — é o serviço; o repositório só
    * grava o que chegou pronto.
    */
-  definirMensalidadeValidaAte(usuarioId: string, ate: string): Promise<void>;
+  /**
+   * `null` revoga: é assim que o estorno tira a mensalidade (#166). Sem
+   * aceitar `null`, revogar viraria gravar uma data no passado — que
+   * funciona por acidente e mente sobre o que aconteceu.
+   */
+  definirMensalidadeValidaAte(
+    usuarioId: string,
+    ate: string | null,
+  ): Promise<void>;
 
   /**
    * Candidatos que ligaram "quero que empresas me encontrem".
