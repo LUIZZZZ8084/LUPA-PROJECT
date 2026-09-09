@@ -1011,10 +1011,15 @@ vez, no momento da migração. Ninguém perde o anúncio no dia da mudança.
 Luiz tinha decidido em 25/08/2026 esperar demanda validada antes de cobrar
 — pagamento como última etapa, issue
 [#46](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/46) parada de
-propósito. Essa espera acabou em 08/09/2026: a decisão foi atualizada, não
-ignorada, e fica registrada aqui pela mesma razão que toda decisão deste
-arquivo fica — para que "por que isto está assim?" tenha resposta seis
-meses depois.
+propósito. **Ele reverteu essa espera em 08/09/2026, e fixou a mensalidade
+do prestador em R$ 19,90.** A decisão foi atualizada, não ignorada, e fica
+registrada aqui pela mesma razão que toda decisão deste arquivo fica —
+para que "por que isto está assim?" tenha resposta seis meses depois.
+
+O preço mora num lugar só, `PRECO_CENTAVOS` em
+`src/server/pagamentos/planos.ts`, e a tela de assinatura lê de lá. Preço
+repetido na tela e no servidor é como se cobra um valor e se anuncia
+outro.
 
 **A infraestrutura nasceu com um tipo de cobrança só, não seis.** O brief
 já previa vaga avulsa, planos de empresa, mensalidade de prestador e

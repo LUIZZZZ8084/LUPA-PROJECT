@@ -77,7 +77,7 @@ describe("criarCobranca — sem Mercado Pago configurado (demonstração)", () =
       sessao,
       "prestador_mensalidade",
     );
-    expect(pagamento.valorCentavos).toBe(2490);
+    expect(pagamento.valorCentavos).toBe(1990);
   });
 
   it("recusa sem sessão", async () => {

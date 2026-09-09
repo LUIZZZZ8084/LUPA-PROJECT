@@ -17,11 +17,11 @@ export function formatMoneyBRL(valor: number): string {
 }
 
 /**
- * "R$ 24,90" — preço de cobrança, sempre com centavos.
+ * "R$ 19,90" — preço de cobrança, sempre com centavos.
  *
  * `formatMoneyBRL` arredonda de propósito para métrica aproximada de
- * painel; um preço de verdade não pode virar "R$ 25" quando o que se
- * cobra é R$ 24,90.
+ * painel; um preço de verdade não pode virar "R$ 20" quando o que se
+ * cobra é R$ 19,90.
  */
 export function formatPrecoBRL(valor: number): string {
   return brlComCentavos.format(valor);

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Autenticado } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
@@ -58,10 +59,11 @@ export interface CobrancaCriada {
  * Cria uma cobrança e, sempre que possível, já devolve para onde mandar
  * quem está pagando.
  *
- * Sem `MERCADO_PAGO_ACCESS_TOKEN`, a cobrança é aprovada na hora — mesmo
- * padrão do resto do app sem Supabase configurado — e é o que mantém a
- * suíte e2e (sempre em demonstração) e o `npm run dev` sem credencial
- * exercitando o fluxo inteiro, do clique ao efeito.
+ * Sem `MERCADO_PAGO_ACCESS_TOKEN` **e** sem Supabase, a cobrança é
+ * aprovada na hora — é o que mantém a suíte e2e (sempre em demonstração)
+ * e o `npm run dev` sem credencial exercitando o fluxo inteiro, do clique
+ * ao efeito. Com banco de verdade e sem token, recusa: o porquê está no
+ * comentário do próprio ramo, logo abaixo.
  */
 export async function criarCobranca(
   sessao: Autenticado | null,
@@ -69,6 +71,30 @@ export async function criarCobranca(
   opcoes: { metadata?: Record<string, unknown>; buscar?: typeof fetch } = {},
 ): Promise<CobrancaCriada> {
   if (!sessao) throw erros.naoAutenticado("sem sessão");
+
+  /*
+   * Demonstração é a ausência de infraestrutura inteira, não a de uma
+   * credencial.
+   *
+   * O precedente do Supabase não vale aqui, e a diferença é o modo de
+   * falha. Sem Supabase, o app inteiro roda com dados de Sinop e
+   * ninguém confunde aquilo com produção. Sem o token do Mercado Pago
+   * numa instalação que **tem** Supabase, o que acontece é outra coisa:
+   * conta real, prestador real, e a mensalidade aprovada de graça — com
+   * um `log.info` dizendo "modo demonstração" e nada na tela. O modo de
+   * falha seria "todo mundo passa", que é o pior de todos numa cobrança.
+   *
+   * Por isso quem decide é `isSupabaseConfigured`, a mesma chave que o
+   * resto do app usa para saber se está em produção. Com banco de
+   * verdade e sem token, isto é configuração faltando — e recusar é o
+   * comportamento certo: ninguém ganha nada de graça, e o log diz o que
+   * arrumar.
+   */
+  if (!temMercadoPagoConfigurado && isSupabaseConfigured) {
+    throw erros.indisponivel(
+      "MERCADO_PAGO_ACCESS_TOKEN ausente em ambiente com banco real",
+    );
+  }
 
   const repo = repositorioPagamentos();
   const pagamento = await repo.criar({
