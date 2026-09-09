@@ -1,6 +1,7 @@
 import {
   Briefcase,
   Building2,
+  CreditCard,
   FileText,
   LogIn,
   Pencil,
@@ -64,6 +65,14 @@ const ATALHOS: {
     descricao: "Vagas publicadas, currículos recebidos e plano.",
     cor: "text-empresas",
     exige: "vaga:publicar",
+  },
+  {
+    href: "/perfil/assinatura",
+    icon: CreditCard,
+    titulo: "Assinatura",
+    descricao: "Mensalidade para aparecer na busca de profissionais.",
+    cor: "text-servicos",
+    exige: "prestador:gerenciar_assinatura",
   },
   {
     href: "/admin",

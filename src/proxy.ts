@@ -218,6 +218,21 @@ export const config = {
      * a borda precisa ver toda navegação; a lista de rotas abertas fica no
      * código, onde dá para explicar cada uma.
      *
+     * `api/webhooks` está aqui porque quem chama não é o navegador de
+     * ninguém. O Mercado Pago faz um POST sem cookie, e o muro respondia
+     * `401 {"erro":"não autenticado"}` antes de a rota existir — a
+     * assinatura HMAC que ela confere nunca chegava a ser lida, e nenhum
+     * pagamento seria confirmado em produção. Passou batido porque nada na
+     * tela quebra: a cobrança abre, o Checkout Pro aparece, a pessoa paga,
+     * e só o efeito nunca acontece.
+     *
+     * **Ficar fora do muro não é ficar sem autenticação.** Webhook se
+     * autentica pelo que assina, não por quem tem sessão, e é o
+     * `route.ts` que recusa 401 sem `x-signature` válida. Pôr em
+     * `ABERTAS` não resolveria: aquela lista é de rota de navegação, e
+     * `/api/` cai no ramo acima dela, que responde JSON de 401 sem nunca
+     * consultá-la.
+     *
      * `manifest.webmanifest` entrou depois, e a ausência dele era um
      * defeito de verdade: o manifesto responde a `/manifest.webmanifest`,
      * gerado por `src/app/manifest.ts` do mesmo jeito que `icon` e
@@ -227,6 +242,6 @@ export const config = {
      * que é quem acabou de receber o link. Não é navegação e não tem o que
      * proteger; o que ele diz (nome, cor, ícone) já é público.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|icon|apple-icon|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|api/webhooks|icon|apple-icon|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };

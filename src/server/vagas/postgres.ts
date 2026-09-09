@@ -1,5 +1,6 @@
 import "server-only";
 
+import { daquiA } from "@/lib/format";
 import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
 import type {
@@ -28,10 +29,6 @@ function paraVaga(linha: Record<string, unknown>): Vaga {
     criadoEm: String(linha.criado_em),
     expiraEm: String(linha.expira_em),
   };
-}
-
-function em30Dias(): string {
-  return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 }
 
 async function cliente() {
@@ -195,7 +192,7 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
     const supabase = await cliente();
     const { data, error } = await supabase
       .from("vagas")
-      .update({ expira_em: em30Dias() })
+      .update({ expira_em: daquiA(30) })
       .eq("id", id)
       .select("*")
       .single();

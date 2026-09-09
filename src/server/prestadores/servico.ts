@@ -1,7 +1,7 @@
 import "server-only";
 
 import { SERVICE_CATEGORIES } from "@/lib/constants";
-import { onlyDigits } from "@/lib/format";
+import { daquiA, onlyDigits } from "@/lib/format";
 import { type Autenticado, exigirCapacidade, type Papel } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
@@ -134,6 +134,13 @@ export async function virarPrestador(
     cnpj: null,
     cnpjVerificado: false,
     razaoSocial: null,
+    /*
+     * 30 dias de graça antes da primeira cobrança — tempo de montar o
+     * perfil e aparecer na vitrine sem precisar assinar no mesmo minuto
+     * em que ativa. `daquiA` mora em `@/lib/format` porque a mesma regra
+     * já vale para o prazo de vaga.
+     */
+    mensalidadeValidaAte: daquiA(30),
   });
 
   /*
@@ -173,4 +180,33 @@ export async function virarPrestador(
   });
 
   return { papel: "prestador_servico" };
+}
+
+/**
+ * Estende a mensalidade por mais 30 dias, a partir de um pagamento
+ * aprovado.
+ *
+ * A partir do maior entre "agora" e o prazo que já valia — quem renova
+ * antes de vencer não perde os dias já pagos. Chamado só por
+ * `src/server/pagamentos/servico.ts`, depois de confirmar o pagamento na
+ * API do Mercado Pago; não faz a própria checagem de permissão porque
+ * quem liga é o sistema, não uma sessão.
+ */
+export async function estenderMensalidade(usuarioId: string): Promise<void> {
+  const repo = repositorioUsuarios();
+  const perfil = await repo.perfilPrestador(usuarioId);
+  if (!perfil) throw erros.naoEncontrado("Perfil de prestador");
+
+  const baseMs = perfil.mensalidadeValidaAte
+    ? Math.max(Date.now(), new Date(perfil.mensalidadeValidaAte).getTime())
+    : Date.now();
+  const novaValidade = new Date(
+    baseMs + 30 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+
+  await repo.definirMensalidadeValidaAte(usuarioId, novaValidade);
+
+  log.info("mensalidade de prestador estendida", {
+    acao: "prestador.mensalidade",
+  });
 }

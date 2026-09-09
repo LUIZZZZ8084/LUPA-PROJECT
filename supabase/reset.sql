@@ -37,6 +37,7 @@ drop view if exists provider_listings cascade;
 -- a ordem aqui é da folha para a raiz.
 drop table if exists inscricoes_push cascade;
 drop table if exists preferencias_notificacao cascade;
+drop table if exists pagamentos cascade;
 drop table if exists tentativas_de_acesso cascade;
 drop table if exists buscas_sem_resultado cascade;
 drop table if exists visualizacoes_vaga cascade;
@@ -64,6 +65,8 @@ drop function if exists atualizar_nota_prestador() cascade;
 drop function if exists tocar_atualizado_em() cascade;
 
 -- Os tipos enum por último: as colunas que os usavam já se foram.
+drop type if exists status_pagamento cascade;
+drop type if exists tipo_pagamento cascade;
 drop type if exists status_publicacao cascade;
 drop type if exists plano_empresa cascade;
 drop type if exists status_candidatura cascade;

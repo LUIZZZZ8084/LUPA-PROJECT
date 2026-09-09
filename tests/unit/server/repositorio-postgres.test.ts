@@ -192,6 +192,7 @@ describe("RepositorioPostgres", () => {
       cnpj: null,
       cnpjVerificado: false,
       razaoSocial: null,
+      mensalidadeValidaAte: null,
     });
     expect(chamadas.at(-1)?.tabela).toBe("perfis_prestador");
 
@@ -309,6 +310,24 @@ describe("perfis para a edição", () => {
     expect(p?.precoInicial).toBe(150);
     expect(p?.anosExperiencia).toBe(7);
     expect(p?.bairrosAtendidos).toEqual([]);
+  });
+
+  it("prestador: traz a validade da mensalidade", async () => {
+    resposta = {
+      data: {
+        usuario_id: ID,
+        categoria_id: 1,
+        descricao: null,
+        preco_inicial: null,
+        anos_experiencia: null,
+        bairros_atendidos: [],
+        mensalidade_valida_ate: "2026-10-01T00:00:00.000Z",
+      },
+      error: null,
+    };
+
+    const p = await repo.perfilPrestador(ID);
+    expect(p?.mensalidadeValidaAte).toBe("2026-10-01T00:00:00.000Z");
   });
 
   /** Zero é valor; nulo é ausência. Confundir os dois some com o preço. */
@@ -457,6 +476,16 @@ describe("gravação de perfil", () => {
     const update = chamadas.find((c) => c.metodo === "update");
     expect(update?.tabela).toBe("perfis_empresa");
     expect(Object.keys(update?.args[0] as object)).not.toContain("cnpj");
+  });
+
+  it("prestador: grava a validade da mensalidade", async () => {
+    await repo.definirMensalidadeValidaAte(ID, "2026-10-01T00:00:00.000Z");
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("perfis_prestador");
+    expect(update?.args[0]).toEqual({
+      mensalidade_valida_ate: "2026-10-01T00:00:00.000Z",
+    });
   });
 
   it("falha ao gravar não passa em silêncio", async () => {

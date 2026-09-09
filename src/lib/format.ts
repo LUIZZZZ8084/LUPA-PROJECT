@@ -6,9 +6,25 @@ const brl = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 0,
 });
 
+const brlComCentavos = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
 /** Valor em reais, sem centavos. Usado no painel administrativo. */
 export function formatMoneyBRL(valor: number): string {
   return brl.format(valor);
+}
+
+/**
+ * "R$ 19,90" — preço de cobrança, sempre com centavos.
+ *
+ * `formatMoneyBRL` arredonda de propósito para métrica aproximada de
+ * painel; um preço de verdade não pode virar "R$ 20" quando o que se
+ * cobra é R$ 19,90.
+ */
+export function formatPrecoBRL(valor: number): string {
+  return brlComCentavos.format(valor);
 }
 
 /** "R$ 3.200 – R$ 4.200", "A partir de R$ 1.800" ou "A combinar". */
@@ -49,16 +65,27 @@ export function timeAgo(iso: string): string {
   return `há ${Math.floor(days / 365)}a`;
 }
 
+/** ISO de daqui a N dias — prazo de vaga, mensalidade de prestador etc. */
+export function daquiA(dias: number): string {
+  return new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
+}
+
 /**
- * Se `expiraEm` já passou.
+ * Se uma data-limite já passou — vaga expirada, mensalidade vencida,
+ * qualquer prazo do mesmo formato.
  *
- * "Expirada" nunca é guardada — é sempre calculada daqui, a partir da
- * coluna `expira_em`/`expires_at`. Guardar como um terceiro valor de
- * `status` exigiria um job agendado para o estado ficar certo; calculando
- * na hora, a correção mora na própria consulta, e nunca atrasa.
+ * O estado "vencido" nunca é guardado — é sempre calculado daqui, a
+ * partir da própria data. Guardar como um valor à parte exigiria um job
+ * agendado para o estado ficar certo; calculando na hora, a correção
+ * mora na própria consulta, e nunca atrasa.
  */
+export function passouDoPrazo(dataIso: string): boolean {
+  return new Date(dataIso).getTime() <= Date.now();
+}
+
+/** Se `expiraEm` já passou. Alias de `passouDoPrazo`, para vaga. */
 export function vagaExpirada(expiraEm: string): boolean {
-  return new Date(expiraEm).getTime() <= Date.now();
+  return passouDoPrazo(expiraEm);
 }
 
 /**

@@ -1,3 +1,4 @@
+import { daquiA } from "@/lib/format";
 import { erros } from "../errors";
 import type {
   DadosNovaVaga,
@@ -5,10 +6,6 @@ import type {
   RepositorioVagas,
   Vaga,
 } from "./tipos";
-
-function em30Dias(): string {
-  return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-}
 
 /**
  * Repositório de vagas em memória, para o modo demonstração.
@@ -59,7 +56,7 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
       habilidades: dados.habilidades ?? [],
       status: "aberta",
       criadoEm: new Date().toISOString(),
-      expiraEm: em30Dias(),
+      expiraEm: daquiA(30),
     };
 
     this.itens.set(vaga.id, vaga);
@@ -88,7 +85,7 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
     const atual = this.itens.get(id);
     if (!atual) throw erros.naoEncontrado("Vaga");
 
-    const nova: Vaga = { ...atual, expiraEm: em30Dias() };
+    const nova: Vaga = { ...atual, expiraEm: daquiA(30) };
     this.itens.set(id, nova);
     return nova;
   }

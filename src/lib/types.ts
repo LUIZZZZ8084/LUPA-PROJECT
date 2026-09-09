@@ -85,6 +85,8 @@ export interface ProviderProfile {
   review_count: number;
   instagram: string | null;
   facebook: string | null;
+  /** Até quando a mensalidade vale. `null` até a primeira cobrança aprovada. */
+  subscription_valid_until: string | null;
 }
 
 export interface Company {

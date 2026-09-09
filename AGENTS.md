@@ -977,6 +977,122 @@ texto, e métrica que sobe quando o dono recarrega mede o dono.
 O registro sai por `after()`, depois da resposta. Quem abriu a vaga quer
 ler a vaga; se a contagem falhar, vai para o log e a página segue.
 
+### Vaga expira em 30 dias, e reativar não cobra nada
+
+Vaga publicada ficava aberta para sempre. Numa plataforma de emprego isso
+sustenta falsa esperança: candidatar-se a uma vaga de meses atrás, que pode
+nem existir mais, sem nenhum sinal de que ficou velha —
+[#157](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/157).
+
+**"Expirada" nunca é guardada.** É sempre calculada a partir de
+`vagas.expira_em` (`vagaExpirada`, em `src/lib/format.ts`), nunca um
+terceiro valor de `status` — que continua só `aberta`/`fechada`, o dono de
+sempre. Guardar como estado próprio exigiria um job agendado para o valor
+ficar certo; calculando na hora, a correção mora na própria consulta e
+nunca atrasa. `getJobs` filtra `expira_em > now()` do mesmo jeito que já
+filtra `status = 'aberta'`; `candidatarSe` recusa vaga expirada mesmo
+chamada direto, sem passar pela tela — o botão já some, mas "botão que só
+recusa depois do clique" é a armadilha que este arquivo já registrou, e a
+action não podia ficar de fora dela.
+
+**Reativar é gratuito e sem limite de vezes**, porque não é "publicar de
+novo" — só estende `expira_em`, sem mexer em `status` nem gastar crédito
+de postagem (relevante desde que existe crédito: ver a seção de cobrança,
+abaixo). É diferente de "encerrar", que é decisão do dono e continua sem
+volta: `reativarVaga` exige `status = 'aberta'` e o prazo já vencido,
+nunca uma vaga que o dono fechou.
+
+Vaga publicada antes desta migração ganha 30 dias a partir do deploy —
+`aplica-prazo-vaga.sql` faz isso com o `default` da coluna, avaliado uma
+vez, no momento da migração. Ninguém perde o anúncio no dia da mudança.
+
+### Cobrança: a espera por demanda acabou, mensalidade de prestador é o primeiro uso real
+
+Luiz tinha decidido em 25/08/2026 esperar demanda validada antes de cobrar
+— pagamento como última etapa, issue
+[#46](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/46) parada de
+propósito. **Ele reverteu essa espera em 08/09/2026, e fixou a mensalidade
+do prestador em R$ 19,90.** A decisão foi atualizada, não ignorada, e fica
+registrada aqui pela mesma razão que toda decisão deste arquivo fica —
+para que "por que isto está assim?" tenha resposta seis meses depois.
+
+O preço mora num lugar só, `PRECO_CENTAVOS` em
+`src/server/pagamentos/planos.ts`, e a tela de assinatura lê de lá. Preço
+repetido na tela e no servidor é como se cobra um valor e se anuncia
+outro.
+
+**A infraestrutura nasceu com um tipo de cobrança só, não seis.** O brief
+já previa vaga avulsa, planos de empresa, mensalidade de prestador e
+currículo pago — mas declarar um `tipo_pagamento` com valores para coisas
+que nenhuma tela ainda vende seria a mesma promessa sem a outra ponta
+construída que já derrubou a fila de verificação manual (`Especie` sem
+`"documento"` nem `"selfie"`, registrado mais acima). `tipo_pagamento`
+nasce só com `'prestador_mensalidade'`
+([#159](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/159)); cada
+cobrança nova ganha o próprio valor, por `alter type ... add value`,
+quando tiver uma tela de verdade.
+
+**Mercado Pago, Checkout Pro — sem `auto_return`.** Ele exige uma
+`back_url.success` alcançável pela internet, e recusa a preferência
+inteira ("back_url.success must be defined") quando a URL é `localhost` —
+descoberto testando com credencial real, não em teoria: a chamada crua
+via `curl` com a mesma URL funcionava, e só falhava com `auto_return`
+mais `localhost` juntos. Sem ele, o Checkout Pro mostra um botão "voltar
+ao site" em vez de redirecionar sozinho — funciona em qualquer ambiente,
+sem `if` condicional por URL, ao custo de perder só o automatismo.
+
+**Sem `MERCADO_PAGO_ACCESS_TOKEN`, a cobrança aprova na hora.** Mesmo
+padrão do resto do app sem Supabase configurado: `criarCobranca` grava o
+pagamento, aprova e aplica o efeito no mesmo passo, sem checkout nenhum
+para redirecionar. É o que mantém a suíte e2e (sempre em demonstração) e
+o `npm run dev` sem credencial exercitando o fluxo inteiro, do clique ao
+efeito — e é diferente de "sem Storage", que recusa e avisa: aqui não há
+nada para a pessoa perder por a cobrança não ter sido real.
+
+**O webhook relê da API do Mercado Pago — nunca confia no corpo do
+POST.** A assinatura (`x-signature`, HMAC contra
+`MERCADO_PAGO_WEBHOOK_SECRET`) prova que a notificação veio de lá, não o
+que ela diz; `confirmarPagamento` usa o corpo só para saber qual
+`payment_id` consultar de volta. Sem o segredo configurado, a rota recusa
+toda notificação — falha fechada, não aberta: melhor não confirmar
+pagamento nenhum sozinho do que confirmar um que ninguém pode provar que
+veio do Mercado Pago.
+
+**A aprovação é condicional na própria instrução do banco — `update ...
+where status = 'pendente'`** —, não "lê o status, decide, grava" em dois
+passos. O Mercado Pago reenvia webhook; duas notificações chegando quase
+juntas não podem aplicar o efeito duas vezes, a mesma família de corrida
+que o limite de publicações já resolve com `pg_advisory_xact_lock`. Aqui
+a trava é mais simples porque a chave já é única por pagamento: a segunda
+tentativa não encontra mais nada "pendente" e a função devolve `null`,
+que o chamador lê como "nada a fazer".
+
+**Cada domínio aplica o próprio efeito; `pagamentos` só aciona.**
+`aplicarEfeito`, em `src/server/pagamentos/servico.ts`, despacha por tipo
+para uma função do domínio certo — `estenderMensalidade`, em
+`src/server/prestadores/servico.ts` — em vez de `pagamentos` conhecer
+como `perfis_prestador` funciona. O `switch` tem uma trava de
+exaustividade (`never` no `default`): se `TipoPagamento` crescer sem que
+este arquivo ganhe um `case`, o build quebra ali — não em produção, com
+uma cobrança aprovada e nenhum efeito aplicado.
+
+**A mensalidade estende a partir do maior entre "agora" e o que já
+valia**, nunca de "agora" sozinho — quem renova antes de vencer não perde
+os dias já pagos. Virar prestador já dá 30 dias de carência
+(`daquiA(30)`, o mesmo helper que a vaga usa) antes da primeira cobrança,
+para montar o perfil sem precisar assinar no mesmo minuto em que ativa; e
+prestador já verificado antes desta migração ganha a mesma carência a
+partir do deploy — a mesma lógica de não tirar ninguém do ar no dia da
+mudança que já vale para o prazo de vaga.
+
+**A vitrine só mostra quem está com a mensalidade em dia**, mesma família
+de regra que `doc_verified`: o filtro mora em `getProviders`
+(`subscription_valid_until > now()`), não na view `provider_listings` —
+filtrar na view esconderia o prestador do próprio perfil, a mesma
+armadilha do 404 que já derrubou quem tinha acabado de ativar. Por isso
+`getProviderById` não filtra: os dados continuam salvos, só o anúncio
+some, e reativar é assinar de novo.
+
 ---
 
 ## Decisões de produto por papel

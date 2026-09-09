@@ -43,6 +43,42 @@ test.describe("muro de login", () => {
   });
 
   /**
+   * O webhook de pagamento tem de alcançar a própria rota.
+   *
+   * Quem chama não é o navegador de ninguém: o Mercado Pago faz um POST
+   * sem cookie. Com a rota dentro do matcher, o muro respondia
+   * `401 {"erro":"não autenticado"}` antes de o handler existir — a
+   * assinatura HMAC nunca era conferida e nenhum pagamento seria
+   * confirmado em produção. Nada na tela quebrava: a cobrança abre, o
+   * Checkout Pro aparece, a pessoa paga, e só o efeito nunca acontece.
+   *
+   * O que se afirma aqui é preciso: a resposta tem de vir **da rota**, e
+   * não do muro. Por isso a asserção é sobre o corpo, não sobre o status
+   * — os dois devolvem 401, e olhar só o número deixaria o bug passar de
+   * novo. Sem `x-signature`, a rota recusa dizendo "assinatura inválida";
+   * o muro diria "não autenticado".
+   */
+  test("o webhook de pagamento chega à rota, e a rota é quem recusa", async ({
+    request,
+  }) => {
+    const resposta = await request.post("/api/webhooks/mercado-pago", {
+      data: { type: "payment", data: { id: "123456" } },
+      maxRedirects: 0,
+    });
+
+    const corpo = await resposta.json();
+
+    expect(
+      corpo.erro,
+      "resposta veio do muro, não da rota — confira o matcher em src/proxy.ts",
+    ).not.toBe("não autenticado");
+
+    // E a rota recusa mesmo: sem assinatura válida, não processa nada.
+    expect(resposta.status()).toBe(401);
+    expect(corpo.erro).toContain("assinatura");
+  });
+
+  /**
    * A outra metade, e a que importa mais: abrir o manifesto não pode ter
    * afrouxado o muro. Uma regex mal escrita no matcher derruba a proteção
    * inteira sem quebrar nada visível.

@@ -8,7 +8,7 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 01/09/2026.**
+**Última atualização: 08/09/2026.**
 
 ## Concluído
 
@@ -174,20 +174,29 @@ Qualidade:
   e vermelho na CI desde o tema virar padrão claro. Reescrito com
   `useSyncExternalStore`, sem estado próprio —
   [#146](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/146)
+- Vaga expira 30 dias após publicada, e some de `/vagas` e da home; a
+  empresa reativa de graça pelo painel, sem gastar crédito de postagem —
+  [#157](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/157)
+- Infraestrutura de cobrança via Mercado Pago (tabela `pagamentos`,
+  Checkout Pro, webhook com assinatura validada, modo demonstração sem
+  credencial) e mensalidade de prestador como primeiro uso real — sem
+  ela, o perfil some da vitrine de `/servicos`. A espera por demanda
+  antes de cobrar (decidida em 25/08) foi revertida em 08/09/2026 —
+  [#159](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/159)
 
 ## Pendente
 
-**Tudo o que sobrou vai junto com o empacotamento em APK.** Decisão do
-Luiz em 01/09/2026, que reúne numa etapa só o que antes estava espalhado.
-Nada aqui está bloqueado por código.
+**Tudo o que sobrou, menos a cobrança, vai junto com o empacotamento em
+APK.** Decisão do Luiz em 01/09/2026, que reúne numa etapa só o que antes
+estava espalhado. Nada aqui está bloqueado por código.
 
-- [ ] Cobrança via Mercado Pago (planos trial/mensal) —
+- [ ] Cobrança via Mercado Pago — vaga avulsa e planos de empresa —
       [#46](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/46)
 
-      Espera por razão de produto, decidida em 25/08 e mantida:
-      *pagamento é a última etapa*. Validar demanda antes de cobrar.
+      A infraestrutura e a mensalidade de prestador já estão prontas
+      (#159); falta ligar a cobrança da empresa.
 
-- [ ] Gerador de currículo pago — depende do #46 —
+- [ ] Gerador de currículo pago —
       [#47](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/47)
 
 ## Depende de decisão, não de código
