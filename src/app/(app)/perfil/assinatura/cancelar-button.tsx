@@ -1,23 +1,24 @@
 "use client";
 
-import { Loader2, Undo2 } from "lucide-react";
+import { CalendarX, Loader2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { estornarMensalidade } from "./actions";
+import { cancelarRenovacaoMensal } from "./actions";
 
 /**
- * Pedir o dinheiro de volta, sem sair da Lupa (#168).
+ * Desliga a renovação automática, sem devolver nada (#170).
  *
- * Só aparece quando existe **primeira** cobrança aprovada dentro dos 30
- * dias (#170) — quem decide isso é a página, no servidor. Mostrar o botão
- * fora do prazo e recusar depois do clique é a armadilha do "botão que só
- * recusa depois do clique" que este projeto já registra.
+ * É o botão que faz a recorrência ser produto e não armadilha: quem
+ * autorizou uma cobrança mensal precisa poder desautorizá-la aqui, e não
+ * indo procurar o Mercado Pago, onde ela não escolheu ter conta.
  *
- * A confirmação é um segundo clique, e não um `confirm()` do navegador:
- * devolver o dinheiro tira a mensalidade na hora, e um clique sem aviso
- * faria alguém perder a vitrine por engano.
+ * A confirmação é um segundo clique, e não um `confirm()` do navegador —
+ * mesmo padrão da devolução. E o texto diz a coisa que a pessoa mais
+ * precisa saber neste momento: **os dias já pagos continuam valendo**.
+ * Sem isso, "cancelar" lê como "perco tudo agora", e quem só queria
+ * parar de pagar no mês que vem desiste de clicar.
  */
-export function EstornarButton() {
+export function CancelarRenovacaoButton({ validaAte }: { validaAte: string }) {
   const [pendente, comTransicao] = useTransition();
   const [confirmando, setConfirmando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -31,13 +32,14 @@ export function EstornarButton() {
           size="sm"
           onClick={() => setConfirmando(true)}
         >
-          <Undo2 size={14} />
-          Pedir devolução
+          <CalendarX size={14} />
+          Cancelar renovação
         </Button>
         <p className="mt-1.5 text-[11px] leading-relaxed text-faint">
-          Até 30 dias depois da primeira cobrança, o valor volta integral. A
-          renovação é cancelada junto.
+          Você para de ser cobrado, e continua na busca até o fim do período já
+          pago.
         </p>
+        {erro && <p className="mt-1.5 text-[11px] text-danger">{erro}</p>}
       </div>
     );
   }
@@ -45,10 +47,9 @@ export function EstornarButton() {
   return (
     <div className="mt-3 rounded-xl border border-warn/30 bg-warn/8 p-3">
       <p className="text-sm leading-relaxed">
-        O valor volta integral, a renovação automática é desligada, e a
-        mensalidade cai na hora — seu perfil sai da busca de quem procura
-        profissional. Os seus dados ficam salvos, e você pode assinar de novo
-        quando quiser; mas a devolução vale só nesta primeira cobrança.
+        Nada é cobrado de novo, e nada é devolvido: seu perfil continua na busca
+        até <strong>{validaAte}</strong>. Depois dessa data ele sai, e você pode
+        assinar outra vez quando quiser.
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -60,7 +61,7 @@ export function EstornarButton() {
           onClick={() => {
             setErro(null);
             comTransicao(async () => {
-              const resposta = await estornarMensalidade({});
+              const resposta = await cancelarRenovacaoMensal({});
               if (!resposta.ok) {
                 setErro(resposta.mensagem);
                 setConfirmando(false);
@@ -71,9 +72,9 @@ export function EstornarButton() {
           {pendente ? (
             <Loader2 size={14} className="animate-spin" />
           ) : (
-            <Undo2 size={14} />
+            <CalendarX size={14} />
           )}
-          Confirmar devolução
+          Confirmar cancelamento
         </Button>
 
         <Button
@@ -86,8 +87,6 @@ export function EstornarButton() {
           Voltar
         </Button>
       </div>
-
-      {erro && <p className="mt-2 text-[11px] text-danger">{erro}</p>}
     </div>
   );
 }

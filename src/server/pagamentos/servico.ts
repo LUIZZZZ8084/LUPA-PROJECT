@@ -8,15 +8,24 @@ import {
   estenderMensalidade,
   revogarMensalidade,
 } from "../prestadores/servico";
+import { repositorioUsuarios } from "../repositories";
 import { repositorioPagamentos } from "./index";
 import {
+  cancelarAssinaturaNoMercadoPago,
+  consultarAssinatura,
   consultarPagamento,
-  criarPreferencia,
+  consultarParcelaDaAssinatura,
+  criarAssinaturaRecorrente,
   estornarPagamento,
   temMercadoPagoConfigurado,
 } from "./mercadopago";
 import { DESCRICAO_PAGAMENTO, PRECO_CENTAVOS } from "./planos";
-import type { Pagamento, TipoPagamento } from "./tipos";
+import type {
+  Assinatura,
+  Pagamento,
+  StatusAssinatura,
+  TipoPagamento,
+} from "./tipos";
 
 export { temMercadoPagoConfigurado };
 
@@ -68,31 +77,47 @@ async function desfazerEfeito(pagamento: Pagamento): Promise<void> {
   }
 }
 
-export interface CobrancaCriada {
-  pagamento: Pagamento;
+// ── Assinar ───────────────────────────────────────────────────────────────
+
+export interface AssinaturaIniciada {
+  assinatura: Assinatura;
   /**
-   * `null` em modo demonstração — a cobrança já nasce aprovada, e não há
-   * para onde redirecionar. Com o Mercado Pago configurado, é o Checkout
-   * Pro.
+   * `null` fora do modo demonstração: a primeira cobrança só existe depois
+   * de a pessoa autorizar no Mercado Pago, e é ele quem avisa.
+   */
+  pagamento: Pagamento | null;
+  /**
+   * Para onde mandar quem está assinando. `null` em modo demonstração — a
+   * assinatura já nasce ativa e a primeira cobrança já foi aplicada.
    */
   checkoutUrl: string | null;
 }
 
 /**
- * Cria uma cobrança e, sempre que possível, já devolve para onde mandar
- * quem está pagando.
+ * Cria (ou retoma) a assinatura recorrente da pessoa.
  *
- * Sem `MERCADO_PAGO_ACCESS_TOKEN` **e** sem Supabase, a cobrança é
- * aprovada na hora — é o que mantém a suíte e2e (sempre em demonstração)
- * e o `npm run dev` sem credencial exercitando o fluxo inteiro, do clique
- * ao efeito. Com banco de verdade e sem token, recusa: o porquê está no
- * comentário do próprio ramo, logo abaixo.
+ * A cobrança deixou de ser avulsa em 09/09/2026 (#170): o modelo antigo
+ * cobrava uma vez, dava 30 dias, e no dia 31 o perfil sumia da vitrine
+ * sem cobrança nova e sem aviso. Agora o Mercado Pago guarda uma
+ * autorização (`preapproval`) e cobra sozinho todo mês.
+ *
+ * **Clicar duas vezes não cria duas assinaturas.** Quem já tem uma
+ * `pendente` volta para o mesmo checkout: um `preapproval` novo a cada
+ * clique deixaria autorizações órfãs no Mercado Pago, e duas autorizadas
+ * seriam duas cobranças por mês na mesma pessoa — o tipo de erro que só
+ * aparece na fatura de quem pagou.
+ *
+ * Sem `MERCADO_PAGO_ACCESS_TOKEN` **e** sem Supabase, a assinatura nasce
+ * ativa com a primeira cobrança já aprovada — é o que mantém a suíte e2e
+ * (sempre em demonstração) e o `npm run dev` sem credencial exercitando o
+ * fluxo inteiro, do clique ao efeito. Com banco de verdade e sem token,
+ * recusa: o porquê está no comentário do próprio ramo.
  */
-export async function criarCobranca(
+export async function assinar(
   sessao: Autenticado | null,
   tipo: TipoPagamento,
-  opcoes: { metadata?: Record<string, unknown>; buscar?: typeof fetch } = {},
-): Promise<CobrancaCriada> {
+  opcoes: { buscar?: typeof fetch } = {},
+): Promise<AssinaturaIniciada> {
   if (!sessao) throw erros.naoAutenticado("sem sessão");
 
   /*
@@ -100,18 +125,12 @@ export async function criarCobranca(
    * credencial.
    *
    * O precedente do Supabase não vale aqui, e a diferença é o modo de
-   * falha. Sem Supabase, o app inteiro roda com dados de Sinop e
-   * ninguém confunde aquilo com produção. Sem o token do Mercado Pago
-   * numa instalação que **tem** Supabase, o que acontece é outra coisa:
-   * conta real, prestador real, e a mensalidade aprovada de graça — com
-   * um `log.info` dizendo "modo demonstração" e nada na tela. O modo de
+   * falha. Sem Supabase, o app inteiro roda com dados de Sinop e ninguém
+   * confunde aquilo com produção. Sem o token do Mercado Pago numa
+   * instalação que **tem** Supabase, o que acontece é outra coisa: conta
+   * real, prestador real, e a mensalidade aprovada de graça — com um
+   * `log.info` dizendo "modo demonstração" e nada na tela. O modo de
    * falha seria "todo mundo passa", que é o pior de todos numa cobrança.
-   *
-   * Por isso quem decide é `isSupabaseConfigured`, a mesma chave que o
-   * resto do app usa para saber se está em produção. Com banco de
-   * verdade e sem token, isto é configuração faltando — e recusar é o
-   * comportamento certo: ninguém ganha nada de graça, e o log diz o que
-   * arrumar.
    */
   if (!temMercadoPagoConfigurado && isSupabaseConfigured) {
     throw erros.indisponivel(
@@ -120,40 +139,103 @@ export async function criarCobranca(
   }
 
   const repo = repositorioPagamentos();
-  const pagamento = await repo.criar({
+  const viva = await repo.assinaturaViva(sessao.usuarioId);
+
+  if (viva?.status === "ativa") {
+    throw erros.validacao([
+      {
+        campo: "assinatura",
+        mensagem: "A sua assinatura já está ativa e renova sozinha.",
+      },
+    ]);
+  }
+
+  // Autorização que a pessoa começou e não terminou: mesmo checkout.
+  if (viva?.status === "pendente" && viva.checkoutUrl) {
+    return { assinatura: viva, pagamento: null, checkoutUrl: viva.checkoutUrl };
+  }
+
+  /*
+   * Suspensa pelo Mercado Pago — cartão recusado, quase sempre. Não há
+   * como religar sem um meio de pagamento novo, então a saída é encerrar
+   * esta e abrir outra. Encerrar antes é o que impede a pessoa de ficar
+   * com duas autorizações no Mercado Pago e ser cobrada duas vezes.
+   */
+  if (viva?.status === "pausada") {
+    const encerrada = await encerrarNoMercadoPago(viva, opcoes.buscar);
+    if (!encerrada.ok) {
+      /*
+       * Não deu para encerrar a antiga, então não se abre outra. É a
+       * mesma ordem de `pedirEstorno`: primeiro para a obrigação que já
+       * existe, depois cria a nova. Seguir aqui deixaria duas
+       * autorizações no Mercado Pago — e a suspensa pode voltar a
+       * cobrar.
+       */
+      throw erros.indisponivel(encerrada.motivo);
+    }
+    await repo.definirStatusAssinatura(viva.id, "cancelada");
+  }
+
+  const assinatura = await repo.criarAssinatura({
     usuarioId: sessao.usuarioId,
     tipo,
     valorCentavos: PRECO_CENTAVOS[tipo],
-    metadata: opcoes.metadata,
   });
 
   if (!temMercadoPagoConfigurado) {
-    const aprovado = await repo.aprovar(pagamento.id, null);
+    /*
+     * O valor devolvido é o da gravação, não o `assinatura` de cima com
+     * um `status` remendado à mão: aquela variável foi lida antes desta
+     * escrita e continuaria dizendo "pendente". É a armadilha que o
+     * `cadastrar()` da #142 já registrou — a conta nascia verificada e a
+     * resposta da própria função mentia sobre isso por uma requisição.
+     */
+    const ativa = await repo.definirStatusAssinatura(assinatura.id, "ativa");
+
+    const pagamento = await repo.criar({
+      usuarioId: sessao.usuarioId,
+      tipo,
+      valorCentavos: PRECO_CENTAVOS[tipo],
+      assinaturaId: assinatura.id,
+    });
     // Só nasceu, então está "pendente" — `aprovar` não devolve null aqui.
+    const aprovado = await repo.aprovar(pagamento.id, null);
     if (aprovado) await aplicarEfeito(aprovado);
 
-    log.info("cobrança aprovada em modo demonstração", {
-      acao: "pagamentos.criar_cobranca",
+    log.info("assinatura ativada em modo demonstração", {
+      acao: "pagamentos.assinar",
       tipo,
     });
 
-    return { pagamento: aprovado ?? pagamento, checkoutUrl: null };
+    return {
+      assinatura: ativa ?? assinatura,
+      pagamento: aprovado ?? pagamento,
+      checkoutUrl: null,
+    };
   }
 
-  const resultado = await criarPreferencia(
+  /*
+   * O Mercado Pago exige o e-mail de quem vai pagar para criar o
+   * `preapproval` — a cobrança avulsa nunca precisou, porque lá quem
+   * digitava o e-mail era a própria pessoa, no checkout.
+   */
+  const usuario = await repositorioUsuarios().porId(sessao.usuarioId);
+  if (!usuario) throw erros.naoEncontrado("Usuário");
+
+  const resultado = await criarAssinaturaRecorrente(
     {
       titulo: DESCRICAO_PAGAMENTO[tipo],
-      valorCentavos: pagamento.valorCentavos,
-      referenciaExterna: pagamento.id,
-      urlRetorno: `${urlBase()}/pagamento/retorno?id=${pagamento.id}`,
-      urlWebhook: `${urlBase()}/api/webhooks/mercado-pago`,
+      valorCentavos: assinatura.valorCentavos,
+      referenciaExterna: assinatura.id,
+      emailPagador: usuario.email,
+      urlRetorno: `${urlBase()}/pagamento/retorno?assinatura=${assinatura.id}`,
     },
     opcoes.buscar,
   );
 
   if (!resultado.ok) {
-    log.warn("falha ao criar preferência no Mercado Pago", {
-      acao: "pagamentos.criar_cobranca",
+    log.warn("falha ao criar assinatura no Mercado Pago", {
+      acao: "pagamentos.assinar",
       tipo,
       motivo: resultado.motivo,
       detalhe: resultado.detalhe,
@@ -161,53 +243,150 @@ export async function criarCobranca(
     throw erros.indisponivel(resultado.motivo);
   }
 
-  const atualizado = await repo.definirPreferencia(
-    pagamento.id,
-    resultado.preferencia.id,
-  );
+  const vinculada = await repo.vincularAssinaturaAoMercadoPago(assinatura.id, {
+    mpPreapprovalId: resultado.assinatura.id,
+    checkoutUrl: resultado.assinatura.initPoint,
+  });
 
-  log.info("preferência criada no Mercado Pago", {
-    acao: "pagamentos.criar_cobranca",
+  log.info("assinatura criada no Mercado Pago", {
+    acao: "pagamentos.assinar",
     tipo,
   });
 
   return {
-    pagamento: atualizado,
-    checkoutUrl: resultado.preferencia.initPoint,
+    assinatura: vinculada,
+    pagamento: null,
+    checkoutUrl: resultado.assinatura.initPoint,
   };
 }
 
-/** Sete dias do Código de Defesa do Consumidor, em milissegundos. */
-export const PRAZO_ESTORNO_MS = 7 * 24 * 60 * 60 * 1000;
+// ── Cancelar a renovação ──────────────────────────────────────────────────
+
+/**
+ * Encerra a autorização lá, se houver uma para encerrar.
+ *
+ * Em demonstração não há nada no Mercado Pago, e `ok` é a resposta certa:
+ * o que interessa a quem chama é "as cobranças futuras estão paradas?", e
+ * cobrança que nunca existiu está parada.
+ */
+async function encerrarNoMercadoPago(
+  assinatura: Assinatura,
+  buscar?: typeof fetch,
+): Promise<{ ok: true } | { ok: false; motivo: string }> {
+  if (!temMercadoPagoConfigurado || !assinatura.mpPreapprovalId) {
+    return { ok: true };
+  }
+  return cancelarAssinaturaNoMercadoPago(assinatura.mpPreapprovalId, buscar);
+}
+
+/**
+ * Interrompe as cobranças futuras, **sem devolver nada** (#170).
+ *
+ * Cancelar e estornar são coisas diferentes, e a diferença é o mês
+ * corrente: quem cancela parou de contratar dali para a frente e continua
+ * com o que já pagou até o fim do período — a mensalidade não é tocada
+ * aqui de propósito. Quem estorna quer o dinheiro de volta, e aí a
+ * mensalidade cai na hora.
+ *
+ * Sem este botão, uma cobrança recorrente vira armadilha: a pessoa
+ * autoriza uma vez e não tem como sair sem procurar o Mercado Pago, onde
+ * ela não escolheu ter conta. Foi por isso que a #170 não podia entregar
+ * a recorrência sem entregar o cancelamento junto.
+ */
+export async function cancelarRenovacao(
+  sessao: Autenticado | null,
+  buscar?: typeof fetch,
+): Promise<{ ok: true } | { ok: false; motivo: string }> {
+  if (!sessao) throw erros.naoAutenticado("sem sessão");
+
+  const repo = repositorioPagamentos();
+  const assinatura = await repo.assinaturaViva(sessao.usuarioId);
+
+  if (!assinatura) {
+    return { ok: false, motivo: "Não há renovação automática para cancelar." };
+  }
+
+  const encerrada = await encerrarNoMercadoPago(assinatura, buscar);
+  if (!encerrada.ok) {
+    log.warn("Mercado Pago recusou o cancelamento da assinatura", {
+      acao: "pagamentos.cancelar_renovacao",
+    });
+    return encerrada;
+  }
+
+  await repo.definirStatusAssinatura(assinatura.id, "cancelada");
+
+  log.info("renovação automática cancelada pela pessoa", {
+    acao: "pagamentos.cancelar_renovacao",
+    tipo: assinatura.tipo,
+  });
+
+  return { ok: true };
+}
+
+// ── Devolver o dinheiro ───────────────────────────────────────────────────
+
+/**
+ * Trinta dias, contados da cobrança — e só da primeira.
+ *
+ * Decisão do Luiz em 09/09/2026 (#170), substituindo os sete dias com que
+ * a #168 nasceu. A primeira cobrança é a porta de entrada: quem
+ * experimentou e não gostou tem um mês inteiro para desistir sem custo.
+ */
+export const PRAZO_ESTORNO_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function dentroDoPrazoDeEstorno(pagamento: Pagamento): boolean {
   return Date.now() - new Date(pagamento.criadoEm).getTime() < PRAZO_ESTORNO_MS;
 }
 
-/** A cobrança que a pessoa ainda pode mandar estornar, se houver. */
+/**
+ * A cobrança que a pessoa ainda pode mandar estornar, se houver.
+ *
+ * Duas condições, e a segunda é a que a #170 acrescentou: **tem de ser a
+ * primeira cobrança dela**. Da segunda em diante a pessoa já sabia o que
+ * estava contratando, e o que ela precisa é de uma saída para o futuro
+ * (`cancelarRenovacao`), não do dinheiro do mês corrente de volta.
+ *
+ * "Primeira" conta aprovadas **e** estornadas (`STATUS_LIQUIDADOS`):
+ * contar só as aprovadas devolveria a casa de partida a cada assinatura
+ * nova, e quem quisesse usar de graça bastaria pedir devolução e assinar
+ * outra vez, todo mês — que é exatamente o buraco que esta regra fecha.
+ */
 export async function cobrancaEstornavel(
   sessao: Autenticado | null,
 ): Promise<Pagamento | null> {
   if (!sessao) return null;
-  const ultimo = await repositorioPagamentos().ultimoAprovado(sessao.usuarioId);
-  return ultimo && dentroDoPrazoDeEstorno(ultimo) ? ultimo : null;
+
+  const repo = repositorioPagamentos();
+  const ultimo = await repo.ultimoAprovado(sessao.usuarioId);
+  if (!ultimo || !dentroDoPrazoDeEstorno(ultimo)) return null;
+
+  const liquidadas = await repo.contarLiquidadas(sessao.usuarioId);
+  return liquidadas === 1 ? ultimo : null;
 }
 
 /**
- * Devolve o dinheiro, a pedido de quem pagou (#168).
+ * Devolve o dinheiro da primeira cobrança, a pedido de quem pagou.
  *
- * Automático, sem fila: decisão do Luiz em 08/09/2026. O prazo é o do
- * arrependimento em compra online, contado da compra — passados sete dias
- * o botão some da tela e devolver vira caso de suporte.
+ * Automático, sem fila: decisão do Luiz em 08/09/2026 (#168), com o prazo
+ * e o alcance revistos em 09/09 (#170) — trinta dias, e só a primeira
+ * cobrança.
  *
  * **A cobrança vem da sessão, nunca do formulário.** Aceitar um id daqui
  * deixaria alguém mandar estornar a cobrança de outra pessoa.
  *
+ * **A renovação é cancelada antes de o dinheiro voltar, e não depois.**
+ * Se a ordem fosse a inversa e o cancelamento falhasse, a pessoa teria o
+ * dinheiro de volta e uma cobrança nova programada para o mês seguinte —
+ * e não haveria como desfazer o estorno para consertar. Cancelando
+ * primeiro, a pior falha possível é uma assinatura encerrada sem
+ * devolução: recuperável, porque assinar de novo está a um clique, e os
+ * dias já pagos não são tocados.
+ *
  * **O efeito é aplicado aqui, e não esperando o webhook.** Quem apertou o
  * botão precisa ver o resultado; o `refunded` chega depois e encontra a
  * cobrança já `estornado` — `estornar` parte de `aprovado` e devolve
- * `null`, então nada acontece duas vezes. A idempotência que a #166
- * construiu é o que permite isto.
+ * `null`, então nada acontece duas vezes.
  *
  * **Falha do Mercado Pago não revoga nada.** Se o estorno não aconteceu, o
  * dinheiro não voltou: tirar a vitrine ali seria o pior dos dois mundos
@@ -219,9 +398,8 @@ export async function pedirEstorno(
 ): Promise<{ ok: true } | { ok: false; motivo: string }> {
   if (!sessao) throw erros.naoAutenticado("sem sessão");
 
-  const pagamento = await repositorioPagamentos().ultimoAprovado(
-    sessao.usuarioId,
-  );
+  const repo = repositorioPagamentos();
+  const pagamento = await repo.ultimoAprovado(sessao.usuarioId);
 
   if (!pagamento) {
     return { ok: false, motivo: "Não há pagamento a estornar." };
@@ -231,14 +409,42 @@ export async function pedirEstorno(
     return {
       ok: false,
       motivo:
-        "O prazo de sete dias para devolução já passou. Fale com o suporte.",
+        "O prazo de 30 dias para devolução já passou. Você pode cancelar a renovação para não ser cobrado de novo.",
     };
+  }
+
+  /*
+   * A tela já não oferece o botão fora da primeira cobrança — mas tela
+   * não é portão, e esta função é alcançável direto pela action.
+   */
+  if ((await repo.contarLiquidadas(sessao.usuarioId)) !== 1) {
+    return {
+      ok: false,
+      motivo:
+        "A devolução vale só para a primeira cobrança. Você pode cancelar a renovação para não ser cobrado de novo.",
+    };
+  }
+
+  const assinatura = await repo.assinaturaViva(sessao.usuarioId);
+  if (assinatura) {
+    const encerrada = await encerrarNoMercadoPago(assinatura, buscar);
+    if (!encerrada.ok) {
+      log.warn("estorno abortado: não deu para cancelar a renovação antes", {
+        acao: "pagamentos.estornar",
+      });
+      return {
+        ok: false,
+        motivo:
+          "Não conseguimos interromper a renovação agora, e por isso não devolvemos o valor. Tente de novo em alguns minutos.",
+      };
+    }
+    await repo.definirStatusAssinatura(assinatura.id, "cancelada");
   }
 
   /*
    * Em demonstração não há o que pedir ao Mercado Pago: a cobrança foi
    * aprovada sem ele. O efeito vale igual, que é o que a tela precisa
-   * mostrar — mesma regra do `criarCobranca`.
+   * mostrar — mesma regra do `assinar`.
    */
   if (temMercadoPagoConfigurado && pagamento.mpPaymentId) {
     const resultado = await estornarPagamento(pagamento.mpPaymentId, buscar);
@@ -250,10 +456,7 @@ export async function pedirEstorno(
     }
   }
 
-  const estornado = await repositorioPagamentos().estornar(
-    pagamento.id,
-    pagamento.mpPaymentId,
-  );
+  const estornado = await repo.estornar(pagamento.id, pagamento.mpPaymentId);
   if (estornado) await desfazerEfeito(estornado);
 
   log.info("estorno pedido pela pessoa", {
@@ -262,6 +465,173 @@ export async function pedirEstorno(
   });
 
   return { ok: true };
+}
+
+// ── O que a tela mostra ───────────────────────────────────────────────────
+
+export interface EstadoDaAssinatura {
+  assinatura: Assinatura | null;
+  /** Já calculado no servidor: o botão não decide o que ele mesmo pode. */
+  podeEstornar: boolean;
+}
+
+export async function estadoDaAssinatura(
+  sessao: Autenticado | null,
+): Promise<EstadoDaAssinatura> {
+  if (!sessao) return { assinatura: null, podeEstornar: false };
+
+  return {
+    assinatura: await repositorioPagamentos().assinaturaViva(sessao.usuarioId),
+    podeEstornar: Boolean(await cobrancaEstornavel(sessao)),
+  };
+}
+
+// ── O que o Mercado Pago avisa ────────────────────────────────────────────
+
+/** O vocabulário do `preapproval`, traduzido para o nosso. */
+function statusDaAssinatura(statusRemoto: string): StatusAssinatura | null {
+  switch (statusRemoto) {
+    case "authorized":
+      return "ativa";
+    case "paused":
+      return "pausada";
+    case "cancelled":
+      return "cancelada";
+    case "pending":
+      return "pendente";
+    default:
+      return null;
+  }
+}
+
+/**
+ * Espelha aqui o estado da assinatura lá — tópico
+ * `subscription_preapproval`.
+ *
+ * Como em toda confirmação deste arquivo, o status vem de uma nova
+ * consulta à API: a assinatura HMAC do webhook prova que a notificação
+ * veio do Mercado Pago, não o que ela diz.
+ */
+export async function confirmarAssinatura(
+  mpPreapprovalId: string,
+  buscar?: typeof fetch,
+): Promise<void> {
+  const remota = await consultarAssinatura(mpPreapprovalId, buscar);
+  if (!remota) {
+    log.warn("Mercado Pago não devolveu uma assinatura reconhecível", {
+      acao: "pagamentos.confirmar_assinatura",
+    });
+    return;
+  }
+
+  const repo = repositorioPagamentos();
+  const assinatura =
+    (await repo.assinaturaPorMpId(mpPreapprovalId)) ??
+    (remota.referenciaExterna
+      ? await repo.assinaturaPorId(remota.referenciaExterna)
+      : null);
+
+  if (!assinatura) {
+    log.warn("aviso de assinatura que não existe aqui", {
+      acao: "pagamentos.confirmar_assinatura",
+    });
+    return;
+  }
+
+  const status = statusDaAssinatura(remota.status);
+  if (!status) return;
+
+  const mudou = await repo.definirStatusAssinatura(assinatura.id, status);
+  if (mudou) {
+    log.info("assinatura mudou de estado", {
+      acao: "pagamentos.confirmar_assinatura",
+      status,
+    });
+  }
+}
+
+/**
+ * Registra uma parcela da recorrência e estende a mensalidade.
+ *
+ * Chamado de dois lugares de propósito: pelo tópico
+ * `subscription_authorized_payment`, que é o aviso próprio da parcela, e
+ * pelo tópico `payment`, quando a cobrança que chegou aponta para uma
+ * assinatura em vez de para uma cobrança avulsa. Os dois passam pelo
+ * mesmo `registrarLiquidada`, que é idempotente pelo `mpPaymentId` — ser
+ * avisado duas vezes não estende 60 dias.
+ *
+ * A redundância é deliberada: os tópicos são marcados à mão no painel do
+ * Mercado Pago, e uma renovação que só funciona se alguém lembrou de
+ * marcar a caixa certa é uma renovação que vai falhar em silêncio.
+ */
+async function registrarParcela(
+  assinatura: Assinatura,
+  mpPaymentId: string,
+  valorCentavos: number | null,
+): Promise<void> {
+  const repo = repositorioPagamentos();
+
+  const parcela = await repo.registrarLiquidada({
+    usuarioId: assinatura.usuarioId,
+    tipo: assinatura.tipo,
+    valorCentavos: valorCentavos ?? assinatura.valorCentavos,
+    assinaturaId: assinatura.id,
+    mpPaymentId,
+  });
+
+  // `null`: outro aviso já registrou esta mesma parcela.
+  if (!parcela) return;
+
+  // Cobrou, logo está autorizada — mesmo que o aviso de autorização
+  // ainda não tenha chegado, ou tenha se perdido.
+  await repo.definirStatusAssinatura(assinatura.id, "ativa");
+  await aplicarEfeito(parcela);
+
+  log.info("parcela da assinatura registrada", {
+    acao: "pagamentos.parcela",
+    tipo: assinatura.tipo,
+  });
+}
+
+/**
+ * Tópico `subscription_authorized_payment`.
+ *
+ * O `data.id` deste aviso **não é** um id de pagamento: é o id de uma
+ * fatura da assinatura, que por dentro carrega o pagamento. Consultar
+ * `/v1/payments/{id}` com ele responderia 404, e a renovação nunca seria
+ * registrada.
+ */
+export async function confirmarParcelaDaAssinatura(
+  authorizedPaymentId: string,
+  buscar?: typeof fetch,
+): Promise<void> {
+  const parcela = await consultarParcelaDaAssinatura(
+    authorizedPaymentId,
+    buscar,
+  );
+
+  if (!parcela?.mpPaymentId || parcela.statusPagamento !== "approved") {
+    // Recusada ou ainda em processamento: o Mercado Pago avisa de novo
+    // quando o estado avançar, e um estorno chega pelo tópico `payment`.
+    return;
+  }
+
+  const assinatura = await repositorioPagamentos().assinaturaPorMpId(
+    parcela.preapprovalId,
+  );
+
+  if (!assinatura) {
+    log.warn("parcela de uma assinatura que não existe aqui", {
+      acao: "pagamentos.parcela",
+    });
+    return;
+  }
+
+  await registrarParcela(
+    assinatura,
+    parcela.mpPaymentId,
+    parcela.valorCentavos,
+  );
 }
 
 /**
@@ -278,7 +648,7 @@ export async function confirmarPagamento(
 ): Promise<void> {
   const infoRemota = await consultarPagamento(mpPaymentId, buscar);
 
-  if (!infoRemota?.referenciaExterna) {
+  if (!infoRemota) {
     log.warn("Mercado Pago não devolveu um pagamento reconhecível", {
       acao: "pagamentos.confirmar",
       mpPaymentId,
@@ -287,14 +657,51 @@ export async function confirmarPagamento(
   }
 
   const repo = repositorioPagamentos();
-  const pagamento = await repo.porId(infoRemota.referenciaExterna);
+
+  /*
+   * Duas formas de reconhecer a cobrança, e a ordem importa.
+   *
+   * Uma parcela da recorrência não tem referência externa própria: o
+   * `external_reference` do `preapproval` é herdado por todos os
+   * pagamentos que ele gera, então a referência dela é a da
+   * **assinatura**. Procurar só por `porId` acharia `null` e o estorno
+   * ou o chargeback de uma renovação passaria batido — e o chargeback
+   * fraudulento é justamente o caso que fez a revogação existir.
+   *
+   * Por isso se pergunta primeiro pelo id do Mercado Pago, que toda
+   * parcela já registrada tem.
+   */
+  const pagamento =
+    (await repo.porMpPaymentId(infoRemota.id)) ??
+    (infoRemota.referenciaExterna
+      ? await repo.porId(infoRemota.referenciaExterna)
+      : null);
 
   if (!pagamento) {
-    log.warn("webhook aponta para uma cobrança que não existe aqui", {
-      acao: "pagamentos.confirmar",
-      mpPaymentId,
-      referencia: infoRemota.referenciaExterna,
-    });
+    /*
+     * Não conhecemos esta cobrança: ou é a primeira notícia de uma
+     * parcela da recorrência, ou é aviso de algo que não é nosso.
+     *
+     * Este ramo é o que mantém a renovação funcionando mesmo com o
+     * tópico `subscription_authorized_payment` desmarcado no painel do
+     * Mercado Pago — e os tópicos são marcados à mão.
+     */
+    const assinatura = infoRemota.referenciaExterna
+      ? await repo.assinaturaPorId(infoRemota.referenciaExterna)
+      : null;
+
+    if (assinatura && infoRemota.status === "approved") {
+      await registrarParcela(assinatura, infoRemota.id, null);
+      return;
+    }
+
+    if (!assinatura) {
+      log.warn("webhook aponta para uma cobrança que não existe aqui", {
+        acao: "pagamentos.confirmar",
+        mpPaymentId,
+        referencia: infoRemota.referenciaExterna,
+      });
+    }
     return;
   }
 
@@ -354,6 +761,24 @@ export async function confirmarPagamento(
     // `null`: outra notificação já estornou, e o efeito já foi desfeito.
     if (estornado) {
       await desfazerEfeito(estornado);
+      /*
+       * E a renovação para junto.
+       *
+       * Quem pede a devolução pela Lupa já passa por aqui com a
+       * assinatura cancelada — `pedirEstorno` cancela antes de mover o
+       * dinheiro. Este ramo é para o outro caso: estorno pedido no
+       * Mercado Pago, ou chargeback. Deixar a autorização viva ali
+       * cobraria de novo no mês seguinte alguém que acabou de contestar
+       * a cobrança.
+       */
+      if (estornado.assinaturaId) {
+        const assinatura = await repo.assinaturaPorId(estornado.assinaturaId);
+        if (assinatura) {
+          await encerrarNoMercadoPago(assinatura, buscar);
+          await repo.definirStatusAssinatura(assinatura.id, "cancelada");
+        }
+      }
+
       log.info("pagamento estornado", {
         acao: "pagamentos.confirmar",
         tipo: pagamento.tipo,

@@ -1,15 +1,20 @@
 /**
  * @vitest-environment node
  *
- * Pedir o dinheiro de volta pela Lupa (#168).
+ * Pedir o dinheiro de volta pela Lupa (#168), com o prazo e o alcance
+ * revistos na #170.
  *
- * Decisão do Luiz em 08/09/2026: automático, sete dias, devolve tudo. Sem
- * fila e sem aprovação — o prestador pediu, o dinheiro volta.
+ * Decisão do Luiz em 08/09/2026: automático, sem fila e sem aprovação — o
+ * prestador pediu, o dinheiro volta. Em 09/09, com a renovação automática,
+ * ele mudou as duas bordas da regra: **30 dias** em vez de sete, e **só a
+ * primeira cobrança**. Da segunda em diante o que existe é cancelar a
+ * renovação, que não devolve nada e mantém os dias já pagos.
  *
  * O que estes testes protegem não é o caminho feliz, que é o mais fácil de
- * acertar. É o contrário: que **falha do Mercado Pago não revogue nada**.
- * Se o estorno não aconteceu, o dinheiro não voltou — tirar a vitrine ali
- * seria o pior dos dois mundos para quem pediu.
+ * acertar. São os dois portões: que a segunda cobrança não seja devolvida,
+ * e que **falha do Mercado Pago não revogue nada** — se o estorno não
+ * aconteceu, o dinheiro não voltou, e tirar a vitrine ali seria o pior dos
+ * dois mundos para quem pediu.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -67,7 +72,7 @@ describe("pedir estorno", () => {
    * linha por dentro do repositório: mexer no `Map` privado testaria um
    * estado que o código nunca produz, e quebraria no dia em que o
    * repositório guardasse de outro jeito. `vi.useFakeTimers` move o mundo,
-   * que é o que de fato acontece quando sete dias passam.
+   * que é o que de fato acontece quando 30 dias passam.
    */
   async function aprovada(diasAtras = 0, dono = sessao.usuarioId) {
     const p = await repo.criar({
@@ -95,23 +100,23 @@ describe("pedir estorno", () => {
   });
 
   /**
-   * Sete dias é o prazo de arrependimento em compra online. Passado ele, a
-   * tela nem oferece — e o serviço recusa de qualquer forma, porque tela
-   * não é portão.
+   * Trinta dias é a janela da primeira cobrança. Passada ela, a tela nem
+   * oferece — e o serviço recusa de qualquer forma, porque tela não é
+   * portão.
    */
-  it("fora dos sete dias, recusa e explica", async () => {
-    await aprovada(8);
+  it("fora dos 30 dias, recusa e explica", async () => {
+    await aprovada(31);
 
     const r = await pedirEstorno(sessao);
 
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.motivo).toMatch(/sete dias|prazo/i);
+    expect(r.motivo).toMatch(/30 dias|prazo/i);
     expect(revogar).not.toHaveBeenCalled();
   });
 
-  it("no sexto dia ainda dá", async () => {
-    await aprovada(6);
+  it("no vigésimo nono dia ainda dá", async () => {
+    await aprovada(29);
     expect((await pedirEstorno(sessao)).ok).toBe(true);
   });
 
@@ -154,6 +159,52 @@ describe("pedir estorno", () => {
     expect(segundo.ok).toBe(false);
   });
 
+  /**
+   * A regra que a renovação automática trouxe (#170).
+   *
+   * Sem ela, uma assinatura mensal com devolução aberta é serviço de
+   * graça: assina, usa 29 dias, pede o dinheiro de volta, repete. Da
+   * segunda cobrança em diante a pessoa já sabia o que estava
+   * contratando, e a saída que ela tem é cancelar a renovação.
+   */
+  describe("só a primeira cobrança", () => {
+    it("a segunda cobrança não é devolvida, mesmo dentro do prazo", async () => {
+      await aprovada();
+      const segunda = await aprovada();
+
+      const r = await pedirEstorno(sessao);
+
+      expect(r.ok).toBe(false);
+      if (r.ok) return;
+      expect(r.motivo).toMatch(/primeira cobran/i);
+      expect(revogar).not.toHaveBeenCalled();
+      expect((await repo.porId(segunda.id))?.status).toBe("aprovado");
+    });
+
+    /**
+     * E não dá para voltar à casa de partida: quem já pediu devolução
+     * tem uma linha `estornado` no histórico, e ela conta.
+     */
+    it("assinar de novo depois de uma devolução não devolve o direito", async () => {
+      await aprovada();
+      await pedirEstorno(sessao);
+      revogar.mockClear();
+
+      await aprovada();
+      const r = await pedirEstorno(sessao);
+
+      expect(r.ok).toBe(false);
+      expect(revogar).not.toHaveBeenCalled();
+    });
+
+    it("a cobrança de outra pessoa não conta contra a sua", async () => {
+      await aprovada(0, outra.usuarioId);
+      await aprovada();
+
+      expect((await pedirEstorno(sessao)).ok).toBe(true);
+    });
+  });
+
   describe("cobrancaEstornavel", () => {
     it("devolve a cobrança dentro do prazo", async () => {
       const p = await aprovada(2);
@@ -161,7 +212,13 @@ describe("pedir estorno", () => {
     });
 
     it("devolve null fora do prazo — a tela não oferece o que será recusado", async () => {
-      await aprovada(9);
+      await aprovada(40);
+      expect(await cobrancaEstornavel(sessao)).toBeNull();
+    });
+
+    it("devolve null na segunda cobrança, pelo mesmo motivo", async () => {
+      await aprovada();
+      await aprovada();
       expect(await cobrancaEstornavel(sessao)).toBeNull();
     });
 
@@ -170,7 +227,7 @@ describe("pedir estorno", () => {
     });
   });
 
-  it("o prazo é de sete dias, e está num lugar só", () => {
-    expect(PRAZO_ESTORNO_MS).toBe(7 * 24 * 60 * 60 * 1000);
+  it("o prazo é de 30 dias, e está num lugar só", () => {
+    expect(PRAZO_ESTORNO_MS).toBe(30 * 24 * 60 * 60 * 1000);
   });
 });

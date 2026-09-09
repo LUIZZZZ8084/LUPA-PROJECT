@@ -8,9 +8,10 @@ import { formatPrecoBRL, passouDoPrazo } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
-import { cobrancaEstornavel } from "@/server/pagamentos/servico";
+import { estadoDaAssinatura } from "@/server/pagamentos/servico";
 import { repositorioUsuarios } from "@/server/repositories";
 import { AssinarButton } from "./assinar-button";
+import { CancelarRenovacaoButton } from "./cancelar-button";
 import { EstornarButton } from "./estornar-button";
 
 export const metadata: Metadata = {
@@ -26,16 +27,23 @@ export default async function AssinaturaPage() {
   const perfil = await repositorioUsuarios().perfilPrestador(sessao.usuarioId);
   if (!perfil) notFound();
 
+  /*
+   * Quem decide o que a tela oferece é o servidor, não o botão. Mostrar a
+   * devolução fora do prazo — ou fora da primeira cobrança — e recusar
+   * depois do clique é o "botão que só recusa depois do clique" que este
+   * projeto já registra duas vezes.
+   */
+  const { assinatura, podeEstornar } = await estadoDaAssinatura(sessao);
+
   const ate = perfil.mensalidadeValidaAte;
-  const ativa = Boolean(ate) && !passouDoPrazo(ate as string);
+  const emDia = Boolean(ate) && !passouDoPrazo(ate as string);
+  const validaAte = ate ? new Date(ate).toLocaleDateString("pt-BR") : null;
+
   const preco = formatPrecoBRL(PRECO_CENTAVOS.prestador_mensalidade / 100);
 
-  /*
-   * Quem decide se há devolução a pedir é o servidor, não o botão. Mostrar
-   * a opção fora do prazo e recusar depois do clique é o "botão que só
-   * recusa depois do clique" que este projeto já registra duas vezes.
-   */
-  const podeEstornar = Boolean(await cobrancaEstornavel(sessao));
+  const renova = assinatura?.status === "ativa";
+  const comecouENaoTerminou = assinatura?.status === "pendente";
+  const cartaoRecusado = assinatura?.status === "pausada";
 
   return (
     <PageShell width="narrow">
@@ -51,21 +59,36 @@ export default async function AssinaturaPage() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-base">Mensalidade de prestador</h2>
-              <Badge tone={ativa ? "vagas" : "neutral"}>
-                {ativa ? "Ativa" : "Inativa"}
+              <Badge tone={emDia ? "vagas" : "neutral"}>
+                {emDia ? "Ativa" : "Inativa"}
               </Badge>
             </div>
 
             <p className="mt-1.5 text-sm leading-relaxed text-muted">
-              {ativa ? (
+              {renova ? (
                 <>
-                  Válida até{" "}
-                  <strong className="text-ink">
-                    {new Date(ate as string).toLocaleDateString("pt-BR")}
-                  </strong>
-                  . Sem ela, o perfil some da busca de{" "}
+                  Renova sozinha todo mês. A próxima cobrança sai por volta de{" "}
+                  <strong className="text-ink">{validaAte}</strong>, e você pode
+                  cancelar quando quiser.
+                </>
+              ) : cartaoRecusado ? (
+                <>
+                  O Mercado Pago não conseguiu cobrar a última mensalidade — em
+                  geral é o cartão. Assine de novo para voltar a renovar.
+                </>
+              ) : comecouENaoTerminou ? (
+                <>
+                  Você começou a assinar e não terminou. Continue de onde parou
+                  para autorizar a cobrança mensal.
+                </>
+              ) : emDia ? (
+                <>
+                  Sua mensalidade vale até{" "}
+                  <strong className="text-ink">{validaAte}</strong>, e{" "}
+                  <strong className="text-ink">não renova sozinha</strong>.
+                  Depois dessa data o perfil sai da busca de{" "}
                   <span className="font-medium">/servicos</span> — os dados
-                  continuam salvos, e reativar é só assinar de novo.
+                  continuam salvos.
                 </>
               ) : (
                 <>
@@ -80,7 +103,26 @@ export default async function AssinaturaPage() {
               <span className="ml-1 text-sm font-normal text-muted">/mês</span>
             </p>
 
-            <AssinarButton renovar={ativa} />
+            {renova && validaAte ? (
+              <CancelarRenovacaoButton validaAte={validaAte} />
+            ) : (
+              <AssinarButton
+                rotulo={
+                  comecouENaoTerminou
+                    ? "Continuar assinatura"
+                    : emDia
+                      ? "Ativar renovação automática"
+                      : "Assinar"
+                }
+              />
+            )}
+
+            {/*
+              A devolução não depende de a renovação estar ligada. Quem
+              cancelou no dia seguinte à primeira cobrança e ainda quer o
+              dinheiro de volta está dentro da regra — esconder o botão
+              ali mandaria essa pessoa ao suporte por nada.
+            */}
             {podeEstornar && <EstornarButton />}
           </div>
         </div>

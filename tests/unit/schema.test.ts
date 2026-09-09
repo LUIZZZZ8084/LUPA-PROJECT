@@ -61,6 +61,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
 
     expect(tabelas).toEqual([
       "admins",
+      "assinaturas",
       "avaliacoes",
       "buscas_sem_resultado",
       "candidaturas",
@@ -583,8 +584,10 @@ describe("grants de anon e authenticated", () => {
     "candidaturas",
     "pedidos_verificacao",
     // Dado financeiro: só a chave de serviço alcança, mesmo tratamento de
-    // `usuarios`.
+    // `usuarios`. `assinaturas` guarda junto o id da autorização que o
+    // Mercado Pago usa para cobrar todo mês (#170).
     "pagamentos",
+    "assinaturas",
     /*
      * Saber quem está de olho em vaga de motorista é a mesma classe de
      * informação que o currículo — numa cidade do tamanho de Sinop, diz
@@ -862,7 +865,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(17);
+    expect(tabelas.rows).toHaveLength(18);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views

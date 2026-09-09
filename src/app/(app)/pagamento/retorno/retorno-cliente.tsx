@@ -6,12 +6,17 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 
 /**
- * Espera a confirmação de um pagamento, por polling.
+ * Espera a confirmação da assinatura, por polling.
  *
  * Quem confirma de verdade é o webhook, em paralelo — o retorno do
- * Checkout Pro só traz o navegador de volta, nunca o status final. Sem
+ * Mercado Pago só traz o navegador de volta, nunca o status final. Sem
  * isso, a tela precisaria confiar na query string do próprio retorno, que
  * qualquer um pode forjar trocando a URL.
+ *
+ * **O que se acompanha é a assinatura, não a cobrança.** Quem volta do
+ * Mercado Pago volta antes de existir qualquer linha em `pagamentos`: a
+ * primeira parcela só é registrada quando o webhook avisa que ela foi
+ * cobrada. Esperar por ela deixaria a tela girando mesmo com tudo certo.
  *
  * Mesmo padrão de polling do painel administrativo: intervalo fixo, sem
  * websocket — conexão aberta em serverless custa uma peça a mais para
@@ -20,9 +25,9 @@ import { Panel } from "@/components/ui/card";
 const INTERVALO_MS = 2000;
 const TENTATIVAS_MAXIMAS = 60; // ~2 minutos
 
-type Status = "pendente" | "aprovado" | "rejeitado" | "cancelado" | "estornado";
+type Status = "pendente" | "ativa" | "pausada" | "cancelada";
 
-export function RetornoPagamento({ pagamentoId }: { pagamentoId: string }) {
+export function RetornoAssinatura({ assinaturaId }: { assinaturaId: string }) {
   const [status, setStatus] = useState<Status>("pendente");
   const [tentativas, setTentativas] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -36,7 +41,7 @@ export function RetornoPagamento({ pagamentoId }: { pagamentoId: string }) {
       abortRef.current = controller;
 
       try {
-        const resposta = await fetch(`/api/pagamentos/${pagamentoId}`, {
+        const resposta = await fetch(`/api/assinaturas/${assinaturaId}`, {
           signal: controller.signal,
           cache: "no-store",
         });
@@ -55,15 +60,16 @@ export function RetornoPagamento({ pagamentoId }: { pagamentoId: string }) {
       clearTimeout(timer);
       abortRef.current?.abort();
     };
-  }, [status, tentativas, pagamentoId]);
+  }, [status, tentativas, assinaturaId]);
 
-  if (status === "aprovado") {
+  if (status === "ativa") {
     return (
       <Panel className="text-center">
         <CheckCircle2 size={32} className="mx-auto text-vagas" />
         <h2 className="mt-3 font-bold">Pagamento aprovado</h2>
         <p className="mt-1.5 text-sm text-muted">
-          Já está valendo. Você pode voltar para o seu perfil.
+          Sua assinatura está ativa e renova sozinha todo mês. Você pode
+          cancelar quando quiser, no seu perfil.
         </p>
         <ButtonLink href="/perfil" variant="vagas" size="sm" className="mt-4">
           Ir para o perfil
@@ -72,16 +78,21 @@ export function RetornoPagamento({ pagamentoId }: { pagamentoId: string }) {
     );
   }
 
-  if (status === "rejeitado" || status === "cancelado") {
+  if (status === "pausada" || status === "cancelada") {
     return (
       <Panel className="text-center">
         <XCircle size={32} className="mx-auto text-danger" />
-        <h2 className="mt-3 font-bold">O pagamento não foi aprovado</h2>
+        <h2 className="mt-3 font-bold">A assinatura não foi ativada</h2>
         <p className="mt-1.5 text-sm text-muted">
           Nada foi cobrado. Você pode tentar de novo quando quiser.
         </p>
-        <ButtonLink href="/perfil" variant="outline" size="sm" className="mt-4">
-          Voltar para o perfil
+        <ButtonLink
+          href="/perfil/assinatura"
+          variant="outline"
+          size="sm"
+          className="mt-4"
+        >
+          Voltar para a assinatura
         </ButtonLink>
       </Panel>
     );

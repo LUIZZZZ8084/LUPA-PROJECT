@@ -1033,9 +1033,34 @@ cobrança nova ganha o próprio valor, por `alter type ... add value`,
 quando tiver uma tela de verdade.
 
 **A devolução se pede pela Lupa, não pelo Mercado Pago.** Decisão do Luiz
-em 08/09/2026 (#168): automático, sete dias, devolve tudo. A pessoa
-assinou aqui; mandá-la a um serviço que ela não escolheu, e onde não tem
-conta, é empurrar o problema para fora.
+em 08/09/2026 (#168): automático e devolve tudo. A pessoa assinou aqui;
+mandá-la a um serviço que ela não escolheu, e onde não tem conta, é
+empurrar o problema para fora.
+
+**E vale só na primeira cobrança, em até 30 dias.** Revisão do Luiz em
+09/09/2026 (#170), quando a cobrança virou recorrente — os sete dias
+originais eram do modelo avulso, onde não havia mês seguinte. Assinatura
+mensal com devolução sempre aberta é serviço de graça: assina, usa 29
+dias, pede o dinheiro de volta, repete. A primeira cobrança é a porta de
+entrada, e quem experimentou e não gostou tem um mês para desistir; da
+segunda em diante a pessoa já sabia o que estava contratando, e o que ela
+precisa é de uma saída para o **futuro** — `cancelarRenovacao` —, não do
+dinheiro do mês corrente de volta.
+
+**"Primeira" conta aprovadas e estornadas**, não só as aprovadas
+(`STATUS_LIQUIDADOS`). Contando só as aprovadas, quem pedisse devolução
+voltaria à casa de partida: assinar de novo daria outra "primeira
+cobrança", e o buraco que a regra fecha continuaria aberto — só com um
+passo a mais.
+
+**A devolução cancela a renovação antes de mover o dinheiro, nunca
+depois.** Se a ordem fosse a inversa e o cancelamento falhasse, a pessoa
+ficaria com o dinheiro de volta e uma cobrança nova programada para o mês
+seguinte — e não há como desfazer um estorno para consertar. Cancelando
+primeiro, a pior falha possível é uma assinatura encerrada sem devolução:
+recuperável, porque assinar de novo está a um clique, e os dias já pagos
+não são tocados. **Quando duas operações irreversíveis precisam acontecer
+juntas, faça primeiro a que dá para desfazer.**
 
 O circuito fecha com o que já existia: o botão chama
 `POST /v1/payments/{id}/refunds`, o Mercado Pago devolve e manda o webhook
@@ -1052,13 +1077,22 @@ em `pagamentos-estorno-que-falha.test.ts` — em arquivo separado porque
 `temMercadoPagoConfigurado` é constante de importação.
 
 **A janela é decidida no servidor, e o botão só aparece dentro dela.**
-Mostrar a opção fora dos sete dias e recusar depois do clique é o "botão
-que só recusa depois do clique" que este arquivo já registra duas vezes.
+Mostrar a opção fora dos 30 dias — ou fora da primeira cobrança — e
+recusar depois do clique é o "botão que só recusa depois do clique" que
+este arquivo já registra duas vezes. E o serviço recusa de qualquer
+forma: tela não é portão.
 
-**Cancelar e estornar não são a mesma coisa**, e hoje só existe a segunda.
-O modelo é pagamento avulso: não renova sozinho, então não há cobrança
-futura a cancelar. "Cancelar assinatura" só passa a significar algo quando
-a cobrança virar `preapproval` — e aí é outra Issue.
+**Cancelar e estornar são coisas diferentes, e agora as duas existem.**
+Cancelar interrompe as cobranças **futuras** e não devolve nada — os dias
+já pagos continuam valendo até o fim do período, e `cancelarRenovacao`
+não toca em `mensalidade_valida_ate` de propósito. Estornar quer o
+dinheiro de volta, e aí a mensalidade cai na hora.
+
+Sem esse botão, uma cobrança recorrente vira armadilha: a pessoa autoriza
+uma vez e só sai indo procurar o Mercado Pago, onde não escolheu ter
+conta. É a mesma razão que trouxe a devolução para dentro da Lupa, e é por
+isso que a #170 não podia entregar a recorrência sem entregar o
+cancelamento junto.
 
 **Estorno e chargeback tiram a mensalidade na hora.** Decisão do Luiz em
 08/09/2026, escolhendo entre isso e encurtar a validade até a data do
@@ -1086,22 +1120,65 @@ compra. **Quando um enum tem valor que nenhum caminho produz, ou falta
 código ou sobra valor** — as duas respostas são aceitáveis, fingir que está
 resolvido não é.
 
-**Mercado Pago, Checkout Pro — sem `auto_return`.** Ele exige uma
-`back_url.success` alcançável pela internet, e recusa a preferência
-inteira ("back_url.success must be defined") quando a URL é `localhost` —
-descoberto testando com credencial real, não em teoria: a chamada crua
-via `curl` com a mesma URL funcionava, e só falhava com `auto_return`
-mais `localhost` juntos. Sem ele, o Checkout Pro mostra um botão "voltar
-ao site" em vez de redirecionar sozinho — funciona em qualquer ambiente,
-sem `if` condicional por URL, ao custo de perder só o automatismo.
+**A renovação é `preapproval`, não Checkout Pro repetido.** O modelo
+antigo era pagamento avulso: pagava R$ 19,90, ganhava 30 dias, e no dia 31
+o perfil sumia da vitrine **sem cobrança nova e sem aviso**. Ninguém
+renovava sozinho — nem o app, nem a pessoa, que não tinha motivo para
+lembrar de uma data que nada avisava. Hoje o Mercado Pago guarda uma
+autorização mensal e cobra sozinho (#170). O Checkout Pro avulso saiu
+junto com a coluna `mp_preference_id`: código e coluna que nenhum caminho
+mais escreve são a mesma armadilha do enum sem produtor, e vaga avulsa os
+traz de volta quando tiver tela.
 
-**Sem `MERCADO_PAGO_ACCESS_TOKEN`, a cobrança aprova na hora.** Mesmo
-padrão do resto do app sem Supabase configurado: `criarCobranca` grava o
-pagamento, aprova e aplica o efeito no mesmo passo, sem checkout nenhum
-para redirecionar. É o que mantém a suíte e2e (sempre em demonstração) e
-o `npm run dev` sem credencial exercitando o fluxo inteiro, do clique ao
-efeito — e é diferente de "sem Storage", que recusa e avisa: aqui não há
-nada para a pessoa perder por a cobrança não ter sido real.
+**Clicar duas vezes não pode criar duas assinaturas.** Quem começou e não
+terminou volta ao **mesmo** `init_point`, guardado em
+`assinaturas.checkout_url`. Um `preapproval` novo a cada clique deixaria
+autorizações órfãs lá — e duas autorizadas seriam duas cobranças por mês
+na mesma pessoa, erro que só aparece na fatura de quem pagou. A garantia é
+da aplicação, e não de um índice único por pessoa, de propósito: uma
+violação de unicidade aconteceria **dentro do webhook**, e webhook que
+responde 500 é webhook que o Mercado Pago reenvia para sempre.
+
+**São três tópicos de webhook, e o `data.id` de cada um aponta para um
+recurso diferente.** `payment` traz um pagamento;
+`subscription_preapproval`, uma assinatura;
+`subscription_authorized_payment`, uma **fatura** da assinatura, que
+carrega o pagamento por dentro — consultar `/v1/payments/{id}` com o id
+dela responde 404, e a renovação nunca é registrada. Cada um tem a própria
+rota de leitura, e o despacho está no route handler.
+
+**A parcela é registrada por dois caminhos, e isso é deliberado.** Os
+tópicos são marcados **à mão** no painel do Mercado Pago, e uma renovação
+que só funciona se alguém lembrou de marcar a caixa certa falha em
+silêncio — meses depois, com prestadores saindo da vitrine sem entender
+por quê. Por isso `confirmarPagamento` também reconhece quando o
+`external_reference` aponta para uma **assinatura**: o `preapproval` passa
+a própria referência a todos os pagamentos que gera. A redundância só é
+segura porque `registrarLiquidada` é idempotente pelo `mp_payment_id`,
+com a garantia no índice único — não numa leitura antes da escrita, que
+duas notificações simultâneas atravessariam. O teste que sustenta tudo
+isso é "o mesmo pagamento pelos dois tópicos estende uma vez só".
+
+**`cancelada` é terminal.** `definirStatusAssinatura` recusa sair dela na
+própria instrução. Sem essa guarda, um aviso atrasado de "autorizada"
+chegando depois do cancelamento ressuscitaria uma assinatura que a pessoa
+encerrou — e ela voltaria a ser cobrada.
+
+**Sem `MERCADO_PAGO_ACCESS_TOKEN`, a assinatura nasce ativa e já
+cobrada.** Mesmo padrão do resto do app sem Supabase configurado:
+`assinar` grava a assinatura, grava a primeira parcela aprovada e aplica o
+efeito no mesmo passo, sem checkout nenhum para redirecionar. É o que
+mantém a suíte e2e (sempre em demonstração) e o `npm run dev` sem
+credencial exercitando o fluxo inteiro, do clique ao efeito — e é
+diferente de "sem Storage", que recusa e avisa: aqui não há nada para a
+pessoa perder por a cobrança não ter sido real.
+
+**A tela de retorno acompanha a assinatura, não a cobrança.** Quem volta
+do Mercado Pago volta **antes** de existir qualquer linha em `pagamentos`:
+a primeira parcela só é registrada quando o webhook avisa. O polling
+antigo, sobre o id do pagamento, giraria em "Confirmando" com tudo certo.
+A pergunta que a pessoa tem ali é outra — "a renovação começou?" —, e quem
+a responde é `/api/assinaturas/[id]`.
 
 **O webhook relê da API do Mercado Pago — nunca confia no corpo do
 POST.** A assinatura (`x-signature`, HMAC contra
