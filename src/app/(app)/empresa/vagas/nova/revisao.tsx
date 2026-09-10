@@ -88,7 +88,7 @@ export function RevisaoDaVaga({ dados }: { dados: DadosDaVaga }) {
               <li>
                 Confira o cargo, o salário e a descrição agora. Corrigir depois
                 só publicando outra vaga, e{" "}
-                <strong className="text-ink">isso gasta outro crédito</strong>.
+                <strong className="text-ink">isso gasta outra vaga</strong>.
               </li>
               <li>
                 Você pode <strong className="text-ink">encerrar</strong> a vaga

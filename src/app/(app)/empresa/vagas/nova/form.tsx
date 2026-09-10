@@ -273,12 +273,12 @@ export function NewJobForm({ cidadeDaEmpresa }: { cidadeDaEmpresa: string }) {
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-line border-t pt-5">
             <p className="text-faint text-xs">
-              Publicar usa um crédito de vaga.{" "}
+              Publicar usa uma vaga do seu saldo.{" "}
               <Link
                 href="/empresa/creditos"
                 className="underline hover:text-muted"
               >
-                Ver meus créditos
+                Ver meu saldo
               </Link>
             </p>
             <Button type="submit" variant="empresas" disabled={pending}>
