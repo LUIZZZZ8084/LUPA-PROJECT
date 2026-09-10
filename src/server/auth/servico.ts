@@ -123,6 +123,7 @@ export async function cadastrar(
       disponibilidade: null,
       formacao: null,
       habilidades: [],
+      experiencias: [],
       // Desligado por padrão: aparecer para empresa é escolha, não default.
       visivelParaEmpresas: false,
     });

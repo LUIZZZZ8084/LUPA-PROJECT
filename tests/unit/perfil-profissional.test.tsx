@@ -28,6 +28,13 @@ const CURRICULO: DadosCandidato = {
   disponibilidade: "Imediata",
   formacao: "Ensino médio completo",
   habilidades: ["CNH categoria C", "Colheitadeira"],
+  experiencias: [
+    {
+      role: "Operador de colheitadeira",
+      company: "Agro Norte Ltda.",
+      period: "2021 — 2023",
+    },
+  ],
   visivelParaEmpresas: false,
 };
 
@@ -76,6 +83,17 @@ describe("candidato", () => {
     expect(screen.getByText("Ensino médio completo")).toBeTruthy();
     expect(screen.getByText("Colheitadeira")).toBeTruthy();
     expect(screen.getByText("Imediata")).toBeTruthy();
+  });
+
+  it("mostra a experiência, com cargo, empresa e período", () => {
+    render(<PerfilCandidato perfil={CURRICULO} />);
+    expect(screen.getByText("Operador de colheitadeira")).toBeTruthy();
+    expect(screen.getByText("Agro Norte Ltda. · 2021 — 2023")).toBeTruthy();
+  });
+
+  it("sem experiência, não mostra a seção", () => {
+    render(<PerfilCandidato perfil={{ ...CURRICULO, experiencias: [] }} />);
+    expect(screen.queryByText("Experiência")).toBeNull();
   });
 
   /**

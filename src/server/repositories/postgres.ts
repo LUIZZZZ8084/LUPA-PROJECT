@@ -262,6 +262,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       resumo: perfil.resumo,
       curriculo_url: perfil.curriculoUrl,
       disponibilidade: perfil.disponibilidade,
+      experiencias: perfil.experiencias,
       visivel_para_empresas: perfil.visivelParaEmpresas,
     });
 
@@ -464,6 +465,8 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       disponibilidade: (data.disponibilidade as string | null) ?? null,
       formacao: (data.formacao as string | null) ?? null,
       habilidades: (data.habilidades as string[] | null) ?? [],
+      experiencias:
+        (data.experiencias as PerfilCandidato["experiencias"] | null) ?? [],
       visivelParaEmpresas: Boolean(data.visivel_para_empresas),
     };
   }
@@ -505,6 +508,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         resumo: dados.resumo,
         formacao: dados.formacao,
         habilidades: dados.habilidades,
+        experiencias: dados.experiencias,
         disponibilidade: dados.disponibilidade,
         visivel_para_empresas: dados.visivelParaEmpresas,
       },

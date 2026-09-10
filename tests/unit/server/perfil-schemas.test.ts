@@ -117,6 +117,125 @@ describe("currículo", () => {
   });
 });
 
+/**
+ * O formulário manda quatro listas paralelas — `expCargo`, `expEmpresa`,
+ * `expPeriodo`, `expDescricao` — uma posição por linha da tela. O schema
+ * zipa as quatro numa lista de experiências antes de validar cada uma.
+ */
+describe("experiência do currículo", () => {
+  it("sem nenhuma linha, a lista fica vazia", () => {
+    const r = schemaCandidato.safeParse({
+      areaDesejada: "",
+      resumo: "",
+      formacao: "",
+      habilidades: "",
+      disponibilidade: "",
+    });
+    expect(r.success && r.data.experiencias).toEqual([]);
+  });
+
+  it("uma linha só chega como string, não como lista de um item", () => {
+    const r = schemaCandidato.safeParse({
+      areaDesejada: "",
+      resumo: "",
+      formacao: "",
+      habilidades: "",
+      disponibilidade: "",
+      expCargo: "Operador de colheitadeira",
+      expEmpresa: "Agro Norte Ltda.",
+      expPeriodo: "2021 — 2023",
+      expDescricao: "",
+    });
+    expect(r.success && r.data.experiencias).toEqual([
+      {
+        role: "Operador de colheitadeira",
+        company: "Agro Norte Ltda.",
+        period: "2021 — 2023",
+        description: undefined,
+      },
+    ]);
+  });
+
+  it("zipa várias linhas pela posição", () => {
+    const r = schemaCandidato.safeParse({
+      areaDesejada: "",
+      resumo: "",
+      formacao: "",
+      habilidades: "",
+      disponibilidade: "",
+      expCargo: ["Operador", "Auxiliar"],
+      expEmpresa: ["Agro Norte", "Sítio Bom Jesus"],
+      expPeriodo: ["2021 — 2023", "2019 — 2021"],
+      expDescricao: ["Colheita mecanizada.", ""],
+    });
+    expect(r.success && r.data.experiencias).toEqual([
+      {
+        role: "Operador",
+        company: "Agro Norte",
+        period: "2021 — 2023",
+        description: "Colheita mecanizada.",
+      },
+      {
+        role: "Auxiliar",
+        company: "Sítio Bom Jesus",
+        period: "2019 — 2021",
+        description: undefined,
+      },
+    ]);
+  });
+
+  /**
+   * Uma linha que a pessoa adicionou e não preencheu não pode virar erro
+   * de validação — ela nem tentou usar aquela linha.
+   */
+  it("linha inteiramente em branco é descartada, não recusada", () => {
+    const r = schemaCandidato.safeParse({
+      areaDesejada: "",
+      resumo: "",
+      formacao: "",
+      habilidades: "",
+      disponibilidade: "",
+      expCargo: "",
+      expEmpresa: "",
+      expPeriodo: "",
+      expDescricao: "",
+    });
+    expect(r.success).toBe(true);
+    expect(r.success && r.data.experiencias).toEqual([]);
+  });
+
+  it("linha parcialmente preenchida é recusada", () => {
+    const r = schemaCandidato.safeParse({
+      areaDesejada: "",
+      resumo: "",
+      formacao: "",
+      habilidades: "",
+      disponibilidade: "",
+      expCargo: "Operador",
+      expEmpresa: "",
+      expPeriodo: "",
+      expDescricao: "",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("limita a quantidade de experiências", () => {
+    const n = 11;
+    const r = schemaCandidato.safeParse({
+      areaDesejada: "",
+      resumo: "",
+      formacao: "",
+      habilidades: "",
+      disponibilidade: "",
+      expCargo: Array.from({ length: n }, (_, i) => `Cargo ${i}`),
+      expEmpresa: Array.from({ length: n }, (_, i) => `Empresa ${i}`),
+      expPeriodo: Array.from({ length: n }, () => "2020 — 2021"),
+      expDescricao: Array.from({ length: n }, () => ""),
+    });
+    expect(r.success).toBe(false);
+  });
+});
+
 describe("anúncio do prestador", () => {
   const base = {
     categoriaId: "1",

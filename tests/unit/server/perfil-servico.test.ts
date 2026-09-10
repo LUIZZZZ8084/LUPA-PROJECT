@@ -66,6 +66,7 @@ describe("carregar o perfil para editar", () => {
       resumo: null,
       formacao: null,
       habilidades: [],
+      experiencias: [],
       disponibilidade: null,
       visivelParaEmpresas: false,
     });
@@ -124,6 +125,9 @@ describe("salvar o perfil do papel", () => {
       resumo: "Operador de colheitadeira.",
       formacao: "Ensino médio completo",
       habilidades: ["CNH categoria C"],
+      experiencias: [
+        { role: "Operador", company: "Agro Norte", period: "2021 — 2023" },
+      ],
       disponibilidade: "Imediata",
       visivelParaEmpresas: false,
     });
@@ -131,6 +135,9 @@ describe("salvar o perfil do papel", () => {
     const p = await repo.perfilCandidato(id);
     expect(p?.formacao).toBe("Ensino médio completo");
     expect(p?.habilidades).toEqual(["CNH categoria C"]);
+    expect(p?.experiencias).toEqual([
+      { role: "Operador", company: "Agro Norte", period: "2021 — 2023" },
+    ]);
   });
 
   /**
@@ -234,6 +241,7 @@ describe("salvar o perfil do papel", () => {
         resumo: null,
         formacao: null,
         habilidades: [],
+        experiencias: [],
         disponibilidade: null,
         visivelParaEmpresas: false,
       }),

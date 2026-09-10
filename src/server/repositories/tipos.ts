@@ -1,3 +1,4 @@
+import type { Experience } from "@/lib/types";
 import type { Papel } from "../auth/rbac";
 
 /**
@@ -134,6 +135,13 @@ export interface PerfilCandidato {
   disponibilidade: string | null;
   formacao: string | null;
   habilidades: string[];
+  /**
+   * Cargo, empresa, período e descrição opcional — mesmo shape da coluna
+   * `experiencias`, que guarda o JSON com essas chaves em inglês porque a
+   * view `company_applications` o embute direto em
+   * `ApplicationWithCandidate.candidate.experiences`, sem tradução.
+   */
+  experiencias: Experience[];
   /** "Quero que empresas me encontrem." Falso por padrão. */
   visivelParaEmpresas: boolean;
 }
@@ -154,6 +162,7 @@ export interface EdicaoCandidato {
   resumo: string | null;
   formacao: string | null;
   habilidades: string[];
+  experiencias: Experience[];
   disponibilidade: string | null;
   visivelParaEmpresas: boolean;
 }

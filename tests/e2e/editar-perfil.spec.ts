@@ -59,6 +59,70 @@ test.describe("edição de perfil", () => {
   });
 
   /**
+   * A coluna `experiencias` existia desde o começo, sem nenhum jeito de
+   * gravar nela pela aplicação (#187). Este é o caminho de ponta a ponta:
+   * adicionar uma linha, remover outra antes de salvar, e ver a que ficou
+   * de volta no perfil.
+   *
+   * Os locators usam `.last()`, nunca uma contagem absoluta: a suíte roda
+   * com `fullyParallel: true` e workers > 1 sobre a mesma sessão de
+   * candidato, então outro teste pode já ter deixado experiência salva
+   * aqui. "Adicionar" sempre acrescenta no fim da lista — é por isso que
+   * a última linha é sempre a que este teste acabou de criar.
+   */
+  test("adiciona uma experiência, remove outra, e o que sobra aparece no perfil", async ({
+    page,
+  }) => {
+    await page.goto("/perfil/editar");
+
+    // Uma linha para descartar antes de salvar.
+    await page.getByRole("button", { name: "Adicionar" }).click();
+    await expect(
+      page.getByLabel("Cargo", { exact: true }).last(),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Remover" }).last().click();
+
+    // A que fica.
+    //
+    // "Empresa" precisa de `exact: true`: sem isso, `getByLabel` também
+    // casa com o rótulo do checkbox "Quero que empresas me encontrem", que
+    // fica logo abaixo desta seção — a mesma armadilha de substring que já
+    // derrubou a suíte inteira uma vez (ver o comentário em
+    // `VisivelParaEmpresas`, em form.tsx).
+    await page.getByRole("button", { name: "Adicionar" }).click();
+    await page
+      .getByLabel("Cargo", { exact: true })
+      .last()
+      .fill("Operador de colheitadeira");
+    await page
+      .getByLabel("Empresa", { exact: true })
+      .last()
+      .fill("Agro Norte Ltda.");
+    await page
+      .getByLabel("Período", { exact: true })
+      .last()
+      .fill("2021 — 2023");
+    await page
+      .getByLabel("Descrição", { exact: true })
+      .last()
+      .fill("Colheita mecanizada de soja.");
+
+    await page
+      .locator("form")
+      .filter({ hasText: "Currículo" })
+      .getByRole("button", { name: "Salvar" })
+      .click();
+
+    await expect(page.getByText("Salvo")).toBeVisible();
+
+    await page.goto("/perfil");
+    await expect(page.getByText("Operador de colheitadeira")).toBeVisible();
+    await expect(
+      page.getByText("Agro Norte Ltda. · 2021 — 2023"),
+    ).toBeVisible();
+  });
+
+  /**
    * O erro precisa aparecer no campo, não só um aviso genérico. Foi o que
    * faltou no cadastro quebrado: "Revise os campos destacados" sem destacar
    * campo nenhum, porque o que faltava não estava na tela.

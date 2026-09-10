@@ -644,7 +644,7 @@ async function candidatoParaDemo(
       desired_area: perfil?.areaDesejada ?? null,
       availability: perfil?.disponibilidade ?? null,
       summary: perfil?.resumo ?? null,
-      experiences: [],
+      experiences: perfil?.experiencias ?? [],
       education: perfil?.formacao ?? null,
       skills: perfil?.habilidades ?? [],
       resume_url: perfil?.curriculoUrl ?? null,

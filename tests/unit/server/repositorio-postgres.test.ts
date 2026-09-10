@@ -204,6 +204,7 @@ describe("RepositorioPostgres", () => {
       disponibilidade: null,
       formacao: null,
       habilidades: [],
+      experiencias: [],
       visivelParaEmpresas: false,
     });
     expect(chamadas.at(-1)?.tabela).toBe("perfis_candidato");
@@ -359,6 +360,9 @@ describe("perfis para a edição", () => {
         disponibilidade: "Imediata",
         formacao: "Ensino médio completo",
         habilidades: ["CNH categoria C"],
+        experiencias: [
+          { role: "Operador", company: "Agro Norte", period: "2021 — 2023" },
+        ],
       },
       error: null,
     };
@@ -366,6 +370,29 @@ describe("perfis para a edição", () => {
     const c = await repo.perfilCandidato(ID);
     expect(c?.formacao).toBe("Ensino médio completo");
     expect(c?.habilidades).toEqual(["CNH categoria C"]);
+    expect(c?.experiencias).toEqual([
+      { role: "Operador", company: "Agro Norte", period: "2021 — 2023" },
+    ]);
+  });
+
+  /** Coluna nula vira lista vazia, não `undefined` — mesma régua de habilidades. */
+  it("candidato: sem experiência gravada, devolve lista vazia", async () => {
+    resposta = {
+      data: {
+        usuario_id: ID,
+        area_desejada: null,
+        resumo: null,
+        curriculo_url: null,
+        disponibilidade: null,
+        formacao: null,
+        habilidades: null,
+        experiencias: null,
+      },
+      error: null,
+    };
+
+    const c = await repo.perfilCandidato(ID);
+    expect(c?.experiencias).toEqual([]);
   });
 
   it("perfil ausente devolve null, não objeto vazio", async () => {
@@ -419,6 +446,9 @@ describe("gravação de perfil", () => {
       resumo: null,
       formacao: "Ensino médio",
       habilidades: ["Trator"],
+      experiencias: [
+        { role: "Operador", company: "Agro Norte", period: "2021 — 2023" },
+      ],
       disponibilidade: null,
       visivelParaEmpresas: false,
     });
@@ -430,6 +460,9 @@ describe("gravação de perfil", () => {
       area_desejada: "Agronegócio",
       formacao: "Ensino médio",
       habilidades: ["Trator"],
+      experiencias: [
+        { role: "Operador", company: "Agro Norte", period: "2021 — 2023" },
+      ],
     });
     expect(upsert?.args[1]).toEqual({ onConflict: "usuario_id" });
   });
