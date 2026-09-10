@@ -22,8 +22,10 @@ import {
   usarRepositorioCandidaturas,
 } from "@/server/candidaturas";
 import { candidatarSe, moverCandidatura } from "@/server/candidaturas/servico";
+import { usarRepositorioCarteiras } from "@/server/carteiras";
 import { RepositorioVagasMemoria, usarRepositorioVagas } from "@/server/vagas";
 import { publicarVaga } from "@/server/vagas/servico";
+import { carteiraInfinita } from "./carteira-de-teste";
 
 const DADOS_VAGA = {
   titulo: "Auxiliar Administrativo",
@@ -33,6 +35,18 @@ const DADOS_VAGA = {
   tipoContrato: "CLT",
   endereco: "Av. das Itaúbas, 1200",
 };
+
+/*
+ * Publicar vaga custa crédito desde a #172, e este arquivo publica como
+ * preparação — o que ele mede é outra coisa. A carteira infinita deixa
+ * isso explícito; quem mede a carteira é `carteira-de-vagas.test.ts`, e
+ * quem mede o portão da publicação é `vagas.test.ts`.
+ */
+let restaurarCarteiraDoArquivo: () => void;
+beforeEach(() => {
+  restaurarCarteiraDoArquivo = usarRepositorioCarteiras(carteiraInfinita());
+});
+afterEach(() => restaurarCarteiraDoArquivo());
 
 describe("mover candidatura em modo demonstração", () => {
   let restaurarVagas: () => void;

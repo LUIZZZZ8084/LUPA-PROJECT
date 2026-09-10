@@ -60,9 +60,10 @@ export type Capacidade =
   | "vaga:encerrar_propria"
   /*
    * Reativar vaga que passou dos 30 dias — nunca a que foi encerrada à
-   * mão. Renova só o prazo, de graça; quem só tem `vaga:publicar` mas não
-   * é dono não chega perto, porque `exigirDono` continua sendo a segunda
-   * pergunta.
+   * mão. Renova só o prazo, mas **não de graça**: gasta uma vaga do
+   * saldo, como publicar (#172), senão bastaria publicar uma vez e
+   * renovar para sempre. Quem só tem `vaga:publicar` mas não é dono não
+   * chega perto, porque `exigirDono` continua sendo a segunda pergunta.
    */
   | "vaga:reativar_propria"
   | "vaga:ver_candidaturas_proprias"

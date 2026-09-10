@@ -8,11 +8,69 @@ export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
   // R$ 19,90 — decisão do Luiz em 08/09/2026, que também é quem reverteu
   // a espera por demanda antes de cobrar (decidida em 25/08).
   prestador_mensalidade: 1990,
+
+  /*
+   * Publicar vaga (#172), decidido pelo Luiz em 09/09/2026 e revisado por
+   * ele duas vezes no mesmo dia, depois de a tela mostrar o preço por vaga.
+   *
+   * A primeira tabela era 29,90 / 100 / 149,90 por 15 vagas, e o preço por
+   * vaga saía 29,90 / 20,00 / 9,99: a avulsa custava **três vezes** o
+   * unitário do pacote maior. Quem tinha uma vaga só olhava aquilo como
+   * punição, e quem tinha três comprava quinze sem precisar.
+   *
+   * A tabela de agora fecha essa distância pelo outro lado: o pacote
+   * maior encolheu de 15 para 10 vagas, então o unitário dele sobe para
+   * R$ 14,99 e a avulsa passa a custar o **dobro**, não o triplo. Dez
+   * também é um número que quem contrata consegue projetar — quinze era
+   * estoque que ninguém sabia se ia usar.
+   *
+   * **O teto é o plano mensal**, e é ele que segura a escada: a partir de
+   * ~14 vagas assinar sai mais barato que comprar o pacote de 10, e é
+   * exatamente aí que o mensal deve ganhar. Um pacote que custasse perto
+   * de R$ 199,90 não venderia, porque a essa altura vale mais assinar.
+   */
+  empresa_vaga_avulsa: 2990,
+  empresa_pacote_5: 11990,
+  empresa_pacote_10: 14990,
+  empresa_mensal: 19990,
 };
 
 export const DESCRICAO_PAGAMENTO: Record<TipoPagamento, string> = {
   prestador_mensalidade: "Mensalidade de prestador — Lupa",
+  empresa_vaga_avulsa: "1 vaga — Lupa",
+  empresa_pacote_5: "5 vagas — Lupa",
+  empresa_pacote_10: "10 vagas — Lupa",
+  empresa_mensal: "Vagas ilimitadas, mensal — Lupa",
 };
+
+/**
+ * Quantos créditos de vaga cada compra entrega.
+ *
+ * Só os pagamentos únicos aparecem aqui: `empresa_mensal` não dá crédito
+ * nenhum de propósito — enquanto vale, publicar não gasta crédito, e
+ * misturar os dois faria a pessoa acumular saldo que não precisa usar.
+ */
+export const CREDITOS_POR_COMPRA: Partial<Record<TipoPagamento, number>> = {
+  empresa_vaga_avulsa: 1,
+  empresa_pacote_5: 5,
+  empresa_pacote_10: 10,
+};
+
+/**
+ * Os tipos que são assinatura recorrente, e não pagamento único.
+ *
+ * É o que decide qual caminho do Mercado Pago a compra percorre:
+ * `preapproval` (autoriza o cartão e cobra sozinho todo mês) ou Checkout
+ * Pro (cobra uma vez e acabou).
+ */
+export const TIPOS_RECORRENTES: readonly TipoPagamento[] = [
+  "prestador_mensalidade",
+  "empresa_mensal",
+];
+
+export function ehRecorrente(tipo: TipoPagamento): boolean {
+  return TIPOS_RECORRENTES.includes(tipo);
+}
 
 /**
  * Dias de teste grátis antes da primeira cobrança da assinatura —
@@ -22,7 +80,15 @@ export const DESCRICAO_PAGAMENTO: Record<TipoPagamento, string> = {
  *
  * A diferença que importa: aqui o cartão já foi autorizado quando o teste
  * começa. Quem cancela dentro do prazo nunca chegou a ser cobrado — não
- * há dinheiro para devolver, e por isso não é a mesma coisa que a
- * carência antiga, que não pedia cartão nenhum.
+ * há dinheiro para devolver, e é por isso que a devolução self-service
+ * deixou de existir (#170): esta é a janela para desistir.
+ *
+ * Vale só para a mensalidade de prestador. O plano mensal de vagas não
+ * tem teste: quem contrata publica a vaga no primeiro dia e teria o
+ * resultado inteiro do mês antes de qualquer cobrança.
  */
 export const DIAS_TESTE_GRATIS = 15;
+
+export function diasDeTeste(tipo: TipoPagamento): number {
+  return tipo === "prestador_mensalidade" ? DIAS_TESTE_GRATIS : 0;
+}

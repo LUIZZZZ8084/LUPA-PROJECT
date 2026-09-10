@@ -234,7 +234,10 @@ describe("cancelarRenovacao", () => {
       "prestador_mensalidade",
     );
 
-    const resultado = await ctx.servico.cancelarRenovacao(sessao);
+    const resultado = await ctx.servico.cancelarRenovacao(
+      sessao,
+      "prestador_mensalidade",
+    );
 
     expect(resultado.ok).toBe(true);
     expect((await ctx.repo.assinaturaPorId(assinatura.id))?.status).toBe(
@@ -256,7 +259,7 @@ describe("cancelarRenovacao", () => {
     await ctx.servico.assinar(sessao, "prestador_mensalidade");
     revogarMensalidadeMock.mockClear();
 
-    await ctx.servico.cancelarRenovacao(sessao);
+    await ctx.servico.cancelarRenovacao(sessao, "prestador_mensalidade");
 
     expect(
       revogarMensalidadeMock,
@@ -265,12 +268,17 @@ describe("cancelarRenovacao", () => {
   });
 
   it("sem assinatura viva, recusa sem quebrar", async () => {
-    const resultado = await ctx.servico.cancelarRenovacao(sessao);
+    const resultado = await ctx.servico.cancelarRenovacao(
+      sessao,
+      "prestador_mensalidade",
+    );
     expect(resultado.ok).toBe(false);
   });
 
   it("sem sessão é 401", async () => {
-    await expect(ctx.servico.cancelarRenovacao(null)).rejects.toMatchObject({
+    await expect(
+      ctx.servico.cancelarRenovacao(null, "prestador_mensalidade"),
+    ).rejects.toMatchObject({
       codigo: "nao_autenticado",
     });
   });
@@ -278,7 +286,7 @@ describe("cancelarRenovacao", () => {
   /** Cancelada é terminal: assinar depois cria outra, nunca ressuscita. */
   it("depois de cancelar dá para assinar de novo", async () => {
     const primeira = await ctx.servico.assinar(sessao, "prestador_mensalidade");
-    await ctx.servico.cancelarRenovacao(sessao);
+    await ctx.servico.cancelarRenovacao(sessao, "prestador_mensalidade");
 
     const segunda = await ctx.servico.assinar(sessao, "prestador_mensalidade");
 

@@ -8,6 +8,7 @@ import type {
   RepositorioPagamentos,
   StatusAssinatura,
   StatusPagamento,
+  TipoPagamento,
 } from "./tipos";
 import { STATUS_ASSINATURA_VIVA } from "./tipos";
 
@@ -68,6 +69,7 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
       tipo: dados.tipo,
       valorCentavos: dados.valorCentavos,
       status,
+      mpPreferenceId: null,
       mpPaymentId,
       assinaturaId: dados.assinaturaId ?? null,
       metadata: dados.metadata ?? {},
@@ -76,6 +78,22 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
     };
     this.itens.set(pagamento.id, pagamento);
     return pagamento;
+  }
+
+  async definirPreferencia(
+    id: string,
+    mpPreferenceId: string,
+  ): Promise<Pagamento> {
+    const atual = this.itens.get(id);
+    if (!atual) throw erros.naoEncontrado("Pagamento");
+
+    const novo: Pagamento = {
+      ...atual,
+      mpPreferenceId,
+      atualizadoEm: new Date().toISOString(),
+    };
+    this.itens.set(id, novo);
+    return novo;
   }
 
   async aprovar(
@@ -138,11 +156,15 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
 
   // ── Assinaturas recorrentes ───────────────────────────────────────────
 
-  async assinaturaViva(usuarioId: string): Promise<Assinatura | null> {
+  async assinaturaViva(
+    usuarioId: string,
+    tipo: TipoPagamento,
+  ): Promise<Assinatura | null> {
     const dela = [...this.assinaturas.values()]
       .filter(
         (a) =>
           a.usuarioId === usuarioId &&
+          a.tipo === tipo &&
           STATUS_ASSINATURA_VIVA.includes(a.status),
       )
       .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));

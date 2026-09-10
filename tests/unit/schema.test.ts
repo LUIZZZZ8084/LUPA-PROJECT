@@ -65,6 +65,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "avaliacoes",
       "buscas_sem_resultado",
       "candidaturas",
+      "carteiras_vaga",
       "categorias_servico",
       "inscricoes_push",
       "pagamentos",
@@ -588,6 +589,9 @@ describe("grants de anon e authenticated", () => {
     // Mercado Pago usa para cobrar todo mês (#170).
     "pagamentos",
     "assinaturas",
+    // Quantos créditos de vaga alguém tem é dado comercial dele, não
+    // registro público como o CNPJ (#172).
+    "carteiras_vaga",
     /*
      * Saber quem está de olho em vaga de motorista é a mesma classe de
      * informação que o currículo — numa cidade do tamanho de Sinop, diz
@@ -865,7 +869,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(18);
+    expect(tabelas.rows).toHaveLength(19);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views

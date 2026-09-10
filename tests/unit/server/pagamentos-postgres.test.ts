@@ -57,6 +57,7 @@ const LINHA = {
   tipo: "prestador_mensalidade",
   valor_centavos: 2490,
   status: "pendente",
+  mp_preference_id: null,
   mp_payment_id: null,
   assinatura_id: null,
   metadata: {},
@@ -95,6 +96,7 @@ describe("RepositorioPagamentosPostgres", () => {
       tipo: "prestador_mensalidade",
       valorCentavos: 2490,
       status: "pendente",
+      mpPreferenceId: null,
       mpPaymentId: null,
       assinaturaId: null,
       metadata: {},
@@ -188,7 +190,10 @@ describe("RepositorioPagamentosPostgres", () => {
 
   it("assinaturaViva procura só as que ainda valem alguma coisa", async () => {
     resposta = { data: ASSINATURA, error: null };
-    const assinatura = await repo.assinaturaViva(LINHA.usuario_id);
+    const assinatura = await repo.assinaturaViva(
+      LINHA.usuario_id,
+      "prestador_mensalidade",
+    );
 
     expect(assinatura?.mpPreapprovalId).toBe("pre-1");
     const filtro = chamadas.find((c) => c.metodo === "in");
@@ -326,9 +331,9 @@ describe("RepositorioPagamentosPostgres", () => {
 
     it("erro sem código conhecido vira 'indisponível'", async () => {
       resposta = { data: null, error: { message: "conexão caiu" } };
-      await expect(repo.assinaturaViva(LINHA.usuario_id)).rejects.toMatchObject(
-        { codigo: "indisponivel" },
-      );
+      await expect(
+        repo.assinaturaViva(LINHA.usuario_id, "prestador_mensalidade"),
+      ).rejects.toMatchObject({ codigo: "indisponivel" });
       await expect(repo.assinaturaPorMpId("pre-1")).rejects.toMatchObject({
         codigo: "indisponivel",
       });

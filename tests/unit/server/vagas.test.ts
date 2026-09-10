@@ -16,6 +16,16 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import type { Autenticado } from "@/server/auth/rbac";
+import {
+  RepositorioCarteirasMemoria,
+  usarRepositorioCarteiras,
+} from "@/server/carteiras";
+import {
+  creditarVagas,
+  debitarVagas,
+  direitoDePublicar,
+  estenderPlanoMensal,
+} from "@/server/carteiras/servico";
 import { ehAppError } from "@/server/errors";
 import { RepositorioMemoria, usarRepositorio } from "@/server/repositories";
 import { RepositorioVagasMemoria, usarRepositorioVagas } from "@/server/vagas";
@@ -46,15 +56,37 @@ const DADOS = {
 
 describe("vagas do painel da empresa", () => {
   let restaurar: () => void;
+  let restaurarCarteira: () => void;
 
-  beforeEach(() => {
+  /*
+   * Publicar passou a custar crédito (#172), então quase todo teste deste
+   * arquivo precisa de saldo — o que se mede aqui é a regra da vaga, não
+   * a da carteira, que tem arquivo próprio em `carteira-de-vagas.test.ts`.
+   *
+   * O saldo é folgado de propósito: um número apertado faria um teste
+   * falhar por causa de outro que publicou antes, e o motivo da falha
+   * ("sem crédito") não teria nada a ver com o que ele mede.
+   */
+  beforeEach(async () => {
     restaurar = usarRepositorioVagas(new RepositorioVagasMemoria());
+    restaurarCarteira = usarRepositorioCarteiras(
+      new RepositorioCarteirasMemoria(),
+    );
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
+
+    for (const id of [
+      empresa.usuarioId,
+      outraEmpresa.usuarioId,
+      admin.usuarioId,
+    ]) {
+      await creditarVagas(id, 50);
+    }
   });
 
   afterEach(() => {
     restaurar();
+    restaurarCarteira();
     vi.restoreAllMocks();
   });
 
@@ -73,6 +105,50 @@ describe("vagas do painel da empresa", () => {
     it("sem sessão é 401, não 403", async () => {
       const erro = await capturar(() => publicarVaga(null, DADOS));
       expect(erro.codigo).toBe("nao_autenticado");
+    });
+
+    /**
+     * O portão da cobrança (#172).
+     *
+     * Sem ele a tabela de preços é enfeite: a tela cobraria e o servidor
+     * deixaria passar assim mesmo. É o mesmo raciocínio de "tela não é
+     * portão" que este projeto já aplica em toda action.
+     */
+    it("sem saldo, não publica — e diz o que fazer", async () => {
+      await debitarVagas(empresa.usuarioId, 50);
+
+      const erro = await capturar(() => publicarVaga(empresa, DADOS));
+
+      expect(erro.codigo).toBe("validacao");
+      /*
+       * As duas saídas, escritas por extenso e não por alternativa solta.
+       * A versão antiga era `/crédito|plano mensal/i`, e depois que a
+       * interface deixou de dizer "crédito" ela continuaria verde
+       * casando só com a segunda metade — teste que passa por um motivo
+       * que ninguém escolheu.
+       */
+      expect(erro.mensagem).toMatch(/compre uma vaga/i);
+      expect(erro.mensagem).toMatch(/plano mensal/i);
+    });
+
+    it("publicar gasta exatamente um crédito", async () => {
+      const antes = (await direitoDePublicar(empresa.usuarioId)).creditos;
+
+      await publicarVaga(empresa, DADOS);
+
+      expect((await direitoDePublicar(empresa.usuarioId)).creditos).toBe(
+        antes - 1,
+      );
+    });
+
+    /** Com o plano mensal ativo, publicar não custa crédito nenhum. */
+    it("plano mensal publica sem gastar crédito", async () => {
+      await debitarVagas(empresa.usuarioId, 50);
+      await estenderPlanoMensal(empresa.usuarioId);
+
+      await publicarVaga(empresa, DADOS);
+
+      expect((await direitoDePublicar(empresa.usuarioId)).creditos).toBe(0);
     });
   });
 
@@ -101,6 +177,8 @@ describe("vagas do painel da empresa", () => {
         cidade: "Sinop",
       });
       prestador = { usuarioId: usuario.id, papel: "prestador_servico" };
+      // Publicar custa crédito desde a #172, e o id só existe aqui.
+      await creditarVagas(prestador.usuarioId, 50);
     });
 
     afterEach(() => restaurarUsuarios());
@@ -254,6 +332,42 @@ describe("vagas do painel da empresa", () => {
       expect(new Date(reativada.expiraEm).getTime()).toBeGreaterThan(
         Date.now(),
       );
+    });
+
+    /**
+     * Reativar custa crédito, como publicar (#172).
+     *
+     * Sem isto a cobrança inteira vira teatro: a empresa compra uma vaga
+     * e a renova para sempre — vaga fantasma paga uma vez. Foi a razão de
+     * reverter o "gratuito e sem limite de vezes" com que a #157 nasceu,
+     * decidido quando publicar ainda não custava nada.
+     */
+    it("reativar gasta um crédito, como publicar", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const vaga = await publicarVaga(empresa, DADOS);
+      const antes = (await direitoDePublicar(empresa.usuarioId)).creditos;
+
+      vi.setSystemTime(new Date("2026-02-05T00:00:00Z"));
+      await reativarVaga(empresa, vaga.id);
+
+      expect((await direitoDePublicar(empresa.usuarioId)).creditos).toBe(
+        antes - 1,
+      );
+    });
+
+    it("sem saldo, não reativa", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const vaga = await publicarVaga(empresa, DADOS);
+      await debitarVagas(empresa.usuarioId, 50);
+
+      vi.setSystemTime(new Date("2026-02-05T00:00:00Z"));
+      const erro = await capturar(() => reativarVaga(empresa, vaga.id));
+
+      expect(erro.codigo).toBe("validacao");
+      expect(erro.mensagem).toMatch(/gasta uma vaga do saldo/i);
+      expect(erro.mensagem).toMatch(/plano mensal/i);
     });
 
     it("recusa reativar vaga que ainda não expirou", async () => {

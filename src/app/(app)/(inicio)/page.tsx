@@ -19,9 +19,11 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { CIDADE_INICIAL, ESTADO_NOME, rotuloDaCidade } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
+import { formatPrecoBRL } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { origemDoUsuario } from "@/server/auth/origem";
 import { type Papel, pode } from "@/server/auth/rbac";
+import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
 
 /**
  * O terceiro card, decidido pelo papel de quem está olhando.
@@ -203,8 +205,17 @@ export default async function HomePage() {
                     Sua empresa está contratando?
                   </h2>
                   <p className="mt-1 max-w-md text-sm text-muted">
+                    {/*
+                      O preço vem de `PRECO_CENTAVOS`, nunca escrito à mão
+                      aqui: preço repetido na tela e no servidor é como se
+                      anuncia um valor e se cobra outro — e esta frase já
+                      mentiu uma vez, quando dizia "a primeira vaga é
+                      gratuita" meses depois de publicar passar a custar.
+                    */}
                     Publique vagas, receba currículos organizados e acompanhe
-                    visualizações. A primeira vaga é gratuita.
+                    visualizações. A partir de{" "}
+                    {formatPrecoBRL(PRECO_CENTAVOS.empresa_vaga_avulsa / 100)}{" "}
+                    por vaga.
                   </p>
                 </div>
               </div>

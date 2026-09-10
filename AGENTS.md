@@ -977,7 +977,7 @@ texto, e métrica que sobe quando o dono recarrega mede o dono.
 O registro sai por `after()`, depois da resposta. Quem abriu a vaga quer
 ler a vaga; se a contagem falhar, vai para o log e a página segue.
 
-### Vaga expira em 30 dias, e reativar não cobra nada
+### Vaga expira em 30 dias, e reativar custa o mesmo que publicar
 
 Vaga publicada ficava aberta para sempre. Numa plataforma de emprego isso
 sustenta falsa esperança: candidatar-se a uma vaga de meses atrás, que pode
@@ -995,12 +995,24 @@ chamada direto, sem passar pela tela — o botão já some, mas "botão que só
 recusa depois do clique" é a armadilha que este arquivo já registrou, e a
 action não podia ficar de fora dela.
 
-**Reativar é gratuito e sem limite de vezes**, porque não é "publicar de
-novo" — só estende `expira_em`, sem mexer em `status` nem gastar crédito
-de postagem (relevante desde que existe crédito: ver a seção de cobrança,
-abaixo). É diferente de "encerrar", que é decisão do dono e continua sem
-volta: `reativarVaga` exige `status = 'aberta'` e o prazo já vencido,
-nunca uma vaga que o dono fechou.
+**Reativar custa uma vaga do saldo, como publicar** — decisão do Luiz em
+09/09/2026 (#172), revertendo o "gratuito e sem limite de vezes" com que
+a #157 nasceu. Este parágrafo afirmou o contrário por um dia, e a
+diferença não é de detalhe: a #157 foi decidida quando publicar não
+custava nada, e mantê-la depois da cobrança abriria o caminho óbvio para
+nunca mais pagar — publica uma vaga e renova para sempre. **Vaga fantasma
+paga uma vez.**
+
+O que continua valendo da #157 é o **estado**: reativar não é "publicar
+de novo" no sentido de `status`, só estende `expira_em`. É diferente de
+"encerrar", que é decisão do dono e continua sem volta — `reativarVaga`
+exige `status = 'aberta'` e o prazo já vencido, nunca uma vaga que o
+dono fechou.
+
+Vale como aviso sobre este arquivo: **quando uma decisão nova reverte uma
+antiga, o parágrafo da antiga é o que precisa ser reescrito** — não basta
+descrever a nova noutra seção. Aqui a seção de cobrança já dizia o certo
+enquanto esta dizia o contrário, e as duas eram lidas como verdade.
 
 Vaga publicada antes desta migração ganha 30 dias a partir do deploy —
 `aplica-prazo-vaga.sql` faz isso com o `default` da coluna, avaliado uma

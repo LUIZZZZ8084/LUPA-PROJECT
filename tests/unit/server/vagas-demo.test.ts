@@ -18,8 +18,10 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import { DEMO_COMPANY_ID } from "@/lib/mock-data";
 import type { Autenticado } from "@/server/auth/rbac";
+import { usarRepositorioCarteiras } from "@/server/carteiras";
 import { RepositorioVagasMemoria, usarRepositorioVagas } from "@/server/vagas";
 import { publicarVaga } from "@/server/vagas/servico";
+import { carteiraInfinita } from "./carteira-de-teste";
 
 const DADOS = {
   titulo: "Auxiliar Administrativo",
@@ -29,6 +31,18 @@ const DADOS = {
   tipoContrato: "CLT",
   endereco: "Av. das Itaúbas, 1200",
 };
+
+/*
+ * Publicar vaga custa crédito desde a #172, e este arquivo publica como
+ * preparação — o que ele mede é outra coisa. A carteira infinita deixa
+ * isso explícito; quem mede a carteira é `carteira-de-vagas.test.ts`, e
+ * quem mede o portão da publicação é `vagas.test.ts`.
+ */
+let restaurarCarteiraDoArquivo: () => void;
+beforeEach(() => {
+  restaurarCarteiraDoArquivo = usarRepositorioCarteiras(carteiraInfinita());
+});
+afterEach(() => restaurarCarteiraDoArquivo());
 
 describe("vagas em modo demonstração", () => {
   let restaurar: () => void;

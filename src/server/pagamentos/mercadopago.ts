@@ -27,6 +27,113 @@ export const temMercadoPagoConfigurado = Boolean(
   process.env.MERCADO_PAGO_ACCESS_TOKEN,
 );
 
+// ── Compra unica: Checkout Pro ────────────────────────────────────────────
+//
+// O `preapproval` acima autoriza um cartao e cobra todo mes. Aqui e o
+// contrario: cobra uma vez e acabou — o caminho da vaga avulsa e dos
+// pacotes (#172).
+//
+// Este bloco ja existiu e foi removido na #170, quando a mensalidade de
+// prestador virou recorrente e nada mais criava preferencia. Voltou junto
+// com a tela que o usa, que era a condicao registrada la: codigo que
+// nenhum caminho alcanca e a mesma armadilha do valor de enum sem
+// produtor.
+
+export interface PreferenciaCriada {
+  id: string;
+  /** URL do Checkout Pro para redirecionar quem esta pagando. */
+  initPoint: string;
+}
+
+export type ResultadoPreferencia =
+  | { ok: true; preferencia: PreferenciaCriada }
+  /** `detalhe` e o corpo cru da resposta do Mercado Pago, so para o log. */
+  | { ok: false; motivo: string; detalhe?: string };
+
+export async function criarPreferencia(
+  dados: {
+    titulo: string;
+    valorCentavos: number;
+    /** O id do nosso `pagamentos.id` — e o que o webhook devolve para achar a linha. */
+    referenciaExterna: string;
+    urlRetorno: string;
+    urlWebhook: string;
+  },
+  buscar: typeof fetch = fetch,
+): Promise<ResultadoPreferencia> {
+  try {
+    const resposta = await buscar(`${BASE}/checkout/preferences`, {
+      method: "POST",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token()}`,
+      },
+      body: JSON.stringify({
+        items: [
+          {
+            title: dados.titulo,
+            quantity: 1,
+            unit_price: dados.valorCentavos / 100,
+            currency_id: "BRL",
+          },
+        ],
+        external_reference: dados.referenciaExterna,
+        /*
+         * Sem `auto_return`: ele exige uma `back_url.success` alcancavel
+         * pela internet, e recusa a preferencia inteira com "back_url.
+         * success must be defined" quando a URL e `localhost` — em
+         * desenvolvimento sem tunel, isso derrubaria toda cobranca antes
+         * mesmo de existir. Sem ele, o Checkout Pro mostra um botao
+         * "voltar ao site" em vez de redirecionar sozinho: funciona em
+         * qualquer ambiente, so perde o automatismo. Descoberto testando
+         * com credencial real, nao em teoria.
+         */
+        back_urls: {
+          success: dados.urlRetorno,
+          pending: dados.urlRetorno,
+          failure: dados.urlRetorno,
+        },
+        notification_url: dados.urlWebhook,
+      }),
+      cache: "no-store",
+    });
+
+    if (!resposta.ok) {
+      const corpoErro = await resposta.text().catch(() => "");
+      return {
+        ok: false,
+        motivo: `O Mercado Pago recusou o pedido (${resposta.status}).`,
+        detalhe: corpoErro,
+      };
+    }
+
+    const corpo = (await resposta.json()) as {
+      id?: unknown;
+      init_point?: unknown;
+    };
+    const id = typeof corpo.id === "string" ? corpo.id : null;
+    const initPoint =
+      typeof corpo.init_point === "string" ? corpo.init_point : null;
+
+    if (!id || !initPoint) {
+      return {
+        ok: false,
+        motivo: "O Mercado Pago respondeu sem os dados esperados.",
+      };
+    }
+
+    return { ok: true, preferencia: { id, initPoint } };
+  } catch {
+    // Tempo esgotado, DNS, TLS: para quem esta tentando pagar e tudo a
+    // mesma coisa — nao deu para comecar a cobranca agora.
+    return {
+      ok: false,
+      motivo: "Nao foi possivel falar com o Mercado Pago agora.",
+    };
+  }
+}
+
 export interface PagamentoNoMercadoPago {
   id: string;
   /** "approved" | "pending" | "rejected" | "cancelled" | "refunded" | ... */
