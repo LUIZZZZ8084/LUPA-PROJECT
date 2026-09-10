@@ -14,6 +14,8 @@ import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
 import type { Role } from "@/lib/types";
+import { SelecaoDePlanoEmpresa } from "./selecao-plano-empresa";
+import { SelecaoDePlanoPrestador } from "./selecao-plano-prestador";
 
 const inicial: EstadoFormulario = {};
 
@@ -36,6 +38,34 @@ export function SignUpForm({ role }: { role: Role }) {
   const [tipoDocumento, setTipoDocumento] = useState<"cnpj" | "cpf">("cnpj");
 
   if (state.ok) {
+    /*
+     * Último passo do cadastro, para prestador e empresa (#184): escolher
+     * entre o plano trial e o plano pago, ali mesmo — em vez de descobrir
+     * que existe cobrança só depois, achando o caminho sozinho (a mesma
+     * lacuna que a #182 fechou parcialmente para quem já tinha conta).
+     * Candidato não tem plano nenhum para escolher e segue direto.
+     */
+    if (role === "prestador_servico" || role === "empresa") {
+      return (
+        <div className="space-y-5">
+          <Panel className="text-center">
+            <CheckCircle2 size={40} className="mx-auto text-vagas" />
+            <h2 className="mt-4 text-lg font-bold">Conta criada</h2>
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
+              {role === "prestador_servico"
+                ? "Falta um passo: escolha se quer aparecer na busca de quem procura profissional agora, ou continuar só com o perfil por enquanto."
+                : "Falta um passo: escolha como publicar sua primeira vaga, ou continue só com o perfil por enquanto."}
+            </p>
+          </Panel>
+          {role === "prestador_servico" ? (
+            <SelecaoDePlanoPrestador />
+          ) : (
+            <SelecaoDePlanoEmpresa />
+          )}
+        </div>
+      );
+    }
+
     return (
       <Panel className="text-center">
         <CheckCircle2 size={40} className="mx-auto text-vagas" />

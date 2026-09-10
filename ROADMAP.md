@@ -220,6 +220,12 @@ Qualidade:
   fica em Storage nenhum — é remontado a cada download, então editar o
   perfil depois da compra não custa de novo —
   [#47](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/47)
+- Seleção de plano como último passo do cadastro de prestador e de
+  empresa: o plano pago aparece em destaque ao lado do trial, em vez de
+  quem assina precisar achar o caminho sozinho depois. Reaproveita
+  `assinar()`/`comprar()` e os mesmos botões de `/perfil/assinatura` e
+  `/empresa/creditos` — nenhuma regra de cobrança nova —
+  [#184](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/184)
 
 ## Pendente
 
