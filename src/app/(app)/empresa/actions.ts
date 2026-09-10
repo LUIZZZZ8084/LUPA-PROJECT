@@ -30,8 +30,10 @@ export const encerrarVaga = criarAcao({
 });
 
 /**
- * Reativar vaga expirada: renova o prazo por 30 dias, de graça. Some do
- * painel a marca de "expirada" e volta a aparecer em `/vagas`.
+ * Reativar vaga expirada: renova o prazo por 30 dias e **gasta uma vaga
+ * do saldo**, como publicar (#172) — reativar de graça seria o caminho
+ * óbvio para nunca mais pagar. Some do painel a marca de "expirada" e a
+ * vaga volta a aparecer em `/vagas`.
  */
 export const reativarVaga = criarAcao({
   nome: "vaga.reativar",

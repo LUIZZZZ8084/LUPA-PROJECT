@@ -224,11 +224,23 @@ export default async function EmpresaPage() {
             <p className="mt-1 text-xs text-muted">
               CNPJ {company.cnpj ?? "não informado"}
             </p>
+            {/*
+              O selo lia `company.plan`, a coluna `perfis_empresa.plano`
+              que nasceu no schema e **nunca teve quem a escrevesse** — a
+              armadilha do estado declarado sem produtor, registrada no
+              AGENTS.md. Presa em `trial` para todo mundo, ela fazia o
+              painel prometer "1ª vaga gratuita" a quem paga desde a
+              primeira, e continuaria dizendo isso a quem tivesse acabado
+              de assinar o mensal de R$ 199,90.
+
+              Quem responde de verdade é a carteira, que a página já
+              carregou logo acima para o card de saldo.
+            */}
             <div className="mt-2.5">
-              <Badge tone={company.plan === "mensal" ? "empresas" : "outline"}>
-                {company.plan === "mensal"
+              <Badge tone={direito.mensalAtivo ? "empresas" : "outline"}>
+                {direito.mensalAtivo
                   ? "Plano mensal ativo"
-                  : "Período de teste — 1ª vaga gratuita"}
+                  : "Pagamento por vaga"}
               </Badge>
             </div>
           </div>

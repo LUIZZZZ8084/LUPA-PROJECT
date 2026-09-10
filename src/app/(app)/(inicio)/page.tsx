@@ -204,7 +204,7 @@ export default async function HomePage() {
                   </h2>
                   <p className="mt-1 max-w-md text-sm text-muted">
                     Publique vagas, receba currículos organizados e acompanhe
-                    visualizações. A primeira vaga é gratuita.
+                    visualizações. A partir de R$ 29,90 por vaga.
                   </p>
                 </div>
               </div>
