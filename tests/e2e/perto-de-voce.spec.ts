@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ARQUIVO_SESSAO_EMPRESA } from "./helpers";
+import { ARQUIVO_SESSAO_EMPRESA, confirmarPublicacao } from "./helpers";
 
 /**
  * Ordenação por proximidade e título por cidade — Issues #79 e #78.
@@ -32,7 +32,7 @@ test.describe("mais perto de você primeiro", () => {
         "Vaga de teste automatizado para conferir a ordenação por " +
           "proximidade na busca de vagas.",
       );
-    await page.getByRole("button", { name: /Publicar vaga/i }).click();
+    await confirmarPublicacao(page);
     await expect(page.getByText("Vaga publicada")).toBeVisible();
   }
 

@@ -250,22 +250,56 @@ export function emailDaConta(papel: "candidato" | "empresa"): string {
 }
 
 /**
- * Compra crédito de vaga pela própria tela, em modo demonstração.
+ * Quantos pacotes o setup compra.
  *
- * Publicar passou a custar crédito (#172), e a suíte roda sempre em
- * demonstração — onde a compra é aprovada na hora, sem Mercado Pago e sem
- * dinheiro. Então o caminho honesto é o mesmo que a empresa percorre:
- * abrir `/empresa/creditos` e comprar.
+ * A conta de empresa é uma só para a suíte inteira, e os dois projetos —
+ * desktop e mobile — publicam contra o mesmo servidor. Um pacote bastava
+ * enquanto ele era de 15 vagas; quando virou 10, o projeto que roda por
+ * último ficava sem saldo no meio do caminho, e o vermelho aparecia em
+ * `vaga-de-outra-cidade.spec.ts`, que não tem nada a ver com cobrança.
  *
- * Semear crédito por baixo seria mais rápido e pior: o teste passaria com
+ * O número é folgado de propósito, pela mesma razão que o saldo dos testes
+ * unitários é 50: falha por falta de saldo aponta para o teste errado, e
+ * teste que falha pelo motivo errado ensina a ignorar vermelho. Comprar de
+ * sobra é barato — em demonstração não há dinheiro nem chamada de rede.
+ */
+const PACOTES_NO_SETUP = 4;
+
+/**
+ * Compra saldo de vaga pela própria tela, em modo demonstração.
+ *
+ * Publicar passou a custar (#172), e a suíte roda sempre em demonstração —
+ * onde a compra é aprovada na hora, sem Mercado Pago e sem dinheiro. Então
+ * o caminho honesto é o mesmo que a empresa percorre: abrir
+ * `/empresa/creditos` e comprar.
+ *
+ * Semear o saldo por baixo seria mais rápido e pior: o teste passaria com
  * a tela de compra quebrada, que é exatamente o tipo de coisa que este
  * projeto já registra ter deixado passar.
  */
 export async function comprarCreditoDeVaga(page: Page): Promise<void> {
-  await page.goto("/empresa/creditos");
-  await page.getByRole("button", { name: /comprar 10 vagas/i }).click();
-  await page.waitForURL(/\/pagamento\/retorno/, { timeout: 20_000 });
-  await expect(
-    page.getByRole("heading", { name: "Pagamento aprovado" }),
-  ).toBeVisible({ timeout: 30_000 });
+  for (let i = 0; i < PACOTES_NO_SETUP; i++) {
+    await page.goto("/empresa/creditos");
+    await page.getByRole("button", { name: /comprar 10 vagas/i }).click();
+    await page.waitForURL(/\/pagamento\/retorno/, { timeout: 20_000 });
+    await expect(
+      page.getByRole("heading", { name: "Pagamento aprovado" }),
+    ).toBeVisible({ timeout: 30_000 });
+  }
+}
+
+/**
+ * Fecha a publicação de uma vaga: revisar e confirmar.
+ *
+ * Publicar virou duas etapas na #173 — a empresa confere o que vai ao ar
+ * antes de confirmar, porque vaga publicada não se edita mais. Os testes
+ * que publicam como preparação passam por aqui em vez de repetir os dois
+ * cliques, e assim uma mudança no rótulo dos botões se conserta num lugar
+ * só.
+ */
+export async function confirmarPublicacao(page: Page): Promise<void> {
+  await page
+    .getByRole("button", { name: /revisar antes de publicar/i })
+    .click();
+  await page.getByRole("button", { name: /confirmar e publicar/i }).click();
 }

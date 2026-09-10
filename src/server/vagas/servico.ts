@@ -1,18 +1,13 @@
 import { empresaDoPainel } from "@/lib/data";
 import { vagaExpirada } from "@/lib/format";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import {
-  type Autenticado,
-  exigirCapacidade,
-  exigirDono,
-  pode,
-} from "../auth/rbac";
+import { type Autenticado, exigirCapacidade, exigirDono } from "../auth/rbac";
 import { devolverCredito, gastarParaPublicar } from "../carteiras/servico";
 import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
 import { repositorioVagas } from "./index";
-import type { DadosNovaVaga, EdicaoVaga, Vaga } from "./tipos";
+import type { DadosNovaVaga, Vaga } from "./tipos";
 
 /**
  * Regras de vaga no painel da empresa.
@@ -144,38 +139,20 @@ export async function publicarVaga(
   return vaga;
 }
 
-export async function editarVaga(
-  sessao: Autenticado | null,
-  id: string,
-  campos: EdicaoVaga,
-): Promise<Vaga> {
-  const autenticado = exigirCapacidade(sessao, "vaga:editar_propria");
-  await vagaDaEmpresa(autenticado, id);
-
-  const vaga = await repositorioVagas().atualizar(id, campos);
-  log.info("vaga editada", { acao: "vaga.editar", papel: autenticado.papel });
-  return vaga;
-}
-
-/**
- * Busca para a tela de edição: `null` cobre tanto "não existe" quanto
- * "não é sua", igual à regra de 404 em vez de 403 — um erro diferente para
- * cada caso confirmaria, para quem sonda ids, que a vaga existe.
+/*
+ * `editarVaga` e `vagaParaEditar` saíram na #173.
+ *
+ * Vaga publicada não se edita mais. Com cobrança por vaga (#172), editar
+ * era o caminho óbvio para não pagar: publica uma e, a cada vaga nova,
+ * reescreve a mesma por dentro — o anúncio muda de conteúdo e nunca custa
+ * de novo. E do outro lado o dano é pior: quem se candidatou a uma vaga
+ * de motorista descobriria, no dia da entrevista, que ela virou outra
+ * coisa.
+ *
+ * O que substitui é a revisão obrigatória antes de publicar, com o aviso
+ * de que não dá para editar depois — e `encerrarVaga`, logo abaixo, para
+ * quem se arrependeu do anúncio inteiro.
  */
-export async function vagaParaEditar(
-  sessao: Autenticado | null,
-  id: string,
-): Promise<Vaga | null> {
-  if (!sessao || !pode(sessao.papel, "vaga:editar_propria")) return null;
-
-  const atual = await repositorioVagas().porId(id);
-  if (!atual) return null;
-  if (sessao.papel !== "admin" && atual.empresaId !== idDaEmpresa(sessao)) {
-    return null;
-  }
-
-  return atual;
-}
 
 export async function encerrarVaga(
   sessao: Autenticado | null,

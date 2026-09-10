@@ -376,12 +376,6 @@ export default async function EmpresaPage() {
                   </Link>
                   {job.status === "aberta" && (
                     <div className="flex shrink-0 items-center gap-2">
-                      <Link
-                        href={`/empresa/vagas/${job.id}/editar`}
-                        className="text-xs font-semibold text-muted underline-offset-2 hover:text-ink hover:underline"
-                      >
-                        Editar
-                      </Link>
                       {expirada ? (
                         <ReativarVagaButton id={job.id} />
                       ) : (

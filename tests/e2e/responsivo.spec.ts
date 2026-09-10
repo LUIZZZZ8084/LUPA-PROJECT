@@ -107,7 +107,9 @@ test.describe("rotas da empresa", () => {
       await page.setViewportSize({ width: w, height: h });
 
       const profundas = await rotasProfundasDaEmpresa(page);
-      expect(profundas.length, "o painel não ofereceu nenhum link").toBe(2);
+      // Uma só desde a #173: a edição de vaga saiu junto com a regra de
+      // que vaga publicada não se edita.
+      expect(profundas.length, "o painel não ofereceu nenhum link").toBe(1);
 
       for (const { path, nome } of [...ROTAS_EMPRESA, ...profundas]) {
         await page.goto(path);

@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { ARQUIVO_SESSAO_EMPRESA, aguardarHidratacao } from "./helpers";
+import {
+  ARQUIVO_SESSAO_EMPRESA,
+  aguardarHidratacao,
+  confirmarPublicacao,
+} from "./helpers";
 
 /**
  * Vaga publicada fora de Sinop precisa aparecer na busca — Issue #76.
@@ -39,7 +43,7 @@ test.describe("vaga publicada fora de Sinop", () => {
           "publicada fora da cidade inicial.",
       );
 
-    await page.getByRole("button", { name: /Publicar vaga/i }).click();
+    await confirmarPublicacao(page);
     await expect(page.getByText("Vaga publicada")).toBeVisible();
 
     // A confirmação fala da cidade da vaga, não da cidade inicial do app.
@@ -88,7 +92,7 @@ test.describe("vaga publicada fora de Sinop", () => {
           "continua separando um município do outro.",
       );
 
-    await page.getByRole("button", { name: /Publicar vaga/i }).click();
+    await confirmarPublicacao(page);
     await expect(page.getByText("Vaga publicada")).toBeVisible();
 
     const link = page.getByRole("link", { name: new RegExp(cargo) });

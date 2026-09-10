@@ -221,7 +221,6 @@ describe("RBAC", () => {
   it("prestador publica no perfil e contrata, mas não se candidata", () => {
     expect(pode("prestador_servico", "publicacao:criar")).toBe(true);
     expect(pode("prestador_servico", "vaga:publicar")).toBe(true);
-    expect(pode("prestador_servico", "vaga:editar_propria")).toBe(true);
     expect(pode("prestador_servico", "vaga:encerrar_propria")).toBe(true);
     expect(pode("prestador_servico", "candidatura:mover_estagio")).toBe(true);
     expect(pode("prestador_servico", "candidatura:criar")).toBe(false);

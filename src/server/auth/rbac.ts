@@ -56,7 +56,6 @@ export type Capacidade =
   | "prestador:gerenciar_assinatura"
   // Vagas
   | "vaga:publicar"
-  | "vaga:editar_propria"
   | "vaga:encerrar_propria"
   /*
    * Reativar vaga que passou dos 30 dias — nunca a que foi encerrada à
@@ -163,7 +162,6 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
      * este arquivo já registrou duas vezes.
      */
     "vaga:publicar",
-    "vaga:editar_propria",
     "vaga:encerrar_propria",
     "vaga:reativar_propria",
     "vaga:ver_candidaturas_proprias",
@@ -174,7 +172,6 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "perfil:editar_proprio",
     "perfil:enviar_documento",
     "vaga:publicar",
-    "vaga:editar_propria",
     "vaga:encerrar_propria",
     "vaga:reativar_propria",
     "vaga:ver_candidaturas_proprias",
