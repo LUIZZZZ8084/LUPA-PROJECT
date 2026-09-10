@@ -284,11 +284,20 @@ export function PerfilPrestador({
 export function PerfilEmpresa({
   empresa,
   docVerificado,
+  direito,
   verificarCnpj,
 }: {
   empresa: PerfilEmpresaDados | null;
   /** Verificada, a empresa não vê o convite para conferir o CNPJ. */
   docVerificado: boolean;
+  /**
+   * O que ela pode publicar hoje — plano mensal ativo, ou saldo de vagas.
+   *
+   * Vem por prop, e não de uma consulta aqui dentro, porque este arquivo é
+   * lido por teste de componente: buscar a carteira daqui arrastaria o
+   * repositório para dentro do teste. A página já carrega o valor.
+   */
+  direito?: { mensalAtivo: boolean; creditos: number } | null;
   /**
    * O botão de conferência, injetado pela página.
    *
@@ -328,10 +337,30 @@ export function PerfilEmpresa({
           Pessoa física — CPF confirmado.
         </p>
       )}
+      {/*
+        O selo lia `empresa.plano` e dizia "Período de teste" para todo
+        mundo, para sempre — inclusive para quem tivesse acabado de assinar
+        o mensal de R$ 199,90. `perfis_empresa.plano` é a coluna que o
+        AGENTS.md cita como exemplo de estado declarado sem produtor: nada
+        nunca escreveu nela.
+
+        Era a **terceira** aparição da mesma coluna morta numa tela; as
+        outras duas caíram na #172 e na #179. Esta sobreviveu porque as
+        varreduras anteriores foram por caminho de código, e este era só
+        um texto.
+
+        Quem responde de verdade é a carteira. E o selo mostra o saldo
+        quando não há plano: "Período de teste" não dizia nada acionável,
+        e "3 vagas para publicar" diz.
+      */}
       <div className="mt-3 flex items-center gap-2">
         <Award size={14} className="text-empresas" />
-        <Badge tone={empresa.plano === "mensal" ? "empresas" : "neutral"}>
-          {empresa.plano === "mensal" ? "Plano mensal" : "Período de teste"}
+        <Badge tone={direito?.mensalAtivo ? "empresas" : "neutral"}>
+          {direito?.mensalAtivo
+            ? "Plano mensal ativo"
+            : direito?.creditos === 1
+              ? "1 vaga para publicar"
+              : `${direito?.creditos ?? 0} vagas para publicar`}
         </Badge>
       </div>
 
