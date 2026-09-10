@@ -21,20 +21,35 @@ export interface DistribuicaoLocal {
 }
 
 /**
- * Faturamento.
+ * O caixa: o que entrou e o que saiu, em centavos.
  *
- * Enquanto não houver integração de pagamento, isto é **derivado**: conta
- * quantas empresas estão no plano mensal e multiplica pelo preço de tabela.
- * Não é receita reconhecida, é projeção — e o painel diz isso na tela, para
- * ninguém tomar decisão achando que o dinheiro já entrou.
+ * Deixou de ser projeção. Até 10/09/2026 este bloco contava empresas em
+ * `perfis_empresa.plano` — coluna que nada escreve — e multiplicava por um
+ * preço de tabela: um número que era sempre zero e se anunciava como
+ * receita. Hoje sai de `pagamentos`, que é por onde o dinheiro passa.
+ *
+ * **As duas saídas ficam separadas de propósito.** Somadas dariam um total
+ * certo e uma leitura errada: `estornado` foi devolução nossa, e
+ * `contestado` é disputa aberta no cartão — custa taxa, é sinal de fraude
+ * e dá para contestar de volta. Quem olha o painel precisa saber qual dos
+ * dois está crescendo.
+ *
+ * **`recorrente` é a parte que se repete sozinha no mês que vem** —
+ * mensalidade de prestador e plano mensal de vagas. O resto é compra
+ * única: pacote de vagas e vaga avulsa não voltam sem alguém comprar de
+ * novo, e misturar os dois faz um mês bom de pacotes parecer receita
+ * previsível.
  */
-export interface Faturamento {
-  assinaturasAtivas: number;
-  emTeste: number;
-  precoMensal: number;
-  receitaMensalEstimada: number;
-  /** Falso enquanto o valor vier de contagem de planos, não de pagamento. */
-  confirmado: boolean;
+export interface Caixa {
+  entrouCentavos: number;
+  estornadoCentavos: number;
+  contestadoCentavos: number;
+  /** Quanto do que entrou vem de assinatura, e não de compra única. */
+  recorrenteCentavos: number;
+  /** Entradas menos as duas saídas. */
+  liquidoCentavos: number;
+  cobrancas: number;
+  contestacoes: number;
 }
 
 export interface Totais {
@@ -49,7 +64,7 @@ export interface PainelAdmin {
   totais: Totais;
   cadastros: CadastrosPorDia[];
   locais: DistribuicaoLocal[];
-  faturamento: Faturamento;
+  caixa: Caixa;
   /** Momento da apuração, para a tela mostrar há quanto tempo é o dado. */
   apuradoEm: string;
 }
@@ -58,5 +73,14 @@ export interface RepositorioMetricas {
   totais(): Promise<Totais>;
   cadastrosPorDia(dias: number): Promise<CadastrosPorDia[]>;
   distribuicaoPorLocal(limite: number): Promise<DistribuicaoLocal[]>;
-  planosDeEmpresa(): Promise<{ mensal: number; trial: number }>;
+
+  /**
+   * O caixa, somado no banco e não na aplicação.
+   *
+   * Trazer `pagamentos` inteira para somar aqui funcionaria hoje, com duas
+   * linhas, e pararia de funcionar sem avisar — a tabela só cresce, e o
+   * painel recarrega a cada 15 segundos. `sum(...) filter (...)` faz isso
+   * numa varredura só.
+   */
+  caixa(): Promise<Caixa>;
 }

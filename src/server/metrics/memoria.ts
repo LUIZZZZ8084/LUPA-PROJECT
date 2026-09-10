@@ -1,8 +1,10 @@
 import { getJobs, getProviders } from "@/lib/data";
 import type { Papel } from "../auth/rbac";
+import { pagamentosEmMemoria } from "../pagamentos";
 import type { RepositorioMemoria } from "../repositories/memoria";
 import type {
   CadastrosPorDia,
+  Caixa,
   DistribuicaoLocal,
   RepositorioMetricas,
   Totais,
@@ -78,11 +80,42 @@ export class RepositorioMetricasMemoria implements RepositorioMetricas {
       .slice(0, limite);
   }
 
-  async planosDeEmpresa(): Promise<{ mensal: number; trial: number }> {
-    const empresas = this.usuarios.todos().filter((u) => u.papel === "empresa");
+  /**
+   * O caixa em demonstração, somado a partir das cobranças em memória.
+   *
+   * Sem Mercado Pago configurado toda compra é aprovada na hora, então o
+   * painel mostra dinheiro de mentira — e é o certo: quem demonstra o
+   * produto precisa ver o bloco preenchido, e o aviso na tela já diz que
+   * o ambiente é de demonstração.
+   */
+  async caixa(): Promise<Caixa> {
+    const somar = (filtro: (p: { status: string }) => boolean) =>
+      pagamentosEmMemoria()
+        .filter(filtro)
+        .reduce((total, p) => total + p.valorCentavos, 0);
 
-    // No modo demonstração toda empresa nova entra em teste.
-    return { mensal: 0, trial: empresas.length };
+    const entrouCentavos = somar((p) => p.status === "aprovado");
+    const estornadoCentavos = somar((p) => p.status === "estornado");
+    const contestadoCentavos = somar((p) => p.status === "contestado");
+
+    return {
+      entrouCentavos,
+      estornadoCentavos,
+      contestadoCentavos,
+      recorrenteCentavos: pagamentosEmMemoria()
+        .filter(
+          (p) =>
+            p.status === "aprovado" &&
+            (p.tipo === "prestador_mensalidade" || p.tipo === "empresa_mensal"),
+        )
+        .reduce((total, p) => total + p.valorCentavos, 0),
+      liquidoCentavos: entrouCentavos - estornadoCentavos - contestadoCentavos,
+      cobrancas: pagamentosEmMemoria().filter((p) => p.status === "aprovado")
+        .length,
+      contestacoes: pagamentosEmMemoria().filter(
+        (p) => p.status === "contestado",
+      ).length,
+    };
   }
 }
 

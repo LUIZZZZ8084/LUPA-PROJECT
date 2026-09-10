@@ -6,11 +6,7 @@ import type { Autenticado, Papel } from "@/server/auth/rbac";
 import { ehAppError } from "@/server/errors";
 import { usarRepositorioMetricas } from "@/server/metrics";
 import { RepositorioMetricasMemoria } from "@/server/metrics/memoria";
-import {
-  PRECO_MENSAL_EMPRESA,
-  painelAdmin,
-  somarCadastros,
-} from "@/server/metrics/servico";
+import { painelAdmin, somarCadastros } from "@/server/metrics/servico";
 import type { RepositorioMetricas } from "@/server/metrics/tipos";
 import { RepositorioMemoria } from "@/server/repositories/memoria";
 
@@ -31,7 +27,15 @@ function repoFalso(
     }),
     cadastrosPorDia: async () => [],
     distribuicaoPorLocal: async () => [],
-    planosDeEmpresa: async () => ({ mensal: 0, trial: 0 }),
+    caixa: async () => ({
+      entrouCentavos: 0,
+      estornadoCentavos: 0,
+      contestadoCentavos: 0,
+      recorrenteCentavos: 0,
+      liquidoCentavos: 0,
+      cobrancas: 0,
+      contestacoes: 0,
+    }),
     ...sobrescrever,
   };
 }
@@ -71,35 +75,70 @@ describe("painel administrativo", () => {
     });
   });
 
-  describe("faturamento", () => {
-    it("multiplica assinaturas pelo preço de tabela", async () => {
+  describe("caixa", () => {
+    /**
+     * O bloco existia como projeção: contava `perfis_empresa.plano` e
+     * multiplicava por um preço de tabela. A coluna nunca teve produtor,
+     * então o número era sempre zero e se anunciava como receita — o
+     * defeito da #179. Agora vem de `pagamentos`.
+     */
+    it("passa adiante o que entrou, e conta as cobranças", async () => {
       restaurar = usarRepositorioMetricas(
-        repoFalso({ planosDeEmpresa: async () => ({ mensal: 4, trial: 7 }) }),
+        repoFalso({
+          caixa: async () => ({
+            entrouCentavos: 49_800,
+            estornadoCentavos: 0,
+            contestadoCentavos: 0,
+            recorrenteCentavos: 19_900,
+            liquidoCentavos: 49_800,
+            cobrancas: 3,
+            contestacoes: 0,
+          }),
+        }),
       );
 
       const painel = await painelAdmin(admin);
 
-      expect(painel.faturamento.assinaturasAtivas).toBe(4);
-      expect(painel.faturamento.emTeste).toBe(7);
-      expect(painel.faturamento.receitaMensalEstimada).toBe(
-        4 * PRECO_MENSAL_EMPRESA,
-      );
+      expect(painel.caixa.entrouCentavos).toBe(49_800);
+      expect(painel.caixa.cobrancas).toBe(3);
+      expect(painel.caixa.recorrenteCentavos).toBe(19_900);
     });
 
     /**
-     * O painel precisa dizer que o número é projeção. Sem isso alguém decide
-     * contratar achando que o dinheiro entrou.
+     * As duas saídas não se somam numa só.
+     *
+     * Devolver dinheiro é decisão da casa; contestação é o cliente abrindo
+     * disputa no cartão — custa taxa, é sinal de fraude e dá para
+     * contestar de volta. Um total único daria o número certo e a leitura
+     * errada, e depois de agregado não há como separar.
      */
-    it("marca o valor como não confirmado enquanto não há pagamento", async () => {
-      restaurar = usarRepositorioMetricas(repoFalso());
+    it("mantém devolução e contestação separadas", async () => {
+      restaurar = usarRepositorioMetricas(
+        repoFalso({
+          caixa: async () => ({
+            entrouCentavos: 100_000,
+            estornadoCentavos: 2_990,
+            contestadoCentavos: 19_990,
+            recorrenteCentavos: 0,
+            liquidoCentavos: 77_020,
+            cobrancas: 5,
+            contestacoes: 1,
+          }),
+        }),
+      );
+
       const painel = await painelAdmin(admin);
-      expect(painel.faturamento.confirmado).toBe(false);
+
+      expect(painel.caixa.estornadoCentavos).toBe(2_990);
+      expect(painel.caixa.contestadoCentavos).toBe(19_990);
+      expect(painel.caixa.contestacoes).toBe(1);
     });
 
-    it("sem assinatura, receita é zero e não quebra", async () => {
+    it("sem cobrança nenhuma, o caixa é zero e não quebra", async () => {
       restaurar = usarRepositorioMetricas(repoFalso());
       const painel = await painelAdmin(admin);
-      expect(painel.faturamento.receitaMensalEstimada).toBe(0);
+      expect(painel.caixa.liquidoCentavos).toBe(0);
+      expect(painel.caixa.cobrancas).toBe(0);
     });
   });
 
@@ -245,9 +284,22 @@ describe("métricas no modo demonstração", () => {
     expect(depois.usuarios).toBe(antes.usuarios + 1);
   });
 
-  it("empresa nova entra como teste, não como assinatura", async () => {
+  /**
+   * Conta criada não é dinheiro entrado.
+   *
+   * O teste antigo era "empresa nova entra como teste, não como
+   * assinatura", sobre `perfis_empresa.plano` — coluna que nada escreve.
+   * Ele passava sempre, e passaria com a cobrança inteira quebrada: media
+   * o cadastro, não o pagamento. O caixa só se mexe quando existe
+   * cobrança aprovada.
+   */
+  it("cadastrar empresa não mexe no caixa", async () => {
     await criar("empresa");
-    expect(await repo.planosDeEmpresa()).toEqual({ mensal: 0, trial: 1 });
+    expect(await repo.caixa()).toMatchObject({
+      entrouCentavos: 0,
+      cobrancas: 0,
+      liquidoCentavos: 0,
+    });
   });
 
   it("respeita o limite de locais pedido", async () => {

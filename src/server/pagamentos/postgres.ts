@@ -208,8 +208,9 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
   async estornar(
     id: string,
     mpPaymentId: string | null,
+    saida: "estornado" | "contestado" = "estornado",
   ): Promise<Pagamento | null> {
-    return mudarStatusSe(id, "aprovado", "estornado", mpPaymentId);
+    return mudarStatusSe(id, "aprovado", saida, mpPaymentId);
   }
 
   // ── Assinaturas recorrentes ───────────────────────────────────────────

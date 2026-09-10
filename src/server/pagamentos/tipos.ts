@@ -19,12 +19,33 @@ export type TipoPagamento =
   /** …e uma assinatura mensal, que dispensa crédito enquanto vale. */
   | "empresa_mensal";
 
+/**
+ * Os seis desfechos de uma cobrança.
+ *
+ * `estornado` e `contestado` são os dois que tiram dinheiro, e são
+ * separados de propósito — decisão do Luiz em 10/09/2026 (#179), quando
+ * "todo valor que entra deve ser registrado, e o que sai também" virou a
+ * regra do caixa.
+ *
+ * Até aqui os dois caíam em `estornado`, porque o efeito no app é o mesmo:
+ * a mensalidade cai na hora. Só que o efeito é o que eles têm em comum, e
+ * não o que eles são:
+ *
+ * - **`estornado`** — nós devolvemos. Foi decisão da casa.
+ * - **`contestado`** — o cliente abriu disputa no cartão (`charged_back`).
+ *   Custa taxa do Mercado Pago, é sinal de fraude ou de compra que a
+ *   pessoa não reconheceu, e dá para contestar de volta.
+ *
+ * A informação chega uma vez só, no webhook, e some se não for gravada
+ * ali — depois não há como saber qual saída foi qual.
+ */
 export type StatusPagamento =
   | "pendente"
   | "aprovado"
   | "rejeitado"
   | "cancelado"
-  | "estornado";
+  | "estornado"
+  | "contestado";
 
 export interface Pagamento {
   id: string;
@@ -167,21 +188,29 @@ export interface RepositorioPagamentos {
   cancelar(id: string, mpPaymentId: string | null): Promise<Pagamento | null>;
 
   /**
-   * Estorno ou chargeback — e este parte de `"aprovado"`, não de
-   * `"pendente"`.
+   * Dinheiro de volta — e esta parte de `"aprovado"`, não de `"pendente"`.
    *
    * É a diferença que faz esta operação existir separada: os outros três
    * desfechos resolvem uma cobrança que ainda estava em aberto, e por isso
-   * a guarda deles é `status = 'pendente'`. Estorno acontece **depois** de
-   * o dinheiro ter entrado, sobre uma cobrança já aprovada — a mesma
+   * a guarda deles é `status = 'pendente'`. Devolução acontece **depois**
+   * de o dinheiro ter entrado, sobre uma cobrança já aprovada — a mesma
    * guarda ali recusaria a transição e o dinheiro voltaria sem ninguém
    * saber.
+   *
+   * `saida` diz **qual** das duas foi, e é o que o webhook sabe e mais
+   * ninguém: `refunded` é devolução nossa, `charged_back` é disputa aberta
+   * pelo cliente. Gravar isso aqui é a única chance — depois as duas viram
+   * "saiu dinheiro" e não há como separar.
    *
    * Continua condicional pelo mesmo motivo dos outros: o Mercado Pago
    * reenvia webhook, e a reversão do efeito não pode acontecer duas vezes.
    * `null` quando outra notificação já resolveu.
    */
-  estornar(id: string, mpPaymentId: string | null): Promise<Pagamento | null>;
+  estornar(
+    id: string,
+    mpPaymentId: string | null,
+    saida?: "estornado" | "contestado",
+  ): Promise<Pagamento | null>;
 
   // ── Assinaturas recorrentes (#170) ────────────────────────────────────
 

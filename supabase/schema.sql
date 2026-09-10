@@ -72,8 +72,18 @@ create type tipo_pagamento as enum (
   'empresa_mensal'
 );
 
+/*
+ * Os seis desfechos de uma cobranca.
+ *
+ * `estornado` e `contestado` sao os dois que tiram dinheiro, e sao
+ * separados de proposito (#179): o efeito no app e o mesmo, mas um foi
+ * decisao nossa e o outro e disputa aberta pelo cliente no cartao, que
+ * custa taxa e da para contestar de volta. A informacao chega uma vez so,
+ * no webhook, e some se nao for gravada ali.
+ */
 create type status_pagamento as enum
-  ('pendente', 'aprovado', 'rejeitado', 'cancelado', 'estornado');
+  ('pendente', 'aprovado', 'rejeitado', 'cancelado', 'estornado',
+   'contestado');
 
 /*
  * O ciclo de vida de uma assinatura recorrente, espelhando o
@@ -1254,12 +1264,43 @@ from usuarios
 where papel <> 'admin'
 group by cidade, bairro;
 
-create view metricas_planos
+/*
+ * O caixa: o que entrou e o que saiu, de verdade (#179).
+ *
+ * A view antiga (`metricas_planos`) contava `perfis_empresa.plano`, coluna
+ * que nunca teve quem escrevesse nela — entao `mensal` era sempre zero e a
+ * "receita estimada" do painel era zero vezes um preco. Estado declarado
+ * sem produtor, a armadilha que este schema ja registrou tres vezes.
+ *
+ * Aqui a fonte e `pagamentos`, que e onde o dinheiro de verdade passa.
+ * Decisao do Luiz em 10/09/2026: todo valor que entra deve ser
+ * registrado, e o que sai tambem.
+ *
+ * As duas saidas ficam em colunas separadas porque significam coisas
+ * diferentes: `estornado` foi devolucao nossa, `contestado` e disputa no
+ * cartao — custa taxa e e sinal de fraude. Somadas dariam um numero certo
+ * e uma leitura errada.
+ *
+ * `recorrente` separa o que se repete sozinho todo mes do que foi compra
+ * unica: sao as duas metades de qualquer projecao, e misturadas fazem um
+ * mes bom de pacotes parecer receita previsivel.
+ */
+create view metricas_caixa
 with (security_invoker = false) as
 select
-  count(*) filter (where plano = 'mensal') as mensal,
-  count(*) filter (where plano = 'trial')  as trial
-from perfis_empresa;
+  coalesce(sum(valor_centavos) filter (where status = 'aprovado'), 0)
+    as entrou_centavos,
+  coalesce(sum(valor_centavos) filter (where status = 'estornado'), 0)
+    as estornado_centavos,
+  coalesce(sum(valor_centavos) filter (where status = 'contestado'), 0)
+    as contestado_centavos,
+  coalesce(sum(valor_centavos) filter (
+    where status = 'aprovado'
+      and tipo in ('prestador_mensalidade', 'empresa_mensal')
+  ), 0) as recorrente_centavos,
+  count(*) filter (where status = 'aprovado')    as cobrancas,
+  count(*) filter (where status = 'contestado')  as contestacoes
+from pagamentos;
 
 -- ============================================================================
 -- 12. Row Level Security
@@ -1378,7 +1419,7 @@ revoke select on verification_queue            from anon, authenticated;
 revoke select on metricas_totais               from anon, authenticated;
 revoke select on metricas_cadastros_por_dia    from anon, authenticated;
 revoke select on metricas_por_local            from anon, authenticated;
-revoke select on metricas_planos               from anon, authenticated;
+revoke select on metricas_caixa                from anon, authenticated;
 
 /*
  * E as tabelas que guardam o mesmo dado por baixo das views.

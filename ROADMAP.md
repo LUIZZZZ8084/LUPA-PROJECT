@@ -175,7 +175,8 @@ Qualidade:
   `useSyncExternalStore`, sem estado próprio —
   [#146](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/146)
 - Vaga expira 30 dias após publicada, e some de `/vagas` e da home; a
-  empresa reativa de graça pelo painel, sem gastar crédito de postagem —
+  empresa reativa pelo painel. Reativar era gratuito enquanto publicar
+  também era; desde a #172 gasta uma vaga do saldo, como publicar —
   [#157](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/157)
 - Infraestrutura de cobrança via Mercado Pago (tabela `pagamentos`,
   webhook com assinatura validada, modo demonstração sem credencial) e
@@ -188,9 +189,11 @@ Qualidade:
   primeira cobrança, em até 30 dias. Antes disto era pagamento avulso —
   o perfil sumia da vitrine no dia 31, sem cobrança nova e sem aviso —
   [#170](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/170)
-- Publicar vaga passou a ser pago: avulsa, pacotes de 5 e 15, e plano
-  mensal ilimitado. Publicar **e reativar** consomem crédito, para não
-  sobrar o caminho de renovar a mesma vaga para sempre —
+- Publicar vaga passou a ser pago: avulsa, pacotes de 5 e 10, e plano
+  mensal ilimitado. Publicar **e reativar** gastam do saldo, para não
+  sobrar o caminho de renovar a mesma vaga para sempre. A tela fala em
+  "vagas" e "saldo", nunca em crédito: a palavra sugeria recarga mensal,
+  e não há —
   [#172](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/172)
 - Revisão obrigatória antes de publicar, e vaga que não se edita depois.
   As duas metades da mesma decisão: sem edição, editar deixa de ser o
@@ -207,6 +210,11 @@ Qualidade:
   sem cartão. O cartão é autorizado logo depois do cadastro, com 15 dias
   de teste grátis antes da primeira cobrança de verdade —
   [#170](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/170)
+- O caixa do painel passou a sair de `pagamentos`: o que entrou, o que
+  foi devolvido e o que foi contestado no cartão, com as duas saídas
+  separadas. Antes era projeção sobre `perfis_empresa.plano`, coluna sem
+  produtor — o número era sempre zero e se anunciava como receita —
+  [#179](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/179)
 
 ## Pendente
 

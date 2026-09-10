@@ -1175,6 +1175,40 @@ aberto; estorno chega depois de o dinheiro ter entrado. Usar a guarda de
 `pendente` ali recusaria a transição em silêncio e devolveria `null`, que
 quem chama lê como "outra notificação já resolveu".
 
+### O caixa: todo valor que entra é registrado, e o que sai também (#179)
+
+Decisão do Luiz em 10/09/2026. O painel do admin mostrava "faturamento
+estimado" a partir de `perfis_empresa.plano` — a coluna que este arquivo
+já cita como exemplo de estado declarado sem produtor. Nada nunca escreveu
+nela, então "assinaturas ativas" era sempre zero, "em teste" contava todas
+as empresas, e a receita era zero vezes um preço de tabela que também
+estava errado (R$ 149, quando o plano mensal custa R$ 199,90).
+
+Hoje a fonte é `pagamentos`, na view `metricas_caixa`, e o bloco deixou de
+se chamar "estimado" — não é projeção, é o que entrou e o que saiu.
+
+**As duas saídas são registros diferentes, e isso é o que a #179 mudou no
+banco.** Até aqui `refunded` e `charged_back` caíam os dois em
+`estornado`, porque o efeito no app é idêntico: a mensalidade cai, os
+créditos voltam. Mas **o efeito é o que eles têm em comum, não o que eles
+são** — chargeback é o cliente abrindo disputa no cartão, custa taxa do
+Mercado Pago, é sinal de fraude e dá para contestar de volta. O enum
+ganhou `contestado`, e o webhook decide qual gravar.
+
+A janela para decidir isso é única: a distinção existe só no corpo da
+notificação, e depois de gravado "saiu dinheiro" não há como recuperá-la.
+Por isso a separação entrou **antes** de existir qualquer estorno em
+produção — reclassificar depois seria chute.
+
+**`recorrente` é medido à parte do total** porque são as duas metades de
+qualquer projeção: mensalidade de prestador e plano mensal voltam sozinhos
+no mês que vem; pacote de vagas e vaga avulsa não voltam sem alguém
+comprar de novo. Somados, um mês bom de pacotes parece receita previsível.
+
+**O líquido é calculado na aplicação, não na view.** A view entrega as
+parcelas; a subtração mora num lugar só, porque escrevê-la em SQL e de
+novo em TypeScript é uma chance a mais de as duas divergirem.
+
 **Os cinco valores de `status_pagamento` agora têm produtor.** `estornado`
 e `cancelado` existiam no enum e no tipo do TypeScript sem que nada no
 código os gravasse: `refunded` e `charged_back` caíam num ramo de "nada

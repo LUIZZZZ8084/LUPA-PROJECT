@@ -39,11 +39,18 @@ const sessao: Autenticado = {
   papel: "prestador_servico",
 };
 
-/** A resposta de `/v1/payments/{id}`, com o status que se quer exercitar. */
-function receita(status: string, referencia: string) {
+/**
+ * A resposta de `/v1/payments/{id}`, com o status que se quer exercitar.
+ *
+ * O `id` é parametrizável porque o `mp_payment_id` é único: um teste que
+ * exercite duas cobranças diferentes precisa de dois ids, senão a segunda
+ * é lida como notificação repetida da primeira e não muda nada — que é
+ * justamente a idempotência funcionando, mas medindo a coisa errada.
+ */
+function receita(status: string, referencia: string, id = 987) {
   return (async () =>
     new Response(
-      JSON.stringify({ id: 987, status, external_reference: referencia }),
+      JSON.stringify({ id, status, external_reference: referencia }),
       { status: 200, headers: { "content-type": "application/json" } },
     )) as unknown as typeof fetch;
 }
@@ -81,17 +88,44 @@ describe("desfechos de pagamento", () => {
    * data do estorno. O caso que manda é o chargeback fraudulento: quem
    * contesta a cobrança e continua anunciando fica com o serviço de graça.
    */
-  it.each(["refunded", "charged_back"])(
-    "%s revoga a mensalidade e grava estornado",
-    async (status) => {
-      const pagamento = await cobrancaAprovada();
+  it.each([
+    ["refunded", "estornado"],
+    ["charged_back", "contestado"],
+  ])("%s revoga a mensalidade e grava %s", async (status, gravado) => {
+    const pagamento = await cobrancaAprovada();
 
-      await confirmarPagamento("987", receita(status, pagamento.id));
+    await confirmarPagamento("987", receita(status, pagamento.id));
 
-      expect(revogar).toHaveBeenCalledWith(sessao.usuarioId);
-      expect((await repo.porId(pagamento.id))?.status).toBe("estornado");
-    },
-  );
+    expect(revogar).toHaveBeenCalledWith(sessao.usuarioId);
+    expect((await repo.porId(pagamento.id))?.status).toBe(gravado);
+  });
+
+  /**
+   * O efeito é o mesmo; o registro não (#179).
+   *
+   * Os dois desfechos tiram a mensalidade na hora, e foi por isso que os
+   * dois viveram no mesmo `estornado` até 10/09/2026. Mas o efeito é o que
+   * eles têm em comum, não o que eles são: `charged_back` é o cliente
+   * abrindo disputa no cartão — custa taxa do Mercado Pago, é sinal de
+   * fraude e dá para contestar de volta.
+   *
+   * Este teste é o que impede a volta do atalho: a distinção existe só no
+   * corpo do webhook e, uma vez gravada como "saiu dinheiro", não há como
+   * recuperar qual saída foi qual.
+   */
+  it("devolução e contestação não viram o mesmo registro", async () => {
+    const devolvido = await cobrancaAprovada();
+    await confirmarPagamento("987", receita("refunded", devolvido.id));
+
+    const contestado = await cobrancaAprovada();
+    await confirmarPagamento(
+      "988",
+      receita("charged_back", contestado.id, 988),
+    );
+
+    expect((await repo.porId(devolvido.id))?.status).toBe("estornado");
+    expect((await repo.porId(contestado.id))?.status).toBe("contestado");
+  });
 
   /**
    * O Mercado Pago reenvia notificação. Revogar duas vezes não faria mal

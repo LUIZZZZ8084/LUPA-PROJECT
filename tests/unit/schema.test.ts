@@ -99,7 +99,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "metricas_totais",
       "metricas_cadastros_por_dia",
       "metricas_por_local",
-      "metricas_planos",
+      "metricas_caixa",
     ]) {
       expect(views, `falta a view ${esperada}`).toContain(esperada);
     }
@@ -611,7 +611,7 @@ describe("grants de anon e authenticated", () => {
     "metricas_totais",
     "metricas_cadastros_por_dia",
     "metricas_por_local",
-    "metricas_planos",
+    "metricas_caixa",
   ];
 
   const PUBLICAS_DE_PROPOSITO = [
