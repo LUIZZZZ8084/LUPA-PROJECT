@@ -15,6 +15,18 @@ import { STATUS_ASSINATURA_VIVA } from "./tipos";
 /** Repositório de pagamentos em memória, para o modo demonstração. */
 export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
   private itens = new Map<string, Pagamento>();
+
+  /**
+   * Todas as cobranças, para o painel somar o caixa em demonstração.
+   *
+   * Fica **fora** do contrato `RepositorioPagamentos` de propósito: em
+   * produção quem soma é o banco, na view `metricas_caixa`, e obrigar o
+   * Postgres a implementar um "traga tudo" que ninguém chama seria
+   * convidar alguém a chamá-lo um dia — sobre uma tabela que só cresce.
+   */
+  todos(): Pagamento[] {
+    return [...this.itens.values()];
+  }
   private assinaturas = new Map<string, Assinatura>();
 
   async porId(id: string): Promise<Pagamento | null> {
@@ -117,12 +129,13 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
     return this.mudarStatusSe(id, "pendente", "cancelado", mpPaymentId);
   }
 
-  /** Parte de `aprovado`: estorno acontece depois de o dinheiro entrar. */
+  /** Parte de `aprovado`: devolução acontece depois de o dinheiro entrar. */
   async estornar(
     id: string,
     mpPaymentId: string | null,
+    saida: "estornado" | "contestado" = "estornado",
   ): Promise<Pagamento | null> {
-    return this.mudarStatusSe(id, "aprovado", "estornado", mpPaymentId);
+    return this.mudarStatusSe(id, "aprovado", saida, mpPaymentId);
   }
 
   private mudarStatusSePendente(

@@ -859,7 +859,19 @@ export async function confirmarPagamento(
     infoRemota.status === "refunded" ||
     infoRemota.status === "charged_back"
   ) {
-    const estornado = await repo.estornar(pagamento.id, infoRemota.id);
+    /*
+     * Qual das duas saídas foi, gravado agora ou nunca (#179).
+     *
+     * O efeito no app é o mesmo — a mensalidade cai, os créditos voltam —
+     * e foi por isso que os dois viveram no mesmo `estornado` até aqui.
+     * Mas o efeito é o que eles têm em comum, não o que eles são:
+     * `charged_back` é o cliente abrindo disputa no cartão, custa taxa e
+     * dá para contestar de volta. Essa distinção só existe neste corpo de
+     * webhook; depois de gravado "saiu dinheiro", acabou.
+     */
+    const saida =
+      infoRemota.status === "charged_back" ? "contestado" : "estornado";
+    const estornado = await repo.estornar(pagamento.id, infoRemota.id, saida);
     // `null`: outra notificação já estornou, e o efeito já foi desfeito.
     if (estornado) {
       await desfazerEfeito(estornado);
@@ -881,9 +893,10 @@ export async function confirmarPagamento(
         }
       }
 
-      log.info("pagamento estornado", {
+      log.info("dinheiro devolvido ao pagador", {
         acao: "pagamentos.confirmar",
         tipo: pagamento.tipo,
+        saida,
         status: infoRemota.status,
       });
     }

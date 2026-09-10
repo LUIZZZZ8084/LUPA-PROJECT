@@ -136,13 +136,45 @@ describe("RepositorioMetricasPostgres", () => {
     expect(limit?.args[0]).toBe(10);
   });
 
-  it("planos vêm da view de contagem", async () => {
-    respostas.set("metricas_planos", {
-      data: { mensal: "4", trial: "11" },
+  /**
+   * O caixa vem somado do banco, e o líquido é calculado aqui.
+   *
+   * A view entrega as parcelas; a subtração mora num lugar só, porque
+   * escrevê-la em SQL e de novo em TypeScript é uma chance a mais de as
+   * duas divergirem.
+   */
+  it("o caixa vem da view, e o líquido desconta as duas saídas", async () => {
+    respostas.set("metricas_caixa", {
+      data: {
+        entrou_centavos: "100000",
+        estornado_centavos: "2990",
+        contestado_centavos: "19990",
+        recorrente_centavos: "19900",
+        cobrancas: "5",
+        contestacoes: "1",
+      },
       error: null,
     });
 
-    expect(await repo.planosDeEmpresa()).toEqual({ mensal: 4, trial: 11 });
+    expect(await repo.caixa()).toEqual({
+      entrouCentavos: 100_000,
+      estornadoCentavos: 2_990,
+      contestadoCentavos: 19_990,
+      recorrenteCentavos: 19_900,
+      liquidoCentavos: 77_020,
+      cobrancas: 5,
+      contestacoes: 1,
+    });
+  });
+
+  /** View vazia é banco sem cobrança nenhuma, não erro. */
+  it("sem linha na view, o caixa é zero", async () => {
+    respostas.set("metricas_caixa", { data: null, error: null });
+
+    expect(await repo.caixa()).toMatchObject({
+      entrouCentavos: 0,
+      liquidoCentavos: 0,
+    });
   });
 
   it("erro de banco vira indisponível, não interno", async () => {

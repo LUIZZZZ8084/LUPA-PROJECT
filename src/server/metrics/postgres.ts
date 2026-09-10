@@ -5,6 +5,7 @@ import type { Papel } from "../auth/rbac";
 import { erros } from "../errors";
 import type {
   CadastrosPorDia,
+  Caixa,
   DistribuicaoLocal,
   RepositorioMetricas,
   Totais,
@@ -104,18 +105,33 @@ export class RepositorioMetricasPostgres implements RepositorioMetricas {
     }));
   }
 
-  async planosDeEmpresa(): Promise<{ mensal: number; trial: number }> {
+  async caixa(): Promise<Caixa> {
     const supabase = await cliente();
     const { data, error } = await supabase
-      .from("metricas_planos")
+      .from("metricas_caixa")
       .select("*")
       .maybeSingle();
 
-    if (error) throw erros.indisponivel(`métricas de plano: ${error.message}`);
+    if (error) throw erros.indisponivel(`caixa: ${error.message}`);
+
+    const entrouCentavos = Number(data?.entrou_centavos ?? 0);
+    const estornadoCentavos = Number(data?.estornado_centavos ?? 0);
+    const contestadoCentavos = Number(data?.contestado_centavos ?? 0);
 
     return {
-      mensal: Number(data?.mensal ?? 0),
-      trial: Number(data?.trial ?? 0),
+      entrouCentavos,
+      estornadoCentavos,
+      contestadoCentavos,
+      recorrenteCentavos: Number(data?.recorrente_centavos ?? 0),
+      /*
+       * O líquido é calculado aqui, e não na view, de propósito: é a
+       * mesma conta nos dois repositórios, e uma subtração escrita duas
+       * vezes em linguagens diferentes é uma chance a mais de divergir.
+       * A view entrega as parcelas; quem soma é um lugar só.
+       */
+      liquidoCentavos: entrouCentavos - estornadoCentavos - contestadoCentavos,
+      cobrancas: Number(data?.cobrancas ?? 0),
+      contestacoes: Number(data?.contestacoes ?? 0),
     };
   }
 }

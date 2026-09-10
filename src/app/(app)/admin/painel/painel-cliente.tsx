@@ -154,45 +154,70 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
         />
       </div>
 
-      {/* Faturamento */}
+      {/*
+        Caixa.
+
+        Este bloco dizia "Faturamento estimado" e mostrava uma projeção:
+        contava empresas em `perfis_empresa.plano` e multiplicava por um
+        preço de tabela. A coluna nunca teve quem escrevesse nela, então o
+        número era sempre zero — e se anunciava como receita.
+
+        Hoje sai de `pagamentos`. Não é estimativa: é o que entrou e o que
+        saiu, e por isso o aviso de "projeção" saiu junto.
+      */}
       <Panel>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="flex items-center gap-2 text-sm font-semibold">
               <TrendingUp size={16} className="text-empresas" />
-              Faturamento estimado
+              Caixa
             </h2>
             <p className="mt-2 text-3xl font-bold tabular-nums text-empresas">
-              {formatMoneyBRL(painel.faturamento.receitaMensalEstimada)}
-              <span className="ml-1 text-sm font-normal text-muted">/mês</span>
+              {formatMoneyBRL(painel.caixa.liquidoCentavos / 100)}
+              <span className="ml-1 text-sm font-normal text-muted">
+                líquido
+              </span>
+            </p>
+            <p className="mt-1 text-muted text-xs">
+              {formatMoneyBRL(painel.caixa.entrouCentavos / 100)} entraram em{" "}
+              {painel.caixa.cobrancas}{" "}
+              {painel.caixa.cobrancas === 1 ? "cobrança" : "cobranças"}
             </p>
           </div>
+
           <div className="text-right text-xs text-muted">
             <p>
               <strong className="text-ink">
-                {painel.faturamento.assinaturasAtivas}
+                {formatMoneyBRL(painel.caixa.recorrenteCentavos / 100)}
               </strong>{" "}
-              assinaturas
+              de assinatura
             </p>
-            <p className="mt-1">
-              <strong className="text-ink">{painel.faturamento.emTeste}</strong>{" "}
-              em teste
-            </p>
+            {/*
+              As duas saídas aparecem separadas, e só quando existem.
+
+              Somá-las daria um total certo e uma leitura errada: devolver
+              dinheiro é decisão da casa, e contestação é o cliente abrindo
+              disputa no cartão — custa taxa e é sinal de fraude. Zerado,
+              nenhuma das duas ocupa espaço no painel.
+            */}
+            {painel.caixa.estornadoCentavos > 0 && (
+              <p className="mt-1">
+                <strong className="text-ink">
+                  −{formatMoneyBRL(painel.caixa.estornadoCentavos / 100)}
+                </strong>{" "}
+                devolvidos
+              </p>
+            )}
+            {painel.caixa.contestadoCentavos > 0 && (
+              <p className="mt-1 text-danger">
+                <strong>
+                  −{formatMoneyBRL(painel.caixa.contestadoCentavos / 100)}
+                </strong>{" "}
+                contestados ({painel.caixa.contestacoes})
+              </p>
+            )}
           </div>
         </div>
-
-        {!painel.faturamento.confirmado && (
-          /*
-           * Aviso obrigatório enquanto não há integração de pagamento. Sem
-           * ele, alguém olha o número e decide achando que o dinheiro entrou.
-           */
-          <p className="mt-4 rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-[11px] leading-relaxed text-warn">
-            <strong>Projeção, não receita.</strong> Conta as empresas no plano
-            mensal e multiplica por{" "}
-            {formatMoneyBRL(painel.faturamento.precoMensal)}. Vira valor
-            confirmado quando a cobrança estiver integrada.
-          </p>
-        )}
       </Panel>
 
       {/* Cadastros por dia */}
