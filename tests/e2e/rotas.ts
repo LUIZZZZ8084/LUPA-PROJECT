@@ -37,6 +37,7 @@ export const ROTAS: readonly RotaVarrida[] = [
   { path: "/perfil", nome: "Perfil" },
   { path: "/perfil/editar", nome: "Editar perfil" },
   { path: "/perfil/candidaturas", nome: "Minhas candidaturas" },
+  { path: "/perfil/curriculo", nome: "Gerador de currículo" },
   /*
    * A conta compartilhada é candidata, e é ela quem pode ativar o lado
    * prestador — a tela renderiza o formulário de verdade nesta varredura.

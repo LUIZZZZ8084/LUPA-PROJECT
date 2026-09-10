@@ -29,6 +29,7 @@ const CURRICULO: DadosCandidato = {
   formacao: "Ensino médio completo",
   habilidades: ["CNH categoria C", "Colheitadeira"],
   visivelParaEmpresas: false,
+  geradorCurriculoLiberado: false,
 };
 
 const ANUNCIO: DadosPrestador = {

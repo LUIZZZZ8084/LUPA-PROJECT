@@ -9,6 +9,8 @@ import {
 import { grauDeProximidade, type Origem } from "@/lib/proximidade";
 import { formaCanonica } from "@/lib/skills";
 import { type Autenticado, pode } from "../auth/rbac";
+import { erros } from "../errors";
+import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
 
 /**
@@ -217,4 +219,48 @@ export async function perfilDoCandidato(
     visivelParaEmpresas: true,
     candidaturaId: daEmpresa.find((c) => c.candidate_id === id)?.id ?? null,
   };
+}
+
+/**
+ * Libera o gerador de currículo para sempre (#47).
+ *
+ * Compra única, não assinatura: ao contrário da mensalidade de prestador,
+ * não há data de validade para estender — só um interruptor que liga uma
+ * vez. Chamada por `aplicarEfeito`, em
+ * `src/server/pagamentos/servico.ts`, quando a cobrança de `curriculo_pdf`
+ * é aprovada.
+ */
+export async function liberarGeradorCurriculo(
+  usuarioId: string,
+): Promise<void> {
+  const repo = repositorioUsuarios();
+  const perfil = await repo.perfilCandidato(usuarioId);
+  if (!perfil) throw erros.naoEncontrado("Perfil de candidato");
+
+  await repo.definirGeradorCurriculoLiberado(usuarioId, true);
+
+  log.info("gerador de currículo liberado", {
+    acao: "candidato.gerador_curriculo",
+  });
+}
+
+/**
+ * Desliga o gerador de currículo — estorno ou chargeback da compra.
+ *
+ * Espelha `liberarGeradorCurriculo`, chamada por `desfazerEfeitoDoTipo`
+ * quando o Mercado Pago avisa que o dinheiro voltou. Não apaga nenhum dado
+ * do perfil: só a permissão de gerar o PDF, que volta atrás da cobrança.
+ */
+export async function revogarGeradorCurriculo(
+  usuarioId: string,
+): Promise<void> {
+  const repo = repositorioUsuarios();
+  const perfil = await repo.perfilCandidato(usuarioId);
+  if (!perfil) throw erros.naoEncontrado("Perfil de candidato");
+
+  await repo.definirGeradorCurriculoLiberado(usuarioId, false);
+
+  log.info("gerador de currículo revogado", {
+    acao: "candidato.gerador_curriculo_revogado",
+  });
 }
