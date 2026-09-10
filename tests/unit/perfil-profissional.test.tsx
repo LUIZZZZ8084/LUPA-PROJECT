@@ -36,6 +36,7 @@ const CURRICULO: DadosCandidato = {
     },
   ],
   visivelParaEmpresas: false,
+  geradorCurriculoLiberado: false,
 };
 
 const ANUNCIO: DadosPrestador = {

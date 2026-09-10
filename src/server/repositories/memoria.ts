@@ -214,6 +214,18 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.prestadores.set(usuarioId, { ...perfil, mensalidadeValidaAte: ate });
   }
 
+  async definirGeradorCurriculoLiberado(
+    usuarioId: string,
+    liberado: boolean,
+  ): Promise<void> {
+    const perfil = this.candidatos.get(usuarioId);
+    if (!perfil) return;
+    this.candidatos.set(usuarioId, {
+      ...perfil,
+      geradorCurriculoLiberado: liberado,
+    });
+  }
+
   /* ---------- Leitura de perfil ---------- */
 
   async perfilEmpresa(usuarioId: string): Promise<PerfilEmpresa | null> {
@@ -247,6 +259,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.candidatos.set(usuarioId, {
       usuarioId,
       curriculoUrl: atual?.curriculoUrl ?? null,
+      geradorCurriculoLiberado: atual?.geradorCurriculoLiberado ?? false,
       ...dados,
     });
   }

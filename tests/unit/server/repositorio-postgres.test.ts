@@ -206,6 +206,7 @@ describe("RepositorioPostgres", () => {
       habilidades: [],
       experiencias: [],
       visivelParaEmpresas: false,
+      geradorCurriculoLiberado: false,
     });
     expect(chamadas.at(-1)?.tabela).toBe("perfis_candidato");
   });
@@ -350,7 +351,7 @@ describe("perfis para a edição", () => {
     expect(p?.anosExperiencia).toBe(0);
   });
 
-  it("candidato: traduz formação e habilidades", async () => {
+  it("candidato: traduz formação, habilidades e o gerador de currículo", async () => {
     resposta = {
       data: {
         usuario_id: ID,
@@ -363,6 +364,7 @@ describe("perfis para a edição", () => {
         experiencias: [
           { role: "Operador", company: "Agro Norte", period: "2021 — 2023" },
         ],
+        gerador_curriculo_liberado: true,
       },
       error: null,
     };
@@ -373,6 +375,7 @@ describe("perfis para a edição", () => {
     expect(c?.experiencias).toEqual([
       { role: "Operador", company: "Agro Norte", period: "2021 — 2023" },
     ]);
+    expect(c?.geradorCurriculoLiberado).toBe(true);
   });
 
   /** Coluna nula vira lista vazia, não `undefined` — mesma régua de habilidades. */
@@ -519,6 +522,14 @@ describe("gravação de perfil", () => {
     expect(update?.args[0]).toEqual({
       mensalidade_valida_ate: "2026-10-01T00:00:00.000Z",
     });
+  });
+
+  it("candidato: liga e desliga o gerador de currículo", async () => {
+    await repo.definirGeradorCurriculoLiberado(ID, true);
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("perfis_candidato");
+    expect(update?.args[0]).toEqual({ gerador_curriculo_liberado: true });
   });
 
   it("falha ao gravar não passa em silêncio", async () => {

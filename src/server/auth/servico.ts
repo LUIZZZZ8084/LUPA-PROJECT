@@ -126,6 +126,8 @@ export async function cadastrar(
       experiencias: [],
       // Desligado por padrão: aparecer para empresa é escolha, não default.
       visivelParaEmpresas: false,
+      // Gerador de currículo pago (#47) — libera na compra, não no cadastro.
+      geradorCurriculoLiberado: false,
     });
   } else if (dados.papel === "prestador_servico") {
     await repo.criarPerfilPrestador({

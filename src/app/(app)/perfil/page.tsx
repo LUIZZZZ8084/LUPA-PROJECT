@@ -2,6 +2,7 @@ import {
   Briefcase,
   Building2,
   CreditCard,
+  FileDown,
   FileText,
   LogIn,
   Pencil,
@@ -98,6 +99,14 @@ const ATALHOS: {
     descricao: "Saldo para publicar, ou plano mensal ilimitado.",
     cor: "text-empresas",
     exige: "vaga:publicar",
+  },
+  {
+    href: "/perfil/curriculo",
+    icon: FileDown,
+    titulo: "Gerador de currículo",
+    descricao: "Gere e baixe seu currículo em PDF, pronto para anexar.",
+    cor: "text-vagas",
+    exige: "candidato:gerar_curriculo",
   },
   {
     href: "/admin",
