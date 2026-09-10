@@ -123,6 +123,7 @@ export async function cadastrar(
       disponibilidade: null,
       formacao: null,
       habilidades: [],
+      experiencias: [],
       // Desligado por padrão: aparecer para empresa é escolha, não default.
       visivelParaEmpresas: false,
       // Gerador de currículo pago (#47) — libera na compra, não no cadastro.

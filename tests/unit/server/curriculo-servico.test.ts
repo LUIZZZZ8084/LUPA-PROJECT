@@ -42,6 +42,7 @@ describe("gerarCurriculoDoCandidato", () => {
       disponibilidade: null,
       formacao: null,
       habilidades: [],
+      experiencias: [],
       visivelParaEmpresas: false,
       geradorCurriculoLiberado: false,
     });
@@ -125,6 +126,7 @@ describe("geradorCurriculoLiberado", () => {
       disponibilidade: null,
       formacao: null,
       habilidades: [],
+      experiencias: [],
       visivelParaEmpresas: false,
       geradorCurriculoLiberado: false,
     });

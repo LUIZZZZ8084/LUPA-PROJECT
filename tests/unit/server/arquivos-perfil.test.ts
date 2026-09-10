@@ -148,6 +148,7 @@ describe("currículo", () => {
       resumo: null,
       formacao: null,
       habilidades: [],
+      experiencias: [],
       disponibilidade: null,
       visivelParaEmpresas: false,
     });
@@ -219,6 +220,7 @@ describe("cada espécie grava na sua coluna", () => {
       resumo: null,
       formacao: null,
       habilidades: [],
+      experiencias: [],
       disponibilidade: null,
       visivelParaEmpresas: false,
     });

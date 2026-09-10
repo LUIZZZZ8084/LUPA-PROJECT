@@ -1,13 +1,14 @@
 "use client";
 
-import { Check, Loader2 } from "lucide-react";
-import { useActionState, useId } from "react";
+import { Check, Loader2, Plus, Trash2 } from "lucide-react";
+import { useActionState, useId, useRef, useState } from "react";
 import type { EstadoVerificacao } from "@/app/(app)/perfil/actions";
 import { CampoBairro } from "@/components/cidade-e-bairro";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
+import type { Experience } from "@/lib/types";
 import type { PerfilCompleto } from "@/server/perfil/servico";
 import {
   type EstadoEdicao,
@@ -180,12 +181,134 @@ function VisivelParaEmpresas({ ligado }: { ligado: boolean }) {
   );
 }
 
+/**
+ * Cada experiência é um cargo, uma empresa, um período e uma descrição
+ * opcional — quatro campos com o mesmo `name`, repetidos por linha. Não é
+ * um textarea de JSON nem uma action por item: o formulário manda quatro
+ * listas paralelas (`expCargo`, `expEmpresa`, `expPeriodo`,
+ * `expDescricao`), e o servidor as zipa de volta — a mesma ideia de
+ * "habilidades separadas por vírgula", só que estruturada porque cargo e
+ * empresa não cabem misturados num campo só.
+ *
+ * O estado local existe só para adicionar e remover linhas. Os valores em
+ * si são `defaultValue`, não controlados: quem digita não precisa de
+ * re-render a cada tecla, e o que sai no submit é o HTML, como em todo o
+ * resto desta tela.
+ */
+function Experiencias({
+  inicial,
+  erro,
+}: {
+  inicial: Experience[];
+  erro?: string;
+}) {
+  const [linhas, setLinhas] = useState(() =>
+    inicial.map((dado, i) => ({ chave: i, dado })),
+  );
+  const proximaChave = useRef(inicial.length);
+
+  function adicionar() {
+    setLinhas((atual) => [
+      ...atual,
+      {
+        chave: proximaChave.current++,
+        dado: { role: "", company: "", period: "", description: "" },
+      },
+    ]);
+  }
+
+  function remover(chave: number) {
+    setLinhas((atual) => atual.filter((l) => l.chave !== chave));
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-[13px] font-medium text-ink">
+          Experiência profissional
+        </span>
+        <Button type="button" variant="outline" size="sm" onClick={adicionar}>
+          <Plus size={15} />
+          Adicionar
+        </Button>
+      </div>
+
+      {erro && <p className="text-xs text-danger">{erro}</p>}
+
+      {linhas.length === 0 && (
+        <p className="text-xs text-faint">
+          Nenhuma experiência adicionada ainda.
+        </p>
+      )}
+
+      {linhas.map((linha) => (
+        <div
+          key={linha.chave}
+          className="space-y-3 rounded-xl border border-line bg-panel-2 p-4"
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Cargo">
+              <Input
+                name="expCargo"
+                defaultValue={linha.dado.role}
+                placeholder="Operador de colheitadeira"
+              />
+            </Field>
+            <Field label="Empresa">
+              <Input
+                name="expEmpresa"
+                defaultValue={linha.dado.company}
+                placeholder="Agro Norte Ltda."
+              />
+            </Field>
+          </div>
+
+          <Field label="Período">
+            <Input
+              name="expPeriodo"
+              defaultValue={linha.dado.period}
+              placeholder="2021 — 2023"
+            />
+          </Field>
+
+          <Field label="Descrição" hint="Opcional.">
+            <Textarea
+              name="expDescricao"
+              rows={2}
+              defaultValue={linha.dado.description ?? ""}
+            />
+          </Field>
+
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => remover(linha.chave)}
+            >
+              <Trash2 size={14} />
+              Remover
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
   const [estado, acao, pendente] = useActionState(
     salvarCurriculoComEstado,
     inicial,
   );
   const c = perfil.candidato;
+
+  // O caminho de um erro dentro do array é "experiencias.0.role", não
+  // "experiencias" — procurar pelo prefixo é o que liga o erro à seção
+  // certa mesmo sem saber qual linha ou qual campo falhou.
+  const erroExperiencias = Object.entries(estado.campos ?? {}).find(([chave]) =>
+    chave.startsWith("experiencias"),
+  )?.[1];
 
   return (
     <form action={acao}>
@@ -232,6 +355,8 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
             defaultValue={(c?.habilidades ?? []).join(", ")}
           />
         </Field>
+
+        <Experiencias inicial={c?.experiencias ?? []} erro={erroExperiencias} />
 
         {/*
           A opção de ser encontrado, com o que ela significa escrito ao

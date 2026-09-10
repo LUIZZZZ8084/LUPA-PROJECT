@@ -59,6 +59,81 @@ test.describe("edição de perfil", () => {
   });
 
   /**
+   * A coluna `experiencias` existia desde o começo, sem nenhum jeito de
+   * gravar nela pela aplicação (#187). Este é o caminho de ponta a ponta:
+   * adicionar uma linha, remover outra antes de salvar, e ver a que ficou
+   * de volta no perfil.
+   *
+   * Os locators usam `.last()`, nunca uma contagem absoluta: a suíte roda
+   * com `fullyParallel: true` e workers > 1 sobre a mesma sessão de
+   * candidato, então outro teste pode já ter deixado experiência salva
+   * aqui. "Adicionar" sempre acrescenta no fim da lista — é por isso que
+   * a última linha é sempre a que este teste acabou de criar.
+   *
+   * O cargo carrega um sufixo único (`Date.now()`), por duas razões que a
+   * CI expôs: "salvar" só acrescenta, nunca substitui — cada execução ou
+   * retry deixa mais uma experiência na mesma conta compartilhada, e um
+   * texto fixo vira ambíguo depois da segunda rodada. E "Operador de
+   * colheitadeira" continha "colheitadeira" — substring do badge de
+   * habilidade "Colheitadeira" que o teste anterior já verifica, a mesma
+   * armadilha de rótulo que este arquivo já registrou para "CNPJ".
+   */
+  test("adiciona uma experiência, remove outra, e o que sobra aparece no perfil", async ({
+    page,
+  }) => {
+    await page.goto("/perfil/editar");
+
+    // Uma linha para descartar antes de salvar.
+    await page.getByRole("button", { name: "Adicionar" }).click();
+    await expect(
+      page.getByLabel("Cargo", { exact: true }).last(),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Remover" }).last().click();
+
+    // A que fica.
+    //
+    // "Empresa" precisa de `exact: true`: sem isso, `getByLabel` também
+    // casa com o rótulo do checkbox "Quero que empresas me encontrem", que
+    // fica logo abaixo desta seção — a mesma armadilha de substring que já
+    // derrubou a suíte inteira uma vez (ver o comentário em
+    // `VisivelParaEmpresas`, em form.tsx).
+    const cargo = `Auxiliar de logística ${Date.now()}`;
+
+    await page.getByRole("button", { name: "Adicionar" }).click();
+    await page.getByLabel("Cargo", { exact: true }).last().fill(cargo);
+    await page
+      .getByLabel("Empresa", { exact: true })
+      .last()
+      .fill("Agro Norte Ltda.");
+    await page
+      .getByLabel("Período", { exact: true })
+      .last()
+      .fill("2021 — 2023");
+    await page
+      .getByLabel("Descrição", { exact: true })
+      .last()
+      .fill("Organização de cargas e rotas.");
+
+    await page
+      .locator("form")
+      .filter({ hasText: "Currículo" })
+      .getByRole("button", { name: "Salvar" })
+      .click();
+
+    await expect(page.getByText("Salvo")).toBeVisible();
+
+    await page.goto("/perfil");
+
+    // A checagem da empresa e do período fica escopada ao item que tem
+    // este cargo — não a página inteira —, porque a lista acumulada de
+    // execuções anteriores pode ter mais de uma linha com o mesmo
+    // "Agro Norte Ltda. · 2021 — 2023".
+    const item = page.locator("li", { hasText: cargo });
+    await expect(item).toBeVisible();
+    await expect(item).toContainText("Agro Norte Ltda. · 2021 — 2023");
+  });
+
+  /**
    * O erro precisa aparecer no campo, não só um aviso genérico. Foi o que
    * faltou no cadastro quebrado: "Revise os campos destacados" sem destacar
    * campo nenhum, porque o que faltava não estava na tela.

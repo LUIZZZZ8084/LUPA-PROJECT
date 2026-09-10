@@ -85,6 +85,7 @@ describe("comprar o gerador de currículo", () => {
       disponibilidade: null,
       formacao: null,
       habilidades: [],
+      experiencias: [],
       visivelParaEmpresas: false,
       geradorCurriculoLiberado: false,
     });

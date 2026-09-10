@@ -16,6 +16,8 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser: async () => null,
 }));
 
+import { getCompanyApplications } from "@/lib/data";
+import { DEMO_COMPANY_ID } from "@/lib/mock-data";
 import type { Autenticado } from "@/server/auth/rbac";
 import {
   RepositorioCandidaturasMemoria,
@@ -23,6 +25,7 @@ import {
 } from "@/server/candidaturas";
 import { candidatarSe, moverCandidatura } from "@/server/candidaturas/servico";
 import { usarRepositorioCarteiras } from "@/server/carteiras";
+import { RepositorioMemoria, usarRepositorio } from "@/server/repositories";
 import { RepositorioVagasMemoria, usarRepositorioVagas } from "@/server/vagas";
 import { publicarVaga } from "@/server/vagas/servico";
 import { carteiraInfinita } from "./carteira-de-teste";
@@ -88,5 +91,75 @@ describe("mover candidatura em modo demonstração", () => {
     );
 
     expect(movida.status).toBe("entrevista");
+  });
+});
+
+/**
+ * `candidatoParaDemo`, em `src/lib/data.ts`, monta o candidato de uma
+ * candidatura em modo demonstração. Antes da #187 ele sempre devolvia
+ * `experiences: []`, mesmo para uma conta real com experiência salva — a
+ * empresa nunca via o que o candidato tinha acabado de preencher em
+ * `/perfil/editar`. Este teste é o caminho de ponta a ponta que prova o
+ * contrário: candidato real, com experiência salva, aparece na ficha que
+ * a empresa recebe.
+ */
+describe("experiência do candidato chega até a empresa, em demonstração", () => {
+  let repoUsuarios: RepositorioMemoria;
+  let restaurarUsuarios: () => void;
+  let restaurarVagas: () => void;
+  let restaurarCandidaturas: () => void;
+
+  beforeEach(() => {
+    repoUsuarios = new RepositorioMemoria();
+    restaurarUsuarios = usarRepositorio(repoUsuarios);
+    restaurarVagas = usarRepositorioVagas(new RepositorioVagasMemoria());
+    restaurarCandidaturas = usarRepositorioCandidaturas(
+      new RepositorioCandidaturasMemoria(),
+    );
+  });
+
+  afterEach(() => {
+    restaurarUsuarios();
+    restaurarVagas();
+    restaurarCandidaturas();
+  });
+
+  it("a experiência salva no perfil aparece na ficha da empresa", async () => {
+    const empresa: Autenticado = {
+      usuarioId: crypto.randomUUID(),
+      papel: "empresa",
+    };
+
+    const usuario = await repoUsuarios.criar({
+      email: "candidato@teste.lupa",
+      senhaHash: "hash",
+      papel: "candidato_clt",
+      nomeCompleto: "Quem Procura Emprego",
+      telefone: "66999110001",
+      cidade: "Sinop",
+    });
+    await repoUsuarios.salvarPerfilCandidato(usuario.id, {
+      areaDesejada: null,
+      resumo: null,
+      formacao: null,
+      habilidades: [],
+      experiencias: [
+        { role: "Operador", company: "Agro Norte", period: "2021 — 2023" },
+      ],
+      disponibilidade: null,
+      visivelParaEmpresas: false,
+    });
+
+    const vaga = await publicarVaga(empresa, DADOS_VAGA);
+    await candidatarSe(
+      { usuarioId: usuario.id, papel: "candidato_clt" },
+      vaga.id,
+    );
+
+    const apps = await getCompanyApplications(DEMO_COMPANY_ID);
+    const app = apps.find((a) => a.candidate_id === usuario.id);
+    expect(app?.candidate.experiences).toEqual([
+      { role: "Operador", company: "Agro Norte", period: "2021 — 2023" },
+    ]);
   });
 });

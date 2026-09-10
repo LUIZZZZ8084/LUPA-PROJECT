@@ -125,6 +125,27 @@ export function PerfilCandidato({ perfil }: { perfil: DadosCandidato | null }) {
         </div>
       )}
 
+      {perfil.experiencias.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs text-muted">Experiência</p>
+          <ul className="mt-2 space-y-3">
+            {perfil.experiencias.map((e) => (
+              <li key={`${e.company}-${e.role}-${e.period}`}>
+                <p className="text-sm font-semibold">{e.role}</p>
+                <p className="text-[11px] text-muted">
+                  {e.company} · {e.period}
+                </p>
+                {e.description && (
+                  <p className="mt-1 text-sm leading-relaxed">
+                    {e.description}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <p className="mt-4 text-xs leading-relaxed text-faint">
         Currículo e área desejada não aparecem em busca pública. Nem todo mundo
         quer que o patrão atual descubra que está procurando emprego.

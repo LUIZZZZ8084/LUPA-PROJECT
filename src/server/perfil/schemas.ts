@@ -78,27 +78,98 @@ const zHabilidades = z.preprocess(
     .max(20, "No máximo 20 habilidades."),
 );
 
-export const schemaCandidato = z.object({
-  areaDesejada: z.preprocess(vazioViraNulo, z.enum(JOB_CATEGORIES).nullable()),
-  resumo: zOpcional(600, "O resumo"),
-  formacao: zOpcional(200, "A formação"),
-  habilidades: zHabilidades,
-  disponibilidade: zOpcional(80, "A disponibilidade"),
+/**
+ * Experiência chega como quatro campos repetidos — `expCargo`,
+ * `expEmpresa`, `expPeriodo`, `expDescricao` —, um por linha do bloco
+ * dinâmico na tela, na mesma posição. Não é um único campo `experiencias`
+ * porque o HTML não manda objeto: manda texto, e texto repetido vira lista
+ * paralela em `objetoDoFormData` (`in saida ? [...atual, valor] : valor`).
+ * Zipar as quatro listas é o que reconstrói cada linha.
+ *
+ * Isso acontece antes do `z.object({...})` de baixo — não dentro de um
+ * campo dele — porque um preprocess de campo só vê o próprio valor, e
+ * zipar precisa dos quatro ao mesmo tempo.
+ */
+const paraLista = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map(String) : v ? [String(v)] : [];
 
-  /*
-   * Caixa de seleção não enviada no formulário chega ausente, não como
-   * "false" — é assim que HTML funciona. Sem este preprocess, desmarcar a
-   * opção não desligaria nada: o campo simplesmente não chegaria, e o
-   * valor anterior sobreviveria.
-   *
-   * Para uma opção de privacidade, "não consegui desligar" é o pior
-   * defeito possível.
-   */
-  visivelParaEmpresas: z.preprocess(
-    (v) => v === "on" || v === "true" || v === true,
-    z.boolean(),
-  ),
-});
+function comExperienciasZipadas(dados: Record<string, unknown>) {
+  const cargos = paraLista(dados.expCargo);
+  const empresas = paraLista(dados.expEmpresa);
+  const periodos = paraLista(dados.expPeriodo);
+  const descricoes = paraLista(dados.expDescricao);
+  const tamanho = Math.max(
+    cargos.length,
+    empresas.length,
+    periodos.length,
+    descricoes.length,
+  );
+
+  const experiencias = [];
+  for (let i = 0; i < tamanho; i++) {
+    const role = (cargos[i] ?? "").trim();
+    const company = (empresas[i] ?? "").trim();
+    const period = (periodos[i] ?? "").trim();
+    const description = (descricoes[i] ?? "").trim();
+
+    // Linha que a pessoa adicionou e não chegou a preencher — descartada
+    // em silêncio, em vez de virar erro de validação por um campo vazio
+    // que ela nem tentou usar.
+    if (!role && !company && !period && !description) continue;
+
+    experiencias.push({ role, company, period, description });
+  }
+
+  return { ...dados, experiencias };
+}
+
+const zExperiencias = z
+  .array(
+    z.object({
+      role: zTexto(2, 80, "O cargo"),
+      company: zTexto(2, 100, "A empresa"),
+      period: zTexto(2, 40, "O período"),
+      // Vazio vira `undefined`, não fica como string vazia no jsonb — a
+      // mesma razão de `vazioViraNulo` nos campos opcionais de cima.
+      description: z.preprocess(
+        (v) => (v === "" ? undefined : v),
+        z.string().max(400, "Descrição longa demais.").optional(),
+      ),
+    }),
+  )
+  .max(10, "No máximo 10 experiências.");
+
+export const schemaCandidato = z.preprocess(
+  (v) =>
+    typeof v === "object" && v !== null
+      ? comExperienciasZipadas(v as Record<string, unknown>)
+      : v,
+  z.object({
+    areaDesejada: z.preprocess(
+      vazioViraNulo,
+      z.enum(JOB_CATEGORIES).nullable(),
+    ),
+    resumo: zOpcional(600, "O resumo"),
+    formacao: zOpcional(200, "A formação"),
+    habilidades: zHabilidades,
+    experiencias: zExperiencias,
+    disponibilidade: zOpcional(80, "A disponibilidade"),
+
+    /*
+     * Caixa de seleção não enviada no formulário chega ausente, não como
+     * "false" — é assim que HTML funciona. Sem este preprocess, desmarcar a
+     * opção não desligaria nada: o campo simplesmente não chegaria, e o
+     * valor anterior sobreviveria.
+     *
+     * Para uma opção de privacidade, "não consegui desligar" é o pior
+     * defeito possível.
+     */
+    visivelParaEmpresas: z.preprocess(
+      (v) => v === "on" || v === "true" || v === true,
+      z.boolean(),
+    ),
+  }),
+);
 
 /**
  * Categoria e descrição são obrigatórias aqui, e não no resto.
