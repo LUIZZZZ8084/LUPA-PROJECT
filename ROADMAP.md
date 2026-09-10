@@ -178,11 +178,20 @@ Qualidade:
   empresa reativa de graça pelo painel, sem gastar crédito de postagem —
   [#157](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/157)
 - Infraestrutura de cobrança via Mercado Pago (tabela `pagamentos`,
-  Checkout Pro, webhook com assinatura validada, modo demonstração sem
-  credencial) e mensalidade de prestador como primeiro uso real — sem
-  ela, o perfil some da vitrine de `/servicos`. A espera por demanda
-  antes de cobrar (decidida em 25/08) foi revertida em 08/09/2026 —
+  webhook com assinatura validada, modo demonstração sem credencial) e
+  mensalidade de prestador como primeiro uso real — sem ela, o perfil
+  some da vitrine de `/servicos`. A espera por demanda antes de cobrar
+  (decidida em 25/08) foi revertida em 08/09/2026 —
   [#159](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/159)
+- A mensalidade renova sozinha: assinatura recorrente (`preapproval`),
+  cancelamento que mantém os dias já pagos, e devolução integral só na
+  primeira cobrança, em até 30 dias. Antes disto era pagamento avulso —
+  o perfil sumia da vitrine no dia 31, sem cobrança nova e sem aviso —
+  [#170](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/170)
+- Sem carência: virar prestador não dá mais 30 dias de vitrine de graça
+  sem cartão. O cartão é autorizado logo depois do cadastro, com 15 dias
+  de teste grátis antes da primeira cobrança de verdade —
+  [#170](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/170)
 
 ## Pendente
 

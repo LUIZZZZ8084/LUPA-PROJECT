@@ -5,7 +5,16 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { assinarMensalidade } from "./actions";
 
-export function AssinarButton({ renovar }: { renovar: boolean }) {
+/**
+ * O rótulo é decidido pela página, no servidor.
+ *
+ * São quatro situações diferentes — nunca assinou, começou e não
+ * terminou, cancelou e quer voltar, teve o cartão recusado — e quem sabe
+ * em qual delas a pessoa está é quem leu a assinatura no banco. Um
+ * `if` aqui dentro repetiria essa leitura no cliente, que não tem como
+ * fazê-la.
+ */
+export function AssinarButton({ rotulo }: { rotulo: string }) {
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
 
@@ -31,7 +40,7 @@ export function AssinarButton({ renovar }: { renovar: boolean }) {
         ) : (
           <CreditCard size={14} />
         )}
-        {renovar ? "Renovar mensalidade" : "Assinar"}
+        {rotulo}
       </Button>
       {erro && <p className="mt-1.5 text-[11px] text-danger">{erro}</p>}
     </div>

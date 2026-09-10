@@ -1,12 +1,20 @@
 /**
  * @vitest-environment node
  *
- * Mensalidade de prestador: a carência de quem acaba de ativar o papel, e
- * a extensão de 30 dias que um pagamento aprovado aciona.
+ * Mensalidade de prestador: `estenderMensalidade` e os dois números de
+ * dias que ela recebe — 30 (parcela normal) e `DIAS_TESTE_GRATIS` (início
+ * do teste, na confirmação da assinatura em
+ * `pagamentos/servico.ts`).
  *
- * As datas são conferidas com margem, não com igualdade exata: entre
- * `daquiA(30)` rodar e o teste ler o resultado passam alguns milissegundos,
- * e comparar por igualdade estrita faria o teste falhar por um motivo que
+ * Desde a #170, virar prestador não dá mais carência sem cartão: o teste
+ * grátis só começa quando o Mercado Pago confirma que o cartão foi
+ * autorizado, e esse caminho tem teste próprio em
+ * `pagamentos-renovacao.test.ts`. Aqui o que se prova é a aritmética da
+ * extensão em si, isolada de quem a aciona.
+ *
+ * As datas são conferidas com margem, não com igualdade exata: entre a
+ * conta rodar e o teste ler o resultado passam alguns milissegundos, e
+ * comparar por igualdade estrita faria o teste falhar por um motivo que
  * não é o dele.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -64,14 +72,16 @@ describe("mensalidade de prestador", () => {
     vi.restoreAllMocks();
   });
 
-  it("virar prestador dá 30 dias de carência antes da primeira cobrança", async () => {
+  /**
+   * Sem carência (#170): virar prestador não libera a vitrine sozinho —
+   * precisa de uma assinatura, que só existe depois de o cartão ser
+   * autorizado em `/perfil/assinatura`.
+   */
+  it("virar prestador não concede mensalidade nenhuma", async () => {
     const id = await criarPrestador();
     const perfil = await repo.perfilPrestador(id);
 
-    expect(perfil?.mensalidadeValidaAte).toBeTruthy();
-    const dias = diasAPartirDeAgora(perfil?.mensalidadeValidaAte as string);
-    expect(dias).toBeGreaterThan(29);
-    expect(dias).toBeLessThan(31);
+    expect(perfil?.mensalidadeValidaAte).toBeNull();
   });
 
   it("estende 30 dias a partir de agora quando a mensalidade já venceu", async () => {
@@ -91,14 +101,31 @@ describe("mensalidade de prestador", () => {
 
   it("renovar antes de vencer soma ao prazo que já valia — não perde dias pagos", async () => {
     const id = await criarPrestador();
+    await estenderMensalidade(id);
 
-    // A carência inicial já é ~30 dias; renovar de novo deve dar ~60.
+    // ~30 dias já valiam; renovar de novo antes de vencer deve dar ~60.
     await estenderMensalidade(id);
 
     const perfil = await repo.perfilPrestador(id);
     const dias = diasAPartirDeAgora(perfil?.mensalidadeValidaAte as string);
     expect(dias).toBeGreaterThan(59);
     expect(dias).toBeLessThan(61);
+  });
+
+  /**
+   * O segundo argumento é o que o início do teste grátis usa — 15 dias,
+   * não os 30 de uma parcela normal (#170). A aritmética é a mesma; só o
+   * número muda.
+   */
+  it("aceita um número de dias diferente de 30, para o teste grátis", async () => {
+    const id = await criarPrestador();
+
+    await estenderMensalidade(id, 15);
+
+    const perfil = await repo.perfilPrestador(id);
+    const dias = diasAPartirDeAgora(perfil?.mensalidadeValidaAte as string);
+    expect(dias).toBeGreaterThan(14);
+    expect(dias).toBeLessThan(16);
   });
 
   it("sem mensalidade anterior nenhuma, estende a partir de agora", async () => {

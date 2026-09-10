@@ -32,7 +32,7 @@ import {
   RepositorioPagamentosMemoria,
   usarRepositorioPagamentos,
 } from "@/server/pagamentos";
-import { confirmarPagamento, criarCobranca } from "@/server/pagamentos/servico";
+import { assinar, confirmarPagamento } from "@/server/pagamentos/servico";
 
 const sessao: Autenticado = {
   usuarioId: "prestador-1",
@@ -67,7 +67,9 @@ describe("desfechos de pagamento", () => {
 
   /** Cria uma cobrança já aprovada — o ponto de partida de um estorno. */
   async function cobrancaAprovada() {
-    const { pagamento } = await criarCobranca(sessao, "prestador_mensalidade");
+    // Em demonstração, `assinar` já devolve a primeira parcela aprovada.
+    const { pagamento } = await assinar(sessao, "prestador_mensalidade");
+    if (!pagamento) throw new Error("esperava a primeira parcela aprovada");
     estender.mockClear();
     return pagamento;
   }
@@ -157,7 +159,7 @@ describe("desfechos de pagamento", () => {
   });
 
   /**
-   * Uma cobrança pendente, sem passar por `criarCobranca` — que em
+   * Uma cobrança pendente, sem passar por `assinar` — que em
    * demonstração aprova na hora.
    */
   async function criarCobrancaPendente() {

@@ -97,7 +97,7 @@ export const ROTAS_NAO_VARRIDAS: Record<string, string> = {
   "/perfil/assinatura":
     "exige sessão de prestador, mesma razão de /perfil/publicacoes. A conta é criada em assinatura-do-prestador.spec.ts, que exercita a tela lá dentro — o fluxo de cobrança ficou sem teste de ponta a ponta enquanto esta linha dizia só que a rota não era varrida, e foi assim que o retorno quebrado em demonstração passou (#164)",
   "/pagamento/retorno":
-    "o `id` na URL é de um pagamento criado em tempo de execução, dono da sessão que assinou — mesma razão de /candidatos/[id]. Coberto em assinatura-do-prestador.spec.ts, que assina e segue o retorno até 'Pagamento aprovado'",
+    "o `assinatura` na URL é de uma assinatura criada em tempo de execução, dona da sessão que assinou — mesma razão de /candidatos/[id]. Coberto em assinatura-do-prestador.spec.ts, que assina e segue o retorno até 'Pagamento aprovado'",
 };
 
 /**

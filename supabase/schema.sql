@@ -66,6 +66,22 @@ create type tipo_pagamento as enum ('prestador_mensalidade');
 create type status_pagamento as enum
   ('pendente', 'aprovado', 'rejeitado', 'cancelado', 'estornado');
 
+/*
+ * O ciclo de vida de uma assinatura recorrente, espelhando o
+ * `preapproval` do Mercado Pago:
+ *
+ *   pendente  — criada, esperando a pessoa autorizar no checkout
+ *   ativa     — autorizada; o Mercado Pago cobra sozinho todo mês
+ *   pausada   — o Mercado Pago suspendeu (cartão recusado, por exemplo)
+ *   cancelada — não cobra mais, e não volta atrás
+ *
+ * `cancelada` é diferente de mensalidade vencida: cancelar interrompe as
+ * cobranças **futuras** e não devolve nada — os dias já pagos continuam
+ * valendo até o fim do período.
+ */
+create type status_assinatura as enum
+  ('pendente', 'ativa', 'pausada', 'cancelada');
+
 -- ============================================================================
 -- 2. Função compartilhada
 -- ============================================================================
@@ -781,7 +797,54 @@ alter table preferencias_notificacao enable row level security;
 alter table inscricoes_push enable row level security;
 
 -- ============================================================================
--- 9e. Pagamentos
+-- 9e. Assinaturas recorrentes
+--
+-- Uma linha por `preapproval` do Mercado Pago: a autorização que ele
+-- guarda para cobrar sozinho todo mês (#170). É o que separa "assinatura"
+-- de "pagamento avulso" — antes disto o prestador pagava uma vez, ganhava
+-- 30 dias, e no dia 31 sumia da vitrine sem cobrança nova e sem aviso.
+--
+-- `checkout_url` fica guardado de propósito: quem clica em assinar, é
+-- mandado ao Mercado Pago e volta sem autorizar precisa cair no **mesmo**
+-- checkout ao clicar de novo. Criar um `preapproval` novo a cada clique
+-- deixaria autorizações órfãs no Mercado Pago, e duas autorizadas seriam
+-- duas cobranças por mês na mesma pessoa.
+--
+-- Sem grant para `anon`/`authenticated`, como `pagamentos`.
+-- ============================================================================
+
+create table assinaturas (
+  id                 uuid primary key default gen_random_uuid(),
+  usuario_id         uuid not null references usuarios(id) on delete cascade,
+  tipo               tipo_pagamento not null,
+  valor_centavos     int not null check (valor_centavos > 0),
+  status             status_assinatura not null default 'pendente',
+  mp_preapproval_id  text,
+  checkout_url       text,
+  criado_em          timestamptz not null default now(),
+  atualizado_em      timestamptz not null default now()
+);
+
+create index assinaturas_usuario_idx on assinaturas (usuario_id, criado_em desc);
+
+/*
+ * Uma linha por assinatura do Mercado Pago. Não há índice único por
+ * pessoa de propósito: a garantia de "uma viva por vez" é da aplicação,
+ * porque uma violação de unicidade aqui aconteceria **dentro do
+ * webhook** — e webhook que responde 500 é webhook que o Mercado Pago
+ * reenvia para sempre.
+ */
+create unique index assinaturas_mp_idx
+  on assinaturas (mp_preapproval_id) where mp_preapproval_id is not null;
+
+create trigger assinaturas_atualizado_em
+  before update on assinaturas
+  for each row execute function tocar_atualizado_em();
+
+alter table assinaturas enable row level security;
+
+-- ============================================================================
+-- 9f. Pagamentos
 --
 -- Toda cobrança que a Lupa cria, avulsa ou recorrente, com o que o
 -- Mercado Pago respondeu. Sem grant para `anon`/`authenticated` — mesmo
@@ -795,8 +858,11 @@ create table pagamentos (
   tipo             tipo_pagamento not null,
   valor_centavos   int not null check (valor_centavos > 0),
   status           status_pagamento not null default 'pendente',
-  mp_preference_id text,
   mp_payment_id    text,
+  -- Nulo em cobrança avulsa; preenchido em toda parcela gerada pela
+  -- recorrência. `on delete set null` porque a cobrança aconteceu de
+  -- verdade e não some junto com a autorização que a originou.
+  assinatura_id    uuid references assinaturas(id) on delete set null,
   metadata         jsonb not null default '{}',
   criado_em        timestamptz not null default now(),
   atualizado_em    timestamptz not null default now()
@@ -1213,3 +1279,4 @@ revoke select on inscricoes_push          from anon, authenticated;
  * cobrança. Mesmo tratamento de `usuarios`.
  */
 revoke select on pagamentos       from anon, authenticated;
+revoke select on assinaturas      from anon, authenticated;

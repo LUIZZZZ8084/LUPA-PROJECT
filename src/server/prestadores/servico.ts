@@ -1,7 +1,7 @@
 import "server-only";
 
 import { SERVICE_CATEGORIES } from "@/lib/constants";
-import { daquiA, onlyDigits } from "@/lib/format";
+import { onlyDigits } from "@/lib/format";
 import { type Autenticado, exigirCapacidade, type Papel } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
@@ -135,12 +135,15 @@ export async function virarPrestador(
     cnpjVerificado: false,
     razaoSocial: null,
     /*
-     * 30 dias de graça antes da primeira cobrança — tempo de montar o
-     * perfil e aparecer na vitrine sem precisar assinar no mesmo minuto
-     * em que ativa. `daquiA` mora em `@/lib/format` porque a mesma regra
-     * já vale para o prazo de vaga.
+     * Sem carência: decisão do Luiz em 09/09/2026 (#170). Havia 30 dias de
+     * vitrine sem pedir cartão nenhum — e era exatamente o que permitia
+     * empilhar carência com a devolução da primeira cobrança e ficar até
+     * 60 dias sem pagar nada. Hoje o teste grátis é o de
+     * `DIAS_TESTE_GRATIS`, e só começa depois que a pessoa autoriza o
+     * cartão em `/perfil/assinatura` — para onde a ativação já
+     * redireciona.
      */
-    mensalidadeValidaAte: daquiA(30),
+    mensalidadeValidaAte: null,
   });
 
   /*
@@ -183,16 +186,21 @@ export async function virarPrestador(
 }
 
 /**
- * Estende a mensalidade por mais 30 dias, a partir de um pagamento
- * aprovado.
+ * Estende a mensalidade a partir de agora ou do prazo que já valia — o
+ * que for maior, para quem renova antes de vencer não perder os dias já
+ * pagos.
  *
- * A partir do maior entre "agora" e o prazo que já valia — quem renova
- * antes de vencer não perde os dias já pagos. Chamado só por
- * `src/server/pagamentos/servico.ts`, depois de confirmar o pagamento na
- * API do Mercado Pago; não faz a própria checagem de permissão porque
- * quem liga é o sistema, não uma sessão.
+ * `dias` tem dois chamadores com sentidos diferentes, os dois em
+ * `src/server/pagamentos/servico.ts`: a extensão normal de 30 dias, a
+ * cada parcela aprovada da assinatura; e `DIAS_TESTE_GRATIS`, quando o
+ * Mercado Pago avisa que o cartão foi autorizado e o teste começou, antes
+ * de qualquer cobrança de verdade. Nenhum dos dois faz a própria checagem
+ * de permissão, porque quem liga é o sistema, não uma sessão.
  */
-export async function estenderMensalidade(usuarioId: string): Promise<void> {
+export async function estenderMensalidade(
+  usuarioId: string,
+  dias = 30,
+): Promise<void> {
   const repo = repositorioUsuarios();
   const perfil = await repo.perfilPrestador(usuarioId);
   if (!perfil) throw erros.naoEncontrado("Perfil de prestador");
@@ -201,13 +209,14 @@ export async function estenderMensalidade(usuarioId: string): Promise<void> {
     ? Math.max(Date.now(), new Date(perfil.mensalidadeValidaAte).getTime())
     : Date.now();
   const novaValidade = new Date(
-    baseMs + 30 * 24 * 60 * 60 * 1000,
+    baseMs + dias * 24 * 60 * 60 * 1000,
   ).toISOString();
 
   await repo.definirMensalidadeValidaAte(usuarioId, novaValidade);
 
   log.info("mensalidade de prestador estendida", {
     acao: "prestador.mensalidade",
+    dias,
   });
 }
 

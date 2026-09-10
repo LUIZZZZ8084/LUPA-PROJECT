@@ -11,10 +11,16 @@ import { entrarComoTeste } from "./helpers";
  * verdadeira e a conclusão não — o custo é uma conta a mais, que este
  * arquivo cria, exatamente como `feed-do-prestador.spec.ts` já fazia.
  *
- * O que se protege aqui é a corrente inteira: assinar cria a cobrança, a
- * cobrança aprovada estende a mensalidade, e a tela passa a dizer que está
- * ativa. Cada elo já tem teste de unidade; o que nenhum deles responde é se
- * eles estão ligados.
+ * O que se protege aqui é a corrente inteira: assinar cria a assinatura
+ * recorrente, a primeira cobrança estende a mensalidade, e a tela passa a
+ * dizer que renova sozinha. Cada elo já tem teste de unidade; o que nenhum
+ * deles responde é se eles estão ligados.
+ *
+ * E protege a saída, que agora é uma só: cancelar. Dentro do teste
+ * grátis ela sai da busca na hora e não custa nada; depois de a primeira
+ * cobrança acontecer, ela para o futuro e mantém os dias já pagos. A
+ * devolução self-service saiu junto com os 30 dias — o teste grátis é a
+ * janela para desistir, e duas janelas confundiam mais do que protegiam.
  *
  * **Sem Mercado Pago no caminho.** A suíte roda em demonstração por
  * construção, e sem `MERCADO_PAGO_ACCESS_TOKEN` a cobrança é aprovada na
@@ -52,7 +58,8 @@ test.describe("assinatura do prestador", () => {
       .getByLabel("Sobre o seu trabalho")
       .fill("Instalações elétricas residenciais e comerciais em Sinop.");
     await page.getByRole("button", { name: /virar prestador/i }).click();
-    await page.waitForURL(/\/perfil$/, { timeout: 15_000 });
+    // Sem carência (#170): a ativação manda direto para a assinatura.
+    await page.waitForURL(/\/perfil\/assinatura$/, { timeout: 15_000 });
   });
 
   test.afterAll(async () => {
@@ -60,16 +67,23 @@ test.describe("assinatura do prestador", () => {
   });
 
   /**
-   * Quem acabou de virar prestador ganha 30 dias de carência, e a tela
-   * precisa dizer isso — senão a pessoa assina de novo sem precisar.
+   * Quem acabou de virar prestador não ganha mais nada de graça sem
+   * autorizar o cartão (#170): a tela mostra "Inativa" e oferece o teste
+   * de 15 dias, não uma data que já vale sozinha.
    */
-  test("mostra o preço e o estado da mensalidade", async () => {
+  test("mostra o preço e o teste grátis, sem carência nenhuma", async () => {
     await page.goto("/perfil/assinatura");
 
-    await expect(page.getByText("R$ 19,90")).toBeVisible();
+    /*
+     * `.first()` nos dois: o preço aparece no texto que explica quando a
+     * cobrança acontece **e** no número grande; "15 dias grátis" aparece
+     * no texto e no rótulo do botão. Repetir é proposital — quem lê só o
+     * botão e quem lê só o parágrafo precisam sair sabendo a mesma coisa.
+     */
+    await expect(page.getByText("R$ 19,90").first()).toBeVisible();
     await expect(page.getByText("/mês")).toBeVisible();
-    await expect(page.getByText("Ativa", { exact: true })).toBeVisible();
-    await expect(page.getByText(/válida até/i)).toBeVisible();
+    await expect(page.getByText("Inativa", { exact: true })).toBeVisible();
+    await expect(page.getByText(/15 dias grátis/i).first()).toBeVisible();
   });
 
   /**
@@ -103,7 +117,17 @@ test.describe("assinatura do prestador", () => {
 
     const antes = await validadeNaTela(page);
 
-    await page.getByRole("button", { name: /assinar|renovar/i }).click();
+    /*
+     * O rótulo muda com o estado — "Testar 15 dias grátis", "Ativar
+     * renovação automática" ou "Continuar assinatura" —, e por isso ele é
+     * listado inteiro em vez de um `/renova/i` frouxo: esse padrão
+     * casaria também com "Cancelar renovação", que é o botão oposto.
+     */
+    await page
+      .getByRole("button", {
+        name: /^(testar \d+ dias grátis|ativar renovação automática|continuar assinatura)$/i,
+      })
+      .click();
     await page.waitForURL(/\/pagamento\/retorno/, { timeout: 20_000 });
 
     /*
@@ -114,8 +138,9 @@ test.describe("assinatura do prestador", () => {
      * pergunta específica é: quem criou a cobrança consegue lê-la de
      * volta pela API?
      */
-    const idDoPagamento = new URL(page.url()).searchParams.get("id") ?? "";
-    expect(idDoPagamento, "o retorno precisa carregar o id na URL").not.toBe(
+    const idDaAssinatura =
+      new URL(page.url()).searchParams.get("assinatura") ?? "";
+    expect(idDaAssinatura, "o retorno precisa carregar o id na URL").not.toBe(
       "",
     );
 
@@ -127,15 +152,15 @@ test.describe("assinatura do prestador", () => {
      * este teste precisa distinguir.
      */
     const daApi = await page.evaluate(async (id) => {
-      const r = await fetch(`/api/pagamentos/${id}`, { cache: "no-store" });
+      const r = await fetch(`/api/assinaturas/${id}`, { cache: "no-store" });
       return { status: r.status, corpo: await r.text() };
-    }, idDoPagamento);
+    }, idDaAssinatura);
 
     expect(
       daApi.status,
-      `quem criou a cobrança tem de conseguir ler o status dela — recebido: ${daApi.corpo}`,
+      `quem criou a assinatura tem de conseguir ler o status dela — recebido: ${daApi.corpo}`,
     ).toBe(200);
-    expect(JSON.parse(daApi.corpo).status).toBe("aprovado");
+    expect(JSON.parse(daApi.corpo).status).toBe("ativa");
 
     /*
      * A tela nasce em "Confirmando o pagamento" e só depois consulta o
@@ -158,35 +183,37 @@ test.describe("assinatura do prestador", () => {
       depois,
       "a validade devia ter avançado depois de assinar",
     ).toBeGreaterThan(antes);
+
+    // E a tela para de dizer que não renova: agora renova.
+    await expect(page.getByText(/renova sozinha todo mês/i)).toBeVisible();
   });
 
   /**
-   * Pedir a devolução pela Lupa, sem entrar no Mercado Pago (#168).
+   * Cancelar interrompe o futuro e **não** desfaz o mês pago (#170).
    *
-   * O prestador acabou de assinar, então está dentro dos sete dias — e o
-   * botão só existe nessa janela, decidido no servidor. A confirmação é um
-   * segundo clique porque a devolução tira a vitrine na hora.
+   * É a diferença que decide se a recorrência é produto ou armadilha: sem
+   * este botão, quem autorizou uma cobrança mensal só sai dela indo
+   * procurar o Mercado Pago, onde não escolheu ter conta. E se cancelar
+   * derrubasse a mensalidade na hora, ninguém clicaria — pagou o mês.
    */
-  test("pede a devolução e a mensalidade cai na hora", async () => {
+  test("cancelar a renovação mantém os dias já pagos", async () => {
     await page.goto("/perfil/assinatura");
+    const antes = await validadeNaTela(page);
 
+    await page.getByRole("button", { name: /cancelar renovação/i }).click();
+    // O aviso diz o que NÃO se perde, antes de perguntar de novo.
+    await expect(page.getByText(/nada é devolvido/i)).toBeVisible();
+    await page.getByRole("button", { name: /confirmar cancelamento/i }).click();
+
+    await expect(page.getByText(/não renova sozinha/i)).toBeVisible({
+      timeout: 15_000,
+    });
+
+    expect(
+      await validadeNaTela(page),
+      "cancelar não pode encurtar o mês que a pessoa já pagou",
+    ).toBe(antes);
     await expect(page.getByText("Ativa", { exact: true })).toBeVisible();
-
-    await page.getByRole("button", { name: /pedir devolução/i }).click();
-    // O aviso diz o que se perde antes de perguntar de novo.
-    await expect(page.getByText(/sai da busca/i)).toBeVisible();
-
-    await page.getByRole("button", { name: /confirmar devolução/i }).click();
-
-    await expect(
-      page.getByText("Inativa", { exact: true }),
-      "a mensalidade tinha de cair junto com a devolução",
-    ).toBeVisible({ timeout: 15_000 });
-
-    // E o botão some: não há mais o que devolver.
-    await expect(
-      page.getByRole("button", { name: /pedir devolução/i }),
-    ).toHaveCount(0);
   });
 
   /**

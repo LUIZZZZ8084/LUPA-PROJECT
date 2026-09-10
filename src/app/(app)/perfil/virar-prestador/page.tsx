@@ -18,8 +18,8 @@ export default async function VirarPrestadorPage() {
   if (!sessao) notFound();
 
   /*
-   * Quem já é prestador vai para o próprio perfil, e isso não é gentileza:
-   * é o que faz a ativação terminar bem.
+   * Quem já é prestador vai para a assinatura, não para o perfil — e isso
+   * não é gentileza: é o que faz a ativação terminar bem.
    *
    * A action chama `revalidatePath("/", "layout")` — o papel decide o menu
    * inteiro. Isso re-renderiza *esta* rota, que a essa altura já recusa a
@@ -27,10 +27,15 @@ export default async function VirarPrestadorPage() {
    * "Não encontramos essa página", e a navegação do cliente perdia a
    * corrida contra a revalidação. Achado pelo e2e, não pela leitura.
    *
+   * O destino é `/perfil/assinatura`, não `/perfil`, desde a #170: virar
+   * prestador não dá mais carência sem cartão, e sem assinatura o perfil
+   * nem aparece na vitrine. Mandar para `/perfil` deixaria quem acabou de
+   * ativar sem saber que falta um passo.
+   *
    * Redirecionar também não vaza nada: quem é prestador sabe que esta tela
    * existe — acabou de sair dela.
    */
-  if (sessao.papel === "prestador_servico") redirect("/perfil");
+  if (sessao.papel === "prestador_servico") redirect("/perfil/assinatura");
 
   /*
    * Empresa (é CNPJ, não CPF) e admin (não age no lugar de ninguém) não

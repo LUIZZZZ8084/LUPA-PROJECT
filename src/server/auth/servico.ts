@@ -1,5 +1,4 @@
 import { CIDADE_INICIAL } from "@/lib/constants";
-import { daquiA } from "@/lib/format";
 import { AppError, erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
@@ -141,9 +140,10 @@ export async function cadastrar(
       cnpj: null,
       cnpjVerificado: false,
       razaoSocial: null,
-      // 30 dias de graça antes da primeira cobrança — mesma regra de
-      // `virarPrestador`.
-      mensalidadeValidaAte: daquiA(30),
+      // Sem carência — mesma regra de `virarPrestador` desde a #170. O
+      // teste grátis começa em `/perfil/assinatura`, quando o cartão é
+      // autorizado, não no cadastro.
+      mensalidadeValidaAte: null,
     });
 
     /*

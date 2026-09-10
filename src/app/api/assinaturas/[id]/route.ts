@@ -5,7 +5,13 @@ import { cronometro, log, novoRequestId } from "@/server/logger";
 import { repositorioPagamentos } from "@/server/pagamentos";
 
 /**
- * Status de um pagamento, para a tela de retorno fazer polling.
+ * Status de uma assinatura, para a tela de retorno fazer polling.
+ *
+ * Antes desta rota o polling era sobre a **cobrança**, e isso deixou de
+ * funcionar com a recorrência (#170): quem volta do Mercado Pago volta
+ * antes de existir qualquer linha em `pagamentos` — a primeira parcela só
+ * é registrada quando o webhook avisa. O que a pessoa quer saber ali é
+ * outra coisa, e a assinatura responde: "a renovação automática começou?".
  *
  * Rota em vez de server action pelo mesmo motivo de `/api/admin/metricas`:
  * o cliente refaz a chamada num intervalo, e `fetch` para uma rota cancela
@@ -27,31 +33,31 @@ export async function GET(
 
   try {
     const sessao = await sessaoAtual();
-    const pagamento = await repositorioPagamentos().porId(id);
+    const assinatura = await repositorioPagamentos().assinaturaPorId(id);
 
     /*
      * "Não encontrado" tanto para quem não tem sessão quanto para quem
-     * tenta ver o pagamento de outra pessoa — um 403 confirmaria que o id
+     * tenta ver a assinatura de outra pessoa — um 403 confirmaria que o id
      * existe, informação de graça para quem está sondando.
      */
-    if (!sessao || !pagamento || pagamento.usuarioId !== sessao.usuarioId) {
+    if (!sessao || !assinatura || assinatura.usuarioId !== sessao.usuarioId) {
       return NextResponse.json({ erro: "não encontrado" }, { status: 404 });
     }
 
-    log.info("status de pagamento consultado", {
+    log.info("status de assinatura consultado", {
       requestId,
-      acao: "pagamentos.status",
+      acao: "assinaturas.status",
       papel: sessao.papel,
       ms: medir(),
     });
 
     return NextResponse.json(
-      { status: pagamento.status },
+      { status: assinatura.status },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (e) {
     const erro = comoAppError(e);
-    log.erro(erro, { requestId, acao: "pagamentos.status", ms: medir() });
+    log.erro(erro, { requestId, acao: "assinaturas.status", ms: medir() });
     return NextResponse.json(erro.paraCliente(), { status: erro.status });
   }
 }

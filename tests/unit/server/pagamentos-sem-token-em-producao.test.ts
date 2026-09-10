@@ -61,7 +61,7 @@ describe("cobrança em produção sem token do Mercado Pago", () => {
 
   it("recusa em vez de aprovar de graça", async () => {
     await expect(
-      servico.criarCobranca(sessao, "prestador_mensalidade"),
+      servico.assinar(sessao, "prestador_mensalidade"),
     ).rejects.toMatchObject({ codigo: "indisponivel" });
 
     expect(
@@ -82,7 +82,7 @@ describe("cobrança em produção sem token do Mercado Pago", () => {
     const criar = vi.spyOn(repo, "criar");
 
     await expect(
-      servico.criarCobranca(sessao, "prestador_mensalidade"),
+      servico.assinar(sessao, "prestador_mensalidade"),
     ).rejects.toMatchObject({ codigo: "indisponivel" });
 
     expect(

@@ -112,7 +112,13 @@ test.describe("virar prestador", () => {
 
     await page.getByRole("button", { name: /virar prestador/i }).click();
 
-    await page.waitForURL(/\/perfil$/, { timeout: 15_000 });
+    /*
+     * Vai para a assinatura, não para o perfil — desde a #170, virar
+     * prestador não dá mais carência sem cartão: sem assinatura o perfil
+     * nem aparece na vitrine, e mandar para `/perfil` deixaria a pessoa
+     * sem saber que falta um passo.
+     */
+    await page.waitForURL(/\/perfil\/assinatura$/, { timeout: 15_000 });
   });
 
   /**
@@ -138,17 +144,18 @@ test.describe("virar prestador", () => {
   });
 
   /**
-   * Voltar à tela de ativação leva ao perfil, não a um 404.
+   * Voltar à tela de ativação leva à assinatura, não a um 404.
    *
    * Parece conforto e não é: a action revalida o layout, o que
    * re-renderiza essa mesma rota. Com `notFound()` ali, quem ativava com
    * sucesso terminava olhando para "Não encontramos essa página" — foi o
-   * que a primeira versão fez, e o que este teste pegou.
+   * que a primeira versão fez, e o que este teste pegou. O destino virou
+   * `/perfil/assinatura` na #170, junto com o fim da carência.
    */
-  test("quem já é prestador é levado ao perfil, não a um 404", async () => {
+  test("quem já é prestador é levado à assinatura, não a um 404", async () => {
     const resposta = await page.goto("/perfil/virar-prestador");
 
     expect(resposta?.status()).toBe(200);
-    await expect(page).toHaveURL(/\/perfil$/);
+    await expect(page).toHaveURL(/\/perfil\/assinatura$/);
   });
 });
