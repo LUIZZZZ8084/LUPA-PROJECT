@@ -50,7 +50,21 @@ import {
 import { ehAppError } from "@/server/errors";
 import { RepositorioMemoria, usarRepositorio } from "@/server/repositories";
 
-const OPCOES = { origem: "1.2.3.4", urlBase: "https://lupapp.com.br" };
+/**
+ * `dormir` no-op: o piso de resposta é de mais de um segundo, e esperá-lo
+ * de verdade em cada um dos treze casos deste arquivo trocaria a suíte
+ * inteira por uma sala de espera. O que se mede aqui é *que* o piso é
+ * respeitado nas duas saídas — abaixo, com o cronômetro em `dormiu` —, e
+ * não que `setTimeout` funciona.
+ */
+const dormiu: number[] = [];
+const OPCOES = {
+  origem: "1.2.3.4",
+  urlBase: "https://lupapp.com.br",
+  dormir: async (ms: number) => {
+    dormiu.push(ms);
+  },
+};
 
 /** O link que foi para o e-mail, e o token cru dentro dele. */
 function tokenDoUltimoEmail(): string {
@@ -69,11 +83,18 @@ describe("recuperação de senha", () => {
     repo = new RepositorioMemoria();
     restaurar = usarRepositorio(repo);
     enviados.length = 0;
+    dormiu.length = 0;
     estado.configurado = true;
     estado.falha = false;
     limparLimites();
     vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    /*
+     * `error`, e não `warn`: o logger manda os dois níveis por
+     * `console.error` para a Vercel separar os fluxos. Silenciar `warn`
+     * aqui não calava nada — o ruído continuava saindo, e um teste que
+     * quisesse conferir o log estaria olhando para o espião errado.
+     */
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     const usuario = await repo.criar({
       email: "maria@teste.lupa",
@@ -139,12 +160,52 @@ describe("recuperação de senha", () => {
       expect(r.motivo).toMatch(/não está disponível|suporte/i);
     });
 
-    it("falha do provedor não vira sucesso silencioso", async () => {
+    /**
+     * Falha de envio responde `ok`, e a inversão é deliberada.
+     *
+     * Este teste exigia o contrário até 09/09/2026 — e o contrário era um
+     * oráculo de contas melhor que o de tempo, porque não precisava de
+     * cronômetro: "não conseguimos enviar" só aparecia para quem **tem**
+     * conta, já que quem não tem nunca chega à linha do envio. Bastava
+     * ler a mensagem para saber quem está cadastrado, que é exatamente o
+     * que a frase idêntica das duas saídas existe para impedir.
+     *
+     * O que substitui a garantia antiga é o log: o `warn` continua saindo,
+     * com o motivo, e é lá que quem opera vai olhar. Silencioso para a
+     * pessoa, não para nós.
+     */
+    it("falha do provedor não vaza que a conta existe", async () => {
       estado.falha = true;
+      // `warn` e `error` saem por `console.error`, para a Vercel separar
+      // os fluxos — ver `emitir` em `src/server/logger.ts`.
+      const avisos = vi.mocked(console.error);
+      avisos.mockClear();
 
       const r = await pedirRecuperacao("maria@teste.lupa", OPCOES);
 
-      expect(r.ok).toBe(false);
+      expect(r.ok, "a resposta precisa ser indistinguível").toBe(true);
+      expect(enviados, "e nada foi enviado de verdade").toHaveLength(0);
+      expect(avisos, "mas o motivo fica no log").toHaveBeenCalled();
+    });
+
+    /**
+     * O piso de tempo, que é a outra metade do disfarce.
+     *
+     * Responder a mesma frase não basta se uma das saídas demora o dobro:
+     * conta que existe grava token e chama o provedor pela rede, conta que
+     * não existe volta de uma leitura só. Sem o piso, cronometrar a tela
+     * responde o que ela se recusa a dizer.
+     */
+    it("as duas saídas esperam o mesmo piso de tempo", async () => {
+      await pedirRecuperacao("maria@teste.lupa", OPCOES);
+      const comConta = dormiu.length;
+
+      dormiu.length = 0;
+      limparLimites();
+      await pedirRecuperacao("ninguem@teste.lupa", OPCOES);
+
+      expect(comConta, "quem tem conta espera o piso").toBe(1);
+      expect(dormiu, "quem não tem espera o mesmo piso").toHaveLength(1);
     });
 
     /**

@@ -42,6 +42,34 @@ export const VALIDADE_MS = 60 * 60 * 1000;
 /** Só para o teste conferir a força do token sem repetir o número. */
 export const BYTES_DO_TOKEN = 32;
 
+/**
+ * O piso de tempo que toda resposta respeita, exista a conta ou não.
+ *
+ * Dizer a mesma frase nas duas saídas não basta se uma delas demora o
+ * dobro: conta que existe grava um token e chama o Resend pela rede, e
+ * conta que não existe volta de uma leitura só. A diferença é de centenas
+ * de milissegundos — mais que suficiente para transformar esta tela no
+ * oráculo que a frase idêntica existe para fechar, e aqui a lista de quem
+ * tem conta é a lista de quem está procurando emprego.
+ *
+ * É o mesmo cuidado que `gastarTempoDeVerificacao` já dá ao login, com
+ * uma diferença: lá dá para gastar o tempo de um Argon2 de verdade, e
+ * aqui não há como imitar a latência de uma chamada de rede. Por isso um
+ * piso fixo, folgado o bastante para caber o envio real.
+ */
+export const PISO_DE_RESPOSTA_MS = 1200;
+
+const dormirDeVerdade = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+async function esperarAtePiso(
+  comecouEm: number,
+  dormir: (ms: number) => Promise<void>,
+): Promise<void> {
+  const falta = PISO_DE_RESPOSTA_MS - (Date.now() - comecouEm);
+  if (falta > 0) await dormir(falta);
+}
+
 function hashDoToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -58,8 +86,22 @@ export type PedidoDeRecuperacao = { ok: true } | { ok: false; motivo: string };
 
 export async function pedirRecuperacao(
   email: string,
-  opcoes: { origem: string; urlBase: string; buscar?: typeof fetch },
+  opcoes: {
+    origem: string;
+    urlBase: string;
+    buscar?: typeof fetch;
+    /** Injetável só para o teste não esperar o piso de verdade. */
+    dormir?: (ms: number) => Promise<void>;
+  },
 ): Promise<PedidoDeRecuperacao> {
+  const comecouEm = Date.now();
+  const dormir = opcoes.dormir ?? dormirDeVerdade;
+
+  /*
+   * Esta saída fica **fora** do piso de propósito: "não há provedor de
+   * e-mail neste ambiente" é verdade para todo mundo igualmente, então
+   * responder rápido aqui não conta nada sobre nenhuma conta.
+   */
   if (!temEmailConfigurado) {
     return {
       ok: false,
@@ -88,6 +130,7 @@ export async function pedirRecuperacao(
     log.info("recuperação pedida para e-mail sem conta", {
       acao: "auth.recuperar",
     });
+    await esperarAtePiso(comecouEm, dormir);
     return { ok: true };
   }
 
@@ -118,19 +161,30 @@ export async function pedirRecuperacao(
     opcoes.buscar,
   );
 
+  /*
+   * Falha de envio também responde `ok`, e isso é escolha.
+   *
+   * "Não conseguimos enviar" só podia acontecer para quem **tem** conta —
+   * quem não tem nunca chega a esta linha. Era o mesmo oráculo que o piso
+   * de tempo fecha, só que determinístico e sem precisar de cronômetro:
+   * bastava ler a mensagem. Some da tela e fica no log, que é onde quem
+   * opera vai procurar.
+   *
+   * O preço é a pessoa esperar por um e-mail que não saiu, e ele é menor
+   * do que parece: a tela já diz "se existe uma conta com esse e-mail",
+   * então "não chegou" nunca foi resposta conclusiva. Pedir de novo
+   * resolve, e o log diz o que houve.
+   */
   if (!resultado.ok) {
     log.warn("falha ao enviar e-mail de recuperação", {
       acao: "auth.recuperar",
       motivo: resultado.motivo,
     });
-    return {
-      ok: false,
-      motivo:
-        "Não conseguimos enviar o e-mail agora. Tente de novo em alguns minutos.",
-    };
+  } else {
+    log.info("e-mail de recuperação enviado", { acao: "auth.recuperar" });
   }
 
-  log.info("e-mail de recuperação enviado", { acao: "auth.recuperar" });
+  await esperarAtePiso(comecouEm, dormir);
   return { ok: true };
 }
 
