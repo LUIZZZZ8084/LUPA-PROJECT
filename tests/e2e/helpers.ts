@@ -269,3 +269,19 @@ export async function comprarCreditoDeVaga(page: Page): Promise<void> {
     page.getByRole("heading", { name: "Pagamento aprovado" }),
   ).toBeVisible({ timeout: 30_000 });
 }
+
+/**
+ * Fecha a publicação de uma vaga: revisar e confirmar.
+ *
+ * Publicar virou duas etapas na #173 — a empresa confere o que vai ao ar
+ * antes de confirmar, porque vaga publicada não se edita mais. Os testes
+ * que publicam como preparação passam por aqui em vez de repetir os dois
+ * cliques, e assim uma mudança no rótulo dos botões se conserta num lugar
+ * só.
+ */
+export async function confirmarPublicacao(page: Page): Promise<void> {
+  await page
+    .getByRole("button", { name: /revisar antes de publicar/i })
+    .click();
+  await page.getByRole("button", { name: /confirmar e publicar/i }).click();
+}

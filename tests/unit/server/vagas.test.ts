@@ -30,11 +30,9 @@ import { ehAppError } from "@/server/errors";
 import { RepositorioMemoria, usarRepositorio } from "@/server/repositories";
 import { RepositorioVagasMemoria, usarRepositorioVagas } from "@/server/vagas";
 import {
-  editarVaga,
   encerrarVaga,
   publicarVaga,
   reativarVaga,
-  vagaParaEditar,
 } from "@/server/vagas/servico";
 
 const empresa: Autenticado = { usuarioId: "empresa-1", papel: "empresa" };
@@ -229,16 +227,6 @@ describe("vagas do painel da empresa", () => {
   });
 
   describe("dono", () => {
-    it("ninguém edita a vaga de outra empresa", async () => {
-      const dela = await publicarVaga(empresa, DADOS);
-
-      const erro = await capturar(() =>
-        editarVaga(outraEmpresa, dela.id, { titulo: "Invadido" }),
-      );
-      // 404, não 403: um 403 confirmaria que a vaga existe.
-      expect(erro.codigo).toBe("nao_encontrado");
-    });
-
     it("ninguém encerra a vaga de outra empresa", async () => {
       const dela = await publicarVaga(empresa, DADOS);
 
@@ -247,53 +235,37 @@ describe("vagas do painel da empresa", () => {
     });
 
     /**
-     * Admin administra, mas não publica vaga nem se candidata — a matriz
-     * de RBAC nem concede `vaga:editar_propria` ao papel. Dar essa
-     * capacidade de graça transformaria um acesso de admin comprometido
-     * em controle total sobre o painel de qualquer empresa.
+     * Admin administra, mas não age no lugar de ninguém — a matriz nem
+     * concede `vaga:encerrar_propria` ao papel. Dar de graça
+     * transformaria um acesso de admin comprometido em controle sobre o
+     * painel de qualquer empresa.
      */
-    it("admin não tem a capacidade de editar ou encerrar vaga", async () => {
+    it("admin não tem a capacidade de encerrar vaga", async () => {
       const dela = await publicarVaga(empresa, DADOS);
 
-      const erroEditar = await capturar(() =>
-        editarVaga(admin, dela.id, { titulo: "Ajustado pelo suporte" }),
-      );
-      expect(erroEditar.codigo).toBe("sem_permissao");
-
-      const erroEncerrar = await capturar(() => encerrarVaga(admin, dela.id));
-      expect(erroEncerrar.codigo).toBe("sem_permissao");
+      const erro = await capturar(() => encerrarVaga(admin, dela.id));
+      expect(erro.codigo).toBe("sem_permissao");
     });
 
     it("id inexistente é 'não encontrado'", async () => {
-      const erro = await capturar(() =>
-        editarVaga(empresa, "nao-existe", { titulo: "x" }),
-      );
+      const erro = await capturar(() => encerrarVaga(empresa, "nao-existe"));
       expect(erro.codigo).toBe("nao_encontrado");
     });
   });
 
-  describe("edição", () => {
-    it("a dona edita a própria vaga", async () => {
-      const vaga = await publicarVaga(empresa, DADOS);
-      const editada = await editarVaga(empresa, vaga.id, {
-        titulo: "Título novo",
-      });
-
-      expect(editada.titulo).toBe("Título novo");
-      expect(editada.descricao).toBe(DADOS.descricao);
-    });
-
-    it("campo não informado mantém o valor anterior", async () => {
-      const vaga = await publicarVaga(empresa, {
-        ...DADOS,
-        salarioMin: 1800,
-      });
-      const editada = await editarVaga(empresa, vaga.id, {
-        titulo: "Só o título mudou",
-      });
-
-      expect(editada.salarioMin).toBe(1800);
-    });
+  /**
+   * Editar vaga publicada saiu na #173.
+   *
+   * Não é lacuna: com cobrança por vaga, editar era o caminho para não
+   * pagar — publica uma e reescreve por dentro a cada vaga nova. E quem
+   * se candidatou a um anúncio tem direito a ele continuar sendo o mesmo.
+   * O que existe no lugar é a revisão obrigatória antes de publicar, e
+   * `encerrarVaga` para quem se arrependeu do anúncio inteiro.
+   */
+  it("não existe mais como editar uma vaga publicada", async () => {
+    const servico = await import("@/server/vagas/servico");
+    expect(Object.keys(servico)).not.toContain("editarVaga");
+    expect(Object.keys(servico)).not.toContain("vagaParaEditar");
   });
 
   describe("encerrar", () => {
@@ -395,24 +367,6 @@ describe("vagas do painel da empresa", () => {
       vi.setSystemTime(new Date("2026-02-05T00:00:00Z"));
       const erro = await capturar(() => reativarVaga(outraEmpresa, dela.id));
       expect(erro.codigo).toBe("nao_encontrado");
-    });
-  });
-
-  describe("vagaParaEditar", () => {
-    it("devolve null sem sessão, sem lançar", async () => {
-      expect(await vagaParaEditar(null, "qualquer")).toBeNull();
-    });
-
-    it("devolve null para vaga de outra empresa", async () => {
-      const vaga = await publicarVaga(empresa, DADOS);
-      expect(await vagaParaEditar(outraEmpresa, vaga.id)).toBeNull();
-    });
-
-    it("devolve a vaga para a dona", async () => {
-      const vaga = await publicarVaga(empresa, DADOS);
-      expect(await vagaParaEditar(empresa, vaga.id)).toMatchObject({
-        id: vaga.id,
-      });
     });
   });
 

@@ -76,14 +76,19 @@ test.describe("rotas da empresa", () => {
   }
 
   /**
-   * Ficha do candidato e edição de vaga, com o id resolvido pelo painel.
+   * A ficha do candidato, com o id resolvido pelo painel.
    *
-   * São as duas telas em que a empresa passa mais tempo — ler currículo e
-   * corrigir anúncio — e nenhuma delas jamais passou por contraste.
+   * É a tela em que a empresa passa mais tempo — ler currículo — e nunca
+   * tinha passado por contraste. A edição de vaga estava aqui até a #173,
+   * quando vaga publicada deixou de ser editável e a tela saiu junto.
+   *
+   * O número é conferido de propósito: uma lista que encolhe em silêncio
+   * é uma varredura que passa a medir menos sem ninguém notar, que é a
+   * armadilha registrada em `rotas-varridas.test.ts`.
    */
   test("as telas com id também passam", async ({ page }) => {
     const profundas = await rotasProfundasDaEmpresa(page);
-    expect(profundas.length, "o painel não ofereceu nenhum link").toBe(2);
+    expect(profundas.length, "o painel não ofereceu nenhum link").toBe(1);
 
     for (const { path, nome } of profundas) {
       await page.goto(path);
