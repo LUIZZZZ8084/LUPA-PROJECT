@@ -24,7 +24,7 @@ export const metadata: Metadata = {
  * decidindo: da menor para a maior, e o ilimitado por último.
  *
  * Cada uma diz o preço **por vaga** — sem isso não há como comparar
- * R$ 100 por 5 com R$ 149,90 por 15, e uma tabela de preços que não
+ * R$ 100 por 5 com R$ 179,90 por 15, e uma tabela de preços que não
  * deixa comparar é uma tabela que faz a pessoa escolher errado e se
  * arrepender.
  */

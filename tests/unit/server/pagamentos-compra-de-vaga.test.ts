@@ -89,9 +89,9 @@ describe("comprar vaga", () => {
     });
 
     it.each([
-      ["empresa_vaga_avulsa", 1, 2990],
+      ["empresa_vaga_avulsa", 1, 2490],
       ["empresa_pacote_5", 5, 10000],
-      ["empresa_pacote_15", 15, 14990],
+      ["empresa_pacote_15", 15, 17990],
     ] as const)(
       "%s credita %i vaga(s) e cobra o preço da tabela",
       async (tipo, creditos, centavos) => {

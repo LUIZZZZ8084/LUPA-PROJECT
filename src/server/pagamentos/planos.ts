@@ -9,11 +9,22 @@ export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
   // a espera por demanda antes de cobrar (decidida em 25/08).
   prestador_mensalidade: 1990,
 
-  // Publicar vaga (#172), decidido pelo Luiz em 09/09/2026. Os três
-  // primeiros são pagamento único e viram crédito; o último é assinatura.
-  empresa_vaga_avulsa: 2990,
+  /*
+   * Publicar vaga (#172), decidido pelo Luiz em 09/09/2026 e ajustado no
+   * mesmo dia depois de a tela mostrar o preço por vaga.
+   *
+   * A primeira tabela era 29,90 / 100 / 149,90, e o preço por vaga saía
+   * 29,90 / 20,00 / 9,99: a avulsa custava **três vezes** o unitário do
+   * pacote maior. Quem tinha uma vaga só olhava aquilo como punição, e
+   * quem tinha três comprava quinze sem precisar.
+   *
+   * **O teto é o plano mensal**, e é ele que segura a escada: um pacote
+   * que custe perto de R$ 199,90 não vende, porque a essa altura vale
+   * mais assinar e publicar à vontade. Por isso o de 15 não sobe mais.
+   */
+  empresa_vaga_avulsa: 2490,
   empresa_pacote_5: 10000,
-  empresa_pacote_15: 14990,
+  empresa_pacote_15: 17990,
   empresa_mensal: 19990,
 };
 
