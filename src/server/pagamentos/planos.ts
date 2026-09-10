@@ -33,6 +33,9 @@ export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
   empresa_pacote_5: 11990,
   empresa_pacote_10: 14990,
   empresa_mensal: 19990,
+
+  /** Currículo em PDF (#47), compra única e permanente. */
+  curriculo_pdf: 1490,
 };
 
 export const DESCRICAO_PAGAMENTO: Record<TipoPagamento, string> = {
@@ -41,6 +44,7 @@ export const DESCRICAO_PAGAMENTO: Record<TipoPagamento, string> = {
   empresa_pacote_5: "5 vagas — Lupa",
   empresa_pacote_10: "10 vagas — Lupa",
   empresa_mensal: "Vagas ilimitadas, mensal — Lupa",
+  curriculo_pdf: "Gerador de currículo em PDF — Lupa",
 };
 
 /**

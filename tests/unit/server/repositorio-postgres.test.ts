@@ -205,6 +205,7 @@ describe("RepositorioPostgres", () => {
       formacao: null,
       habilidades: [],
       visivelParaEmpresas: false,
+      geradorCurriculoLiberado: false,
     });
     expect(chamadas.at(-1)?.tabela).toBe("perfis_candidato");
   });
@@ -349,7 +350,7 @@ describe("perfis para a edição", () => {
     expect(p?.anosExperiencia).toBe(0);
   });
 
-  it("candidato: traduz formação e habilidades", async () => {
+  it("candidato: traduz formação, habilidades e o gerador de currículo", async () => {
     resposta = {
       data: {
         usuario_id: ID,
@@ -359,6 +360,7 @@ describe("perfis para a edição", () => {
         disponibilidade: "Imediata",
         formacao: "Ensino médio completo",
         habilidades: ["CNH categoria C"],
+        gerador_curriculo_liberado: true,
       },
       error: null,
     };
@@ -366,6 +368,7 @@ describe("perfis para a edição", () => {
     const c = await repo.perfilCandidato(ID);
     expect(c?.formacao).toBe("Ensino médio completo");
     expect(c?.habilidades).toEqual(["CNH categoria C"]);
+    expect(c?.geradorCurriculoLiberado).toBe(true);
   });
 
   it("perfil ausente devolve null, não objeto vazio", async () => {
@@ -486,6 +489,14 @@ describe("gravação de perfil", () => {
     expect(update?.args[0]).toEqual({
       mensalidade_valida_ate: "2026-10-01T00:00:00.000Z",
     });
+  });
+
+  it("candidato: liga e desliga o gerador de currículo", async () => {
+    await repo.definirGeradorCurriculoLiberado(ID, true);
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("perfis_candidato");
+    expect(update?.args[0]).toEqual({ gerador_curriculo_liberado: true });
   });
 
   it("falha ao gravar não passa em silêncio", async () => {

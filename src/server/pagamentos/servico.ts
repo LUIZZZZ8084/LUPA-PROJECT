@@ -3,6 +3,10 @@ import "server-only";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Autenticado } from "../auth/rbac";
 import {
+  liberarGeradorCurriculo,
+  revogarGeradorCurriculo,
+} from "../candidatos/servico";
+import {
   creditarVagas,
   debitarVagas,
   estenderPlanoMensal,
@@ -80,6 +84,10 @@ async function aplicarEfeito(pagamento: Pagamento): Promise<void> {
       await estenderPlanoMensal(pagamento.usuarioId);
       return;
 
+    case "curriculo_pdf":
+      await liberarGeradorCurriculo(pagamento.usuarioId);
+      return;
+
     default: {
       // Exaustividade: se `TipoPagamento` ganhar um novo valor sem que
       // este switch seja atualizado, o build quebra aqui — não em
@@ -121,6 +129,10 @@ async function desfazerEfeitoDoTipo(
 
     case "empresa_mensal":
       await revogarPlanoMensal(usuarioId);
+      return;
+
+    case "curriculo_pdf":
+      await revogarGeradorCurriculo(usuarioId);
       return;
 
     default: {
