@@ -270,16 +270,16 @@ export default async function EmpresaPage() {
               {direito.mensalAtivo
                 ? "Plano mensal ativo"
                 : direito.creditos === 1
-                  ? "1 crédito de vaga"
-                  : `${direito.creditos} créditos de vaga`}
+                  ? "1 vaga para publicar"
+                  : `${direito.creditos} vagas para publicar`}
             </h2>
           </div>
           <p className="mt-1 text-muted text-sm leading-relaxed">
             {direito.mensalAtivo
-              ? "Publique quantas vagas quiser, sem gastar crédito."
+              ? "Publique quantas vagas quiser, sem tirar do saldo."
               : direito.creditos === 0
-                ? "Compre um crédito para publicar sua próxima vaga."
-                : "Cada crédito publica uma vaga por 30 dias. Toque para comprar mais."}
+                ? "Compre uma vaga para publicar a próxima."
+                : "Cada uma fica 30 dias no ar. Toque para comprar mais."}
           </p>
         </Link>
 
@@ -305,7 +305,7 @@ export default async function EmpresaPage() {
           <EmptyState
             icon={<FileText size={22} />}
             title="Você ainda não publicou nenhuma vaga"
-            description="Publicar leva menos de dois minutos, e custa um crédito de vaga."
+            description="Publicar leva menos de dois minutos, e usa uma vaga do seu saldo."
             action={
               <ButtonLink
                 href="/empresa/vagas/nova"

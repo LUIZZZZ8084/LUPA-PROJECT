@@ -70,7 +70,7 @@ export default async function CreditosPage() {
       <PageTitle
         title="Comprar vagas"
         accent="text-empresas"
-        description="Cada vaga publicada fica 30 dias no ar. Você compra quantas quiser, e os créditos não expiram."
+        description="Cada vaga publicada fica 30 dias no ar. Você compra quantas quiser, e elas não expiram."
       />
 
       {/*
@@ -93,22 +93,22 @@ export default async function CreditosPage() {
                   {new Date(
                     direito.mensalidadeValidaAte as string,
                   ).toLocaleDateString("pt-BR")}
-                  , sem gastar crédito.
+                  , sem tirar nada do saldo.
                 </p>
               </>
             ) : (
               <>
                 <p className="font-bold text-sm">
                   {direito.creditos === 0
-                    ? "Você não tem créditos"
+                    ? "Você não tem vagas para publicar"
                     : direito.creditos === 1
-                      ? "Você tem 1 crédito"
-                      : `Você tem ${direito.creditos} créditos`}
+                      ? "Você tem 1 vaga para publicar"
+                      : `Você tem ${direito.creditos} vagas para publicar`}
                 </p>
                 <p className="mt-0.5 text-muted text-sm leading-relaxed">
                   {direito.creditos === 0
                     ? "Compre abaixo para publicar sua primeira vaga."
-                    : "Cada crédito publica uma vaga por 30 dias."}
+                    : "Cada uma fica 30 dias no ar."}
                 </p>
               </>
             )}
@@ -164,7 +164,7 @@ export default async function CreditosPage() {
                 <Badge tone="empresas">Mensal</Badge>
               </div>
               <p className="mt-0.5 text-muted text-sm">
-                Para quem contrata todo mês e não quer contar crédito.
+                Para quem contrata todo mês e não quer ficar contando.
               </p>
             </div>
             <div className="flex-none text-right">
@@ -176,7 +176,7 @@ export default async function CreditosPage() {
           <ul className="mt-3 space-y-1.5 text-muted text-sm">
             <li className="flex items-start gap-2">
               <Check size={15} className="mt-0.5 flex-none text-empresas" />
-              Publique quantas vagas quiser, sem gastar crédito
+              Publique quantas vagas quiser, sem tirar do saldo
             </li>
             <li className="flex items-start gap-2">
               <Check size={15} className="mt-0.5 flex-none text-empresas" />
@@ -184,7 +184,7 @@ export default async function CreditosPage() {
             </li>
             <li className="flex items-start gap-2">
               <Check size={15} className="mt-0.5 flex-none text-empresas" />
-              Os créditos que você já tem continuam guardados
+              As vagas que você já comprou continuam guardadas
             </li>
           </ul>
 
@@ -208,13 +208,16 @@ export default async function CreditosPage() {
           </li>
           <li>
             <strong className="text-ink">
-              Reativar uma vaga vencida usa um crédito.
+              Reativar uma vaga vencida gasta outra do saldo.
             </strong>{" "}
             É o mesmo que publicar de novo, e por isso custa o mesmo.
           </li>
           <li>
-            <strong className="text-ink">Crédito não expira.</strong> Comprou 10
-            e usou 3? Os outros 7 ficam esperando.
+            <strong className="text-ink">
+              O que você compra não expira, e nem recarrega.
+            </strong>{" "}
+            Comprou 10 e usou 3? As outras 7 ficam esperando. Acabou, é só
+            comprar mais — não vira nada sozinho no fim do mês.
           </li>
           <li>
             <strong className="text-ink">

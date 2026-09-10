@@ -86,7 +86,7 @@ export function RetornoDaCompra({ id, rota }: { id: string; rota: Rota }) {
         <p className="mt-1.5 text-muted text-sm">
           {rota === "assinaturas"
             ? "Sua assinatura está ativa e renova sozinha todo mês. Você pode cancelar quando quiser, no seu perfil."
-            : "Seus créditos já estão na conta e não expiram. Você pode publicar quando quiser."}
+            : "Suas vagas já estão na conta e não expiram. Você pode publicar quando quiser."}
         </p>
         <ButtonLink
           href={rota === "assinaturas" ? "/perfil" : "/empresa"}

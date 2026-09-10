@@ -9,6 +9,16 @@
  * A chave é `usuarioId`, não um `empresaId`: desde a #129 quem publica
  * vaga também pode ser prestador contratando ajudante, e ele não tem
  * perfil de empresa no momento em que compra o primeiro crédito.
+ *
+ * **A tela não diz "crédito" em lugar nenhum, e isso é deliberado.** Aqui
+ * dentro o nome continua esse — é o que a coisa é: um contador pré-pago,
+ * consumido por publicação. Para quem compra, "crédito" sugere saldo que
+ * recarrega no fim do mês, que é exatamente o que **não** acontece:
+ * decisão do Luiz em 09/09/2026, quem paga 5 ou 10 tem 5 ou 10, não
+ * renova, e querer mais é comprar de novo. A interface fala em "vagas
+ * para publicar" e em "saldo"; a divergência entre os dois vocabulários é
+ * escolha, não descuido — renomear `creditos_vaga` no banco custaria
+ * migração em produção e não mudaria uma palavra do que a pessoa lê.
  */
 export interface Carteira {
   usuarioId: string;

@@ -114,13 +114,21 @@ describe("vagas do painel da empresa", () => {
      * deixaria passar assim mesmo. É o mesmo raciocínio de "tela não é
      * portão" que este projeto já aplica em toda action.
      */
-    it("sem crédito, não publica — e diz o que fazer", async () => {
+    it("sem saldo, não publica — e diz o que fazer", async () => {
       await debitarVagas(empresa.usuarioId, 50);
 
       const erro = await capturar(() => publicarVaga(empresa, DADOS));
 
       expect(erro.codigo).toBe("validacao");
-      expect(erro.mensagem).toMatch(/crédito|plano mensal/i);
+      /*
+       * As duas saídas, escritas por extenso e não por alternativa solta.
+       * A versão antiga era `/crédito|plano mensal/i`, e depois que a
+       * interface deixou de dizer "crédito" ela continuaria verde
+       * casando só com a segunda metade — teste que passa por um motivo
+       * que ninguém escolheu.
+       */
+      expect(erro.mensagem).toMatch(/compre uma vaga/i);
+      expect(erro.mensagem).toMatch(/plano mensal/i);
     });
 
     it("publicar gasta exatamente um crédito", async () => {
@@ -348,7 +356,7 @@ describe("vagas do painel da empresa", () => {
       );
     });
 
-    it("sem crédito, não reativa", async () => {
+    it("sem saldo, não reativa", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
       const vaga = await publicarVaga(empresa, DADOS);
@@ -358,7 +366,8 @@ describe("vagas do painel da empresa", () => {
       const erro = await capturar(() => reativarVaga(empresa, vaga.id));
 
       expect(erro.codigo).toBe("validacao");
-      expect(erro.mensagem).toMatch(/crédito|plano mensal/i);
+      expect(erro.mensagem).toMatch(/gasta uma vaga do saldo/i);
+      expect(erro.mensagem).toMatch(/plano mensal/i);
     });
 
     it("recusa reativar vaga que ainda não expirou", async () => {

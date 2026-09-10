@@ -121,8 +121,8 @@ export async function publicarVaga(
 
   if (!(await gastarParaPublicar(autenticado.usuarioId))) {
     throw erros.validacao(
-      [{ campo: "creditos", mensagem: "Você não tem créditos de vaga." }],
-      "Para publicar, compre um crédito de vaga ou assine o plano mensal.",
+      [{ campo: "creditos", mensagem: "Você não tem vagas para publicar." }],
+      "Para publicar, compre uma vaga ou assine o plano mensal.",
     );
   }
 
@@ -225,8 +225,8 @@ export async function reativarVaga(
 
   if (!(await gastarParaPublicar(autenticado.usuarioId))) {
     throw erros.validacao(
-      [{ campo: "creditos", mensagem: "Você não tem créditos de vaga." }],
-      "Reativar uma vaga custa um crédito, como publicar. Compre um crédito ou assine o plano mensal.",
+      [{ campo: "creditos", mensagem: "Você não tem vagas para publicar." }],
+      "Reativar gasta uma vaga do saldo, como publicar. Compre mais uma ou assine o plano mensal.",
     );
   }
 
