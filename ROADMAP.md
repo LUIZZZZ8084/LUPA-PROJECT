@@ -8,7 +8,7 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 09/09/2026.**
+**Última atualização: 10/09/2026.**
 
 ## Concluído
 
@@ -215,6 +215,12 @@ Qualidade:
   separadas. Antes era projeção sobre `perfis_empresa.plano`, coluna sem
   produtor — o número era sempre zero e se anunciava como receita —
   [#179](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/179)
+- Seleção de plano como último passo do cadastro de prestador e de
+  empresa: o plano pago aparece em destaque ao lado do trial, em vez de
+  quem assina precisar achar o caminho sozinho depois. Reaproveita
+  `assinar()`/`comprar()` e os mesmos botões de `/perfil/assinatura` e
+  `/empresa/creditos` — nenhuma regra de cobrança nova —
+  [#184](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/184)
 
 ## Pendente
 

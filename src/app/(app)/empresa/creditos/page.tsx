@@ -5,6 +5,7 @@ import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL } from "@/lib/format";
+import { OPCOES_DE_VAGA } from "@/lib/planos-empresa";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { direitoDePublicar } from "@/server/carteiras/servico";
@@ -18,39 +19,6 @@ import { ComprarButton } from "./comprar-button";
 export const metadata: Metadata = {
   title: "Comprar vagas",
 };
-
-/**
- * As quatro opções, na ordem em que fazem sentido para quem está
- * decidindo: da menor para a maior, e o ilimitado por último.
- *
- * Cada uma diz o preço **por vaga** — sem isso não há como comparar
- * R$ 119,90 por 5 com R$ 149,90 por 10, e uma tabela de preços que não
- * deixa comparar é uma tabela que faz a pessoa escolher errado e se
- * arrepender.
- */
-const OPCOES: {
-  tipo: TipoPagamento;
-  nome: string;
-  paraQuem: string;
-  destaque?: boolean;
-}[] = [
-  {
-    tipo: "empresa_vaga_avulsa",
-    nome: "1 vaga",
-    paraQuem: "Para quem tem uma vaga só, agora.",
-  },
-  {
-    tipo: "empresa_pacote_5",
-    nome: "5 vagas",
-    paraQuem: "Para quem contrata algumas vezes por ano.",
-  },
-  {
-    tipo: "empresa_pacote_10",
-    nome: "10 vagas",
-    paraQuem: "Para quem contrata o ano inteiro.",
-    destaque: true,
-  },
-];
 
 function precoPorVaga(tipo: TipoPagamento): string {
   const creditos = CREDITOS_POR_COMPRA[tipo] ?? 1;
@@ -117,7 +85,7 @@ export default async function CreditosPage() {
       </Panel>
 
       <div className="space-y-3">
-        {OPCOES.map((opcao) => (
+        {OPCOES_DE_VAGA.map((opcao) => (
           <Panel
             key={opcao.tipo}
             className={opcao.destaque ? "border-empresas/40" : undefined}

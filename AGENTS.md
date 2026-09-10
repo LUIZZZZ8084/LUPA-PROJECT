@@ -1372,6 +1372,43 @@ armadilha do 404 que já derrubou quem tinha acabado de ativar. Por isso
 `getProviderById` não filtra: os dados continuam salvos, só o anúncio
 some, e reativar é assinar de novo.
 
+### O plano vira o último passo do cadastro, não uma descoberta depois
+
+Pedido do Paulinho (#184): quem se cadastrava como prestador ou como
+empresa só descobria que existia cobrança bem depois — o prestador,
+abrindo `/perfil/assinatura` por conta própria; a empresa, sendo barrada
+na hora de publicar a primeira vaga (a #182 já tinha dado um atalho no
+perfil para isso, mas o atalho ainda vinha depois, não junto).
+
+**Nenhuma regra de cobrança nova.** A tela que aparece depois de "Conta
+criada" reaproveita `AssinarButton` (`/perfil/assinatura`) e
+`ComprarButton` (`/empresa/creditos`) tal como são — os mesmos
+componentes, importados por caminho absoluto de dentro de
+`src/app/(auth)/cadastro/`. O clique cai exatamente na mesma server
+action de sempre (`assinarMensalidade`, `comprarCreditos`), que já sabe
+redirecionar para o Checkout Pro ou aprovar na hora em demonstração. A
+sessão já existe nesse ponto — `cadastrarConta` chama `criarSessao` antes
+de a tela renderizar —, então os componentes não recebem `usuarioId`
+nenhum; leem a sessão do cookie, como qualquer outra tela do app.
+
+**Candidato não passa por nenhuma tela de plano.** Não tem o que
+escolher: quem paga é o gerador de currículo pago (#47), noutro momento
+e noutra tela, não a barreira de entrada logo depois de criar a conta.
+
+**A lista de opções de vaga saiu de `/empresa/creditos` para
+`src/lib/planos-empresa.ts`.** As duas telas mostram as mesmas três
+compras avulsas com o mesmo texto; antes de existir a segunda tela, uma
+cópia colada seria a próxima a ficar para trás no dia em que o texto
+mudasse numa e não na outra — a mesma lição do preço, que já vinha de
+`PRECO_CENTAVOS` numa fonte só.
+
+**O trial ganhou card com benefícios, não só um link "pular".** Pedido
+explícito: mostrar os dois lados, não esconder a alternativa grátis atrás
+de um texto pequeno. O que muda é o peso visual — o plano pago tem borda
+e fundo destacados, badge "Recomendado", e vem primeiro; o trial fica
+discreto, mas continua sendo uma opção completa, com a mesma lista de
+benefícios que os planos pagos.
+
 ---
 
 ## Decisões de produto por papel
