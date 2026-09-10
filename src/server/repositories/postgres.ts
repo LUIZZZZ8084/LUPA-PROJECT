@@ -9,6 +9,7 @@ import type {
   EdicaoCandidato,
   EdicaoEmpresa,
   EdicaoPrestador,
+  NovoTokenDeRecuperacao,
   PerfilCandidato,
   PerfilEmpresa,
   PerfilPrestador,
@@ -139,6 +140,44 @@ export class RepositorioPostgres implements RepositorioUsuarios {
 
     if (error)
       throw erros.indisponivel(`atualização de senha: ${error.message}`);
+  }
+
+  async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase.from("tokens_recuperacao").insert({
+      usuario_id: dados.usuarioId,
+      token_hash: dados.tokenHash,
+      expira_em: dados.expiraEm,
+    });
+
+    if (error)
+      throw erros.indisponivel(`token de recuperação: ${error.message}`);
+  }
+
+  /**
+   * Valida e gasta na mesma instrução.
+   *
+   * As duas condições (`usado_em is null` e `expira_em > now()`) moram no
+   * `update`, não numa leitura anterior: dois cliques no mesmo link, ou
+   * um link vazado sendo usado em paralelo, passariam os dois por um
+   * `select` e trocariam a senha duas vezes. Zero linhas de volta é a
+   * resposta esperada — quem chama lê como "não vale mais".
+   */
+  async consumirTokenDeRecuperacao(
+    tokenHash: string,
+  ): Promise<{ usuarioId: string } | null> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("tokens_recuperacao")
+      .update({ usado_em: new Date().toISOString() })
+      .eq("token_hash", tokenHash)
+      .is("usado_em", null)
+      .gt("expira_em", new Date().toISOString())
+      .select("usuario_id")
+      .maybeSingle();
+
+    if (error) throw erros.indisponivel(`consumo de token: ${error.message}`);
+    return data ? { usuarioId: String(data.usuario_id) } : null;
   }
 
   async atualizarPapel(id: string, papel: Papel): Promise<void> {

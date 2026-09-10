@@ -540,8 +540,64 @@ Migração `0001` substituiu `auth.users` por uma tabela `usuarios` nossa.
 Postgres; cadastro e login são exercitáveis sem infraestrutura, o que mantém
 o modo demonstração vivo.
 
-**Perdas, que precisam ser construídas antes de abrir o cadastro ao
-público:** verificação de e-mail e recuperação de senha. Vinham de graça.
+**Perdas.** Verificação de e-mail e recuperação de senha vinham de graça
+e passaram a ter de ser construídas. **A segunda foi, na #174**; a
+primeira continua em aberto.
+
+### Esqueci minha senha, e os três cuidados que a fazem segura (#174)
+
+Até 09/09/2026, quem esquecia a senha perdia a conta — e o suporte também
+não tinha o que fazer, porque não existe como trocar a senha de alguém sem
+a antiga.
+
+**A resposta é a mesma exista a conta ou não.** É a mesma regra do login,
+e pela mesma razão registrada acima: a lista de quem tem conta é a lista
+de quem está procurando emprego, e numa cidade do tamanho de Sinop isso
+pode custar o emprego atual de alguém. A tela diz "se existe uma conta com
+esse e-mail" — informa sem confirmar. O log também não recebe o endereço:
+um log que reconstrói a lista desfaz o cuidado da tela.
+
+**O token é guardado em hash, nunca em claro.** Quem lesse
+`tokens_recuperacao` — um backup exposto, um acesso de leitura mal
+concedido — poderia trocar a senha de qualquer conta do app. O valor
+original só existe no e-mail que a pessoa recebeu.
+
+É SHA-256, e não Argon2, de propósito: Argon2 é caro justamente para
+resistir a força bruta contra senha de gente, que tem pouca entropia. Aqui
+o segredo é aleatório de 256 bits — não há o que adivinhar, e o custo por
+tentativa não compra nada.
+
+**O token é gasto na mesma instrução que o valida.** As duas condições
+(`usado_em is null` e `expira_em > now()`) moram no `update`, não numa
+leitura anterior: dois cliques no mesmo link, ou um link vazado sendo
+usado em paralelo, passariam os dois por um `select` e trocariam a senha
+duas vezes. Mesma família da aprovação de pagamento e do consumo de
+crédito de vaga.
+
+**O limite é por origem, e conta toda tentativa** — como no cadastro, e ao
+contrário do login. O que se contém aqui não é adivinhação de senha: é o
+envio em si. Sem isso a tela vira um canal para mandar e-mail em nome da
+Lupa a qualquer endereço, quantas vezes se quiser, e quem paga a
+reputação do domínio somos nós.
+
+**Trocar a senha não derruba as sessões antigas, e a tela diz isso.** A
+sessão é um JWT de 7 dias e não há como invalidá-la antes de expirar — o
+preço registrado logo abaixo, em "Sessão em JWT, não em banco". Quem está
+trocando a senha porque desconfia de acesso indevido precisa saber, e o
+lugar de dizer é a própria tela de troca. O que se faz é emitir uma sessão
+nova para quem acabou de trocar: sem isso ela provaria quem é pelo link e
+cairia num login para digitar a senha que criou trinta segundos antes.
+
+**Sem provedor de e-mail, o recurso não existe e a tela explica.** Mesma
+degradação do Storage sem Supabase e do push sem VAPID. Fingir que enviou
+deixaria a pessoa esperando um e-mail que nunca sai, e concluindo que a
+conta sumiu. `RESEND_API_KEY` e `EMAIL_REMETENTE` são o que liga —
+nenhuma das duas leva prefixo `NEXT_PUBLIC_`.
+
+**O e-mail é texto puro, sem HTML.** O público daqui abre e-mail no
+celular, e template com imagem e botão colorido é o formato que os
+provedores mais pontuam como promoção — justamente o e-mail que precisa
+chegar na caixa de entrada, e rápido.
 
 ### Argon2id com parâmetros da OWASP
 

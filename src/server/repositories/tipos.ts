@@ -41,6 +41,12 @@ export interface Usuario {
 }
 
 /** O que pode circular pela aplicação: sem hash de senha. */
+export interface NovoTokenDeRecuperacao {
+  usuarioId: string;
+  tokenHash: string;
+  expiraEm: string;
+}
+
 export type UsuarioPublico = Omit<Usuario, "senhaHash">;
 
 export function semSenha(usuario: Usuario): UsuarioPublico {
@@ -186,6 +192,31 @@ export interface RepositorioUsuarios {
   porId(id: string): Promise<Usuario | null>;
   criar(dados: DadosNovoUsuario): Promise<Usuario>;
   atualizarSenhaHash(id: string, senhaHash: string): Promise<void>;
+
+  // ── Recuperação de senha (#174) ───────────────────────────────────────
+
+  /**
+   * Guarda o **hash** do token, nunca o token.
+   *
+   * Quem lesse a tabela poderia trocar a senha de qualquer conta; o valor
+   * original só existe no e-mail que a pessoa recebeu.
+   */
+  criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void>;
+
+  /**
+   * Gasta o token, e só se ele ainda valer.
+   *
+   * Devolve `null` quando o token não existe, já foi usado ou expirou —
+   * os três são a mesma coisa para quem chama, e distinguir daria a quem
+   * sonda um link a informação de que ele já existiu.
+   *
+   * A validação e o consumo acontecem na **mesma instrução**: dois
+   * cliques no mesmo link, ou um link vazado sendo usado em paralelo,
+   * passariam os dois por uma leitura anterior.
+   */
+  consumirTokenDeRecuperacao(
+    tokenHash: string,
+  ): Promise<{ usuarioId: string } | null>;
   registrarAcesso(id: string): Promise<void>;
 
   /**

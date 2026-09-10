@@ -77,6 +77,8 @@ e repetível, ao lado do `schema.sql`:
 | [`supabase/aplica-prazo-vaga.sql`](../supabase/aplica-prazo-vaga.sql) | Uma vez, em banco criado antes da Issue #157 |
 | [`supabase/aplica-pagamentos.sql`](../supabase/aplica-pagamentos.sql) | Uma vez, em banco criado antes da Issue #159 |
 | [`supabase/aplica-assinatura-recorrente.sql`](../supabase/aplica-assinatura-recorrente.sql) | Uma vez, em banco criado antes da Issue #170 — **depois** de `aplica-pagamentos.sql`, de quem herda `tipo_pagamento` |
+| [`supabase/aplica-cobranca-de-vaga.sql`](../supabase/aplica-cobranca-de-vaga.sql) | Uma vez, em banco criado antes da Issue #172 — **depois** de `aplica-assinatura-recorrente.sql` |
+| [`supabase/aplica-recuperacao-de-senha.sql`](../supabase/aplica-recuperacao-de-senha.sql) | Uma vez, em banco criado antes da Issue #174 |
 
 Banco novo não precisa de nenhum deles: o `schema.sql` já traz tudo.
 
@@ -149,6 +151,11 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 SESSION_SECRET
+
+# Recuperação de senha (#174). Sem as duas, a tela existe e explica que
+# o envio não está disponível — em vez de fingir que enviou.
+RESEND_API_KEY
+EMAIL_REMETENTE
 ```
 
 O `SESSION_SECRET` assina a sessão. Gere com:

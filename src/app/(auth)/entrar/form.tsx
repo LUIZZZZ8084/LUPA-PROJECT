@@ -101,6 +101,20 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
             {pending && <Loader2 size={16} className="animate-spin" />}
             Entrar
           </Button>
+
+          {/*
+            Abaixo do botão, e não ao lado do campo de senha.
+
+            Quem sabe a senha não precisa ver isto no caminho; quem não
+            sabe já tentou entrar e errou, e é aí que procura a saída. Foi
+            só isto que faltou por meses: até a #174, quem esquecia a
+            senha perdia a conta, e o suporte também não tinha o que fazer.
+          */}
+          <p className="text-center text-muted text-xs">
+            <Link href="/esqueci-senha" className="underline hover:text-ink">
+              Esqueci minha senha
+            </Link>
+          </p>
         </Panel>
       </form>
 
