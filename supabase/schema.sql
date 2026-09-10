@@ -68,7 +68,7 @@ create type tipo_pagamento as enum (
   -- ultimo e assinatura mensal e nao consome credito nenhum.
   'empresa_vaga_avulsa',
   'empresa_pacote_5',
-  'empresa_pacote_15',
+  'empresa_pacote_10',
   'empresa_mensal'
 );
 

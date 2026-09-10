@@ -24,7 +24,7 @@ export const metadata: Metadata = {
  * decidindo: da menor para a maior, e o ilimitado por último.
  *
  * Cada uma diz o preço **por vaga** — sem isso não há como comparar
- * R$ 100 por 5 com R$ 179,90 por 15, e uma tabela de preços que não
+ * R$ 119,90 por 5 com R$ 149,90 por 10, e uma tabela de preços que não
  * deixa comparar é uma tabela que faz a pessoa escolher errado e se
  * arrepender.
  */
@@ -45,8 +45,8 @@ const OPCOES: {
     paraQuem: "Para quem contrata algumas vezes por ano.",
   },
   {
-    tipo: "empresa_pacote_15",
-    nome: "15 vagas",
+    tipo: "empresa_pacote_10",
+    nome: "10 vagas",
     paraQuem: "Para quem contrata o ano inteiro.",
     destaque: true,
   },
@@ -213,8 +213,8 @@ export default async function CreditosPage() {
             É o mesmo que publicar de novo, e por isso custa o mesmo.
           </li>
           <li>
-            <strong className="text-ink">Crédito não expira.</strong> Comprou 15
-            e usou 3? Os outros 12 ficam esperando.
+            <strong className="text-ink">Crédito não expira.</strong> Comprou 10
+            e usou 3? Os outros 7 ficam esperando.
           </li>
           <li>
             <strong className="text-ink">

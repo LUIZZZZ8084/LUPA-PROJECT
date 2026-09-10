@@ -10,21 +10,28 @@ export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
   prestador_mensalidade: 1990,
 
   /*
-   * Publicar vaga (#172), decidido pelo Luiz em 09/09/2026 e ajustado no
-   * mesmo dia depois de a tela mostrar o preço por vaga.
+   * Publicar vaga (#172), decidido pelo Luiz em 09/09/2026 e revisado por
+   * ele duas vezes no mesmo dia, depois de a tela mostrar o preço por vaga.
    *
-   * A primeira tabela era 29,90 / 100 / 149,90, e o preço por vaga saía
-   * 29,90 / 20,00 / 9,99: a avulsa custava **três vezes** o unitário do
-   * pacote maior. Quem tinha uma vaga só olhava aquilo como punição, e
-   * quem tinha três comprava quinze sem precisar.
+   * A primeira tabela era 29,90 / 100 / 149,90 por 15 vagas, e o preço por
+   * vaga saía 29,90 / 20,00 / 9,99: a avulsa custava **três vezes** o
+   * unitário do pacote maior. Quem tinha uma vaga só olhava aquilo como
+   * punição, e quem tinha três comprava quinze sem precisar.
    *
-   * **O teto é o plano mensal**, e é ele que segura a escada: um pacote
-   * que custe perto de R$ 199,90 não vende, porque a essa altura vale
-   * mais assinar e publicar à vontade. Por isso o de 15 não sobe mais.
+   * A tabela de agora fecha essa distância pelo outro lado: o pacote
+   * maior encolheu de 15 para 10 vagas, então o unitário dele sobe para
+   * R$ 14,99 e a avulsa passa a custar o **dobro**, não o triplo. Dez
+   * também é um número que quem contrata consegue projetar — quinze era
+   * estoque que ninguém sabia se ia usar.
+   *
+   * **O teto é o plano mensal**, e é ele que segura a escada: a partir de
+   * ~14 vagas assinar sai mais barato que comprar o pacote de 10, e é
+   * exatamente aí que o mensal deve ganhar. Um pacote que custasse perto
+   * de R$ 199,90 não venderia, porque a essa altura vale mais assinar.
    */
-  empresa_vaga_avulsa: 2490,
-  empresa_pacote_5: 10000,
-  empresa_pacote_15: 17990,
+  empresa_vaga_avulsa: 2990,
+  empresa_pacote_5: 11990,
+  empresa_pacote_10: 14990,
   empresa_mensal: 19990,
 };
 
@@ -32,7 +39,7 @@ export const DESCRICAO_PAGAMENTO: Record<TipoPagamento, string> = {
   prestador_mensalidade: "Mensalidade de prestador — Lupa",
   empresa_vaga_avulsa: "1 vaga — Lupa",
   empresa_pacote_5: "5 vagas — Lupa",
-  empresa_pacote_15: "15 vagas — Lupa",
+  empresa_pacote_10: "10 vagas — Lupa",
   empresa_mensal: "Vagas ilimitadas, mensal — Lupa",
 };
 
@@ -46,7 +53,7 @@ export const DESCRICAO_PAGAMENTO: Record<TipoPagamento, string> = {
 export const CREDITOS_POR_COMPRA: Partial<Record<TipoPagamento, number>> = {
   empresa_vaga_avulsa: 1,
   empresa_pacote_5: 5,
-  empresa_pacote_15: 15,
+  empresa_pacote_10: 10,
 };
 
 /**

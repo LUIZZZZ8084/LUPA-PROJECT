@@ -15,7 +15,7 @@ export type TipoPagamento =
   /** Publicar vaga (#172): três compras únicas que viram crédito… */
   | "empresa_vaga_avulsa"
   | "empresa_pacote_5"
-  | "empresa_pacote_15"
+  | "empresa_pacote_10"
   /** …e uma assinatura mensal, que dispensa crédito enquanto vale. */
   | "empresa_mensal";
 

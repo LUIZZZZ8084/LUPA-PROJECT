@@ -89,9 +89,9 @@ describe("comprar vaga", () => {
     });
 
     it.each([
-      ["empresa_vaga_avulsa", 1, 2490],
-      ["empresa_pacote_5", 5, 10000],
-      ["empresa_pacote_15", 15, 17990],
+      ["empresa_vaga_avulsa", 1, 2990],
+      ["empresa_pacote_5", 5, 11990],
+      ["empresa_pacote_10", 10, 14990],
     ] as const)(
       "%s credita %i vaga(s) e cobra o preço da tabela",
       async (tipo, creditos, centavos) => {
@@ -176,7 +176,7 @@ describe("comprar vaga", () => {
     it("o webhook aprovando credita o pacote inteiro", async () => {
       const { pagamento } = await ctx.servico.comprar(
         sessao,
-        "empresa_pacote_15",
+        "empresa_pacote_10",
         { buscar: respostaJson(PREFERENCIA) },
       );
 
@@ -192,13 +192,13 @@ describe("comprar vaga", () => {
       expect(
         (await ctx.carteiraServico.direitoDePublicar(sessao.usuarioId))
           .creditos,
-      ).toBe(15);
+      ).toBe(10);
     });
 
     it("pagamento recusado não credita nada", async () => {
       const { pagamento } = await ctx.servico.comprar(
         sessao,
-        "empresa_pacote_15",
+        "empresa_pacote_10",
         { buscar: respostaJson(PREFERENCIA) },
       );
 

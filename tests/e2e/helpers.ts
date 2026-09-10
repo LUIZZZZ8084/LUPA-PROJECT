@@ -263,7 +263,7 @@ export function emailDaConta(papel: "candidato" | "empresa"): string {
  */
 export async function comprarCreditoDeVaga(page: Page): Promise<void> {
   await page.goto("/empresa/creditos");
-  await page.getByRole("button", { name: /comprar 15 vagas/i }).click();
+  await page.getByRole("button", { name: /comprar 10 vagas/i }).click();
   await page.waitForURL(/\/pagamento\/retorno/, { timeout: 20_000 });
   await expect(
     page.getByRole("heading", { name: "Pagamento aprovado" }),

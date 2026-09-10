@@ -7,9 +7,14 @@
 -- registra em `pedidos_verificacao` e nos valores de `status_pagamento`.
 --
 -- Quatro formas de pagar, decididas pelo Luiz em 09/09/2026: vaga avulsa
--- (R$ 29,90), pacote de 5 (R$ 100,00), pacote de 15 (R$ 149,90) e mensal
+-- (R$ 29,90), pacote de 5 (R$ 119,90), pacote de 10 (R$ 149,90) e mensal
 -- ilimitado (R$ 199,90). Os três primeiros viram crédito e não expiram; o
 -- último é assinatura recorrente e não consome crédito nenhum.
+--
+-- Os valores em si não moram aqui: a fonte única é `PRECO_CENTAVOS`, em
+-- `src/server/pagamentos/planos.ts`. Esta lista existe só para quem lê a
+-- migração entender o que os valores do enum significam — se ela e o
+-- `planos.ts` divergirem um dia, quem manda é o `planos.ts`.
 --
 -- Idempotente: roda de novo sem erro num banco que já tem tudo isto.
 -- ============================================================================
@@ -36,9 +41,9 @@ begin
 
   if not exists (
     select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
-    where t.typname = 'tipo_pagamento' and e.enumlabel = 'empresa_pacote_15'
+    where t.typname = 'tipo_pagamento' and e.enumlabel = 'empresa_pacote_10'
   ) then
-    alter type tipo_pagamento add value 'empresa_pacote_15';
+    alter type tipo_pagamento add value 'empresa_pacote_10';
   end if;
 
   if not exists (

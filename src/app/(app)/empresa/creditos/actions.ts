@@ -20,7 +20,7 @@ import { assinar, comprar } from "@/server/pagamentos/servico";
 const COMPRAVEL = z.enum([
   "empresa_vaga_avulsa",
   "empresa_pacote_5",
-  "empresa_pacote_15",
+  "empresa_pacote_10",
   "empresa_mensal",
 ]);
 
