@@ -136,6 +136,12 @@ export interface PerfilCandidato {
   habilidades: string[];
   /** "Quero que empresas me encontrem." Falso por padrão. */
   visivelParaEmpresas: boolean;
+  /**
+   * Gerador de currículo pago (#47), liberado para sempre por uma compra
+   * única — não expira e não precisa ser comprado de novo depois de
+   * editar o perfil.
+   */
+  geradorCurriculoLiberado: boolean;
 }
 
 /* ============================================================
@@ -300,6 +306,15 @@ export interface RepositorioUsuarios {
   definirMensalidadeValidaAte(
     usuarioId: string,
     ate: string | null,
+  ): Promise<void>;
+
+  /**
+   * Liga ou desliga o gerador de currículo (#47) — compra única, sem data
+   * de validade para gravar, ao contrário da mensalidade.
+   */
+  definirGeradorCurriculoLiberado(
+    usuarioId: string,
+    liberado: boolean,
   ): Promise<void>;
 
   /**

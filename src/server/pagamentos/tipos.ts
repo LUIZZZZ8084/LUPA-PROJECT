@@ -6,8 +6,6 @@
  * seria a mesma promessa vazia que derrubou a fila de verificação manual.
  * A trava de exaustividade do `switch` em `aplicarEfeito` é o que cobra
  * isso: acrescentar um valor aqui sem tratá-lo lá quebra o build.
- *
- * O gerador de currículo pago (#47) continua de fora pelo mesmo motivo.
  */
 
 export type TipoPagamento =
@@ -17,7 +15,14 @@ export type TipoPagamento =
   | "empresa_pacote_5"
   | "empresa_pacote_10"
   /** …e uma assinatura mensal, que dispensa crédito enquanto vale. */
-  | "empresa_mensal";
+  | "empresa_mensal"
+  /**
+   * Gerador de currículo pago (#47): compra única, que libera a geração e
+   * o download do PDF para sempre — não é um PDF avulso, é o recurso
+   * destravado. O perfil muda depois da compra, e o currículo é montado de
+   * novo a cada download a partir do que está salvo naquele momento.
+   */
+  | "curriculo_pdf";
 
 /**
  * Os seis desfechos de uma cobrança.

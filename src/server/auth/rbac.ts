@@ -79,6 +79,16 @@ export type Capacidade =
    * `visivel_para_empresas` — a capacidade só diz quem pode perguntar.
    */
   | "candidato:buscar_disponiveis"
+  /**
+   * Gerar e baixar o currículo em PDF (#47).
+   *
+   * Só o candidato tem: é quem se candidata que precisa de currículo para
+   * anexar, e o cadastro já pede os dados que o gerador usa (área
+   * desejada, e depois o resto em `/perfil/editar`). A compra em si é
+   * checada à parte — a capacidade só diz quem pode chegar à tela, não se
+   * já pagou.
+   */
+  | "candidato:gerar_curriculo"
   // Publicações no perfil
   | "publicacao:criar"
   | "publicacao:editar_propria"
@@ -111,6 +121,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "candidatura:ver_propria",
     "prestador:ativar",
     "avaliacao:escrever",
+    "candidato:gerar_curriculo",
     /*
      * Publicar trabalho também é do candidato.
      *

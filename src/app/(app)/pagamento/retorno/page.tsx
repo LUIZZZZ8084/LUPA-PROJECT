@@ -49,6 +49,7 @@ export default async function RetornoPagamentoPage({
       <RetornoDaCompra
         id={alvo.id}
         rota={idAssinatura ? "assinaturas" : "pagamentos"}
+        tipo={alvo.tipo}
       />
     </PageShell>
   );

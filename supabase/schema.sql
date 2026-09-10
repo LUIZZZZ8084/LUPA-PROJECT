@@ -57,9 +57,10 @@ create type plano_empresa as enum ('trial', 'mensal');
 create type status_publicacao as enum ('ativa', 'arquivada');
 
 /*
- * Nasce só com 'prestador_mensalidade', o primeiro uso real da cobrança.
- * Vaga avulsa, planos de empresa e o gerador de currículo pago ganham o
- * próprio valor quando cada um tiver uma tela que o use.
+ * Nasceu só com 'prestador_mensalidade', o primeiro uso real da cobrança.
+ * Cada valor novo só entra quando ganha tela que o venda e efeito que o
+ * aplique — ver o comentário de `TipoPagamento` em
+ * `src/server/pagamentos/tipos.ts`.
  */
 create type tipo_pagamento as enum (
   'prestador_mensalidade',
@@ -69,7 +70,9 @@ create type tipo_pagamento as enum (
   'empresa_vaga_avulsa',
   'empresa_pacote_5',
   'empresa_pacote_10',
-  'empresa_mensal'
+  'empresa_mensal',
+  -- Gerador de currículo em PDF (#47): compra única, libera para sempre.
+  'curriculo_pdf'
 );
 
 /*
@@ -239,7 +242,14 @@ create table perfis_candidato (
    * O que a empresa alcança com isto ligado é contato, não currículo. O
    * currículo continua sendo entregue por quem se candidata.
    */
-  visivel_para_empresas boolean not null default false
+  visivel_para_empresas boolean not null default false,
+
+  /*
+   * Gerador de currículo pago (#47) — compra única de R$ 14,90, que
+   * libera a geração e o download do PDF para sempre. Não é assinatura:
+   * não há data de validade para guardar, só o interruptor.
+   */
+  gerador_curriculo_liberado boolean not null default false
 );
 
 create table perfis_prestador (

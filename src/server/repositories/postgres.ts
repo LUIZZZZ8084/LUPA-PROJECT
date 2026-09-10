@@ -263,6 +263,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       curriculo_url: perfil.curriculoUrl,
       disponibilidade: perfil.disponibilidade,
       visivel_para_empresas: perfil.visivelParaEmpresas,
+      gerador_curriculo_liberado: perfil.geradorCurriculoLiberado,
     });
 
     if (error)
@@ -385,6 +386,21 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     }
   }
 
+  async definirGeradorCurriculoLiberado(
+    usuarioId: string,
+    liberado: boolean,
+  ): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("perfis_candidato")
+      .update({ gerador_curriculo_liberado: liberado })
+      .eq("usuario_id", usuarioId);
+
+    if (error) {
+      throw erros.indisponivel(`gerador de currículo: ${error.message}`);
+    }
+  }
+
   /* ---------- Leitura de perfil, para a tela de edição ---------- */
 
   async perfilEmpresa(usuarioId: string): Promise<PerfilEmpresa | null> {
@@ -465,6 +481,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       formacao: (data.formacao as string | null) ?? null,
       habilidades: (data.habilidades as string[] | null) ?? [],
       visivelParaEmpresas: Boolean(data.visivel_para_empresas),
+      geradorCurriculoLiberado: Boolean(data.gerador_curriculo_liberado),
     };
   }
 

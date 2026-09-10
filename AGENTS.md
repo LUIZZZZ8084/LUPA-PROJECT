@@ -1372,6 +1372,45 @@ armadilha do 404 que já derrubou quem tinha acabado de ativar. Por isso
 `getProviderById` não filtra: os dados continuam salvos, só o anúncio
 some, e reativar é assinar de novo.
 
+### Gerador de currículo pago, sem Storage nenhum
+
+Compra única de R$ 14,90 (`curriculo_pdf`) que libera, para sempre,
+gerar e baixar o currículo em PDF — não é assinatura, não tem data de
+validade para guardar, só um interruptor
+(`perfis_candidato.gerador_curriculo_liberado`).
+
+**O PDF nunca é gravado.** Todo outro arquivo do app — avatar, logo,
+currículo em texto que a pessoa envia pronta — passa pelo bucket privado
+com caminho fixo por pessoa (`src/server/arquivos/regras.ts`). Este é
+diferente de propósito: `src/app/api/curriculo/route.ts` monta o PDF na
+hora, a cada `GET`, a partir do que está salvo no perfil naquele
+momento, e devolve os bytes direto — sem Storage, sem `Especie` nova, sem
+o modo demonstração precisar fingir upload. A consequência é a que
+importa: editar o perfil depois de comprar não exige comprar de novo, e
+o download de ontem nunca fica desatualizado, porque não existe "o
+download de ontem" — cada um é remontado.
+
+**A geração em si não usa JSX.** `src/server/curriculo/gerar.ts` monta o
+documento do `@react-pdf/renderer` com `React.createElement`, não com
+marcação — `src/server/**` só entra na métrica de cobertura como `.ts`
+(`vitest.config.mts`), e este seria o único `.tsx` da pasta. Trocar de
+JSX para `createElement` manteve o arquivo dentro do que a suíte mede, em
+vez de criar um ponto cego novo.
+
+**Duas perguntas, não uma**, em `gerarCurriculoDoCandidato`
+(`src/server/curriculo/servico.ts`): o papel pode chegar aqui
+(`candidato:gerar_curriculo`, só `candidato_clt`) e já pagou
+(`geradorCurriculoLiberado`). A capacidade sozinha deixaria qualquer
+candidato gerar de graça; o pagamento sozinho não impediria outro papel
+de tentar pelo id certo.
+
+**O tipo de pagamento entrou na mesma trava de exaustividade que os
+outros** — `aplicarEfeito` e `desfazerEfeitoDoTipo`, em
+`src/server/pagamentos/servico.ts` — despachando para
+`liberarGeradorCurriculo`/`revogarGeradorCurriculo` em
+`src/server/candidatos/servico.ts`, no mesmo padrão de `estenderMensalidade`
+para o prestador: `pagamentos` aciona, o domínio decide.
+
 ### O plano vira o último passo do cadastro, não uma descoberta depois
 
 Pedido do Paulinho (#184): quem se cadastrava como prestador ou como
