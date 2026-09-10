@@ -69,6 +69,14 @@ test.describe("edição de perfil", () => {
    * candidato, então outro teste pode já ter deixado experiência salva
    * aqui. "Adicionar" sempre acrescenta no fim da lista — é por isso que
    * a última linha é sempre a que este teste acabou de criar.
+   *
+   * O cargo carrega um sufixo único (`Date.now()`), por duas razões que a
+   * CI expôs: "salvar" só acrescenta, nunca substitui — cada execução ou
+   * retry deixa mais uma experiência na mesma conta compartilhada, e um
+   * texto fixo vira ambíguo depois da segunda rodada. E "Operador de
+   * colheitadeira" continha "colheitadeira" — substring do badge de
+   * habilidade "Colheitadeira" que o teste anterior já verifica, a mesma
+   * armadilha de rótulo que este arquivo já registrou para "CNPJ".
    */
   test("adiciona uma experiência, remove outra, e o que sobra aparece no perfil", async ({
     page,
@@ -89,11 +97,10 @@ test.describe("edição de perfil", () => {
     // fica logo abaixo desta seção — a mesma armadilha de substring que já
     // derrubou a suíte inteira uma vez (ver o comentário em
     // `VisivelParaEmpresas`, em form.tsx).
+    const cargo = `Auxiliar de logística ${Date.now()}`;
+
     await page.getByRole("button", { name: "Adicionar" }).click();
-    await page
-      .getByLabel("Cargo", { exact: true })
-      .last()
-      .fill("Operador de colheitadeira");
+    await page.getByLabel("Cargo", { exact: true }).last().fill(cargo);
     await page
       .getByLabel("Empresa", { exact: true })
       .last()
@@ -105,7 +112,7 @@ test.describe("edição de perfil", () => {
     await page
       .getByLabel("Descrição", { exact: true })
       .last()
-      .fill("Colheita mecanizada de soja.");
+      .fill("Organização de cargas e rotas.");
 
     await page
       .locator("form")
@@ -116,10 +123,14 @@ test.describe("edição de perfil", () => {
     await expect(page.getByText("Salvo")).toBeVisible();
 
     await page.goto("/perfil");
-    await expect(page.getByText("Operador de colheitadeira")).toBeVisible();
-    await expect(
-      page.getByText("Agro Norte Ltda. · 2021 — 2023"),
-    ).toBeVisible();
+
+    // A checagem da empresa e do período fica escopada ao item que tem
+    // este cargo — não a página inteira —, porque a lista acumulada de
+    // execuções anteriores pode ter mais de uma linha com o mesmo
+    // "Agro Norte Ltda. · 2021 — 2023".
+    const item = page.locator("li", { hasText: cargo });
+    await expect(item).toBeVisible();
+    await expect(item).toContainText("Agro Norte Ltda. · 2021 — 2023");
   });
 
   /**
