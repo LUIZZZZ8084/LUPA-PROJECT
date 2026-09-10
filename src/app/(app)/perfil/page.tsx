@@ -6,6 +6,7 @@ import {
   LogIn,
   Pencil,
   ShieldCheck,
+  Ticket,
   UserRound,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -29,6 +30,7 @@ import { sessaoAtual } from "@/server/auth/cookies";
 import type { Capacidade } from "@/server/auth/rbac";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
+import { direitoDePublicar } from "@/server/carteiras/servico";
 import { perfilParaEditar } from "@/server/perfil/servico";
 import { VerificarCnpj } from "./verificar-cnpj";
 
@@ -74,6 +76,29 @@ const ATALHOS: {
     cor: "text-servicos",
     exige: "prestador:gerenciar_assinatura",
   },
+  /*
+   * O caminho da empresa para a cobrança, que não existia (#182).
+   *
+   * A tela de compra vive em `/empresa/creditos` desde a #172, e só se
+   * chegava nela pelo painel. Quem se cadastrava como empresa abria o
+   * perfil, não via nada sobre pagar, e descobria ao ser barrado na hora
+   * de publicar — botão que falta é mais silencioso que botão que recusa,
+   * e este arquivo já registra as duas armadilhas.
+   *
+   * O gate é `vaga:publicar`, então o prestador que contrata também o vê:
+   * ele tem a capacidade desde a #129 e compra vaga do mesmo jeito. Para
+   * ele são duas cobranças diferentes, e os títulos dizem qual é qual —
+   * "Assinatura" é a mensalidade que o põe na vitrine, "Comprar vagas" é
+   * o que ele gasta para contratar alguém.
+   */
+  {
+    href: "/empresa/creditos",
+    icon: Ticket,
+    titulo: "Comprar vagas",
+    descricao: "Saldo para publicar, ou plano mensal ilimitado.",
+    cor: "text-empresas",
+    exige: "vaga:publicar",
+  },
   {
     href: "/admin",
     icon: ShieldCheck,
@@ -108,6 +133,17 @@ export default async function PerfilPage() {
   const perfil = sessao
     ? await perfilParaEditar(sessao.usuarioId, sessao.papel)
     : null;
+
+  /*
+   * O que a empresa pode publicar hoje, para o selo dizer a verdade.
+   *
+   * Só é buscado para quem contrata: pedir a carteira de um candidato
+   * seria uma consulta a mais para responder o que já se sabe.
+   */
+  const direito =
+    sessao && pode(sessao.papel, "vaga:publicar")
+      ? await direitoDePublicar(sessao.usuarioId)
+      : null;
 
   /*
    * A nota vem à parte, da listagem pública: ela é calculada por trigger e
@@ -209,6 +245,7 @@ export default async function PerfilPage() {
         <PerfilEmpresa
           empresa={perfil?.empresa ?? null}
           docVerificado={Boolean(usuario?.docVerificado)}
+          direito={direito}
           verificarCnpj={<VerificarCnpj />}
         />
       )}

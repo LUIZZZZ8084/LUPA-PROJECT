@@ -247,11 +247,10 @@ describe("empresa", () => {
     expect(screen.getByText(/anúncio falso/i)).toBeTruthy();
   });
 
-  it("mostra razão social, CNPJ e plano", () => {
+  it("mostra razão social e CNPJ", () => {
     render(<PerfilEmpresa empresa={EMPRESA} docVerificado />);
     expect(screen.getByText("Agro Norte Ltda.")).toBeTruthy();
     expect(screen.getByText("11222333000181")).toBeTruthy();
-    expect(screen.getByText("Plano mensal")).toBeTruthy();
   });
 
   /**
@@ -268,11 +267,50 @@ describe("empresa", () => {
     expect(screen.queryByText("CNPJ")).toBeNull();
   });
 
-  it("plano de teste aparece como período de teste", () => {
+  /**
+   * O selo diz o que a carteira sabe, não o que `perfis_empresa.plano` diz.
+   *
+   * O teste antigo era "plano de teste aparece como período de teste", e
+   * ele passava sempre — inclusive com a cobrança inteira quebrada, porque
+   * a coluna que ele media nunca teve quem escrevesse nela. Era a terceira
+   * tela lendo essa coluna morta (#182); as outras duas caíram na #172 e
+   * na #179.
+   */
+  it("com plano mensal ativo, o selo diz isso", () => {
     render(
-      <PerfilEmpresa empresa={{ ...EMPRESA, plano: "trial" }} docVerificado />,
+      <PerfilEmpresa
+        empresa={EMPRESA}
+        docVerificado
+        direito={{ mensalAtivo: true, creditos: 0 }}
+      />,
     );
-    expect(screen.getByText("Período de teste")).toBeTruthy();
+    expect(screen.getByText("Plano mensal ativo")).toBeTruthy();
+  });
+
+  /**
+   * Sem plano, o selo mostra o saldo — e não um "período de teste" que
+   * não existe. O número é acionável; a frase antiga não era.
+   */
+  it("sem plano, o selo mostra o saldo de vagas", () => {
+    render(
+      <PerfilEmpresa
+        empresa={EMPRESA}
+        docVerificado
+        direito={{ mensalAtivo: false, creditos: 3 }}
+      />,
+    );
+    expect(screen.getByText("3 vagas para publicar")).toBeTruthy();
+  });
+
+  it("saldo de uma vaga não vira plural", () => {
+    render(
+      <PerfilEmpresa
+        empresa={EMPRESA}
+        docVerificado
+        direito={{ mensalAtivo: false, creditos: 1 }}
+      />,
+    );
+    expect(screen.getByText("1 vaga para publicar")).toBeTruthy();
   });
 
   /**
