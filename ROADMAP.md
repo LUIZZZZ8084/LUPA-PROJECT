@@ -8,7 +8,7 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 08/09/2026.**
+**Última atualização: 09/09/2026.**
 
 ## Concluído
 
@@ -188,6 +188,21 @@ Qualidade:
   primeira cobrança, em até 30 dias. Antes disto era pagamento avulso —
   o perfil sumia da vitrine no dia 31, sem cobrança nova e sem aviso —
   [#170](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/170)
+- Publicar vaga passou a ser pago: avulsa, pacotes de 5 e 15, e plano
+  mensal ilimitado. Publicar **e reativar** consomem crédito, para não
+  sobrar o caminho de renovar a mesma vaga para sempre —
+  [#172](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/172)
+- Revisão obrigatória antes de publicar, e vaga que não se edita depois.
+  As duas metades da mesma decisão: sem edição, editar deixa de ser o
+  caminho para não pagar; com revisão, o erro de digitação não custa outro
+  crédito — [#173](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/173)
+- "Esqueci minha senha", com token de uso único guardado em hash. Fecha
+  metade da dívida que a migração 0001 abriu ao trocar o Supabase Auth por
+  autenticação própria; a verificação de e-mail continua em aberto —
+  [#174](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/174)
+- A busca de candidatos ficou alcançável pelo painel da empresa: existia
+  desde a #83 e só tinha um botão pequeno no cabeçalho —
+  [#175](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/175)
 - Sem carência: virar prestador não dá mais 30 dias de vitrine de graça
   sem cartão. O cartão é autorizado logo depois do cadastro, com 15 dias
   de teste grátis antes da primeira cobrança de verdade —

@@ -110,7 +110,13 @@ const AREAS_FECHADAS: readonly AreaFechada[] = [
  *
  * A lista é curta por segurança: o padrão é fechado, e abrir é explícito.
  */
-const ABERTAS = ["/entrar", "/cadastro"];
+/*
+ * Quatro rotas abertas, e as duas últimas por necessidade: quem esqueceu
+ * a senha não tem como estar logado para recuperá-la (#174). O token no
+ * link é o que prova quem é — e ele é conferido no servidor, na mesma
+ * instrução que o gasta.
+ */
+const ABERTAS = ["/entrar", "/cadastro", "/esqueci-senha", "/redefinir-senha"];
 
 /** Para onde mandar quem não tem sessão. */
 const ENTRADA = "/entrar";

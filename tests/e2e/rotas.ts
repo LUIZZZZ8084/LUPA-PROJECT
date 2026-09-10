@@ -33,6 +33,7 @@ export const ROTAS: readonly RotaVarrida[] = [
   { path: "/cadastro?tipo=prestador_servico", nome: "Cadastro de prestador" },
   { path: "/cadastro?tipo=empresa", nome: "Cadastro de empresa" },
   { path: "/entrar", nome: "Login" },
+  { path: "/esqueci-senha", nome: "Esqueci minha senha" },
   { path: "/perfil", nome: "Perfil" },
   { path: "/perfil/editar", nome: "Editar perfil" },
   { path: "/perfil/candidaturas", nome: "Minhas candidaturas" },
@@ -92,6 +93,8 @@ export const ROTAS_NAO_VARRIDAS: Record<string, string> = {
     "exige sessão de prestador, e as duas contas compartilhadas da suíte são candidata e empresa. Uma terceira custaria mais um cadastro no limite de 5 por origem em 15 minutos — apertado demais para segurar. A tela tem varredura de acessibilidade própria, dentro de feed-do-prestador.spec.ts, onde a conta já é prestador",
   "/perfil/assinatura":
     "exige sessão de prestador, mesma razão de /perfil/publicacoes. A conta é criada em assinatura-do-prestador.spec.ts, que exercita a tela lá dentro — o fluxo de cobrança ficou sem teste de ponta a ponta enquanto esta linha dizia só que a rota não era varrida, e foi assim que o retorno quebrado em demonstração passou (#164)",
+  "/redefinir-senha":
+    "o token na URL só existe dentro do e-mail que a pessoa acaba de receber, e é gasto no primeiro uso — não há como fixar um aqui. A tela é exercitada em recuperacao-de-senha.spec.ts, que percorre pedir → abrir o link → trocar a senha; sem token ela responde 200 com a explicação de link incompleto, e essa variante é varrida por /esqueci-senha, que compartilha o layout",
   "/pagamento/retorno":
     "o `assinatura` na URL é de uma assinatura criada em tempo de execução, dona da sessão que assinou — mesma razão de /candidatos/[id]. Coberto em assinatura-do-prestador.spec.ts, que assina e segue o retorno até 'Pagamento aprovado'",
 };

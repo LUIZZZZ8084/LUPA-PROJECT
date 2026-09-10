@@ -40,6 +40,7 @@ drop table if exists preferencias_notificacao cascade;
 drop table if exists pagamentos cascade;
 drop table if exists assinaturas cascade;
 drop table if exists carteiras_vaga cascade;
+drop table if exists tokens_recuperacao cascade;
 drop table if exists tentativas_de_acesso cascade;
 drop table if exists buscas_sem_resultado cascade;
 drop table if exists visualizacoes_vaga cascade;

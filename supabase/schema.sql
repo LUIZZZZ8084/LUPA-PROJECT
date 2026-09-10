@@ -982,6 +982,49 @@ create trigger pagamentos_atualizado_em
 
 alter table pagamentos enable row level security;
 
+
+-- ============================================================================
+-- 9g. Recuperacao de senha
+--
+-- A migracao 0001 trocou o Supabase Auth por autenticacao propria, e o
+-- AGENTS.md registra desde entao o que se perdeu junto: verificacao de
+-- e-mail e recuperacao de senha, que vinham de graca. Esta tabela e a
+-- segunda metade dessa divida (#174).
+--
+-- **O token nunca e guardado em claro.** Quem lesse esta tabela — um
+-- backup exposto, um acesso de leitura mal concedido — poderia trocar a
+-- senha de qualquer conta. Guarda-se o SHA-256 dele; o valor original so
+-- existe no e-mail que a pessoa recebeu.
+--
+-- SHA-256 e nao Argon2 de proposito: Argon2 e caro justamente para
+-- resistir a forca bruta contra senha de gente, que tem pouca entropia.
+-- Aqui o segredo e aleatorio de 256 bits — nao ha o que adivinhar, e o
+-- custo por tentativa nao compra nada.
+--
+-- Sem grant para `anon`/`authenticated`: e material de troca de senha.
+-- ============================================================================
+
+create table tokens_recuperacao (
+  id         uuid primary key default gen_random_uuid(),
+  usuario_id uuid not null references usuarios(id) on delete cascade,
+  /* SHA-256 do token, em hex. Unico: dois pedidos nao colidem. */
+  token_hash text not null unique,
+  expira_em  timestamptz not null,
+  /*
+   * Uso unico. Marcado na propria instrucao que troca a senha (`where
+   * usado_em is null`), e nao por "le, decide, grava": dois cliques no
+   * mesmo link, ou um link vazado sendo usado em paralelo, passariam os
+   * dois por uma leitura anterior.
+   */
+  usado_em   timestamptz,
+  criado_em  timestamptz not null default now()
+);
+
+create index tokens_recuperacao_usuario_idx
+  on tokens_recuperacao (usuario_id, criado_em desc);
+
+alter table tokens_recuperacao enable row level security;
+
 -- ============================================================================
 -- 10. Views que a aplicação consulta
 --
@@ -1384,3 +1427,4 @@ revoke select on inscricoes_push          from anon, authenticated;
 revoke select on pagamentos       from anon, authenticated;
 revoke select on assinaturas      from anon, authenticated;
 revoke select on carteiras_vaga   from anon, authenticated;
+revoke select on tokens_recuperacao from anon, authenticated;

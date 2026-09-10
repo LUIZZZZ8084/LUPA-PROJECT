@@ -5,6 +5,7 @@ import type {
   EdicaoCandidato,
   EdicaoEmpresa,
   EdicaoPrestador,
+  NovoTokenDeRecuperacao,
   PerfilCandidato,
   PerfilEmpresa,
   PerfilPrestador,
@@ -28,6 +29,15 @@ import type {
  */
 export class RepositorioMemoria implements RepositorioUsuarios {
   private usuarios = new Map<string, Usuario>();
+  /*
+   * Chaveado pelo hash do token, como em Postgres: assim os dois
+   * repositórios erram (ou acertam) do mesmo jeito quando alguém procura
+   * por um token que não existe.
+   */
+  private tokensDeRecuperacao = new Map<
+    string,
+    { usuarioId: string; expiraEm: string; usado: boolean }
+  >();
   private porEmailIndice = new Map<string, string>();
   private cpfs = new Set<string>();
 
@@ -84,6 +94,25 @@ export class RepositorioMemoria implements RepositorioUsuarios {
   async atualizarSenhaHash(id: string, senhaHash: string): Promise<void> {
     const usuario = this.usuarios.get(id);
     if (usuario) this.usuarios.set(id, { ...usuario, senhaHash });
+  }
+
+  async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
+    this.tokensDeRecuperacao.set(dados.tokenHash, {
+      usuarioId: dados.usuarioId,
+      expiraEm: dados.expiraEm,
+      usado: false,
+    });
+  }
+
+  async consumirTokenDeRecuperacao(
+    tokenHash: string,
+  ): Promise<{ usuarioId: string } | null> {
+    const token = this.tokensDeRecuperacao.get(tokenHash);
+    if (!token || token.usado) return null;
+    if (new Date(token.expiraEm).getTime() <= Date.now()) return null;
+
+    this.tokensDeRecuperacao.set(tokenHash, { ...token, usado: true });
+    return { usuarioId: token.usuarioId };
   }
 
   async atualizarPapel(id: string, papel: Papel): Promise<void> {

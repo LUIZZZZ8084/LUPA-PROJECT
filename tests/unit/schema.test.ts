@@ -76,6 +76,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "preferencias_notificacao",
       "publicacoes",
       "tentativas_de_acesso",
+      "tokens_recuperacao",
       "usuarios",
       "vagas",
       "visualizacoes_vaga",
@@ -592,6 +593,9 @@ describe("grants de anon e authenticated", () => {
     // Quantos créditos de vaga alguém tem é dado comercial dele, não
     // registro público como o CNPJ (#172).
     "carteiras_vaga",
+    // Material de troca de senha: quem lesse isto trocaria a senha de
+    // qualquer conta do app (#174).
+    "tokens_recuperacao",
     /*
      * Saber quem está de olho em vaga de motorista é a mesma classe de
      * informação que o currículo — numa cidade do tamanho de Sinop, diz
@@ -869,7 +873,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(19);
+    expect(tabelas.rows).toHaveLength(20);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
