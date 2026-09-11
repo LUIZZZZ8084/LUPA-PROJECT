@@ -5,7 +5,7 @@
  */
 
 import type { Metadata } from "next";
-import { AREA_EMPRESA } from "../../../_contratacao/area";
+import { AREA_PRESTADOR } from "../../../_contratacao/area";
 import { FichaDaCandidatura } from "../../../_contratacao/candidatura";
 
 export const metadata: Metadata = {
@@ -13,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
-  return <FichaDaCandidatura params={params} area={AREA_EMPRESA} />;
+  return <FichaDaCandidatura params={params} area={AREA_PRESTADOR} />;
 }

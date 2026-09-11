@@ -158,4 +158,81 @@ test.describe("virar prestador", () => {
     expect(resposta?.status()).toBe(200);
     await expect(page).toHaveURL(/\/perfil\/assinatura$/);
   });
+  /*
+   * A área de contratação do prestador (#189).
+   *
+   * Estes quatro testes são o que sustenta a exclusão de `/contratar/**`
+   * da varredura de rotas: sem eles, a linha em `ROTAS_NAO_VARRIDAS`
+   * diria "não é varrida" e alguém leria "está coberta em outro lugar" —
+   * o mal-entendido exato que deixou o fluxo de cobrança inteiro sem
+   * teste de ponta a ponta até a #164.
+   */
+  test("o prestador tem a própria área de contratação", async () => {
+    const resposta = await page.goto("/contratar");
+
+    expect(resposta?.status()).toBe(200);
+    await expect(page).toHaveURL(/\/contratar$/);
+  });
+
+  /**
+   * O bug que a #189 existe para matar.
+   *
+   * O painel oferecia "Cadastrar empresa" apontando para
+   * `/cadastro?tipo=empresa` — o formulário de conta **nova**. Como o
+   * perfil de contratante do prestador só nasce na primeira vaga
+   * publicada, ele chegava aqui sem perfil e era mandado criar outra
+   * conta: o saldo de vagas ficava preso na primeira, e ele pagaria duas
+   * vezes sem entender por quê.
+   */
+  test("o painel vazio não manda criar uma segunda conta", async () => {
+    await page.goto("/contratar");
+
+    await expect(
+      page.getByRole("link", { name: /cadastrar empresa/i }),
+    ).toHaveCount(0);
+    await expect(page.locator('a[href^="/cadastro"]')).toHaveCount(0);
+
+    /*
+     * O estado vazio em si não é alcançável aqui, e isso é do modo
+     * demonstração: `empresaDoPainel()` mapeia qualquer sessão para a
+     * empresa de exemplo, então `company` nunca vem nulo. O que este
+     * teste trava é o que importa e vale nos dois modos — **nenhum
+     * caminho desta área leva ao cadastro de conta nova**. A variante do
+     * convite certo ("publicar primeira vaga") é coberta no teste de
+     * unidade do painel, onde o repositório é injetável.
+     */
+    await expect(
+      page.getByRole("heading", { name: /contratar/i }),
+    ).toBeVisible();
+  });
+
+  /** Cada porta atende o próprio papel — nunca a área escrita para CNPJ. */
+  test("/empresa devolve o prestador para a área dele", async () => {
+    await page.goto("/empresa");
+    await expect(page).toHaveURL(/\/contratar$/);
+  });
+
+  /**
+   * O perfil do prestador perde os dois atalhos (#191).
+   *
+   * "Minha Empresa" apontava para a área errada; "Minhas candidaturas"
+   * abria numa tela vazia para sempre para quem se cadastrou direto como
+   * prestador. O acesso continua — o teste logo acima prova que
+   * `/perfil/candidaturas` responde 200 —, o que sai é o atalho.
+   */
+  test("o perfil não oferece Minha Empresa nem Minhas candidaturas", async () => {
+    await page.goto("/perfil");
+
+    await expect(
+      page.getByRole("link", { name: /minha empresa/i }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: /minhas candidaturas/i }),
+    ).toHaveCount(0);
+
+    // No lugar delas, a área que é dele.
+    await expect(
+      page.getByRole("link", { name: /^contratar/i }).first(),
+    ).toBeVisible();
+  });
 });

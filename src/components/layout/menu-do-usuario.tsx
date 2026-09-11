@@ -21,6 +21,14 @@ function atalhosDoPapel(papel: string) {
   if (papel === "empresa") {
     return [{ href: "/empresa", label: "Painel da empresa", Icon: Building2 }];
   }
+  /*
+   * O prestador contrata pela área dele, não pela da empresa (#190).
+   * Mandá-lo para `/empresa` seria devolver a tela escrita para quem tem
+   * CNPJ — que é o que a #189 veio desfazer.
+   */
+  if (papel === "prestador_servico") {
+    return [{ href: "/contratar", label: "Contratar", Icon: Building2 }];
+  }
   if (papel === "admin") {
     return [
       {

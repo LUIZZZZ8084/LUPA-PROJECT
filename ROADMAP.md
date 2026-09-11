@@ -210,6 +210,18 @@ Qualidade:
   sem cartão. O cartão é autorizado logo depois do cadastro, com 15 dias
   de teste grátis antes da primeira cobrança de verdade —
   [#170](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/170)
+- O prestador ganhou área própria de contratação em `/contratar`, com a
+  mesma implementação de `/empresa` e rotas separadas. O painel deixou de
+  oferecer "Cadastrar empresa" a quem já tem conta — era o caminho para
+  uma segunda conta, com o saldo de vagas preso na primeira —
+  [#189](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/189)
+- A aba de contratação passou a ser a do papel de quem entrou: "Empresa"
+  para empresa, "Contratar" para prestador, nunca as duas —
+  [#190](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/190)
+- O perfil do prestador perdeu "Minha Empresa" e "Minhas candidaturas".
+  A capacidade de ver o próprio histórico fica: o que sai é o atalho, não
+  o acesso —
+  [#191](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/191)
 - O caixa do painel passou a sair de `pagamentos`: o que entrou, o que
   foi devolvido e o que foi contestado no cartão, com as duas saídas
   separadas. Antes era projeção sobre `perfis_empresa.plano`, coluna sem

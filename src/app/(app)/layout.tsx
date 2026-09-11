@@ -33,7 +33,7 @@ export default async function AppLayout({
         }
       />
       <div className="flex-1">{children}</div>
-      <BottomNav autenticado={Boolean(usuario)} />
+      <BottomNav autenticado={Boolean(usuario)} papel={usuario?.papel} />
     </>
   );
 }

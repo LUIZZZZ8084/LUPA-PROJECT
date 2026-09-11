@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { ComprarButton } from "@/app/(app)/empresa/creditos/comprar-button";
+import { ComprarButton } from "@/app/(app)/_contratacao/comprar-button";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";

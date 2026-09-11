@@ -10,6 +10,20 @@ import {
   encerrarVaga as encerrarVagaServico,
   reativarVaga as reativarVagaServico,
 } from "@/server/vagas/servico";
+import { BASES_DE_CONTRATACAO } from "./area";
+
+/**
+ * Revalida o painel das **duas** áreas de contratação.
+ *
+ * A action não sabe de qual porta veio o clique — `/empresa` ou
+ * `/contratar` —, e não precisa saber: revalidar um caminho que a pessoa
+ * não está vendo não custa nada, e deixar de revalidar o certo faz a tela
+ * mentir sobre o que acabou de acontecer. Escrever `/empresa` à mão aqui
+ * era o defeito silencioso que a #189 quase deixou passar.
+ */
+function revalidarContratacao(sufixo = "") {
+  for (const base of BASES_DE_CONTRATACAO) revalidatePath(`${base}${sufixo}`);
+}
 
 /**
  * Encerrar vaga: some da busca pública, mas as candidaturas já recebidas
@@ -22,7 +36,7 @@ export const encerrarVaga = criarAcao({
     const sessao = await sessaoAtual();
     await encerrarVagaServico(sessao, id);
 
-    revalidatePath("/empresa");
+    revalidarContratacao();
     revalidatePath("/vagas");
     revalidatePath(`/vagas/${id}`);
     return {};
@@ -42,7 +56,7 @@ export const reativarVaga = criarAcao({
     const sessao = await sessaoAtual();
     await reativarVagaServico(sessao, id);
 
-    revalidatePath("/empresa");
+    revalidarContratacao();
     revalidatePath("/vagas");
     revalidatePath(`/vagas/${id}`);
     return {};
@@ -57,7 +71,7 @@ export const moverCandidatura = criarAcao({
     const sessao = await sessaoAtual();
     await moverCandidaturaServico(sessao, id, status);
 
-    revalidatePath("/empresa");
+    revalidarContratacao();
     revalidatePath("/perfil");
     return {};
   },

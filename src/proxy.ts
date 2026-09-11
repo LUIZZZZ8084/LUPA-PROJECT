@@ -64,6 +64,20 @@ const AREAS_FECHADAS: readonly AreaFechada[] = [
     semSessao: "login",
   },
   /*
+   * A mesma trava para a área do prestador (#189).
+   *
+   * `/contratar` é a porta dele para o que a empresa faz em `/empresa`,
+   * com a mesma implementação por baixo — então a regra do proxy precisa
+   * ser a mesma nas duas. Uma lista escrita à mão que cresce só de um
+   * lado é a armadilha que o `AGENTS.md` registra no matcher do proxy: o
+   * item esquecido não quebra tela nenhuma e ninguém vê.
+   */
+  {
+    prefixo: "/contratar/vagas/nova",
+    capacidade: "vaga:publicar",
+    semSessao: "login",
+  },
+  /*
    * `/empresa` sai da lista de áreas fechadas.
    *
    * Ela era barrada por `vaga:ver_candidaturas_proprias`, que só a empresa

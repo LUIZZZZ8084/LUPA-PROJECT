@@ -5,23 +5,51 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const ITEMS = [
-  { href: "/", label: "Início", icon: Home, accent: "text-ink" },
-  { href: "/vagas", label: "Vagas", icon: Briefcase, accent: "text-vagas" },
-  {
-    href: "/servicos",
-    label: "Serviços",
-    icon: Wrench,
-    accent: "text-servicos",
-  },
-  {
+/**
+ * A aba de contratação é a do papel de quem entrou (#190).
+ *
+ * Empresa e prestador contratam do mesmo jeito desde a #129, mas em áreas
+ * com nomes diferentes: quem contrata um ajudante uma vez por ano não se
+ * reconhece em "Empresa", e se reconhece em "Contratar".
+ *
+ * O candidato continua vendo "Empresa" de propósito — a página dele
+ * explica que aquela área é de quem contrata, o que a #122 pôs no lugar
+ * de um 404. Esconder a aba devolveria a pergunta "onde publico uma
+ * vaga?" sem nenhuma resposta na tela.
+ *
+ * **Cada papel vê uma aba, nunca as duas.**
+ */
+function contratacaoDoPapel(papel: string | undefined) {
+  if (papel === "prestador_servico") {
+    return {
+      href: "/contratar",
+      label: "Contratar",
+      icon: Building2,
+      accent: "text-empresas",
+    } as const;
+  }
+  return {
     href: "/empresa",
     label: "Empresa",
     icon: Building2,
     accent: "text-empresas",
-  },
-  { href: "/perfil", label: "Perfil", icon: User, accent: "text-ink" },
-] as const;
+  } as const;
+}
+
+function itens(papel: string | undefined) {
+  return [
+    { href: "/", label: "Início", icon: Home, accent: "text-ink" },
+    { href: "/vagas", label: "Vagas", icon: Briefcase, accent: "text-vagas" },
+    {
+      href: "/servicos",
+      label: "Serviços",
+      icon: Wrench,
+      accent: "text-servicos",
+    },
+    contratacaoDoPapel(papel),
+    { href: "/perfil", label: "Perfil", icon: User, accent: "text-ink" },
+  ] as const;
+}
 
 /**
  * Navegação inferior no mobile — o padrão que o público já conhece de
@@ -33,7 +61,13 @@ const ITEMS = [
  * oferece exigem login, e mostrar atalho que devolve a tela de entrada faz
  * a pessoa concluir que o app está quebrado.
  */
-export function BottomNav({ autenticado }: { autenticado?: boolean }) {
+export function BottomNav({
+  autenticado,
+  papel,
+}: {
+  autenticado?: boolean;
+  papel?: string;
+}) {
   const pathname = usePathname();
 
   if (!autenticado) return null;
@@ -48,7 +82,7 @@ export function BottomNav({ autenticado }: { autenticado?: boolean }) {
       )}
     >
       <ul className="mx-auto flex max-w-lg">
-        {ITEMS.map(({ href, label, icon: Icon, accent }) => {
+        {itens(papel).map(({ href, label, icon: Icon, accent }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
