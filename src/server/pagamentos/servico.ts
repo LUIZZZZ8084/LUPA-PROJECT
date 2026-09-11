@@ -19,6 +19,7 @@ import {
   revogarMensalidade,
 } from "../prestadores/servico";
 import { repositorioUsuarios } from "../repositories";
+import { urlPublica } from "../url-publica";
 import { repositorioPagamentos } from "./index";
 import {
   cancelarAssinaturaNoMercadoPago,
@@ -44,12 +45,6 @@ import type {
 } from "./tipos";
 
 export { temMercadoPagoConfigurado };
-
-function urlBase(): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-}
 
 /**
  * Aplica o que um pagamento aprovado muda no resto do app.
@@ -302,7 +297,7 @@ export async function assinar(
       valorCentavos: assinatura.valorCentavos,
       referenciaExterna: assinatura.id,
       emailPagador: usuario.email,
-      urlRetorno: `${urlBase()}/pagamento/retorno?assinatura=${assinatura.id}`,
+      urlRetorno: `${urlPublica()}/pagamento/retorno?assinatura=${assinatura.id}`,
       diasTeste: diasDeTeste(tipo),
     },
     opcoes.buscar,
@@ -402,8 +397,8 @@ export async function comprar(
       titulo: DESCRICAO_PAGAMENTO[tipo],
       valorCentavos: pagamento.valorCentavos,
       referenciaExterna: pagamento.id,
-      urlRetorno: `${urlBase()}/pagamento/retorno?compra=${pagamento.id}`,
-      urlWebhook: `${urlBase()}/api/webhooks/mercado-pago`,
+      urlRetorno: `${urlPublica()}/pagamento/retorno?compra=${pagamento.id}`,
+      urlWebhook: `${urlPublica()}/api/webhooks/mercado-pago`,
     },
     opcoes.buscar,
   );

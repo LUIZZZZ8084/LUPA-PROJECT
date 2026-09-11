@@ -5,12 +5,7 @@ import { z } from "zod";
 import { criarAcao } from "@/server/action";
 import { pedirRecuperacao } from "@/server/auth/recuperacao";
 import { erros } from "@/server/errors";
-
-function urlBase(): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-}
+import { urlPublica } from "@/server/url-publica";
 
 /**
  * Pede o e-mail de recuperação (#174).
@@ -32,7 +27,7 @@ export const pedirRecuperacaoDeSenha = criarAcao({
 
     const resultado = await pedirRecuperacao(email, {
       origem,
-      urlBase: urlBase(),
+      urlBase: urlPublica(),
     });
 
     if (!resultado.ok) {
