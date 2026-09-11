@@ -1,7 +1,14 @@
 "use client";
 
-import { ArrowLeft, CheckCircle2, Eye, Loader2 } from "lucide-react";
-import Link from "next/link";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Eye,
+  Infinity as Infinito,
+  Loader2,
+  Ticket,
+} from "lucide-react";
 import { useActionState, useRef, useState, useTransition } from "react";
 import {
   CampoBairro,
@@ -12,6 +19,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { CONTRACT_TYPES, JOB_CATEGORIES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { AreaDeContratacao } from "./area";
 import { type EstadoVaga, publicarVagaComEstado } from "./nova-vaga-actions";
 import { type DadosDaVaga, lerDoFormulario, RevisaoDaVaga } from "./revisao";
@@ -39,10 +47,21 @@ const inicial: EstadoVaga = {};
 export function NewJobForm({
   cidadeDaEmpresa,
   area,
+  direito,
 }: {
   cidadeDaEmpresa: string;
   area: AreaDeContratacao;
+  /**
+   * O que a pessoa pode publicar hoje — para a tela avisar **antes**.
+   *
+   * Informa, não autoriza: quem decide de verdade é `gastarParaPublicar`,
+   * na mesma instrução que grava. Aqui o valor pode estar velho por
+   * alguns segundos, e isso é aceitável para um aviso; seria inaceitável
+   * para um portão.
+   */
+  direito: { mensalAtivo: boolean; creditos: number };
 }) {
+  const semSaldo = !direito.mensalAtivo && direito.creditos === 0;
   const [state, action, pending] = useActionState(
     publicarVagaComEstado,
     inicial,
@@ -85,6 +104,59 @@ export function NewJobForm({
   return (
     <>
       {/*
+        O saldo vem antes dos campos, e diz o número (#193).
+
+        O aviso morava no rodapé, em 12px cinza-claro, e dizia só *que*
+        publicar usa uma vaga — nunca quantas a pessoa tem. Quem estava
+        zerado preenchia dez campos para descobrir no fim. Avisar no
+        começo é mais barato para ela e não custa nada para quem tem
+        saldo.
+      */}
+      {!revisao && (
+        <Panel className={cn("mb-4", semSaldo && "border-warn/40 bg-warn/10")}>
+          <div className="flex items-start gap-3">
+            {direito.mensalAtivo ? (
+              <Infinito size={18} className="mt-0.5 flex-none text-empresas" />
+            ) : semSaldo ? (
+              <AlertTriangle size={18} className="mt-0.5 flex-none text-warn" />
+            ) : (
+              <Ticket size={18} className="mt-0.5 flex-none text-empresas" />
+            )}
+
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-sm">
+                {direito.mensalAtivo
+                  ? "Plano mensal ativo"
+                  : direito.creditos === 0
+                    ? "Você não tem vagas para publicar"
+                    : direito.creditos === 1
+                      ? "Você tem 1 vaga para publicar"
+                      : `Você tem ${direito.creditos} vagas para publicar`}
+              </p>
+              <p className="mt-0.5 text-muted text-sm leading-relaxed">
+                {direito.mensalAtivo
+                  ? "Publique quantas quiser enquanto o plano estiver ativo, sem tirar do saldo."
+                  : direito.creditos === 0
+                    ? "Compre antes de escrever a vaga — assim você não preenche tudo para ser barrado no fim."
+                    : "Publicar usa uma delas. Cada vaga fica 30 dias no ar."}
+              </p>
+
+              {semSaldo && (
+                <ButtonLink
+                  href={`${area.base}/creditos`}
+                  variant="empresas"
+                  size="sm"
+                  className="mt-3"
+                >
+                  <Ticket size={15} />
+                  Comprar vagas
+                </ButtonLink>
+              )}
+            </div>
+          </div>
+        </Panel>
+      )}
+      {/*
         Na revisão os campos continuam **montados**, só escondidos.
         Desmontá-los perderia tudo o que a pessoa digitou quando ela
         voltasse — e "voltar e corrigir" é justamente o que esta tela
@@ -99,9 +171,31 @@ export function NewJobForm({
           <RevisaoDaVaga dados={revisao.dados} />
 
           {state.erro && (
-            <p className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-danger text-sm">
-              {state.erro}
-            </p>
+            <div className="mt-4 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3">
+              <p className="text-danger text-sm">{state.erro}</p>
+
+              {/*
+                A recusa por saldo oferece a saída, em vez de ser um beco.
+
+                A pessoa acabou de escrever a vaga inteira e foi barrada.
+                Sem este botão ela tem que descobrir sozinha onde comprar,
+                saindo da tela — e os campos vivem no DOM, então sair
+                perde tudo. O `campos.creditos` é o que distingue esta
+                recusa de um erro de validação qualquer: só o serviço de
+                vaga o produz, em `publicarVaga` e `reativarVaga`.
+              */}
+              {state.campos?.creditos && (
+                <ButtonLink
+                  href={`${area.base}/creditos`}
+                  variant="empresas"
+                  size="sm"
+                  className="mt-3"
+                >
+                  <Ticket size={15} />
+                  Comprar vagas
+                </ButtonLink>
+              )}
+            </div>
           )}
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
@@ -280,13 +374,7 @@ export function NewJobForm({
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-line border-t pt-5">
             <p className="text-faint text-xs">
-              Publicar usa uma vaga do seu saldo.{" "}
-              <Link
-                href={`${area.base}/creditos`}
-                className="underline hover:text-muted"
-              >
-                Ver meu saldo
-              </Link>
+              Você confere tudo antes de publicar.
             </p>
             <Button type="submit" variant="empresas" disabled={pending}>
               <Eye size={16} />
