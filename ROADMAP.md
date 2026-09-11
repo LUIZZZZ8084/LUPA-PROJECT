@@ -251,29 +251,23 @@ Qualidade:
   engoliu a primeira venda — falha fechada estava certa, silenciosa é
   que não —
   [#196](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/196)
+- Varredura que resgata cobrança presa: uma vez por dia, o que ficou
+  `pendente` além da carência é relido no Mercado Pago e reconciliado.
+  A aprovada tem precedência entre as tentativas, e o que ainda pode
+  virar dinheiro não é tocado —
+  [#198](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/198)
 
 ## Pendente
 
-A cobrança saiu daqui em 11/09/2026, provada em produção. O que sobrou
-é a rede de proteção que o episódio da primeira venda expôs: o dinheiro
-entrou, o aviso foi recusado, e nada no app percebeu — quem percebeu foi
-gente lendo tabela à mão, um dia depois. A #196 já tirou o silêncio do
-lado da configuração; falta o app se recuperar sozinho quando o aviso
-falhar por qualquer outro motivo.
+A cobrança saiu daqui em 11/09/2026, provada em produção, e com ela as
+duas redes de proteção que o episódio da primeira venda expôs.
 
-- [ ] Cobrança que fica pendente demais precisa se resolver sozinha —
-      [#198](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/198)
-
-      Nenhum caminho relê uma cobrança presa em `pendente`. Todo o
-      circuito depende de o webhook chegar naquela janela de minutos; se
-      ele falhar, o dinheiro entra e o app nunca fica sabendo.
-      `confirmarPagamento` já faz a coisa certa e é idempotente — falta
-      alguém chamar, por varredura agendada ou por botão no admin.
+**Tudo o que sobrou vai junto com o empacotamento em APK** — decisão do
+Luiz em 01/09/2026, que reúne numa etapa só o que antes estava
+espalhado. Nada aqui está bloqueado por código.
 
 
-O empacotamento em APK continua reunindo numa etapa só o que antes
-estava espalhado — decisão do Luiz em 01/09/2026 —, e não está
-bloqueado por código.
+
 
 ## Depende de decisão, não de código
 

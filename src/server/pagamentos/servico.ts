@@ -12,7 +12,7 @@ import {
   estenderPlanoMensal,
   revogarPlanoMensal,
 } from "../carteiras/servico";
-import { erros } from "../errors";
+import { comoAppError, erros } from "../errors";
 import { log } from "../logger";
 import {
   estenderMensalidade,
@@ -21,6 +21,7 @@ import {
 import { repositorioUsuarios } from "../repositories";
 import { urlPublica } from "../url-publica";
 import { repositorioPagamentos } from "./index";
+import type { PagamentoNoMercadoPago } from "./mercadopago";
 import {
   cancelarAssinaturaNoMercadoPago,
   consultarAssinatura,
@@ -28,6 +29,7 @@ import {
   consultarParcelaDaAssinatura,
   criarAssinaturaRecorrente,
   criarPreferencia,
+  pagamentosPorReferencia,
   temMercadoPagoConfigurado,
 } from "./mercadopago";
 import {
@@ -912,4 +914,145 @@ export async function confirmarPagamento(
 
   // "pending", "in_process" etc.: nada muda ainda — o Mercado Pago manda
   // outra notificação quando o status avançar.
+}
+
+// ── Reconciliação: quando o aviso não chega (#198) ────────────────────────
+
+/**
+ * Quanto tempo o webhook tem antes de a varredura se meter.
+ *
+ * O caminho normal é o aviso do Mercado Pago, que chega em segundos.
+ * Reconciliar antes disso seria duas coisas fazendo a mesma coisa — e a
+ * corrida entre elas não quebra nada (a aprovação é condicional na própria
+ * instrução), mas gasta chamada de rede para chegar onde já se ia chegar.
+ */
+const MINUTOS_DE_GRACA = 10;
+
+/**
+ * Até onde a varredura olha para trás.
+ *
+ * PIX expira, boleto vence, e gente abandona checkout. Sem um fundo, toda
+ * varredura perguntaria para sempre ao Mercado Pago sobre compras de meses
+ * atrás que nunca vão mudar — e a fila de abandonadas só cresce, então o
+ * custo cresce junto e as recentes, que são as que importam, ficam para
+ * trás do `maximo`.
+ */
+const DIAS_DE_ALCANCE = 7;
+
+/** Cada linha vira pelo menos uma chamada de rede; a função tem prazo. */
+const MAXIMO_POR_VARREDURA = 50;
+
+/** Status do Mercado Pago em que a cobrança ainda pode virar dinheiro. */
+const AINDA_EM_ABERTO = ["pending", "in_process", "authorized"];
+
+export interface ResultadoDaReconciliacao {
+  /** Cobranças presas que entraram na janela desta varredura. */
+  vistas: number;
+  /** Quantas saíram de `pendente` por causa dela. */
+  reconciliadas: number;
+}
+
+/**
+ * Relê no Mercado Pago as cobranças que ficaram `pendente` tempo demais.
+ *
+ * Existe por causa de 10/09/2026: o aviso da primeira venda de verdade foi
+ * entregue e **nós o recusamos** com 401, por segredo divergente. O
+ * dinheiro entrou, a cobrança ficou `pendente` para sempre, e o app não
+ * tinha nenhum caminho para descobrir isso sozinho — quem descobriu foi
+ * gente lendo a tabela à mão, um dia depois.
+ *
+ * **A cobrança presa não sabe o id do pagamento.** Enquanto está
+ * `pendente`, `mp_payment_id` é nulo — era o webhook que ia preenchê-lo. O
+ * que se tem é o nosso id, que viaja como `external_reference`; por isso a
+ * volta é por busca, e não por consulta direta.
+ *
+ * **Qual pagamento vale, quando há mais de um.** Uma preferência gera
+ * várias tentativas: cartão recusado, depois PIX aprovado. Processar a
+ * recusada primeiro marcaria a cobrança como `rejeitado` — e aí a aprovada
+ * chegaria e não encontraria mais nada `pendente` para aprovar, porque a
+ * guarda mora na própria instrução do banco. **O crédito sumiria de vez,
+ * por causa da ordem.** Então a aprovada tem precedência explícita, e não
+ * por acaso da ordenação que o Mercado Pago devolver.
+ *
+ * **Pendente de verdade não se toca.** Boleto em aberto e PIX ainda não
+ * pago são `pending` lá também: encerrar a cobrança nossa ali tiraria de
+ * alguém uma compra que ele ainda pode concluir.
+ *
+ * **Uma cobrança que estoura não derruba a varredura.** A falha vai para o
+ * log e a próxima é processada — vinte presas e uma quebrada não podem
+ * significar vinte e uma não resolvidas.
+ *
+ * Todo o efeito passa por `confirmarPagamento`, que é idempotente: rodar
+ * duas vezes não credita duas vezes.
+ */
+export async function reconciliarPagamentosPendentes(
+  opcoes: { agora?: Date; buscar?: typeof fetch } = {},
+): Promise<ResultadoDaReconciliacao> {
+  const agora = opcoes.agora ?? new Date();
+  const repo = repositorioPagamentos();
+
+  const presas = await repo.pendentesParaReconciliar({
+    antesDe: new Date(
+      agora.getTime() - MINUTOS_DE_GRACA * 60_000,
+    ).toISOString(),
+    depoisDe: new Date(
+      agora.getTime() - DIAS_DE_ALCANCE * 24 * 60 * 60_000,
+    ).toISOString(),
+    maximo: MAXIMO_POR_VARREDURA,
+  });
+
+  let reconciliadas = 0;
+
+  for (const presa of presas) {
+    try {
+      const achados = await pagamentosPorReferencia(presa.id, opcoes.buscar);
+      const escolhido = escolherPagamento(achados);
+      if (!escolhido) continue;
+
+      await confirmarPagamento(escolhido.id, opcoes.buscar);
+
+      /*
+       * Conta pelo que mudou no banco, não pelo que se tentou.
+       *
+       * `confirmarPagamento` pode não fazer nada — outra notificação
+       * chegou primeiro, ou o status remoto não pede mudança. Um contador
+       * de tentativas diria que a varredura resolveu vinte coisas numa
+       * noite em que ela não resolveu nenhuma.
+       */
+      const depois = await repo.porId(presa.id);
+      if (depois && depois.status !== "pendente") reconciliadas += 1;
+    } catch (e) {
+      log.erro(comoAppError(e), {
+        acao: "pagamentos.reconciliar",
+        pagamentoId: presa.id,
+      });
+    }
+  }
+
+  log.info("varredura de cobranças presas", {
+    acao: "pagamentos.reconciliar",
+    vistas: presas.length,
+    reconciliadas,
+  });
+
+  return { vistas: presas.length, reconciliadas };
+}
+
+/**
+ * Entre as tentativas que o Mercado Pago tem, qual decide a cobrança.
+ *
+ * A ordem é regra de negócio, não conveniência — o comentário de
+ * `reconciliarPagamentosPendentes` explica o que a ordem errada custa.
+ */
+function escolherPagamento(
+  achados: PagamentoNoMercadoPago[],
+): PagamentoNoMercadoPago | null {
+  const aprovado = achados.find((a) => a.status === "approved");
+  if (aprovado) return aprovado;
+
+  // Ainda pode virar dinheiro: é compra em aberto, não cobrança perdida.
+  if (achados.some((a) => AINDA_EM_ABERTO.includes(a.status))) return null;
+
+  // Sobrou só desfecho negativo — qualquer um leva ao mesmo lugar.
+  return achados[0] ?? null;
 }

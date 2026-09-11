@@ -188,6 +188,77 @@ export async function consultarPagamento(
   }
 }
 
+/**
+ * Os pagamentos que o Mercado Pago tem para uma referência externa nossa.
+ *
+ * É o caminho inverso do webhook, e existe porque a varredura da #198
+ * parte de uma cobrança que **nunca soube** o id do pagamento: enquanto
+ * ela está `pendente`, `mp_payment_id` é nulo — era o webhook que ia
+ * preenchê-lo, e foi justamente ele que falhou. O que sabemos é o nosso
+ * `pagamentos.id`, que viaja como `external_reference`.
+ *
+ * Devolve lista, e não um só, porque **uma preferência pode gerar várias
+ * tentativas**: cartão recusado, depois PIX aprovado. Quem chama decide
+ * qual vale — e a ordem em que se decide não é detalhe, está em
+ * `reconciliarPagamentosPendentes`.
+ */
+export async function pagamentosPorReferencia(
+  referenciaExterna: string,
+  buscar: typeof fetch = fetch,
+): Promise<PagamentoNoMercadoPago[]> {
+  try {
+    const resposta = await buscar(
+      `${BASE}/v1/payments/search?external_reference=${encodeURIComponent(
+        referenciaExterna,
+      )}`,
+      {
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+        headers: { authorization: `Bearer ${token()}` },
+        cache: "no-store",
+      },
+    );
+
+    if (!resposta.ok) return [];
+
+    const corpo = (await resposta.json()) as { results?: unknown };
+    if (!Array.isArray(corpo.results)) return [];
+
+    return corpo.results.flatMap((cru) => {
+      const item = cru as {
+        id?: unknown;
+        status?: unknown;
+        external_reference?: unknown;
+      };
+      if (
+        (typeof item.id !== "number" && typeof item.id !== "string") ||
+        typeof item.status !== "string"
+      ) {
+        return [];
+      }
+      return [
+        {
+          id: String(item.id),
+          status: item.status,
+          referenciaExterna:
+            typeof item.external_reference === "string"
+              ? item.external_reference
+              : null,
+        },
+      ];
+    });
+  } catch {
+    /*
+     * Rede, timeout, TLS: a varredura tenta de novo amanhã.
+     *
+     * Lista vazia aqui significa "não deu para perguntar", e quem chama
+     * trata igual a "não há nada" — de propósito. Os dois levam à mesma
+     * ação, que é não mexer na cobrança: inventar uma distinção obrigaria
+     * a decidir algo sobre dinheiro sem ter falado com o Mercado Pago.
+     */
+    return [];
+  }
+}
+
 // ── Assinaturas recorrentes: `preapproval` (#170) ─────────────────────────
 //
 // O Checkout Pro acima cobra uma vez. O `preapproval` é a autorização que
