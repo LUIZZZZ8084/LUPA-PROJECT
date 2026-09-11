@@ -1894,27 +1894,47 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   gravar em estado, é sinal de que o valor deveria vir de
   `useSyncExternalStore`, não de um efeito.**
 
-- **Um endereço deduzido em silêncio, no caminho por onde entra dinheiro.**
-  `urlBase()` — duplicado em `pagamentos/servico.ts` e em
-  `esqueci-senha/actions.ts` — caía em `VERCEL_URL` quando
-  `NEXT_PUBLIC_APP_URL` não estava definida. E `VERCEL_URL` **nunca é o
-  domínio próprio**: é a URL gerada do deploy
-  (`lupa-project-<hash>.vercel.app`), diferente a cada publicação. Então
-  todo `notification_url` e todo `back_urls` que o Mercado Pago recebeu
-  apontavam para um hostname descartável. Em 10/09/2026 isso custou a
-  primeira venda de verdade da Lupa: R$ 29,90 aprovados lá, nenhum aviso
-  chegando aqui, cobrança `pendente` para sempre e quem pagou sem receber
-  a vaga. **Nada ficou vermelho** — a rota do webhook estava certa, o
-  segredo estava certo, os testes passavam, e o app respondia 200 na
-  notificação de teste do painel. O defeito só apareceu porque alguém foi
-  conferir a tabela `pagamentos` à mão, um dia depois. Hoje falta de
-  `NEXT_PUBLIC_APP_URL` **derruba a produção**, como já fazia
-  `SESSION_SECRET`, e a decisão é por `VERCEL_ENV` e não por `NODE_ENV`:
-  preview compila com `NODE_ENV=production` também, e lá deduzir está
-  certo. **Valor deduzido em silêncio é aceitável enquanto o pior caso for
-  uma tela feia; deixa de ser no momento em que o caminho move dinheiro ou
-  sai por e-mail** — ali o padrão tem que ser falhar barulhento, porque
-  ninguém confere o que parece estar funcionando (#195).
+- **A primeira venda de verdade sumiu, e o diagnóstico errado durou um
+  dia.** Em 10/09/2026 entraram R$ 29,90 aprovados no Mercado Pago e a
+  cobrança ficou `pendente` para sempre; quem pagou não recebeu a vaga.
+  Duas coisas estavam erradas ao mesmo tempo, e confundir uma com a outra
+  custou um dia:
+
+  **O que de fato impediu o crédito foi um 401 nosso.** O Mercado Pago
+  *entregou* a notificação, na URL certa (`lupapp.com.br`), com o evento
+  certo — e `validarAssinaturaWebhook` recusou, porque o deploy no ar
+  carregava um `MERCADO_PAGO_WEBHOOK_SECRET` divergente do que ele usava
+  para assinar. A recusa está **certa**: notificação que não se pode
+  provar não confirma pagamento. O que faltava era barulho — a única
+  pista era um `log.warn` por notificação, e ninguém lê log de produção
+  todo dia num projeto de duas pessoas. Hoje `src/server/config-obrigatoria.ts`
+  confere a configuração quando o processo sobe e derruba antes de
+  atender ninguém (#196). **Falha fechada correta e silenciosa faz o
+  mesmo estrago que falha aberta** — a diferença entre "estão forjando
+  webhook" e "este deploy subiu sem variável" é conhecida na hora de
+  subir, não no meio de um pagamento.
+
+  **E o `urlBase()` era um segundo defeito, de verdade, mas não este.**
+  Duplicado em `pagamentos/servico.ts` e `esqueci-senha/actions.ts`, ele
+  caía em `VERCEL_URL` sem `NEXT_PUBLIC_APP_URL` — e `VERCEL_URL` **nunca
+  é o domínio próprio**: é a URL gerada do deploy, diferente a cada
+  publicação. Isso mandava os `back_urls` para um hostname descartável,
+  então quem pagava voltava para fora do app. Corrigido na #195, e hoje
+  a falta da variável derruba produção. Mas ele **não** era a causa do
+  crédito perdido, e eu afirmei que era, com confiança, antes de abrir o
+  histórico de entregas do painel do Mercado Pago — que dizia `401 - Com
+  erro` em letras garrafais. **Quando um sistema externo tem um registro
+  do que ele tentou, leia esse registro antes de teorizar sobre o que
+  aconteceu**; a resposta estava a dois cliques o tempo todo.
+
+  Um detalhe que atrasou mais: o id da aplicação foi lido de um print e
+  um `5` virou `6`. O painel do Mercado Pago responde 5xx genérico para
+  aplicação inexistente, o que passa por instabilidade deles. **Número de
+  identificação se copia da fonte, não se transcreve de imagem.**
+
+  O que continua valendo dos dois: **valor deduzido em silêncio é
+  aceitável enquanto o pior caso for uma tela feia; deixa de ser no
+  momento em que o caminho move dinheiro ou sai por e-mail.**
 
 ### Sobre verificação
 
