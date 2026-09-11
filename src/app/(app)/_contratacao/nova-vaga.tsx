@@ -4,6 +4,7 @@ import { CIDADE_INICIAL } from "@/lib/constants";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
+import { direitoDePublicar } from "@/server/carteiras/servico";
 import type { AreaDeContratacao } from "./area";
 import { NewJobForm } from "./nova-vaga-form";
 
@@ -27,7 +28,16 @@ export async function PublicarVaga({ area }: { area: AreaDeContratacao }) {
    */
   if (!sessao || !pode(sessao.papel, "vaga:publicar")) notFound();
 
-  const usuario = await usuarioDaSessao(sessao.usuarioId);
+  const [usuario, direito] = await Promise.all([
+    usuarioDaSessao(sessao.usuarioId),
+    /*
+     * O saldo vem para ca para a tela poder avisar **antes** do
+     * formulario, e nao depois de dez campos preenchidos. Quem decide de
+     * verdade continua sendo `gastarParaPublicar`, na hora de gravar —
+     * isto aqui informa, nao autoriza.
+     */
+    direitoDePublicar(sessao.usuarioId),
+  ]);
 
   return (
     <PageShell width="narrow">
@@ -40,6 +50,7 @@ export async function PublicarVaga({ area }: { area: AreaDeContratacao }) {
       <NewJobForm
         cidadeDaEmpresa={usuario?.cidade ?? CIDADE_INICIAL}
         area={area}
+        direito={direito}
       />
     </PageShell>
   );

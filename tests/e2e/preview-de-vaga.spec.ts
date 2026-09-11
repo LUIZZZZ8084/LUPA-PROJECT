@@ -126,4 +126,27 @@ test.describe("revisão antes de publicar", () => {
       page.locator('a[href$="/editar"][href^="/empresa/vagas/"]'),
     ).toHaveCount(0);
   });
+  /**
+   * O saldo aparece antes dos campos, com o número (#193).
+   *
+   * O aviso antigo vivia no rodapé e dizia só *que* publicar usa uma vaga.
+   * Aqui a conta da suíte tem saldo de sobra, então o que se confere é o
+   * formato — que a tela informa a quantidade, e não uma frase genérica.
+   * Os estados de "sem saldo" e de plano mensal ficam no teste de
+   * componente (`saldo-ao-publicar.test.tsx`), porque chegar a zero aqui
+   * exigiria gastar as quarenta vagas que o setup compra.
+   */
+  test("o formulário diz quantas vagas há no saldo, antes dos campos", async ({
+    page,
+  }) => {
+    await page.goto("/empresa/vagas/nova");
+
+    const aviso = page.getByText(/vagas? para publicar/i).first();
+    await expect(aviso).toBeVisible();
+
+    // Antes do primeiro campo, não depois do último.
+    const posicaoAviso = await aviso.boundingBox();
+    const posicaoCargo = await page.getByLabel("Cargo").boundingBox();
+    expect(posicaoAviso?.y ?? 0).toBeLessThan(posicaoCargo?.y ?? 0);
+  });
 });

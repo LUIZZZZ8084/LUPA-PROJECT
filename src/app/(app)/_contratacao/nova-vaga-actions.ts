@@ -7,6 +7,7 @@ import { sessaoAtual } from "@/server/auth/cookies";
 import { avisarVagaNova } from "@/server/notificacoes/servico";
 import { schemaNovaVaga } from "@/server/vagas/schemas";
 import { publicarVaga as publicarVagaServico } from "@/server/vagas/servico";
+import { BASES_DE_CONTRATACAO } from "./area";
 
 /**
  * Publicação de vaga.
@@ -35,7 +36,16 @@ export const publicarVaga = criarAcao({
      */
     after(() => avisarVagaNova(vaga));
 
-    revalidatePath("/empresa");
+    /*
+     * As duas areas de contratacao, nao so `/empresa` (#193).
+     *
+     * A #189 corrigiu isto em `actions.ts` e `creditos-actions.ts` e
+     * **passou batido aqui**: quem publicava pelo `/contratar` voltava
+     * para um painel que nao mostrava a vaga recem-criada. Mesma licao do
+     * `perfis_empresa.plano`, que apareceu em tres telas — corrigir num
+     * arquivo nao corrige os irmaos.
+     */
+    for (const base of BASES_DE_CONTRATACAO) revalidatePath(base);
     revalidatePath("/vagas");
     return {};
   },
