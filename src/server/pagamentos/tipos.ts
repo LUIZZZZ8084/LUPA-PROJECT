@@ -140,6 +140,27 @@ export interface RepositorioPagamentos {
   porId(id: string): Promise<Pagamento | null>;
 
   /**
+   * Cobranças que ficaram `pendente` tempo demais, para a varredura
+   * reconciliar (#198).
+   *
+   * A janela tem dois lados, e os dois importam. `antesDe` dá ao webhook
+   * o tempo dele: reconciliar uma cobrança de dez segundos atrás competiria
+   * com a notificação que está a caminho, e as duas fariam a mesma coisa.
+   * `depoisDe` corta o fundo do poço — PIX expira, boleto vence, e
+   * perguntar todo dia ao Mercado Pago sobre uma compra abandonada em
+   * março é gastar chamada para sempre por algo que nunca vai mudar.
+   *
+   * `maximo` existe porque isto roda com orçamento: cada linha vira pelo
+   * menos uma chamada de rede, e uma varredura que tenta processar a
+   * tabela inteira estoura o tempo da função e não termina nenhuma.
+   */
+  pendentesParaReconciliar(janela: {
+    antesDe: string;
+    depoisDe: string;
+    maximo: number;
+  }): Promise<Pagamento[]>;
+
+  /**
    * A cobrança pelo id que o Mercado Pago usa, e não pelo nosso.
    *
    * É o que permite reconhecer uma parcela da recorrência quando o

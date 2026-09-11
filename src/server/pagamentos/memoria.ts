@@ -33,6 +33,22 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
     return this.itens.get(id) ?? null;
   }
 
+  async pendentesParaReconciliar(janela: {
+    antesDe: string;
+    depoisDe: string;
+    maximo: number;
+  }): Promise<Pagamento[]> {
+    return [...this.itens.values()]
+      .filter(
+        (p) =>
+          p.status === "pendente" &&
+          p.criadoEm < janela.antesDe &&
+          p.criadoEm > janela.depoisDe,
+      )
+      .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm))
+      .slice(0, janela.maximo);
+  }
+
   async porMpPaymentId(mpPaymentId: string): Promise<Pagamento | null> {
     return (
       [...this.itens.values()].find((p) => p.mpPaymentId === mpPaymentId) ??

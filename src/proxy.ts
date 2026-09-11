@@ -253,6 +253,13 @@ export const config = {
      * `/api/` cai no ramo acima dela, que responde JSON de 401 sem nunca
      * consultá-la.
      *
+     * `api/cron` entrou pela mesma porta e pelo mesmo motivo (#198): o
+     * cron da Vercel faz um GET sem cookie nenhum, e o muro responderia
+     * 401 antes de a varredura existir. Seria o defeito do webhook de
+     * novo, e pior — uma rede de proteção que nunca roda não deixa rastro
+     * nenhum de que não está rodando. Ela também se autentica sozinha, por
+     * `CRON_SECRET`.
+     *
      * `manifest.webmanifest` entrou depois, e a ausência dele era um
      * defeito de verdade: o manifesto responde a `/manifest.webmanifest`,
      * gerado por `src/app/manifest.ts` do mesmo jeito que `icon` e
@@ -262,6 +269,6 @@ export const config = {
      * que é quem acabou de receber o link. Não é navegação e não tem o que
      * proteger; o que ele diz (nome, cor, ícone) já é público.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|api/webhooks|icon|apple-icon|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|api/webhooks|api/cron|icon|apple-icon|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };

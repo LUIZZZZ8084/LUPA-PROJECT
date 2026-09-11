@@ -77,6 +77,33 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
     return data ? paraPagamento(data) : null;
   }
 
+  async pendentesParaReconciliar(janela: {
+    antesDe: string;
+    depoisDe: string;
+    maximo: number;
+  }): Promise<Pagamento[]> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("pagamentos")
+      .select("*")
+      .eq("status", "pendente")
+      .lt("criado_em", janela.antesDe)
+      .gt("criado_em", janela.depoisDe)
+      /*
+       * Da mais velha para a mais nova.
+       *
+       * `maximo` corta a lista, e o corte precisa cair sempre do mesmo
+       * lado: ordenando pela mais nova, uma fila maior que o limite
+       * deixaria as antigas para trás em toda varredura — justamente as
+       * que estão presas há mais tempo, que são as que importam.
+       */
+      .order("criado_em", { ascending: true })
+      .limit(janela.maximo);
+
+    if (error) throw erros.indisponivel(error.message);
+    return (data ?? []).map(paraPagamento);
+  }
+
   async temParcelaAprovada(assinaturaId: string): Promise<boolean> {
     const supabase = await cliente();
     const { count, error } = await supabase

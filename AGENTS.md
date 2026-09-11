@@ -1349,6 +1349,40 @@ a trava é mais simples porque a chave já é única por pagamento: a segunda
 tentativa não encontra mais nada "pendente" e a função devolve `null`,
 que o chamador lê como "nada a fazer".
 
+**E quando o aviso não chega, a varredura vai buscar (#198).** Todo o
+circuito acima depende de o webhook chegar naquela janela de segundos. Em
+10/09/2026 ele não chegou — foi entregue e **recusado com 401**, por
+segredo divergente —, e não havia caminho nenhum para o app descobrir
+sozinho: o dinheiro entrou e a cobrança ficou `pendente` para sempre. Hoje
+`reconciliarPagamentosPendentes` relê no Mercado Pago o que ficou preso,
+disparada por cron.
+
+A cobrança presa **não sabe o id do pagamento** — enquanto está
+`pendente`, `mp_payment_id` é nulo, porque era o webhook que ia
+preenchê-lo. O que se tem é o nosso id, que viaja como
+`external_reference`; por isso a volta é por busca
+(`/v1/payments/search`), e não por consulta direta.
+
+**Entre várias tentativas, a aprovada tem precedência explícita.** Uma
+preferência gera mais de um pagamento: cartão recusado, depois PIX
+aprovado. Processar a recusada primeiro marcaria a cobrança como
+`rejeitado` — e a aprovada chegaria depois sem encontrar nada `pendente`
+para aprovar, porque a guarda mora na própria instrução do banco. **O
+crédito sumiria de vez, por causa da ordem em que uma lista voltou.**
+Ordem que decide dinheiro não pode ser herdada da resposta de terceiro.
+
+**O que ainda pode virar dinheiro não se toca:** boleto em aberto e PIX
+não pago são `pending` lá também, e encerrar a cobrança ali tiraria de
+alguém uma compra que ele ainda pode concluir. E há janela dos dois lados
+— dez minutos de carência, para não competir com o webhook, e sete dias
+de alcance, porque perguntar para sempre sobre checkout abandonado é
+gastar chamada por algo que nunca vai mudar.
+
+A rota que dispara (`/api/cron/reconciliar-pagamentos`) precisou entrar
+no matcher do `proxy.ts`, como `api/webhooks` já tinha entrado: o cron da
+Vercel faz um GET sem cookie, e o muro responderia 401 antes de a
+varredura existir. Seria o defeito do webhook de novo, e pior — **rede de
+proteção que nunca roda não deixa rastro de que não está rodando.**
 **Cada domínio aplica o próprio efeito; `pagamentos` só aciona.**
 `aplicarEfeito`, em `src/server/pagamentos/servico.ts`, despacha por tipo
 para uma função do domínio certo — `estenderMensalidade`, em
