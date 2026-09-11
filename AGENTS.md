@@ -1894,6 +1894,28 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   gravar em estado, é sinal de que o valor deveria vir de
   `useSyncExternalStore`, não de um efeito.**
 
+- **Um endereço deduzido em silêncio, no caminho por onde entra dinheiro.**
+  `urlBase()` — duplicado em `pagamentos/servico.ts` e em
+  `esqueci-senha/actions.ts` — caía em `VERCEL_URL` quando
+  `NEXT_PUBLIC_APP_URL` não estava definida. E `VERCEL_URL` **nunca é o
+  domínio próprio**: é a URL gerada do deploy
+  (`lupa-project-<hash>.vercel.app`), diferente a cada publicação. Então
+  todo `notification_url` e todo `back_urls` que o Mercado Pago recebeu
+  apontavam para um hostname descartável. Em 10/09/2026 isso custou a
+  primeira venda de verdade da Lupa: R$ 29,90 aprovados lá, nenhum aviso
+  chegando aqui, cobrança `pendente` para sempre e quem pagou sem receber
+  a vaga. **Nada ficou vermelho** — a rota do webhook estava certa, o
+  segredo estava certo, os testes passavam, e o app respondia 200 na
+  notificação de teste do painel. O defeito só apareceu porque alguém foi
+  conferir a tabela `pagamentos` à mão, um dia depois. Hoje falta de
+  `NEXT_PUBLIC_APP_URL` **derruba a produção**, como já fazia
+  `SESSION_SECRET`, e a decisão é por `VERCEL_ENV` e não por `NODE_ENV`:
+  preview compila com `NODE_ENV=production` também, e lá deduzir está
+  certo. **Valor deduzido em silêncio é aceitável enquanto o pior caso for
+  uma tela feia; deixa de ser no momento em que o caminho move dinheiro ou
+  sai por e-mail** — ali o padrão tem que ser falhar barulhento, porque
+  ninguém confere o que parece estar funcionando (#195).
+
 ### Sobre verificação
 
 **Verifique o que você diz que verificou.** Três episódios reais aqui:

@@ -90,6 +90,17 @@ export default defineConfig({
            * arquivo de teste.
            */
           SESSION_SECRET: "segredo-de-teste-do-playwright-com-mais-de-32-chars",
+          /*
+           * A raiz dos links que saem do app para fora — webhook do
+           * Mercado Pago e e-mail de recuperação (#195).
+           *
+           * Aqui ela é o próprio servidor efêmero da suíte. Sem isto,
+           * `urlPublica()` cairia no padrão de desenvolvimento, que
+           * aponta para a porta 3000 enquanto a suíte serve noutra: o
+           * teste passaria medindo um endereço que não é o que ele
+           * levantou.
+           */
+          NEXT_PUBLIC_APP_URL: `http://127.0.0.1:${PORT}`,
         },
       },
 });
