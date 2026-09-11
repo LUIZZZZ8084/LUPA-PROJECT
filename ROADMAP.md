@@ -245,13 +245,21 @@ Qualidade:
   webhook e creditada na carteira, pelo mesmo caminho que qualquer
   compra percorre —
   [#46](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/46)
+- Produção não sobe sem o que produção precisa: `instrumentation.ts`
+  confere a configuração obrigatória antes de atender qualquer
+  requisição e derruba com a lista do que falta. Nasceu do 401 que
+  engoliu a primeira venda — falha fechada estava certa, silenciosa é
+  que não —
+  [#196](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/196)
 
 ## Pendente
 
 A cobrança saiu daqui em 11/09/2026, provada em produção. O que sobrou
-são as duas redes de proteção que o episódio da primeira venda expôs: o
-dinheiro entrou, o aviso foi recusado, e nada no app percebeu — quem
-percebeu foi gente lendo tabela à mão, um dia depois.
+é a rede de proteção que o episódio da primeira venda expôs: o dinheiro
+entrou, o aviso foi recusado, e nada no app percebeu — quem percebeu foi
+gente lendo tabela à mão, um dia depois. A #196 já tirou o silêncio do
+lado da configuração; falta o app se recuperar sozinho quando o aviso
+falhar por qualquer outro motivo.
 
 - [ ] Cobrança que fica pendente demais precisa se resolver sozinha —
       [#198](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/198)
@@ -262,13 +270,6 @@ percebeu foi gente lendo tabela à mão, um dia depois.
       `confirmarPagamento` já faz a coisa certa e é idempotente — falta
       alguém chamar, por varredura agendada ou por botão no admin.
 
-- [ ] Webhook sem segredo em produção falha em silêncio —
-      [#196](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/196)
-
-      Faltando `MERCADO_PAGO_WEBHOOK_SECRET`, toda notificação é
-      recusada com 401 e a única pista é um `log.warn` que ninguém lê.
-      A falha fechada está certa; silenciosa não. Mesmo tratamento da
-      #195: em produção, derruba.
 
 O empacotamento em APK continua reunindo numa etapa só o que antes
 estava espalhado — decisão do Luiz em 01/09/2026 —, e não está
