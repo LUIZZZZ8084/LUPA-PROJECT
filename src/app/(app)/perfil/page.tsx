@@ -52,6 +52,18 @@ const ATALHOS: {
   descricao: string;
   cor: string;
   exige: Capacidade;
+  /**
+   * Papéis para os quais o atalho **não** aparece, mesmo tendo a
+   * capacidade (#191).
+   *
+   * A capacidade responde "pode?", e às vezes a resposta certa para a
+   * tela é outra: o prestador *pode* ver as próprias candidaturas — e a
+   * rota continua respondendo —, mas o card abria numa tela vazia para
+   * sempre para quem se cadastrou direto como prestador. Tirar a
+   * capacidade faria `/perfil/candidaturas` dar 404, que é o dano que o
+   * AGENTS.md registra; o que sai é o atalho, não o acesso.
+   */
+  escondeDe?: readonly string[];
 }[] = [
   {
     href: "/perfil/candidaturas",
@@ -60,6 +72,7 @@ const ATALHOS: {
     descricao: "Acompanhe o status das vagas em que você se candidatou.",
     cor: "text-vagas",
     exige: "candidatura:ver_propria",
+    escondeDe: ["prestador_servico"],
   },
   {
     href: "/empresa",
@@ -68,6 +81,23 @@ const ATALHOS: {
     descricao: "Vagas publicadas, currículos recebidos e plano.",
     cor: "text-empresas",
     exige: "vaga:publicar",
+    escondeDe: ["prestador_servico"],
+  },
+  /*
+   * A mesma coisa, na porta do prestador (#189).
+   *
+   * Não é um segundo painel: as duas rotas renderizam a mesma
+   * implementação, em `_contratacao/`. O que muda é o nome — quem
+   * contrata um ajudante não se reconhece em "Minha Empresa".
+   */
+  {
+    href: "/contratar",
+    icon: Building2,
+    titulo: "Contratar",
+    descricao: "Publique vagas e receba currículos, sem precisar de CNPJ.",
+    cor: "text-empresas",
+    exige: "vaga:publicar",
+    escondeDe: ["empresa", "admin"],
   },
   {
     href: "/perfil/assinatura",
@@ -99,6 +129,16 @@ const ATALHOS: {
     descricao: "Saldo para publicar, ou plano mensal ilimitado.",
     cor: "text-empresas",
     exige: "vaga:publicar",
+    escondeDe: ["prestador_servico"],
+  },
+  {
+    href: "/contratar/creditos",
+    icon: Ticket,
+    titulo: "Comprar vagas",
+    descricao: "Saldo para publicar, ou plano mensal ilimitado.",
+    cor: "text-empresas",
+    exige: "vaga:publicar",
+    escondeDe: ["empresa", "admin"],
   },
   {
     href: "/perfil/curriculo",
@@ -123,7 +163,10 @@ export default async function PerfilPage() {
   const usuario = sessao ? await usuarioDaSessao(sessao.usuarioId) : null;
 
   const atalhos = sessao
-    ? ATALHOS.filter((a) => pode(sessao.papel, a.exige))
+    ? ATALHOS.filter(
+        (a) =>
+          pode(sessao.papel, a.exige) && !a.escondeDe?.includes(sessao.papel),
+      )
     : [];
 
   /*

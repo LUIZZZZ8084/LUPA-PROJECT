@@ -5,13 +5,13 @@
  */
 
 import type { Metadata } from "next";
-import { AREA_EMPRESA } from "../../_contratacao/area";
-import { PainelDeContratacao } from "../../_contratacao/painel";
+import { AREA_PRESTADOR } from "../../_contratacao/area";
+import { ComprarVagas } from "../../_contratacao/creditos";
 
 export const metadata: Metadata = {
-  title: "Minha Empresa",
+  title: "Comprar vagas",
 };
 
 export default function Page() {
-  return <PainelDeContratacao area={AREA_EMPRESA} />;
+  return <ComprarVagas area={AREA_PRESTADOR} />;
 }

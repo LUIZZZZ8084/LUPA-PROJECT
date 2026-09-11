@@ -3,7 +3,7 @@
 import { Loader2, ShoppingCart } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { comprarCreditos } from "./actions";
+import { comprarCreditos } from "./creditos-actions";
 
 export function ComprarButton({
   tipo,

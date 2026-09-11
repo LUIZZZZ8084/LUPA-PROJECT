@@ -90,6 +90,14 @@ export const ROTAS_NAO_VARRIDAS: Record<string, string> = {
   "/candidatos/[id]":
     "depende de um candidato que tenha ligado 'quero ser encontrado', criado dentro do próprio teste — varrido em visivel-para-empresas.spec.ts",
   "/empresa/candidaturas/[id]": "id resolvido em ROTAS_PROFUNDAS_EMPRESA",
+  "/contratar":
+    "exige sessão de prestador, e as duas contas compartilhadas da suíte são candidata e empresa — mesma razão de /perfil/publicacoes. A área é exercitada em virar-prestador.spec.ts, que converte a conta e percorre /contratar lá dentro: o painel responde, o estado vazio não oferece criar segunda conta, e /empresa devolve o prestador para cá. O corpo das telas é o mesmo de /empresa (em _contratacao/), que é varrido — o que muda entre as duas é só o caminho base",
+  "/contratar/creditos":
+    "mesma implementação de /empresa/creditos, que é varrida — só muda a base. Exercitada em virar-prestador.spec.ts",
+  "/contratar/vagas/nova":
+    "mesma implementação de /empresa/vagas/nova, que é varrida — só muda a base. Exercitada em virar-prestador.spec.ts",
+  "/contratar/candidaturas/[id]":
+    "id resolvido em tempo de execução, como /empresa/candidaturas/[id]; mesma implementação, que é varrida pela área da empresa",
   "/perfil/publicacoes":
     "exige sessão de prestador, e as duas contas compartilhadas da suíte são candidata e empresa. Uma terceira custaria mais um cadastro no limite de 5 por origem em 15 minutos — apertado demais para segurar. A tela tem varredura de acessibilidade própria, dentro de feed-do-prestador.spec.ts, onde a conta já é prestador",
   "/perfil/assinatura":

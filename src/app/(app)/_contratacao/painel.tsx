@@ -1,0 +1,520 @@
+import {
+  Building2,
+  FileText,
+  Inbox,
+  MessageCircle,
+  Plus,
+  Ticket,
+  UserSearch,
+} from "lucide-react";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import {
+  EmptyState,
+  PageShell,
+  PageTitle,
+} from "@/components/layout/page-shell";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
+import { Panel, Stat } from "@/components/ui/card";
+import { VerifiedMark } from "@/components/verified-badge";
+import {
+  empresaDoPainel,
+  getCompany,
+  getCompanyApplications,
+  getCompanyJobs,
+  getCompanyStats,
+} from "@/lib/data";
+import {
+  pluralize,
+  prazoDaVaga,
+  timeAgo,
+  vagaExpirada,
+  whatsappLink,
+} from "@/lib/format";
+import { sessaoAtual } from "@/server/auth/cookies";
+import { pode } from "@/server/auth/rbac";
+import {
+  type MatchDaCandidatura,
+  matchPorCandidatura,
+} from "@/server/candidaturas/match";
+import { recomendadosParaEmpresa } from "@/server/candidaturas/recomendados";
+import { direitoDePublicar } from "@/server/carteiras/servico";
+import {
+  serieDoPainel,
+  temPainelDeEmpresa,
+  totaisDaSerie,
+} from "@/server/visualizacoes/servico";
+import { type AreaDeContratacao, areaDoPapel } from "./area";
+import { EncerrarVagaButton } from "./encerrar-vaga-button";
+import { MoverCandidaturaSelect } from "./mover-candidatura-select";
+import { ReativarVagaButton } from "./reativar-vaga-button";
+import { Recomendados } from "./recomendados";
+import { SerieGrafico } from "./serie-grafico";
+
+/**
+ * O quanto o candidato casa com a vaga a que se candidatou.
+ *
+ * Sem match no mapa, não desenha nada: a vaga não declarou habilidade e o
+ * título não deu pista. Mostrar "0%" ali seria afirmar que o candidato não
+ * tem nada do que se pede, quando a verdade é que ninguém disse o que se
+ * pede.
+ *
+ * O número vive no `aria-label` por extenso porque o selo mostra só
+ * "72%", e "72%" sozinho não diz de quê — nem para quem usa leitor de
+ * tela, nem para quem está no celular, onde `title` não existe. Quem
+ * quiser o detalhe abre a ficha.
+ */
+function SeloDeMatch({ match }: { match: MatchDaCandidatura | undefined }) {
+  if (!match) return null;
+
+  const tone =
+    match.porcentagem >= 70
+      ? "vagas"
+      : match.porcentagem >= 40
+        ? "warn"
+        : "neutral";
+
+  return (
+    <Badge
+      tone={tone}
+      className="flex-none"
+      aria-label={`Combina com ${match.pontos} de ${match.deQuantas} habilidades que a vaga pede`}
+    >
+      {match.porcentagem}%
+    </Badge>
+  );
+}
+
+export async function PainelDeContratacao({
+  area,
+}: {
+  area: AreaDeContratacao;
+}) {
+  const sessao = await sessaoAtual();
+
+  /*
+   * O painel é "minha empresa", e quem não tem empresa não tem painel.
+   *
+   * A página lia a sessão e nunca conferia o papel: qualquer conta
+   * autenticada — candidato, prestador — abria daqui. Não vazava dado, e
+   * é por isso que ninguém viu: em produção `empresaDoPainel()` devolve o
+   * id de quem está pedindo, então as consultas voltam vazias, e publicar
+   * já barrava na capacidade dentro da action. O que faltava era o
+   * portão, e portão que falta é o que a próxima página criada aqui
+   * embaixo herda.
+   *
+   * 404 e não 403, como no resto da casa. O admin também cai aqui de
+   * propósito: ele enxerga tudo pelo `/admin/painel`, e uma empresa
+   * própria é justamente o que ele não tem.
+   */
+  if (!sessao) notFound();
+
+  /*
+   * Cada porta atende o próprio papel (#189).
+   *
+   * A implementação é a mesma, mas as duas áreas não são intercambiáveis:
+   * uma empresa em `/contratar` leria "Contratar" no lugar do nome dela, e
+   * um prestador em `/empresa` volta a ver a área escrita para quem tem
+   * CNPJ — que é exatamente o que esta separação veio desfazer. O
+   * candidato não cai aqui: ele segue para a explicação logo abaixo.
+   */
+  const areaDaPessoa = areaDoPapel(sessao.papel);
+  if (areaDaPessoa && areaDaPessoa.base !== area.base) {
+    redirect(`${areaDaPessoa.base}`);
+  }
+
+  /*
+   * Candidato não é barrado com 404 — recebe a explicação.
+   *
+   * A barra inferior mostra "Empresa" para todo mundo, e antes o toque
+   * dava página não encontrada. Não há segredo a proteger aqui: que exista
+   * um painel de quem contrata é evidente pela própria navegação. O que
+   * faltava era dizer o que é preciso para usá-lo.
+   */
+  if (!pode(sessao.papel, "vaga:ver_candidaturas_proprias")) {
+    return (
+      <PageShell width="narrow">
+        <PageTitle
+          title="Contratar pela Lupa"
+          accent="text-empresas"
+          description="Esta área é de quem contrata: publica vaga, recebe currículo e acompanha as candidaturas."
+        />
+        <Panel>
+          <div className="flex items-start gap-3">
+            <Building2 size={20} className="mt-0.5 flex-none text-empresas" />
+            <div>
+              <h2 className="font-bold text-base">
+                Sua conta ainda não contrata
+              </h2>
+              <p className="mt-1.5 text-muted text-sm leading-relaxed">
+                Contas de candidato usam a Lupa para procurar vaga e
+                profissional. Para contratar, é preciso um perfil de contratante
+                — empresa, produtor rural ou autônomo que emprega.
+              </p>
+              <p className="mt-3 text-faint text-sm leading-relaxed">
+                Ainda não dá para criar esse perfil por aqui. Fale com a gente e
+                resolvemos no suporte.
+              </p>
+            </div>
+          </div>
+        </Panel>
+      </PageShell>
+    );
+  }
+
+  const companyId = empresaDoPainel(sessao.usuarioId);
+  const [company, jobs, applications, stats, serie, recomendados] =
+    await Promise.all([
+      getCompany(companyId),
+      getCompanyJobs(companyId),
+      getCompanyApplications(companyId),
+      getCompanyStats(companyId),
+      // Quem não é empresa cai no estado vazio logo abaixo; pedir a série
+      // antes disso trocaria a explicação por uma tela de erro.
+      temPainelDeEmpresa(sessao) ? serieDoPainel(sessao) : [],
+      recomendadosParaEmpresa(sessao),
+    ]);
+  const totais = totaisDaSerie(serie);
+  const match = matchPorCandidatura(applications, jobs);
+  const direito = await direitoDePublicar(sessao.usuarioId);
+
+  /*
+   * Sem perfil de contratante, e a tela diz coisas diferentes por papel.
+   *
+   * **Esta tela oferecia "Cadastrar empresa" apontando para
+   * `/cadastro?tipo=empresa`** — o formulário de criar conta **nova**. Para
+   * o prestador isso era uma armadilha cara: `garantirPerfilDeContratante`
+   * só cria o perfil dele na primeira vaga publicada, então ele chegava
+   * aqui sem perfil, era mandado criar outra conta, e o saldo de vagas que
+   * já tinha comprado ficava preso na primeira — a carteira é por
+   * `usuario_id`. Ele pagaria duas vezes sem entender por quê (#189).
+   *
+   * Para o prestador, não ter perfil aqui é **normal**: ele só ainda não
+   * contratou ninguém. O convite certo é publicar a primeira vaga, e o
+   * perfil nasce junto com ela.
+   *
+   * Para uma conta de empresa, é estado quebrado de verdade — ela ganha o
+   * perfil no próprio cadastro. Aí o caminho é o suporte, nunca outra
+   * conta.
+   */
+  if (!company) {
+    const contratante = sessao.papel === "prestador_servico";
+
+    return (
+      <PageShell>
+        <EmptyState
+          icon={<Inbox size={22} />}
+          title={
+            contratante
+              ? "Você ainda não publicou nenhuma vaga"
+              : "Nenhuma empresa vinculada a esta conta"
+          }
+          description={
+            contratante
+              ? "Publique a primeira e seu perfil de contratante é criado junto — sem formulário nenhum, com os dados que você já cadastrou."
+              : "Isto não devia acontecer: a conta de empresa ganha o perfil no cadastro. Fale com a gente que resolvemos no suporte."
+          }
+          action={
+            contratante ? (
+              <ButtonLink
+                href={`${area.base}/vagas/nova`}
+                variant="empresas"
+                size="sm"
+              >
+                Publicar primeira vaga
+              </ButtonLink>
+            ) : undefined
+          }
+        />
+      </PageShell>
+    );
+  }
+
+  return (
+    <PageShell>
+      {/*
+        O título é o da área, não "Minha Empresa" fixo.
+        
+        O prestador chegava aqui pela porta dele e lia o nome da porta da
+        empresa — que é exatamente o que a #189 veio desfazer. Foi o e2e
+        que pegou: o painel renderizava certo e o cabeçalho mentia.
+      */}
+      <PageTitle
+        title={area.nome}
+        accent="text-empresas"
+        description="Acompanhe suas vagas e os currículos recebidos."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/candidatos" variant="outline">
+              <UserSearch size={17} />
+              Candidatos
+            </ButtonLink>
+            <ButtonLink href={`${area.base}/vagas/nova`} variant="empresas">
+              <Plus size={17} />
+              Publicar nova vaga
+            </ButtonLink>
+          </div>
+        }
+      />
+
+      <Panel>
+        <div className="flex items-start gap-4">
+          <Avatar
+            name={company.company_name}
+            src={company.logo_url}
+            size="lg"
+            square
+          />
+          <div className="min-w-0 flex-1">
+            <h2 className="flex items-center gap-1.5 text-lg font-bold">
+              {company.company_name}
+              <VerifiedMark size={16} />
+            </h2>
+            <p className="mt-1 text-xs text-muted">
+              CNPJ {company.cnpj ?? "não informado"}
+            </p>
+            {/*
+              O selo lia `company.plan`, a coluna `perfis_empresa.plano`
+              que nasceu no schema e **nunca teve quem a escrevesse** — a
+              armadilha do estado declarado sem produtor, registrada no
+              AGENTS.md. Presa em `trial` para todo mundo, ela fazia o
+              painel prometer "1ª vaga gratuita" a quem paga desde a
+              primeira, e continuaria dizendo isso a quem tivesse acabado
+              de assinar o mensal de R$ 199,90.
+
+              Quem responde de verdade é a carteira, que a página já
+              carregou logo acima para o card de saldo.
+            */}
+            <div className="mt-2.5">
+              <Badge tone={direito.mensalAtivo ? "empresas" : "outline"}>
+                {direito.mensalAtivo
+                  ? "Plano mensal ativo"
+                  : "Pagamento por vaga"}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-3 gap-3">
+          <Stat
+            label="Vagas ativas"
+            value={stats.active_jobs}
+            accent="text-empresas"
+          />
+          <Stat label="Currículos" value={stats.applications} />
+          <Stat
+            label="Visualizações (30 dias)"
+            value={totais.visualizacoes.toLocaleString("pt-BR")}
+          />
+        </div>
+
+        <SerieGrafico serie={serie} />
+      </Panel>
+
+      {/*
+        Dois atalhos que estavam escondidos.
+
+        "Candidatos" existia só como um botão pequeno no cabeçalho, ao
+        lado de "Publicar nova vaga" — e a busca inteira da #83 passava
+        despercebida por quem não sabia que ela existia. Aqui os dois
+        ganham espaço, e cada um diz o que a pessoa encontra do outro
+        lado: atalho sem explicação é atalho que ninguém clica.
+      */}
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link
+          href={`${area.base}/creditos`}
+          className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
+        >
+          <div className="flex items-center gap-2">
+            <Ticket size={18} className="flex-none text-empresas" />
+            <h2 className="font-bold text-sm">
+              {direito.mensalAtivo
+                ? "Plano mensal ativo"
+                : direito.creditos === 1
+                  ? "1 vaga para publicar"
+                  : `${direito.creditos} vagas para publicar`}
+            </h2>
+          </div>
+          <p className="mt-1 text-muted text-sm leading-relaxed">
+            {direito.mensalAtivo
+              ? "Publique quantas vagas quiser, sem tirar do saldo."
+              : direito.creditos === 0
+                ? "Compre uma vaga para publicar a próxima."
+                : "Cada uma fica 30 dias no ar. Toque para comprar mais."}
+          </p>
+        </Link>
+
+        <Link
+          href="/candidatos"
+          className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
+        >
+          <div className="flex items-center gap-2">
+            <UserSearch size={18} className="flex-none text-empresas" />
+            <h2 className="font-bold text-sm">Buscar candidatos</h2>
+          </div>
+          <p className="mt-1 text-muted text-sm leading-relaxed">
+            Procure por habilidade e área entre quem pediu para ser encontrado —
+            sem esperar alguém se candidatar.
+          </p>
+        </Link>
+      </div>
+
+      {/* Vagas publicadas */}
+      <section className="mt-6">
+        <h2 className="mb-3 text-base font-bold">Vagas publicadas</h2>
+        {jobs.length === 0 ? (
+          <EmptyState
+            icon={<FileText size={22} />}
+            title="Você ainda não publicou nenhuma vaga"
+            description="Publicar leva menos de dois minutos, e usa uma vaga do seu saldo."
+            action={
+              <ButtonLink
+                href={`${area.base}/vagas/nova`}
+                variant="empresas"
+                size="sm"
+              >
+                <Plus size={16} />
+                Publicar vaga
+              </ButtonLink>
+            }
+          />
+        ) : (
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
+            {jobs.map((job) => {
+              const expirada =
+                job.status === "aberta" && vagaExpirada(job.expires_at);
+              return (
+                <li
+                  key={job.id}
+                  className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
+                >
+                  <Link
+                    href={`/vagas/${job.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">
+                        {job.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted">
+                        {pluralize(
+                          job.applicant_count,
+                          "candidato",
+                          "candidatos",
+                        )}{" "}
+                        · {timeAgo(job.created_at)}
+                        {job.status === "aberta" &&
+                          ` · ${prazoDaVaga(job.expires_at)}`}
+                      </p>
+                    </div>
+                    <Badge
+                      tone={
+                        expirada
+                          ? "warn"
+                          : job.status === "aberta"
+                            ? "vagas"
+                            : "neutral"
+                      }
+                    >
+                      {expirada
+                        ? "Expirada"
+                        : job.status === "aberta"
+                          ? "Ativa"
+                          : "Encerrada"}
+                    </Badge>
+                  </Link>
+                  {job.status === "aberta" && (
+                    <div className="flex shrink-0 items-center gap-2">
+                      {expirada ? (
+                        <ReativarVagaButton id={job.id} />
+                      ) : (
+                        <EncerrarVagaButton id={job.id} titulo={job.title} />
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <Recomendados vagas={recomendados} />
+
+      {/* Currículos recebidos */}
+      <section className="mt-8">
+        <h2 className="mb-3 text-base font-bold">Currículos recebidos</h2>
+        {applications.length === 0 ? (
+          <EmptyState
+            icon={<Inbox size={22} />}
+            title="Nenhuma candidatura ainda"
+            description="Assim que alguém se candidatar às suas vagas, o currículo aparece aqui."
+          />
+        ) : (
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
+            {applications.map((app) => (
+              <li
+                key={app.id}
+                className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
+              >
+                {/*
+                  A linha inteira abre a ficha: nome, bairro e vaga não
+                  bastam para decidir chamar alguém, e antes disto não
+                  havia para onde clicar.
+                */}
+                <Link
+                  href={`/empresa/candidaturas/${app.id}`}
+                  className="group flex min-w-0 flex-1 items-center gap-3"
+                >
+                  <Avatar
+                    name={app.candidate.full_name}
+                    src={app.candidate.avatar_url}
+                    size="sm"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold underline-offset-2 group-hover:underline">
+                      {app.candidate.full_name}
+                    </p>
+                    <p className="truncate text-[11px] text-muted">
+                      {app.job_title}
+                      {app.candidate.neighborhood
+                        ? ` · ${app.candidate.neighborhood}`
+                        : ""}
+                      {` · ${timeAgo(app.created_at)}`}
+                    </p>
+                  </div>
+                </Link>
+
+                <SeloDeMatch match={match.get(app.id)} />
+
+                {/*
+                  Atalho de contato na própria lista: o caminho entre
+                  receber o currículo e chamar a pessoa não deveria ter
+                  uma tela no meio.
+                */}
+                {app.candidate.phone && (
+                  <a
+                    href={whatsappLink(
+                      app.candidate.phone,
+                      `Olá! Vimos sua candidatura para a vaga de ${app.job_title} na Lupa e gostaríamos de conversar.`,
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Falar com ${app.candidate.full_name} no WhatsApp`}
+                    className="flex-none rounded-lg border border-line p-2 text-muted transition-colors hover:border-vagas hover:text-vagas"
+                  >
+                    <MessageCircle size={16} />
+                  </a>
+                )}
+
+                <MoverCandidaturaSelect id={app.id} statusAtual={app.status} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </PageShell>
+  );
+}

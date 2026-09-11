@@ -12,7 +12,8 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { CONTRACT_TYPES, JOB_CATEGORIES } from "@/lib/constants";
-import { type EstadoVaga, publicarVagaComEstado } from "./actions";
+import type { AreaDeContratacao } from "./area";
+import { type EstadoVaga, publicarVagaComEstado } from "./nova-vaga-actions";
 import { type DadosDaVaga, lerDoFormulario, RevisaoDaVaga } from "./revisao";
 
 const inicial: EstadoVaga = {};
@@ -35,7 +36,13 @@ const inicial: EstadoVaga = {};
  * revisão aparecer. Só depois de a pessoa confirmar é que a action roda,
  * com o mesmo `FormData` que ela acabou de ver.
  */
-export function NewJobForm({ cidadeDaEmpresa }: { cidadeDaEmpresa: string }) {
+export function NewJobForm({
+  cidadeDaEmpresa,
+  area,
+}: {
+  cidadeDaEmpresa: string;
+  area: AreaDeContratacao;
+}) {
   const [state, action, pending] = useActionState(
     publicarVagaComEstado,
     inicial,
@@ -64,7 +71,7 @@ export function NewJobForm({ cidadeDaEmpresa }: { cidadeDaEmpresa: string }) {
           {cidade}.
         </p>
         <div className="mt-6 flex justify-center gap-3">
-          <ButtonLink href="/empresa" variant="empresas" size="sm">
+          <ButtonLink href={area.base} variant="empresas" size="sm">
             Ir para o painel
           </ButtonLink>
           <ButtonLink href="/vagas" variant="outline" size="sm">
@@ -275,7 +282,7 @@ export function NewJobForm({ cidadeDaEmpresa }: { cidadeDaEmpresa: string }) {
             <p className="text-faint text-xs">
               Publicar usa uma vaga do seu saldo.{" "}
               <Link
-                href="/empresa/creditos"
+                href={`${area.base}/creditos`}
                 className="underline hover:text-muted"
               >
                 Ver meu saldo

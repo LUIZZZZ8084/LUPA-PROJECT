@@ -7,6 +7,20 @@ import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { exigirCapacidade } from "@/server/auth/rbac";
 import { assinar, comprar } from "@/server/pagamentos/servico";
+import { BASES_DE_CONTRATACAO } from "./area";
+
+/**
+ * Revalida o painel das **duas** áreas de contratação.
+ *
+ * A action não sabe de qual porta veio o clique — `/empresa` ou
+ * `/contratar` —, e não precisa saber: revalidar um caminho que a pessoa
+ * não está vendo não custa nada, e deixar de revalidar o certo faz a tela
+ * mentir sobre o que acabou de acontecer. Escrever `/empresa` à mão aqui
+ * era o defeito silencioso que a #189 quase deixou passar.
+ */
+function revalidarContratacao(sufixo = "") {
+  for (const base of BASES_DE_CONTRATACAO) revalidatePath(`${base}${sufixo}`);
+}
 
 /**
  * Os quatro tipos que esta tela vende, e nada além disso.
@@ -42,14 +56,14 @@ export const comprarCreditos = criarAcao({
 
     if (tipo === "empresa_mensal") {
       const { checkoutUrl, assinatura } = await assinar(sessao, tipo);
-      revalidatePath("/empresa/creditos");
-      revalidatePath("/empresa");
+      revalidarContratacao("/creditos");
+      revalidarContratacao();
       redirect(checkoutUrl ?? `/pagamento/retorno?assinatura=${assinatura.id}`);
     }
 
     const { checkoutUrl, pagamento } = await comprar(sessao, tipo);
-    revalidatePath("/empresa/creditos");
-    revalidatePath("/empresa");
+    revalidarContratacao("/creditos");
+    revalidarContratacao();
     redirect(checkoutUrl ?? `/pagamento/retorno?compra=${pagamento.id}`);
   },
 });

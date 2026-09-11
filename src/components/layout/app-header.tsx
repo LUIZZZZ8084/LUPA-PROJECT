@@ -13,11 +13,25 @@ import { ButtonLink } from "@/components/ui/button";
 import { ESTADO_NOME, rotuloDaCidade } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
-const LINKS = [
-  { href: "/vagas", label: "Vagas", accent: "text-vagas" },
-  { href: "/servicos", label: "Serviços", accent: "text-servicos" },
-  { href: "/empresa", label: "Para empresas", accent: "text-empresas" },
-] as const;
+/**
+ * O último link é a área de contratação de quem entrou (#190).
+ *
+ * "Para empresas" é o convite certo para quem ainda não contrata — e para
+ * o prestador ele estaria mentindo: a área dele é `/contratar`, e é lá que
+ * a tela fala a língua de quem contrata sem ter CNPJ.
+ */
+function links(papel: string | undefined) {
+  const contratacao =
+    papel === "prestador_servico"
+      ? { href: "/contratar", label: "Contratar", accent: "text-empresas" }
+      : { href: "/empresa", label: "Para empresas", accent: "text-empresas" };
+
+  return [
+    { href: "/vagas", label: "Vagas", accent: "text-vagas" },
+    { href: "/servicos", label: "Serviços", accent: "text-servicos" },
+    contratacao,
+  ] as const;
+}
 
 /**
  * O cabeçalho recebe a sessão por prop, resolvida no layout.
@@ -39,7 +53,7 @@ export function AppHeader({ usuario }: { usuario?: UsuarioDoMenu | null }) {
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Seções">
-          {LINKS.map(({ href, label, accent }) => {
+          {links(usuario?.papel).map(({ href, label, accent }) => {
             const active = pathname.startsWith(href);
             return (
               <Link

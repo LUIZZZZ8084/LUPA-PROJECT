@@ -357,6 +357,55 @@ quem está tratando: muda o que dá para conferir antes de ir a uma
 entrevista. Não é aviso de risco — produtor rural e autônomo contratam de
 verdade —, é a informação que faltava.
 
+### Duas portas para contratar, uma implementação só (#189)
+
+Empresa e prestador contratam **do mesmo jeito** desde a #129: as quatro
+capacidades de vaga estão nos dois papéis, e a carteira é por
+`usuario_id`, não por empresa. O que não funcionava era o prestador ser
+jogado dentro de `/empresa`, uma área escrita inteira para quem tem CNPJ.
+
+**E não era só vocabulário.** `garantirPerfilDeContratante` só cria o
+`perfis_empresa` do prestador **na primeira vaga publicada**. O painel
+roda antes disso, `getCompany()` volta vazio, e a tela oferecia
+"Cadastrar empresa" apontando para `/cadastro?tipo=empresa` — o formulário
+de **conta nova**. Como comprar vaga já funcionava para ele, o caminho
+provável era o pior: compra dez vagas, vai publicar, e o app manda criar
+outra conta. O saldo fica preso na primeira, e ele paga duas vezes.
+
+Decisão do Luiz em 10/09/2026: o prestador ganha `/contratar`, com a
+mesma estrutura. A visualização de candidatos (`/candidatos`) continua
+sendo **a mesma para os dois** — já era, e não muda.
+
+**Duas rotas, uma implementação.** Os corpos das telas moram em
+`src/app/(app)/_contratacao/` e recebem a área por parâmetro; `/empresa/**`
+e `/contratar/**` são arquivos finos que só dizem qual renderizar.
+Duplicar as ~990 linhas daria o gêmeo que diverge na primeira vez que
+alguém mexe num lado só — foi o que aconteceu com `perfis_empresa.plano`,
+que apareceu em três telas e precisou de três correções (#172, #179,
+#182). A pasta começa com `_` porque o App Router tira do roteamento tudo
+que é prefixado assim.
+
+**O `revalidatePath` revalida as duas bases**, por `BASES_DE_CONTRATACAO`.
+A action não sabe de qual porta veio o clique e não precisa saber:
+revalidar um caminho que a pessoa não está vendo não custa nada, e deixar
+de revalidar o certo faz a tela mentir sobre o que acabou de acontecer.
+Escrever `/empresa` à mão ali era o defeito silencioso que esta mudança
+quase deixou passar.
+
+**Cada porta atende o próprio papel**, com `redirect` quando erra — uma
+empresa em `/contratar` leria "Contratar" no lugar do nome dela. E **o
+título da página é `area.nome`, não um literal**: a primeira versão
+renderizava o painel certo com o cabeçalho dizendo "Minha Empresa" na
+área do prestador, e foi o e2e que pegou. *Tela compartilhada tem que ter
+todo texto de identidade parametrizado, não só os links.*
+
+**O perfil do prestador perde "Minha Empresa" e "Minhas candidaturas"**
+(#191). A segunda é a que exige cuidado: a capacidade
+`candidatura:ver_propria` **continua no papel**, porque tirá-la faria
+`/perfil/candidaturas` responder 404 — o dano que este arquivo registra
+desde a troca de papel. O que sai é o **atalho**, não o acesso, e há teste
+e2e conferindo que a rota segue respondendo 200.
+
 ### O CNPJ é conferido na Receita, e o que isso prova
 
 O cadastro validava o CNPJ por **dígito verificador**, o que prova que o
