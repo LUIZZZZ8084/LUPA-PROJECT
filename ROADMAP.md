@@ -8,7 +8,7 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 10/09/2026.**
+**Última atualização: 11/09/2026.**
 
 ## Concluído
 
@@ -238,24 +238,47 @@ Qualidade:
   `assinar()`/`comprar()` e os mesmos botões de `/perfil/assinatura` e
   `/empresa/creditos` — nenhuma regra de cobrança nova —
   [#184](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/184)
+- Cobrança via Mercado Pago, provada de ponta a ponta em produção: vaga
+  avulsa, pacotes de 5 e 10, plano mensal da empresa e mensalidade do
+  prestador. A primeira venda de verdade entrou em 10/09/2026 (R$ 29,90)
+  e foi conciliada em 11/09 — cobrança criada, paga, notificada por
+  webhook e creditada na carteira, pelo mesmo caminho que qualquer
+  compra percorre —
+  [#46](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/46)
 
 ## Pendente
 
-**Tudo o que sobrou, menos a cobrança, vai junto com o empacotamento em
-APK.** Decisão do Luiz em 01/09/2026, que reúne numa etapa só o que antes
-estava espalhado. Nada aqui está bloqueado por código.
+A cobrança saiu daqui em 11/09/2026, provada em produção. O que sobrou
+são as duas redes de proteção que o episódio da primeira venda expôs: o
+dinheiro entrou, o aviso foi recusado, e nada no app percebeu — quem
+percebeu foi gente lendo tabela à mão, um dia depois.
 
-- [ ] Cobrança via Mercado Pago — vaga avulsa e planos de empresa —
-      [#46](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/46)
+- [ ] Cobrança que fica pendente demais precisa se resolver sozinha —
+      [#198](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/198)
 
-      A infraestrutura e a mensalidade de prestador já estão prontas
-      (#159); falta ligar a cobrança da empresa.
+      Nenhum caminho relê uma cobrança presa em `pendente`. Todo o
+      circuito depende de o webhook chegar naquela janela de minutos; se
+      ele falhar, o dinheiro entra e o app nunca fica sabendo.
+      `confirmarPagamento` já faz a coisa certa e é idempotente — falta
+      alguém chamar, por varredura agendada ou por botão no admin.
+
+- [ ] Webhook sem segredo em produção falha em silêncio —
+      [#196](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/196)
+
+      Faltando `MERCADO_PAGO_WEBHOOK_SECRET`, toda notificação é
+      recusada com 401 e a única pista é um `log.warn` que ninguém lê.
+      A falha fechada está certa; silenciosa não. Mesmo tratamento da
+      #195: em produção, derruba.
+
+O empacotamento em APK continua reunindo numa etapa só o que antes
+estava espalhado — decisão do Luiz em 01/09/2026 —, e não está
+bloqueado por código.
 
 ## Depende de decisão, não de código
 
 | O que | Quem decide | Por que está parado |
 |---|---|---|
-| Conta do Mercado Pago | Luiz | Sem credencial não há como integrar |
+| Verificação por SMS e CPF (#120) | Luiz | Depende de provedor pago |
 | Cloudflare | Luiz | Só com abuso real medido — o passo antes é o #67 |
 | Busca vetorial | Luiz | Só com o dado do #66 na mão |
 
