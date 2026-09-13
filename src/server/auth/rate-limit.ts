@@ -1,5 +1,6 @@
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { erros } from "../errors";
+import type { Orcamento } from "../limites";
 import { log } from "../logger";
 import { RepositorioLimitePostgres } from "./rate-limit-postgres";
 import { CONFIG_LIMITE, type RepositorioLimite } from "./rate-limit-tipos";
@@ -84,6 +85,33 @@ class RepositorioLimiteMemoria implements RepositorioLimite {
   async registrarSucesso(chave: string): Promise<void> {
     janelas.delete(chave);
   }
+  async registrarUso(
+    chave: string,
+    orcamento: Orcamento,
+  ): Promise<Date | null> {
+    const agora = Date.now();
+    limparAntigas(agora);
+    const janelaMs = orcamento.janelaSegundos * 1000;
+
+    const janela = janelas.get(chave);
+    if (!janela || agora - janela.primeiraEm > janelaMs) {
+      janelas.set(chave, {
+        tentativas: 1,
+        primeiraEm: agora,
+        bloqueadoAte: null,
+      });
+      return null;
+    }
+
+    janela.tentativas += 1;
+    // `>` e não `>=`: `chamadas` é quantas passam, e a seguinte é a
+    // recusada. Espelha o `+ 1` da versão em banco.
+    if (janela.tentativas > orcamento.chamadas) {
+      janela.bloqueadoAte = agora + janelaMs;
+      return new Date(janela.bloqueadoAte);
+    }
+    return null;
+  }
 }
 
 const memoria = new RepositorioLimiteMemoria();
@@ -155,3 +183,31 @@ export function limparLimites(): void {
 
 export type { RepositorioLimite };
 export { CONFIG_LIMITE };
+
+/**
+ * Gasta uma chamada do orçamento da ação e recusa quando não cabe mais.
+ *
+ * Diferente de `conferirLimite` + `registrarFalha`, que são dois passos
+ * porque lá a pergunta é feita **antes** de gastar o Argon2. Aqui é um
+ * passo só, e de propósito: a mesma instrução que soma é a que responde se
+ * ainda cabia, então duas chamadas simultâneas não conseguem as duas ler
+ * "cabe" e passar.
+ *
+ * Quem estourou continua somando enquanto insiste, e isso é intencional:
+ * num teto de volume, insistir **é** o comportamento que se contém. Para
+ * quem errou de boa-fé o custo é a janela, que é curta justamente por
+ * isso.
+ */
+export async function consumirOrcamento(
+  chave: string,
+  orcamento: Orcamento,
+): Promise<void> {
+  const bloqueadoAte = await repositorio().registrarUso(chave, orcamento);
+  if (!bloqueadoAte) return;
+
+  const segundos = Math.max(
+    1,
+    Math.ceil((bloqueadoAte.getTime() - Date.now()) / 1000),
+  );
+  throw erros.muitasTentativas(segundos);
+}

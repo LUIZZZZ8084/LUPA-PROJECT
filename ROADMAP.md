@@ -8,7 +8,7 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 11/09/2026.**
+**Última atualização: 13/09/2026.**
 
 ## Concluído
 
@@ -256,6 +256,10 @@ Qualidade:
   A aprovada tem precedência entre as tentativas, e o que ainda pode
   virar dinheiro não é tocado —
   [#198](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/198)
+- Teto de volume em toda escrita, não só em autenticação: cada server
+  action tem orçamento declarado por nome, cobrado dentro de `criarAcao`,
+  e contado por sessão — nunca por IP, que puniria a lan house inteira —
+  [#202](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/202)
 
 ## Pendente
 

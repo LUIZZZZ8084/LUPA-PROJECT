@@ -873,6 +873,36 @@ duas, e a sexta passa.
 Contra atacante distribuído continua não bastando. O passo seguinte é rate
 limit na borda, e vale quando aparecer abuso medido — não antes.
 
+**Toda escrita tem teto, e ele é declarativo (#202).** Até 13/09/2026 só
+autenticação tinha limite; candidatar-se, publicar, avaliar, comprar
+crédito e mexer no perfil não tinham nenhum. O que acaba nesse caso não é
+o banco — são 3 conexões de PostgREST servindo consulta indexada, e elas
+aguentam. O que acaba é a **cota da Vercel**: "cai tudo" por esgotamento
+de plano, não por sobrecarga.
+
+O teto mora em `src/server/limites.ts`, numa tabela por nome de ação, e é
+cobrado dentro de `criarAcao` — o ponto por onde as 31 actions passam.
+Espalhar isso pelas actions seria o que a matriz de RBAC já evita: teto
+esquecido na trigésima segunda. Há teste que varre `src/app`, e action
+nova sem entrada em `ORCAMENTOS` **ou** em `SEM_ORCAMENTO` — com a razão
+escrita — reprova.
+
+**A chave é a sessão, não o IP**, e a diferença aqui não é técnica, é de
+público. Em Sinop, lan house, escritório e provedor de rádio põem dezenas
+de pessoas atrás do mesmo endereço: limitar por IP puniria todas por causa
+de uma, e quem usa conexão compartilhada é justamente o público deste app.
+Como tudo é fechado por login, todo abuso carrega sessão — e quem não tem
+sessão cai no IP, que é o certo nas três de autenticação, onde a conta
+ainda não existe.
+
+**A cobrança vem antes da validação**, e antes de qualquer trabalho: o que
+garante que a ação recusada não teve efeito nenhum, nem parcial. Teto que
+recusa depois de executar não é teto, é mensagem.
+
+**`chamadas` quer dizer quantas passam.** A função SQL bloqueia em
+`>= max`, então quem chama soma 1 — sem isso, um orçamento escrito como 15
+deixaria passar 14, e a tabela mentiria sobre si mesma por uma unidade que
+ninguém confere.
 **Limite de tentativa no cadastro é por origem, não por e-mail.** Quem
 cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se

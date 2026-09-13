@@ -6,6 +6,8 @@
  * testes exercitam é a mesma regra que roda em produção.
  */
 
+import type { Orcamento } from "../limites";
+
 export interface RepositorioLimite {
   /** Até quando a chave está bloqueada, ou `null` se não está. */
   bloqueadoAte(chave: string): Promise<Date | null>;
@@ -15,6 +17,18 @@ export interface RepositorioLimite {
 
   /** Zera o contador. */
   registrarSucesso(chave: string): Promise<void>;
+
+  /**
+   * Soma um uso contra um orçamento e devolve até quando a chave ficou
+   * bloqueada, ou `null` se ainda cabe (#202).
+   *
+   * É parente de `registrarFalha`, mas responde outra pergunta, e por isso
+   * é outro método: lá se contém **adivinhação de senha**, e o orçamento é
+   * fixo; aqui se contém **volume de chamada**, e cada ação tem o seu.
+   * Conta toda chamada, não só a que deu errado — numa ação de escrita, a
+   * que deu certo é justamente a que custou.
+   */
+  registrarUso(chave: string, orcamento: Orcamento): Promise<Date | null>;
 }
 
 /**
