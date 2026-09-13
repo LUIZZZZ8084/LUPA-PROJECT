@@ -2,6 +2,7 @@ import "server-only";
 
 import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
+import type { Orcamento } from "../limites";
 import { log } from "../logger";
 import { CONFIG_LIMITE, type RepositorioLimite } from "./rate-limit-tipos";
 
@@ -70,6 +71,38 @@ export class RepositorioLimitePostgres implements RepositorioLimite {
     }
   }
 
+  async registrarUso(
+    chave: string,
+    orcamento: Orcamento,
+  ): Promise<Date | null> {
+    const supabase = await this.cliente();
+
+    /*
+     * A mesma função SQL do limite de acesso, com outro orçamento.
+     *
+     * Ela já recebe janela, teto e bloqueio por parâmetro, então não houve
+     * migração para escrever: o que muda é quem chama e com que números. E
+     * o que importa continua sendo o motivo de ela existir — somar numa
+     * instrução só. Pelo caminho ler-somar-gravar, duas chamadas
+     * simultâneas leem o mesmo número e escrevem o mesmo número, e o teto
+     * vira sugestão exatamente sob a carga que ele existe para conter.
+     */
+    const { data, error } = await supabase.rpc("registrar_falha_de_acesso", {
+      p_chave: chave,
+      p_janela_segundos: orcamento.janelaSegundos,
+      /*
+       * `+ 1` porque a função bloqueia em `>= max`, e `chamadas` aqui quer
+       * dizer **quantas passam**. Sem isto, um orçamento de 15 deixaria
+       * passar 14 — diferença que ninguém nota lendo a tabela e que
+       * aparece como "o limite é menor do que está escrito".
+       */
+      p_max_tentativas: orcamento.chamadas + 1,
+      p_bloqueio_segundos: orcamento.janelaSegundos,
+    });
+
+    if (error) throw erros.indisponivel(`limite: ${error.message}`);
+    return data ? new Date(String(data)) : null;
+  }
   async registrarSucesso(chave: string): Promise<void> {
     const supabase = await this.cliente();
     const { error } = await supabase

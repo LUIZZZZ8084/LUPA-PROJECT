@@ -100,6 +100,22 @@ export function conferirConfiguracaoDeProducao(
     (e) => e.exigida(ambiente) && !ambiente[e.nome]?.trim(),
   );
 
+  /*
+   * O multiplicador de limite é de suíte de teste, e em produção seria
+   * uma variável de ambiente desligando a proteção sem ninguém perceber —
+   * a mesma classe de coisa que a #195 e a #196 já custaram caro. Vale
+   * derrubar: quem a definiu aqui fez por engano.
+   */
+  const multiplicador = ambiente.LIMITE_MULTIPLICADOR?.trim();
+  if (multiplicador && multiplicador !== "1") {
+    throw new Error(
+      `LIMITE_MULTIPLICADOR está definido como "${multiplicador}" em ` +
+        "produção, e isso afrouxa o teto de volume de todas as ações. Ele " +
+        "existe só para a suíte e2e, onde uma conta faz o trabalho de " +
+        "muitas. Remova a variável na Vercel e republique.",
+    );
+  }
+
   if (faltando.length === 0) return;
 
   throw new Error(

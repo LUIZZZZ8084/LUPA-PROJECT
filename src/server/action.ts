@@ -1,7 +1,11 @@
 import "server-only";
 
+import { headers } from "next/headers";
 import type { z } from "zod";
+import { sessaoAtual } from "./auth/cookies";
+import { consumirOrcamento } from "./auth/rate-limit";
 import { type AppError, comoAppError } from "./errors";
+import { ORCAMENTOS } from "./limites";
 import { cronometro, log, novoRequestId } from "./logger";
 import { objetoDoFormData, validar } from "./validation";
 
@@ -15,6 +19,7 @@ import { objetoDoFormData, validar } from "./validation";
  * 2. Nenhuma exceção escapa para a interface — o retorno é sempre o mesmo
  *    formato, com mensagem em português e um identificador para o suporte.
  * 3. Cada chamada deixa uma linha de log com ação, duração e resultado.
+ * 4. A ação respeita o teto declarado em `ORCAMENTOS` (#202).
  *
  * O ganho real é o terceiro item: quando alguém em Sinop disser "não
  * consegui me cadastrar", existe uma linha dizendo qual passo falhou e
@@ -45,6 +50,24 @@ function normalizar(entrada: EntradaAcao): Record<string, unknown> {
   return entrada;
 }
 
+/**
+ * De quem é a chamada, para o teto saber contra quem contar.
+ *
+ * Sessão quando há sessão; IP quando não há. O app é todo fechado por
+ * login, então o primeiro caso é a regra e o segundo é a exceção — e é o
+ * que evita punir a lan house inteira por causa de uma pessoa. O nome da
+ * ação entra na chave para que estourar o teto de publicar vaga não
+ * bloqueie candidatar-se.
+ */
+async function chaveDoPedido(acao: string): Promise<string> {
+  const sessao = await sessaoAtual();
+  if (sessao) return `acao:${acao}:u:${sessao.usuarioId}`;
+
+  const cabecalhos = await headers();
+  const origem =
+    cabecalhos.get("x-forwarded-for")?.split(",")[0]?.trim() || "desconhecida";
+  return `acao:${acao}:o:${origem}`;
+}
 export interface DefinicaoAcao<TEntrada, TSaida> {
   /** Nome estável para o log, ex.: "auth.login". */
   nome: string;
@@ -74,6 +97,23 @@ export function criarAcao<TEntrada, TSaida>(
     const ctx: Contexto = { requestId, acao: definicao.nome };
 
     try {
+      /*
+       * O teto vem antes da validação, e antes de qualquer trabalho.
+       *
+       * Validar é barato, mas não é de graça — e quem está em rajada não
+       * merece nem isso. Mais importante: recusar antes de executar é o
+       * que garante que a ação não tenha efeito nenhum, nem parcial.
+       *
+       * Ação sem entrada em `ORCAMENTOS` passa direto, e isso não é
+       * brecha esquecida: há teste que varre as actions do app e reprova
+       * nome novo que não esteja nem aqui nem em `SEM_ORCAMENTO`, com a
+       * razão escrita.
+       */
+      const orcamento = ORCAMENTOS[definicao.nome];
+      if (orcamento) {
+        await consumirOrcamento(await chaveDoPedido(definicao.nome), orcamento);
+      }
+
       const validado = validar(definicao.entrada, normalizar(entrada));
 
       if (!validado.ok) {
