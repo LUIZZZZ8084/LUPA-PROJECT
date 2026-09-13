@@ -899,6 +899,21 @@ ainda não existe.
 garante que a ação recusada não teve efeito nenhum, nem parcial. Teto que
 recusa depois de executar não é teto, é mensagem.
 
+**A suíte e2e precisou de um multiplicador, e isso ensina o limite do
+modelo.** Um teto por pessoa presume que uma conta é uma pessoa. A suíte
+compartilha login entre os specs, roda em dois navegadores e, na CI,
+repete o que falha até duas vezes — então ela é uma conta fazendo o
+trabalho de muitas, e `vaga.publicar` estourou. **Passou local e reprovou
+na CI**, porque local roda sem retentativa: retentativa não é neutra
+quando existe estado que sobrevive a ela.
+
+O conserto foi `LIMITE_MULTIPLICADOR`, declarado no `playwright.config.ts`
+junto do segredo de sessão e da URL pública — e **recusado em produção**,
+onde seria uma variável de ambiente desligando a proteção sem ninguém
+conferir. Multiplicar e não desligar: a suíte continua exercitando todo o
+caminho do limite a cada ação, e o que muda é só onde ele morde. *Não se
+afrouxa produção para caber um teste — se o teste não representa gente, é
+o ambiente dele que se declara diferente.*
 **`chamadas` quer dizer quantas passam.** A função SQL bloqueia em
 `>= max`, então quem chama soma 1 — sem isso, um orçamento escrito como 15
 deixaria passar 14, e a tabela mentiria sobre si mesma por uma unidade que

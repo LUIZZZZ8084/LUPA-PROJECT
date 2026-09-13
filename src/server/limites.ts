@@ -48,8 +48,32 @@ export interface Orcamento {
  */
 const JANELA = 10 * 60;
 
+/**
+ * Quantas vezes o orçamento cabe além do normal neste ambiente.
+ *
+ * Existe por causa da suíte e2e, e o motivo é honesto: ela roda **uma
+ * conta só** fazendo o trabalho de muitas, em dois navegadores, e na CI
+ * com `retries: 2` — cada retentativa republica. Um teto por pessoa
+ * enxerga isso como uma pessoa absurdamente ocupada, e foi exatamente o
+ * que aconteceu: passou local (sem retentativa) e reprovou na CI.
+ *
+ * **Não se sobe o teto de produção para caber um teste.** Dez publicações
+ * em dez minutos continua sendo mais do que gente faz; quem não é gente é
+ * a suíte. Ela declara o próprio multiplicador, como já declara o segredo
+ * de sessão e a URL pública, e continua exercitando todo o caminho do
+ * limite — o que se perde é só o ponto em que ele morde.
+ *
+ * Em produção isto é **recusado**, não ignorado: multiplicador ali seria
+ * desligar a proteção com uma variável de ambiente que ninguém lembra de
+ * conferir. Ver `conferirConfiguracaoDeProducao`.
+ */
+const MULTIPLICADOR = (() => {
+  const cru = Number(process.env.LIMITE_MULTIPLICADOR ?? "1");
+  return Number.isFinite(cru) && cru >= 1 ? Math.floor(cru) : 1;
+})();
+
 function porJanela(chamadas: number): Orcamento {
-  return { chamadas, janelaSegundos: JANELA };
+  return { chamadas: chamadas * MULTIPLICADOR, janelaSegundos: JANELA };
 }
 
 /**

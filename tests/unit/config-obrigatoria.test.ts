@@ -105,4 +105,42 @@ describe("configuração obrigatória de produção", () => {
       conferirConfiguracaoDeProducao(semA("MERCADO_PAGO_WEBHOOK_SECRET")),
     ).toThrow(/republique/);
   });
+
+  /**
+   * O multiplicador de limite é da suíte e2e, onde uma conta faz o
+   * trabalho de muitas. Em produção ele afrouxaria o teto de volume de
+   * todas as ações — uma variável de ambiente desligando a proteção sem
+   * ninguém perceber, que é a classe exata de coisa que a #195 e a #196
+   * já custaram caro.
+   */
+  describe("multiplicador de limite", () => {
+    it("derruba produção quando está definido", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          ...PRODUCAO_COMPLETA,
+          LIMITE_MULTIPLICADOR: "50",
+        }),
+      ).toThrow(/LIMITE_MULTIPLICADOR/);
+    });
+
+    /** `1` é o padrão escrito por extenso, e não afrouxa nada. */
+    it("aceita 1, que é o mesmo que não ter", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          ...PRODUCAO_COMPLETA,
+          LIMITE_MULTIPLICADOR: "1",
+        }),
+      ).not.toThrow();
+    });
+
+    /** Fora de produção é justamente onde ele serve. */
+    it("não incomoda em preview nem na suíte", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          VERCEL_ENV: "preview",
+          LIMITE_MULTIPLICADOR: "50",
+        }),
+      ).not.toThrow();
+    });
+  });
 });

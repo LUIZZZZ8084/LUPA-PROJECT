@@ -101,6 +101,20 @@ export default defineConfig({
            * levantou.
            */
           NEXT_PUBLIC_APP_URL: `http://127.0.0.1:${PORT}`,
+          /*
+           * Uma conta só fazendo o trabalho de muitas (#202).
+           *
+           * A suíte compartilha login entre os specs, roda em dois
+           * navegadores e, na CI, repete o que falha até duas vezes. O
+           * teto de volume é por pessoa, então tudo isso conta contra a
+           * mesma — e `vaga.publicar` estourava, reprovando a suíte por
+           * um limite que gente de verdade não alcança.
+           *
+           * Multiplicar, e não desligar: todo o caminho do limite continua
+           * sendo exercitado a cada ação; o que muda é onde ele morde.
+           * Produção recusa subir com esta variável definida.
+           */
+          LIMITE_MULTIPLICADOR: "50",
         },
       },
 });
