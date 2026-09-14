@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { novoNonce, politicaDeSeguranca } from "@/lib/csp";
 import { type Capacidade, pode } from "@/server/auth/rbac";
 import { CONFIG_SESSAO, lerSessao } from "@/server/auth/session";
 
@@ -182,7 +183,18 @@ function paraOLogin(request: NextRequest) {
   return NextResponse.redirect(login);
 }
 
-export async function proxy(request: NextRequest) {
+/**
+ * A decisão de acesso, separada do envelope que aplica a CSP.
+ *
+ * Recebe os cabeçalhos já com o nonce porque toda resposta que **renderiza
+ * HTML** precisa repassá-los ao Next — e são duas: o `next()` de quem
+ * passa, e a reescrita de 404. Esquecer a segunda deixaria a tela de "não
+ * encontrado" sem hidratar, e ninguém olha o console numa página de erro.
+ */
+async function decidir(
+  request: NextRequest,
+  cabecalhos: Headers,
+): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   const token = request.cookies.get(CONFIG_SESSAO.NOME_COOKIE)?.value;
@@ -191,7 +203,9 @@ export async function proxy(request: NextRequest) {
   const area = areaDe(pathname);
 
   if (!area) {
-    if (sessao || ehRotaAberta(pathname)) return NextResponse.next();
+    if (sessao || ehRotaAberta(pathname)) {
+      return NextResponse.next({ request: { headers: cabecalhos } });
+    }
 
     /*
      * Rota de dados sem sessão responde 401, não redirecionamento: um
@@ -206,7 +220,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (sessao && pode(sessao.papel, area.capacidade)) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: cabecalhos } });
   }
 
   if (!sessao && area.semSessao === "login") return paraOLogin(request);
@@ -223,7 +237,38 @@ export async function proxy(request: NextRequest) {
   destino.pathname = CAMINHO_INEXISTENTE;
   destino.search = "";
 
-  return NextResponse.rewrite(destino, { status: 404 });
+  return NextResponse.rewrite(destino, {
+    request: { headers: cabecalhos },
+    status: 404,
+  });
+}
+
+/**
+ * O envelope: gera o nonce, deixa a decisão acontecer, e carimba a
+ * política na saída.
+ *
+ * O nonce viaja em **dois** cabeçalhos de requisição, e os dois são
+ * necessários por razões diferentes: `x-nonce` é o que uma página pode ler
+ * para assinar um script próprio, e `content-security-policy` é de onde o
+ * **Next** extrai o nonce para assinar os scripts de hidratação que ele
+ * mesmo injeta. Só o primeiro deixaria a hidratação sem assinatura.
+ *
+ * E a política sai em toda resposta, não só nas que renderizam HTML.
+ * Redirecionamento e JSON não executam script, mas carimbar tudo é mais
+ * barato de manter correto do que uma lista de exceções — este arquivo já
+ * registra, no matcher, o que custa um item esquecido numa lista dessas.
+ */
+export async function proxy(request: NextRequest) {
+  const nonce = novoNonce();
+  const politica = politicaDeSeguranca(nonce);
+
+  const cabecalhos = new Headers(request.headers);
+  cabecalhos.set("x-nonce", nonce);
+  cabecalhos.set("content-security-policy", politica);
+
+  const resposta = await decidir(request, cabecalhos);
+  resposta.headers.set("Content-Security-Policy", politica);
+  return resposta;
 }
 
 export const config = {

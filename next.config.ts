@@ -2,48 +2,17 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import { hostsDeImagemRemota } from "./src/lib/imagens";
 
-/**
- * Content-Security-Policy.
- *
- * É a última linha: se alguma entrada escapar do escape em qualquer lugar,
- * é ela que impede o script injetado de rodar ou de mandar o que roubou
- * para fora.
- *
- * `'unsafe-inline'` em `script-src` existe porque o Next injeta o script de
- * hidratação inline, sem nonce, no App Router. Tirá-lo hoje quebra o app;
- * a saída é migrar para nonce quando o Next facilitar, e até lá a política
- * vale pelo resto — nenhum script de terceiro carrega, e `connect-src`
- * limita para onde os dados podem ir.
- *
- * `img-src` aceita `https:` porque avatar e logo vêm do Storage do
- * Supabase, cujo domínio muda por projeto; `data:` é para o SVG inline dos
- * ícones. `frame-ancestors 'none'` repete o X-Frame-Options para
- * navegador que já ignora o cabeçalho antigo.
- */
 /*
- * O React em modo de desenvolvimento usa `eval` para reconstruir a pilha de
- * chamada de erro vinda do servidor. Sem `'unsafe-eval'`, todo `npm run
- * dev` abre com um erro vermelho no console que não tem nada a ver com o
- * código — ruído que treina a equipe a ignorar o console.
+ * A Content-Security-Policy **não mora mais aqui** (#223).
  *
- * Vale só no `dev`. O bundle de produção não usa `eval`, e é ele que vai
- * para a Vercel.
+ * Ela passou a ser montada por requisição em `src/lib/csp.ts` e aplicada
+ * pelo `src/proxy.ts`, porque ganhou um nonce — e constante não tem nonce.
+ * Com `'unsafe-inline'` sozinho, a política não impedia a coisa que existe
+ * para impedir: script injetado rodava.
+ *
+ * Os outros cabeçalhos continuam aqui: são fixos, e fixo é mais barato de
+ * servir pela configuração do que por middleware.
  */
-const EVAL_NO_DEV =
-  process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
-
-const CSP = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${EVAL_NO_DEV}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co https://*.ingest.sentry.io",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "object-src 'none'",
-].join("; ");
 
 const nextConfig: NextConfig = {
   images: {
@@ -104,7 +73,6 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(self)",
           },
-          { key: "Content-Security-Policy", value: CSP },
         ],
       },
     ];

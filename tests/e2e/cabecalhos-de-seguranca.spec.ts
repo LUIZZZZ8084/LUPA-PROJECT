@@ -41,6 +41,65 @@ test.describe("cabeçalhos de segurança", () => {
   });
 
   /**
+   * O nonce é o que faz `script-src` valer alguma coisa (#223).
+   *
+   * Até a #223 a política trazia `'unsafe-inline'` sozinho, e com isso não
+   * impedia justamente a coisa que ela existe para impedir: script
+   * injetado rodava, e `<img onerror=...>` também. O que restava era
+   * `'self'` barrando script de terceiro por `src`.
+   *
+   * Navegador que entende nonce ignora `'unsafe-inline'` quando há nonce
+   * na política — por isso os dois convivem, e o antigo continua ali como
+   * degradação para WebView velha, que é o aparelho deste público.
+   */
+  test("script-src traz nonce, e ele muda a cada requisição", async ({
+    request,
+  }) => {
+    const nonceDe = async () => {
+      const csp =
+        (await request.get("/entrar")).headers()["content-security-policy"] ??
+        "";
+      return /'nonce-([A-Za-z0-9+/=_-]+)'/.exec(csp)?.[1];
+    };
+
+    const primeiro = await nonceDe();
+    const segundo = await nonceDe();
+
+    expect(primeiro, "script-src sem nonce").toBeTruthy();
+    expect(primeiro?.length ?? 0).toBeGreaterThanOrEqual(16);
+
+    /*
+     * Nonce reaproveitado entre requisições anula o ponto: quem o lesse
+     * uma vez assinaria script em toda visita seguinte. E é o erro fácil
+     * de cometer — basta gerar a política fora do handler.
+     */
+    expect(segundo, "o nonce se repetiu entre requisições").not.toBe(primeiro);
+  });
+
+  /**
+   * A prova de que o nonce não é só enfeite no cabeçalho: a página precisa
+   * hidratar sem o navegador recusar nada.
+   *
+   * O AGENTS.md registra três vezes o mesmo erro — declarar que algo
+   * funciona sem abrir um navegador de verdade. Um nonce que o Next não
+   * aplique aos próprios scripts deixa a CSP perfeita no cabeçalho e o app
+   * morto na tela, e nenhum teste de requisição pegaria isso.
+   */
+  test("a tela hidrata sem violação de CSP no console", async ({ page }) => {
+    const violacoes: string[] = [];
+    page.on("console", (msg) => {
+      if (/Content Security Policy|Refused to (execute|load)/i.test(msg.text()))
+        violacoes.push(msg.text());
+    });
+
+    await page.goto("/entrar");
+    // O botão só responde depois da hidratação.
+    await expect(page.getByRole("button", { name: /Entrar/i })).toBeEnabled();
+
+    expect(violacoes, violacoes.join(" | ")).toEqual([]);
+  });
+
+  /**
    * `connect-src` decide para onde os dados podem sair. Curinga aqui
    * anularia a parte da CSP que impede exfiltração.
    */

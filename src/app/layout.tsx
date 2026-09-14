@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { headers } from "next/headers";
 import { DemoBanner } from "@/components/demo-banner";
 import { RouteProgress } from "@/components/motion/route-progress";
 import { SCRIPT_TEMA_INICIAL } from "@/lib/theme";
@@ -63,11 +64,25 @@ export const viewport: Viewport = {
  * "tela de autenticação não tem menu" seja fato do arranjo — quem criar a
  * próxima tela de auth herda o comportamento sem precisar saber disso.
  */
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  /*
+   * O nonce da requisição, posto pelo `proxy.ts` (#223).
+   *
+   * O Next assina sozinho os scripts de hidratação que ele injeta. O script
+   * de tema abaixo é **nosso**, e por isso precisa ser assinado à mão — sem
+   * isto o navegador o recusa, e o recuso é silencioso para quem usa: a
+   * página carrega, só que piscando branco antes do tema escuro.
+   *
+   * Foi o e2e que pegou, e não a leitura do cabeçalho: a CSP ficava
+   * perfeita na resposta e o script morria na tela. É a lição que o
+   * AGENTS.md registra três vezes — confirme num navegador de verdade.
+   */
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html
       lang="pt-BR"
@@ -80,6 +95,7 @@ export default function RootLayout({
       <head>
         {/* Roda antes da primeira pintura — ver o comentário em `lib/theme.ts`. */}
         <script
+          nonce={nonce}
           // biome-ignore lint/security/noDangerouslySetInnerHtml: script fixo do próprio código, não dado de entrada.
           dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA_INICIAL }}
         />
