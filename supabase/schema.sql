@@ -436,6 +436,17 @@ create table avaliacoes (
 create index avaliacoes_prestador_idx on avaliacoes (prestador_id, criado_em desc);
 
 /*
+ * Chave estrangeira sem índice é varredura na tabela filha toda vez que a
+ * pai muda (#210). Postgres indexa a chave primária sozinho, a estrangeira
+ * não — e quem paga a conta é o `delete` em `usuarios`, que precisa
+ * conferir cada referência.
+ *
+ * Criar agora, com dezenas de linhas, é instantâneo. Criar depois, com a
+ * tabela crescida, trava escrita.
+ */
+create index avaliacoes_avaliador_idx on avaliacoes (avaliador_id);
+
+/*
  * Uma avaliação por pessoa, por prestador.
  *
  * A checagem na aplicação não basta: dois envios simultâneos passam os
@@ -557,6 +568,10 @@ create table pedidos_verificacao (
 
 create index pedidos_verificacao_status_idx
   on pedidos_verificacao (status, enviado_em);
+
+-- Mesma razão da #210.
+create index pedidos_verificacao_usuario_idx
+  on pedidos_verificacao (usuario_id);
 
 -- ============================================================================
 -- 9d. Tentativas de acesso, para o limite sobreviver ao deploy
@@ -992,6 +1007,10 @@ create table pagamentos (
 );
 
 create index pagamentos_usuario_idx on pagamentos (usuario_id, criado_em desc);
+
+-- A mesma razão da #210, e esta é a que mais cresce: uma linha por
+-- cobrança, para sempre.
+create index pagamentos_assinatura_idx on pagamentos (assinatura_id);
 
 create unique index pagamentos_mp_payment_idx
   on pagamentos (mp_payment_id) where mp_payment_id is not null;
