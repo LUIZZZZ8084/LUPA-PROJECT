@@ -40,6 +40,8 @@ export class RepositorioMemoria implements RepositorioUsuarios {
   >();
   private porEmailIndice = new Map<string, string>();
   private cpfs = new Set<string>();
+  /** Corte de revogação por usuário, em milissegundos (#225). */
+  private cortes = new Map<string, number>();
 
   private empresas = new Map<string, PerfilEmpresa>();
   private prestadores = new Map<string, PerfilPrestador>();
@@ -94,6 +96,19 @@ export class RepositorioMemoria implements RepositorioUsuarios {
   async atualizarSenhaHash(id: string, senhaHash: string): Promise<void> {
     const usuario = this.usuarios.get(id);
     if (usuario) this.usuarios.set(id, { ...usuario, senhaHash });
+    // O corte anda junto com a senha, como na versão em Postgres: é a
+    // mesma regra, e ter duas implementações é justamente o que exige que
+    // ela esteja escrita nas duas.
+    this.cortes.set(id, Date.now());
+  }
+
+  async cortesDeSessao(dias: number): Promise<Map<string, number>> {
+    const desde = Date.now() - dias * 24 * 60 * 60 * 1000;
+    const recentes = new Map<string, number>();
+    for (const [id, quando] of this.cortes) {
+      if (quando >= desde) recentes.set(id, Math.floor(quando / 1000));
+    }
+    return recentes;
   }
 
   async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {

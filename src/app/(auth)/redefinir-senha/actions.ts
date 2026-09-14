@@ -6,6 +6,7 @@ import { criarAcao } from "@/server/action";
 import { criarSessao } from "@/server/auth/cookies";
 import type { Papel } from "@/server/auth/rbac";
 import { redefinirSenha } from "@/server/auth/recuperacao";
+import { derrubarCacheDeRevogacoes } from "@/server/auth/revogacao";
 import { zSenha } from "@/server/validation";
 
 /**
@@ -29,6 +30,24 @@ export const redefinirSenhaAction = criarAcao({
   }),
   executar: async ({ token, senha }) => {
     const { usuarioId, papel } = await redefinirSenha(token, senha);
+
+    /*
+     * A ordem importa, e é esta (#225).
+     *
+     * `atualizarSenhaHash` já gravou o corte de revogação junto com a
+     * senha. Derrubar o cache aqui faz o corte valer no mesmo instante,
+     * em vez de esperar a janela de 60 segundos — e o caso que importa é
+     * justamente o de quem está agindo agora, desconfiando de invasão.
+     *
+     * A sessão nova vem **depois**, para nascer com `iat` já do lado de
+     * cá do corte. Emitir antes seria derrubar a própria pessoa do
+     * aparelho onde ela acabou de trocar a senha.
+     *
+     * E isto mora na action, não no serviço: `updateTag` só existe dentro
+     * de uma server action, o que é a regra de camada deste projeto dita
+     * pelo próprio Next.
+     */
+    derrubarCacheDeRevogacoes();
     await criarSessao(usuarioId, papel as Papel);
     redirect("/");
   },

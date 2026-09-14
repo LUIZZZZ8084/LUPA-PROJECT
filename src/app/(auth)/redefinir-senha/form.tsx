@@ -53,15 +53,19 @@ export function RedefinirSenhaForm({ token }: { token: string }) {
         )}
 
         {/*
-          A sessão é um JWT de 7 dias e não dá para revogar antes de
-          expirar — o preço registrado no AGENTS.md desde que a sessão saiu
-          do banco. Quem está trocando a senha porque desconfia de acesso
-          indevido precisa saber, e o lugar de dizer é aqui.
+          Este aviso dizia o contrário até a #225: que a sessão de outro
+          aparelho continuava valendo por até 7 dias, porque o JWT não
+          tinha como ser revogado. Era verdade, e era a resposta errada
+          para quem troca a senha justamente por desconfiar de invasão.
+
+          Hoje a troca corta as sessões antigas, e o texto muda junto —
+          promessa na tela é contrato, e contrato desatualizado engana nas
+          duas direções: aqui ele faria a pessoa procurar o suporte por um
+          problema que já não existe.
         */}
         <p className="text-faint text-xs leading-relaxed">
-          Se você já estiver conectado em outro aparelho, aquela sessão continua
-          valendo por até 7 dias. Se desconfia de acesso indevido, fale com o
-          suporte.
+          Trocar a senha desconecta os outros aparelhos. Este aqui continua
+          conectado.
         </p>
 
         <div className="flex flex-wrap items-center justify-between gap-3">

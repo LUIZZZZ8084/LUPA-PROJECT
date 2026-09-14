@@ -11,9 +11,15 @@ import { ehPapel, type Papel } from "./rbac";
  * não há processo de longa duração para guardar estado, e cada consulta a
  * mais é latência para quem está num 3G em Sinop.
  *
- * O preço é não conseguir revogar um token antes de expirar. Por isso a
- * validade é curta (7 dias) e o payload carrega só id e papel — nunca nome,
- * e-mail ou telefone, que ficariam legíveis para quem abrisse o cookie.
+ * O payload carrega só id e papel — nunca nome, e-mail ou telefone, que
+ * ficariam legíveis para quem abrisse o cookie.
+ *
+ * **O preço de não revogar deixou de ser total (#225).** Era: token válido
+ * por até 7 dias, sem volta, mesmo depois de a pessoa trocar a senha
+ * desconfiando de invasão. Hoje `usuarios.sessoes_validas_desde` marca um
+ * corte por pessoa, e `sessaoAtual()` descarta token emitido antes dele —
+ * lendo uma lista curta e cacheada, não uma consulta por requisição. A
+ * sessão continua fora do banco; o que entrou foi uma data.
  */
 
 export const NOME_COOKIE = "lupa_sessao";
@@ -29,6 +35,15 @@ export interface Sessao {
   papel: Papel;
   /** Epoch em segundos. */
   expiraEm: number;
+  /**
+   * Quando o token foi emitido, em epoch de segundos (#225).
+   *
+   * O `iat` sempre esteve no token; o que faltava era lê-lo. É ele que
+   * responde se esta sessão nasceu antes do corte de revogação da pessoa
+   * — e é o que permite derrubar sessão antiga sem guardar sessão nenhuma
+   * no banco.
+   */
+  emitidoEm: number;
 }
 
 /**
@@ -109,11 +124,15 @@ export async function lerSessao(token: string): Promise<Sessao | null> {
     });
 
     if (!payload.sub || !ehPapel(payload.papel) || !payload.exp) return null;
+    // `iat` é escrito por `assinarSessao`; token sem ele não é nosso, e
+    // sem ele não há como saber se nasceu antes do corte de revogação.
+    if (!payload.iat) return null;
 
     return {
       usuarioId: payload.sub,
       papel: payload.papel,
       expiraEm: payload.exp,
+      emitidoEm: payload.iat,
     };
   } catch {
     // Token inválido é rotina: expirou, veio de outro ambiente, foi mexido.

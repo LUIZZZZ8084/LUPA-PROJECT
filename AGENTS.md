@@ -629,13 +629,26 @@ envio em si. Sem isso a tela vira um canal para mandar e-mail em nome da
 Lupa a qualquer endereço, quantas vezes se quiser, e quem paga a
 reputação do domínio somos nós.
 
-**Trocar a senha não derruba as sessões antigas, e a tela diz isso.** A
-sessão é um JWT de 7 dias e não há como invalidá-la antes de expirar — o
-preço registrado logo abaixo, em "Sessão em JWT, não em banco". Quem está
-trocando a senha porque desconfia de acesso indevido precisa saber, e o
-lugar de dizer é a própria tela de troca. O que se faz é emitir uma sessão
-nova para quem acabou de trocar: sem isso ela provaria quem é pelo link e
-cairia num login para digitar a senha que criou trinta segundos antes.
+**Trocar a senha derruba as sessões antigas (#225), e a tela diz isso.**
+Este parágrafo dizia o contrário, e era verdade: sem estado no banco não
+havia como invalidar um JWT antes de expirar, então quem trocava a senha
+desconfiando de invasão continuava com o invasor dentro por até sete dias.
+A tela avisava — honesto, e inútil para quem está sendo invadido agora.
+
+O que mudou não foi a sessão, que continua fora do banco. Foi entrar uma
+data por pessoa, `usuarios.sessoes_validas_desde`, que corta todo token
+emitido antes dela. Detalhes na seção "Sessão em JWT, não em banco", logo
+abaixo.
+
+**A revogação mora no `update` da senha**, e não numa chamada à parte.
+`atualizarSenhaHash` grava as duas coisas na mesma instrução, porque um
+segundo passo é o que alguém esquece no terceiro caminho de troca de
+senha — o defeito exato da #142, onde `virarPrestador` e `cadastrar`
+produziam o mesmo tipo de conta e só uma tinha a regra.
+
+A sessão nova continua sendo emitida para quem acabou de trocar, e agora
+a **ordem importa**: o corte primeiro, a sessão depois. Invertida, a
+pessoa seria deslogada do aparelho onde acabou de trocar a senha.
 
 **Sem provedor de e-mail, o recurso não existe e a tela explica.** Mesma
 degradação do Storage sem Supabase e do push sem VAPID. Fingir que enviou
@@ -658,9 +671,49 @@ senha a ninguém.
 ### Sessão em JWT, não em banco
 
 Serverless não tem processo de longa duração, e cada consulta a mais é
-latência para quem está em 3G. O preço é não revogar antes de expirar; por
-isso a validade é de 7 dias com renovação silenciosa faltando 2. O payload
-carrega **só id e papel** — cookie é legível por quem tem o aparelho.
+latência para quem está em 3G. A validade é de 7 dias com renovação
+silenciosa faltando 2, e o payload carrega **só id e papel** — cookie é
+legível por quem tem o aparelho.
+
+**O preço de não revogar deixou de ser total (#225).** Era: token válido
+por até uma semana, sem volta, mesmo depois de a pessoa trocar a senha
+desconfiando de invasão. Hoje `usuarios.sessoes_validas_desde` marca um
+corte por pessoa, e `sessaoAtual()` descarta token emitido antes dele.
+
+**E isto não é "sessão no banco", que é a alternativa que se recusou.**
+Sessão no banco significa perguntar, a cada requisição, se aquela sessão
+vale — uma consulta por navegação, para todo mundo, o tempo todo. Aqui a
+pergunta é outra: o app lê a lista de **quem cortou nos últimos 7 dias** e
+a guarda em cache por 60 segundos. No caminho comum não há consulta
+nenhuma.
+
+A lista é curta por construção e **não cresce com o tempo**: token com
+mais de 7 dias já expirou sozinho, então quem trocou a senha no mês
+passado sai dela. Ela cresce com o número de trocas de senha desta semana
+— num app de 26 contas, é quase sempre vazia. *Quando revogar exige
+estado, procure o estado que responde a todos de uma vez, não o que
+responde a um por requisição.*
+
+O preço novo, aceito: uma sessão revogada pode sobreviver até 60 segundos.
+
+**A leitura falha aberta**, e é o oposto do webhook de pagamento, de
+propósito. Lá, deixar passar confirmaria dinheiro que ninguém provou;
+aqui, recusar derrubaria **todo mundo** do app por causa de uma consulta
+que não respondeu. Errar para o lado permissivo custa uma janela a mais
+numa revogação; errar para o fechado é o app inteiro fora do ar.
+
+**A checagem mora em `sessaoAtual()`, não no `proxy.ts`.** O proxy roda no
+runtime de borda, sem banco e sem o cache de dados do Next. E não faz
+falta: toda rota que decide alguma coisa sobre uma pessoa lê a sessão por
+ali — as duas que não leem, o cron e o webhook, se autenticam por segredo
+e por assinatura.
+
+**A comparação é estritamente `<`, e isso não é detalhe.** Corte e `iat`
+são epoch de **segundos**, e a troca de senha grava um e emite o outro
+quase no mesmo instante. Com `<=`, a sessão recém-emitida cairia no
+próprio corte sempre que os dois caíssem no mesmo segundo — a pessoa
+trocaria a senha e seria deslogada, de forma intermitente e impossível de
+reproduzir.
 
 Sem `SESSION_SECRET`, produção recusa subir. Segredo padrão versionado
 significa sessão de admin forjável por qualquer um que leia o repositório.

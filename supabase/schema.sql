@@ -157,6 +157,24 @@ create table usuarios (
   criado_em            timestamptz not null default now(),
   atualizado_em        timestamptz not null default now(),
   ultimo_acesso_em     timestamptz,
+  /*
+   * Corte de revogacao de sessao (#225).
+   *
+   * A sessao e um JWT de 7 dias e nao mora no banco — o app roda em
+   * funcoes serverless, e consulta a mais e latencia para quem esta em 3G.
+   * O preco registrado era nao conseguir revogar antes de expirar: quem
+   * trocava a senha desconfiando de acesso indevido continuava com o
+   * invasor dentro por ate uma semana.
+   *
+   * Esta coluna e o corte: todo token emitido **antes** dela deixa de
+   * valer. Nao e sessao no banco — e uma data por pessoa, lida de uma
+   * lista curta e cacheada, nao uma consulta por requisicao.
+   *
+   * Nulo e o normal: quem nunca trocou a senha nao tem corte. E a lista
+   * que a aplicacao le so traz os ultimos 7 dias, porque token mais velho
+   * que isso ja expirou sozinho — a tabela nao cresce com o tempo.
+   */
+  sessoes_validas_desde timestamptz,
 
   constraint email_com_formato check (position('@' in email) > 1),
   constraint telefone_so_digitos check (telefone ~ '^[0-9]{10,13}$')
@@ -172,6 +190,18 @@ create unique index usuarios_email_unico on usuarios (lower(email));
 
 create index usuarios_papel_cidade_idx on usuarios (papel, cidade);
 create index usuarios_criado_em_idx on usuarios (criado_em desc);
+
+/*
+ * Cobre a unica consulta que le o corte de sessao: "quem revogou nos
+ * ultimos 7 dias" (#225).
+ *
+ * Parcial porque a esmagadora maioria das linhas e nula — quem nunca
+ * trocou a senha nao tem corte. Indice cheio aqui seria pagar escrita em
+ * toda conta por uma leitura que nunca olha para elas.
+ */
+create index usuarios_sessoes_validas_desde_idx
+  on usuarios (sessoes_validas_desde)
+  where sessoes_validas_desde is not null;
 
 create trigger usuarios_atualizado_em
   before update on usuarios

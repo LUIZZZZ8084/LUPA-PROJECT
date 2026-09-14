@@ -1,5 +1,6 @@
 import "server-only";
 
+import { TETO_DO_DONO } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import type { Papel } from "../auth/rbac";
 import { erros } from "../errors";
@@ -135,11 +136,41 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     const supabase = await cliente();
     const { error } = await supabase
       .from("usuarios")
-      .update({ senha_hash: senhaHash })
+      .update({
+        senha_hash: senhaHash,
+        /*
+         * O corte de sessão entra na **mesma instrução** que a senha
+         * (#225). Duas instruções deixariam uma janela em que a senha já
+         * mudou e as sessões antigas ainda valem — e, pior, deixariam
+         * alguém escrever um terceiro caminho de troca de senha chamando
+         * só a primeira.
+         */
+        sessoes_validas_desde: new Date().toISOString(),
+      })
       .eq("id", id);
 
     if (error)
       throw erros.indisponivel(`atualização de senha: ${error.message}`);
+  }
+
+  async cortesDeSessao(dias: number): Promise<Map<string, number>> {
+    const supabase = await cliente();
+    const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("id, sessoes_validas_desde")
+      .gte("sessoes_validas_desde", desde.toISOString())
+      .limit(TETO_DO_DONO);
+
+    if (error) throw erros.indisponivel(`cortes de sessão: ${error.message}`);
+
+    return new Map(
+      (data ?? []).map((l) => [
+        String(l.id),
+        Math.floor(new Date(String(l.sessoes_validas_desde)).getTime() / 1000),
+      ]),
+    );
   }
 
   async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
