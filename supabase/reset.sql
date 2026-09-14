@@ -21,6 +21,13 @@
 -- =============================================================================
 
 -- As views primeiro: dependem das tabelas.
+--
+-- `cascade` no `drop table` levaria as duas de baixo junto, e por um tempo
+-- `metricas_caixa` ficou de fora desta lista por isso. Continuam escritas
+-- aqui porque esta lista e o inventario de views do projeto: view que so
+-- some de carona some tambem da revisao de quem le o arquivo.
+drop view if exists metricas_pressao cascade;
+drop view if exists metricas_caixa cascade;
 drop view if exists metricas_planos cascade;
 drop view if exists metricas_por_local cascade;
 drop view if exists metricas_cadastros_por_dia cascade;

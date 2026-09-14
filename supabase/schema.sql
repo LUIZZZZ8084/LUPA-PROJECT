@@ -1331,6 +1331,63 @@ select
   count(*) filter (where status = 'contestado')  as contestacoes
 from pagamentos;
 
+/*
+ * Pressao nos tetos: quem esta encostando no limite, agrupado (#207).
+ *
+ * A Issue nasceu pedindo tabela nova — contagem por rota e por dia, no
+ * padrao de `buscas_sem_resultado`. Decisao do Luiz em 14/09/2026: nao se
+ * cria a tabela. Volume por rota a Vercel ja conta (e o medidor da fatura
+ * dela, que e justamente o teto que chega primeiro), e o sinal que falta —
+ * recusa de teto subindo — ja esta aqui em `tentativas_de_acesso`. O que
+ * nao se tem e historico, e historico e exatamente a parte que guarda
+ * dado.
+ *
+ * ## Por que uma view, e nao um `group by` em JavaScript
+ *
+ * **Porque `chave` tem e-mail dentro.** Os formatos sao
+ * `login:<e-mail>`, `cadastro:<ip>`, `recuperacao:<ip>` e
+ * `acao:<nome>:u:<usuarioId>`. Agregar na aplicacao significaria trazer
+ * essa coluna para dentro do processo e confiar que ninguem, nunca, a
+ * renderize — e "confiar que ninguem renderize" e o tipo de garantia que
+ * este projeto ja viu falhar. Aqui a chave nao sai do banco: o que
+ * atravessa a fronteira ja e contagem.
+ *
+ * O segundo motivo e o mesmo de `metricas_caixa`: agregar na aplicacao
+ * funciona hoje, com poucas linhas, e para de funcionar **exatamente sob
+ * abuso** — que e o unico momento em que alguem vai abrir este bloco.
+ *
+ * ## O rotulo nao carrega dado de ninguem
+ *
+ * Para `acao:<nome>:...` o rotulo e `<nome>`, que vem de `ORCAMENTOS` —
+ * literal do nosso codigo, nunca entrada de usuario. Para os tres de
+ * autenticacao o rotulo e so o prefixo (`login`, `cadastro`,
+ * `recuperacao`): o resto da chave fica para tras de proposito.
+ *
+ * ## O que cada numero responde
+ *
+ * `chaves` e `pico` juntos separam transito de abuso: vinte chaves com
+ * tres chamadas cada e um dia movimentado; uma chave com sessenta e uma
+ * pessoa — ou um script — sozinha. `bloqueadas` e o sinal que a decisao
+ * do Cloudflare esta esperando: enquanto for zero, nao ha abuso medido.
+ *
+ * A janela e a propria retencao da tabela — `limpar_tentativas_vencidas`
+ * apaga o que passou de quatro janelas. Logo isto e sempre "agora", nunca
+ * tendencia, e a tela diz isso.
+ */
+create view metricas_pressao
+with (security_invoker = false) as
+select
+  case
+    when chave like 'acao:%' then split_part(chave, ':', 2)
+    else split_part(chave, ':', 1)
+  end                                             as rotulo,
+  count(*)                                        as chaves,
+  coalesce(sum(tentativas), 0)                    as chamadas,
+  count(*) filter (where bloqueado_ate > now())   as bloqueadas,
+  coalesce(max(tentativas), 0)                    as pico
+from tentativas_de_acesso
+group by 1;
+
 -- ============================================================================
 -- 12. Row Level Security
 --
@@ -1449,6 +1506,14 @@ revoke select on metricas_totais               from anon, authenticated;
 revoke select on metricas_cadastros_por_dia    from anon, authenticated;
 revoke select on metricas_por_local            from anon, authenticated;
 revoke select on metricas_caixa                from anon, authenticated;
+
+/*
+ * E a pressao nos tetos (#207). O `revoke` aqui nao e formalidade: a view
+ * e `security_invoker = false`, entao ela le `tentativas_de_acesso`
+ * ignorando a RLS da tabela. Sem esta linha, a chave anonima leria quantas
+ * contas estao bloqueadas em cada acao — um mapa de onde bater.
+ */
+revoke select on metricas_pressao              from anon, authenticated;
 
 /*
  * E as tabelas que guardam o mesmo dado por baixo das views.

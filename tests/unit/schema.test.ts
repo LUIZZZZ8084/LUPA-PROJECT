@@ -15,6 +15,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { agregarPressao } from "@/server/metrics/tipos";
 
 const SCHEMA = readFileSync(join(process.cwd(), "supabase/schema.sql"), "utf8");
 
@@ -100,6 +101,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "metricas_cadastros_por_dia",
       "metricas_por_local",
       "metricas_caixa",
+      "metricas_pressao",
     ]) {
       expect(views, `falta a view ${esperada}`).toContain(esperada);
     }
@@ -612,6 +614,12 @@ describe("grants de anon e authenticated", () => {
     "metricas_cadastros_por_dia",
     "metricas_por_local",
     "metricas_caixa",
+    /*
+     * Agrega `tentativas_de_acesso`, e a view e `security_invoker = false`
+     * — le a tabela ignorando a RLS dela. Sem o revoke, `anon` leria
+     * quantas contas estao bloqueadas em cada acao (#207).
+     */
+    "metricas_pressao",
   ];
 
   const PUBLICAS_DE_PROPOSITO = [
@@ -879,7 +887,8 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
       `select count(*) as total from information_schema.views
        where table_schema = 'public'`,
     );
-    expect(Number(views.rows[0].total)).toBe(10);
+    // Onze desde a #207, que acrescentou `metricas_pressao`.
+    expect(Number(views.rows[0].total)).toBe(11);
   });
 
   it("não sobra tipo, função nem view órfã", async () => {
@@ -1398,5 +1407,160 @@ describe("limite de tentativas durável", () => {
               as tem_acesso`,
     );
     expect(r.rows[0].tem_acesso).toBe(false);
+  });
+});
+
+/*
+ * A view que mede a pressão nos tetos (#207).
+ *
+ * Duas coisas são testadas aqui, e a segunda é a que decide se a
+ * funcionalidade é segura ou perigosa.
+ *
+ * **A primeira é a paridade.** A mesma agregação existe em SQL (para
+ * produção) e em TypeScript (para o modo demonstração, que não tem banco).
+ * Regra de agregação escrita duas vezes em linguagens diferentes diverge
+ * sem ninguém ver — este projeto já registrou isso a respeito do líquido do
+ * caixa, e a saída de lá foi não escrever a conta duas vezes. Aqui não dá:
+ * a demonstração precisa da versão em memória. Então a defesa é rodar as
+ * duas sobre a mesma entrada e comparar linha a linha.
+ *
+ * **A segunda é o que a view não pode devolver.** `tentativas_de_acesso`
+ * guarda `login:<e-mail>` — endereço de e-mail de gente de verdade, na
+ * mesma tabela. A view existe para que essa coluna não atravesse a
+ * fronteira do banco, e não só para economizar `group by` na aplicação.
+ */
+describe("medição de pressão nos tetos", () => {
+  let banco: PGlite;
+
+  const LINHAS: [string, number, string | null][] = [
+    ["acao:vaga.publicar:u:aaa", 4, null],
+    ["acao:vaga.publicar:u:bbb", 11, "+10 minutes"],
+    ["acao:candidatura.criar:u:ccc", 7, null],
+    // Bloqueio vencido: existe na coluna e não vale mais.
+    ["acao:candidatura.criar:o:187.1.2.3", 2, "-10 minutes"],
+    ["login:fulano@exemplo.com", 5, "+10 minutes"],
+    ["cadastro:187.45.9.2", 3, null],
+    ["recuperacao:187.45.9.2", 1, null],
+  ];
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+
+    for (const [chave, tentativas, bloqueio] of LINHAS) {
+      await banco.query(
+        `insert into tentativas_de_acesso (chave, tentativas, bloqueado_ate)
+         values ($1, $2, case when $3::text is null then null
+                              else now() + $3::interval end)`,
+        [chave, tentativas, bloqueio],
+      );
+    }
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  const lerView = () =>
+    banco.query<{
+      rotulo: string;
+      chaves: string;
+      chamadas: string;
+      bloqueadas: string;
+      pico: string;
+    }>(
+      `select rotulo, chaves, chamadas, bloqueadas, pico
+         from metricas_pressao
+        order by bloqueadas desc, chamadas desc`,
+    );
+
+  it("agrupa por ação, e as de autenticação pelo prefixo", async () => {
+    const r = await lerView();
+    expect(r.rows.map((l) => l.rotulo).sort()).toEqual([
+      "cadastro",
+      "candidatura.criar",
+      "login",
+      "recuperacao",
+      "vaga.publicar",
+    ]);
+  });
+
+  it("só conta bloqueio que ainda vale", async () => {
+    const r = await lerView();
+    const porRotulo = new Map(r.rows.map((l) => [l.rotulo, l]));
+
+    expect(Number(porRotulo.get("vaga.publicar")?.bloqueadas)).toBe(1);
+    // Tem `bloqueado_ate` preenchido, mas no passado.
+    expect(Number(porRotulo.get("candidatura.criar")?.bloqueadas)).toBe(0);
+  });
+
+  /**
+   * O teste que existe para o dia em que alguém mexer num dos dois lados.
+   */
+  it("a view e a agregação em memória dão o mesmo resultado", async () => {
+    const r = await lerView();
+
+    const doBanco = r.rows.map((l) => ({
+      rotulo: l.rotulo,
+      chaves: Number(l.chaves),
+      chamadas: Number(l.chamadas),
+      bloqueadas: Number(l.bloqueadas),
+      pico: Number(l.pico),
+    }));
+
+    const agora = new Date();
+    const daMemoria = agregarPressao(
+      LINHAS.map(([chave, tentativas, bloqueio]) => ({
+        chave,
+        tentativas,
+        bloqueadoAte: bloqueio
+          ? new Date(
+              agora.getTime() +
+                (bloqueio.startsWith("-") ? -10 : 10) * 60 * 1000,
+            )
+          : null,
+      })),
+      agora,
+    );
+
+    expect(daMemoria).toEqual(doBanco);
+  });
+
+  /**
+   * `tentativas_de_acesso.chave` é `login:<e-mail>`. A view não pode ter
+   * nenhuma coluna por onde esse valor volte — nem com outro nome.
+   */
+  it("a view não expõe a chave, que tem e-mail dentro", async () => {
+    const colunas = await banco.query<{ column_name: string }>(
+      `select column_name from information_schema.columns
+        where table_schema = 'public' and table_name = 'metricas_pressao'
+        order by column_name`,
+    );
+
+    expect(colunas.rows.map((c) => c.column_name)).toEqual([
+      "bloqueadas",
+      "chamadas",
+      "chaves",
+      "pico",
+      "rotulo",
+    ]);
+
+    const tudo = await banco.query(`select * from metricas_pressao`);
+    expect(JSON.stringify(tudo.rows)).not.toContain("@");
+    expect(JSON.stringify(tudo.rows)).not.toContain("187.45.9.2");
+  });
+
+  /**
+   * A view é `security_invoker = false`: ela lê `tentativas_de_acesso`
+   * ignorando a RLS da tabela. Sem o `revoke`, a chave anônima leria
+   * quantas contas estão bloqueadas em cada ação — um mapa de onde bater.
+   */
+  it("a chave anônima não lê a view", async () => {
+    const r = await banco.query<{ anon: boolean; auth: boolean }>(
+      `select has_table_privilege('anon', 'metricas_pressao', 'SELECT') as anon,
+              has_table_privilege('authenticated', 'metricas_pressao', 'SELECT') as auth`,
+    );
+    expect(r.rows[0].anon).toBe(false);
+    expect(r.rows[0].auth).toBe(false);
   });
 });

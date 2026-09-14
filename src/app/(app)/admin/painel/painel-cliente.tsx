@@ -15,6 +15,7 @@ import { Panel } from "@/components/ui/card";
 import { formatMoneyBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PainelAdmin } from "@/server/metrics/tipos";
+import { PressaoNosTetos } from "./pressao-nos-tetos";
 
 /**
  * Painel administrativo com atualização por polling.
@@ -297,6 +298,17 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
           </ul>
         )}
       </Panel>
+
+      {/*
+        Por último, e dentro do polling.
+
+        Último porque em dia normal é uma lista de números pequenos, e
+        bloco de zeros no topo do painel ensina a rolar por cima dele.
+        Dentro do polling porque a pergunta é "está subindo agora" — ao
+        contrário de "Buscas sem resultado", que fica fora justamente por
+        ser insumo de uma decisão mensal.
+      */}
+      <PressaoNosTetos linhas={painel.pressao} />
     </div>
   );
 }

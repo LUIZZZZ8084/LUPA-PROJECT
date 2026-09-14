@@ -2,6 +2,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { erros } from "../errors";
 import type { Orcamento } from "../limites";
 import { log } from "../logger";
+import type { JanelaDeLimite } from "../metrics/tipos";
 import { RepositorioLimitePostgres } from "./rate-limit-postgres";
 import { CONFIG_LIMITE, type RepositorioLimite } from "./rate-limit-tipos";
 
@@ -173,6 +174,25 @@ function registrarFalhaEmMemoria(chave: string): void {
 /** Zera o contador. Chame no login bem-sucedido. */
 export async function registrarSucesso(chave: string): Promise<void> {
   await repositorio().registrarSucesso(chave);
+}
+
+/**
+ * As janelas vivas, para o painel do modo demonstração (#207).
+ *
+ * **Em produção isto devolve sempre lista vazia**, e não por acaso: com
+ * Supabase configurado quem conta é `RepositorioLimitePostgres`, e este
+ * `Map` nunca recebe nada. Lá o painel lê a view `metricas_pressao`, onde
+ * a chave — que é `login:<e-mail>` nas de autenticação — não sai do banco.
+ *
+ * Ou seja: a única implementação que enxerga chave crua é a que só existe
+ * onde as contas são de mentira.
+ */
+export function janelasVivas(): JanelaDeLimite[] {
+  return [...janelas.entries()].map(([chave, janela]) => ({
+    chave,
+    tentativas: janela.tentativas,
+    bloqueadoAte: janela.bloqueadoAte ? new Date(janela.bloqueadoAte) : null,
+  }));
 }
 
 /** Só para teste. */

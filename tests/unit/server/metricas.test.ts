@@ -36,6 +36,7 @@ function repoFalso(
       cobrancas: 0,
       contestacoes: 0,
     }),
+    pressaoNosTetos: async () => [],
     ...sobrescrever,
   };
 }

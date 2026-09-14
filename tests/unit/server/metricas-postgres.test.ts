@@ -177,6 +177,97 @@ describe("RepositorioMetricasPostgres", () => {
     });
   });
 
+  /**
+   * A pressão vem agregada da view, e a ordem importa (#207).
+   *
+   * Bloqueio primeiro porque é o único número que muda uma decisão — é o
+   * "abuso medido" que a escolha de pôr limite na borda está esperando.
+   * Volume depois, para o dia em que nada estiver bloqueado.
+   */
+  it("pressão vem da view, ordenada por bloqueio e depois por volume", async () => {
+    respostas.set("metricas_pressao", {
+      data: [
+        {
+          rotulo: "vaga.publicar",
+          chaves: "2",
+          chamadas: "31",
+          bloqueadas: "1",
+          pico: "22",
+        },
+        {
+          rotulo: "login",
+          chaves: "9",
+          chamadas: "12",
+          bloqueadas: "0",
+          pico: "3",
+        },
+      ],
+      error: null,
+    });
+
+    const linhas = await repo.pressaoNosTetos(20);
+
+    expect(linhas[0]).toEqual({
+      rotulo: "vaga.publicar",
+      chaves: 2,
+      chamadas: 31,
+      bloqueadas: 1,
+      pico: 22,
+    });
+
+    const ordens = chamadas
+      .filter((c) => c.tabela === "metricas_pressao" && c.metodo === "order")
+      .map((c) => c.args[0]);
+    expect(ordens).toEqual(["bloqueadas", "chamadas"]);
+
+    const limite = chamadas.find(
+      (c) => c.tabela === "metricas_pressao" && c.metodo === "limit",
+    );
+    expect(limite?.args[0]).toBe(20);
+  });
+
+  /**
+   * A consulta pede `*`, e isso só é seguro porque a view não tem `chave`.
+   *
+   * `tentativas_de_acesso.chave` é `login:<e-mail>` nas três de
+   * autenticação. A projeção acontece em SQL justamente para que nenhuma
+   * consulta desta camada consiga trazer endereço de e-mail de volta —
+   * este teste trava o contrário: se um dia a view ganhar a coluna e o
+   * repositório a repassar, alguém precisa ver vermelho.
+   */
+  it("nada do que sai da view identifica alguém", async () => {
+    respostas.set("metricas_pressao", {
+      data: [
+        {
+          rotulo: "login",
+          chaves: "1",
+          chamadas: "5",
+          bloqueadas: "1",
+          pico: "5",
+          // A view não devolve isto. Se um dia devolver, não pode passar.
+          chave: "login:alguem@exemplo.com",
+        },
+      ],
+      error: null,
+    });
+
+    const [linha] = await repo.pressaoNosTetos(20);
+
+    expect(Object.keys(linha).sort()).toEqual([
+      "bloqueadas",
+      "chamadas",
+      "chaves",
+      "pico",
+      "rotulo",
+    ]);
+    expect(JSON.stringify(linha)).not.toContain("@");
+  });
+
+  it("sem linha na view, a pressão é lista vazia", async () => {
+    respostas.set("metricas_pressao", { data: null, error: null });
+    expect(await repo.pressaoNosTetos(20)).toEqual([]);
+  });
+
   it("erro de banco vira indisponível, não interno", async () => {
     respostas.set("metricas_totais", {
       data: null,

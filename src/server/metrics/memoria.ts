@@ -1,13 +1,16 @@
 import { getJobs, getProviders } from "@/lib/data";
+import { janelasVivas } from "../auth/rate-limit";
 import type { Papel } from "../auth/rbac";
 import { pagamentosEmMemoria } from "../pagamentos";
 import type { RepositorioMemoria } from "../repositories/memoria";
-import type {
-  CadastrosPorDia,
-  Caixa,
-  DistribuicaoLocal,
-  RepositorioMetricas,
-  Totais,
+import {
+  agregarPressao,
+  type CadastrosPorDia,
+  type Caixa,
+  type DistribuicaoLocal,
+  type PressaoNoTeto,
+  type RepositorioMetricas,
+  type Totais,
 } from "./tipos";
 
 /**
@@ -116,6 +119,18 @@ export class RepositorioMetricasMemoria implements RepositorioMetricas {
         (p) => p.status === "contestado",
       ).length,
     };
+  }
+
+  /**
+   * A pressão em demonstração sai do `Map` do limite em memória.
+   *
+   * É a mesma agregação da view — literalmente a mesma função — rodando
+   * sobre a outra implementação do contador. Em produção este `Map` fica
+   * vazio, porque lá quem conta é o Postgres; aqui ele é o único que
+   * existe.
+   */
+  async pressaoNosTetos(limite: number): Promise<PressaoNoTeto[]> {
+    return agregarPressao(janelasVivas(), new Date()).slice(0, limite);
   }
 }
 
