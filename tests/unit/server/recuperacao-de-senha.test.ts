@@ -248,10 +248,14 @@ describe("recuperação de senha", () => {
       const token = tokenDoUltimoEmail();
 
       // O que a aplicação gravou é o SHA-256 — o cru não abre nada.
-      expect(await repo.consumirTokenDeRecuperacao(token)).toBeNull();
+      expect(
+        await repo.consumirTokenDeRecuperacao(token, "recuperacao"),
+      ).toBeNull();
 
       const hash = createHash("sha256").update(token).digest("hex");
-      expect(await repo.consumirTokenDeRecuperacao(hash)).toMatchObject({
+      expect(
+        await repo.consumirTokenDeRecuperacao(hash, "recuperacao"),
+      ).toMatchObject({
         usuarioId,
       });
     });

@@ -1750,3 +1750,95 @@ describe("corte de revogação de sessão", () => {
     expect(r.rows[0].anon).toBe(false);
   });
 });
+
+/*
+ * Token de verificação de e-mail não troca senha (#227).
+ *
+ * A tabela é a mesma da recuperação, e é o certo: mesmo material — segredo
+ * aleatório, guardado em hash, uso único, com prazo. Uma tabela gêmea
+ * divergiria na primeira vez que alguém mexesse num lado só.
+ *
+ * O que ela **não** pode ser é um token que serve para as duas coisas. O
+ * de verificação sai com muito mais liberdade — no cadastro e a cada
+ * "reenviar" —, e se ele também redefinisse senha, cada reenvio seria mais
+ * um link de redefinição circulando.
+ */
+describe("finalidade do token de uso único", () => {
+  let banco: PGlite;
+  let usuarioId: string;
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
+       values ('token@lupa.test', 'h', 'candidato_clt', 'Alguém', '66999110013')
+       returning id`,
+    );
+    usuarioId = r.rows[0].id;
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  /**
+   * As linhas que já existiam continuam valendo para o que sempre foram —
+   * o default é o que evita uma migração de dados.
+   */
+  it("o default é recuperação, para o que já existe continuar valendo", async () => {
+    const r = await banco.query<{ finalidade: string }>(
+      `insert into tokens_recuperacao (usuario_id, token_hash, expira_em)
+       values ($1, 'hash-antigo', now() + interval '1 hour')
+       returning finalidade`,
+      [usuarioId],
+    );
+    expect(r.rows[0].finalidade).toBe("recuperacao");
+  });
+
+  /**
+   * O teste que decide se a separação é real: a mesma instrução que gasta
+   * o token filtra pela finalidade. Numa checagem antes do `update`, duas
+   * requisições simultâneas passariam as duas.
+   */
+  it("consumir com a finalidade errada não gasta nem devolve nada", async () => {
+    await banco.query(
+      `insert into tokens_recuperacao (usuario_id, token_hash, finalidade, expira_em)
+       values ($1, 'hash-verificacao', 'verificacao_email', now() + interval '1 hour')`,
+      [usuarioId],
+    );
+
+    // É a instrução que a aplicação roda, com a finalidade errada.
+    const errada = await banco.query(
+      `update tokens_recuperacao set usado_em = now()
+        where token_hash = 'hash-verificacao'
+          and finalidade = 'recuperacao'
+          and usado_em is null
+          and expira_em > now()
+        returning usuario_id`,
+    );
+    expect(errada.rows).toHaveLength(0);
+
+    // E o token continua intacto para o que ele é.
+    const certa = await banco.query(
+      `update tokens_recuperacao set usado_em = now()
+        where token_hash = 'hash-verificacao'
+          and finalidade = 'verificacao_email'
+          and usado_em is null
+          and expira_em > now()
+        returning usuario_id`,
+    );
+    expect(certa.rows).toHaveLength(1);
+  });
+
+  it("o enum aceita só as duas finalidades que existem", async () => {
+    const r = await banco.query<{ valor: string }>(
+      `select unnest(enum_range(null::finalidade_token))::text as valor`,
+    );
+    expect(r.rows.map((l) => l.valor)).toEqual([
+      "recuperacao",
+      "verificacao_email",
+    ]);
+  });
+});

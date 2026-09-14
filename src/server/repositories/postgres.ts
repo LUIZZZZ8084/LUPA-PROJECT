@@ -10,6 +10,7 @@ import type {
   EdicaoCandidato,
   EdicaoEmpresa,
   EdicaoPrestador,
+  FinalidadeToken,
   NovoTokenDeRecuperacao,
   PerfilCandidato,
   PerfilEmpresa,
@@ -178,6 +179,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     const { error } = await supabase.from("tokens_recuperacao").insert({
       usuario_id: dados.usuarioId,
       token_hash: dados.tokenHash,
+      finalidade: dados.finalidade,
       expira_em: dados.expiraEm,
     });
 
@@ -196,12 +198,25 @@ export class RepositorioPostgres implements RepositorioUsuarios {
    */
   async consumirTokenDeRecuperacao(
     tokenHash: string,
+    finalidade: FinalidadeToken,
   ): Promise<{ usuarioId: string } | null> {
     const supabase = await cliente();
     const { data, error } = await supabase
       .from("tokens_recuperacao")
       .update({ usado_em: new Date().toISOString() })
       .eq("token_hash", tokenHash)
+      /*
+       * A finalidade entra **aqui**, na mesma instrução que gasta o token,
+       * e não numa leitura antes (#227). Uma checagem prévia seria o
+       * caminho ler-decide-grava que este arquivo já recusa nas outras
+       * três condições: duas requisições simultâneas passariam as duas.
+       *
+       * E ela existe porque o token de verificação de e-mail é mandado com
+       * muito mais liberdade que o de senha — no cadastro e a cada
+       * "reenviar". Sem esta linha, cada reenvio seria mais um link de
+       * redefinição de senha circulando.
+       */
+      .eq("finalidade", finalidade)
       .is("usado_em", null)
       .gt("expira_em", new Date().toISOString())
       .select("usuario_id")
@@ -209,6 +224,17 @@ export class RepositorioPostgres implements RepositorioUsuarios {
 
     if (error) throw erros.indisponivel(`consumo de token: ${error.message}`);
     return data ? { usuarioId: String(data.usuario_id) } : null;
+  }
+
+  async definirEmailVerificado(id: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({ email_verificado: true })
+      .eq("id", id);
+
+    if (error)
+      throw erros.indisponivel(`verificação de e-mail: ${error.message}`);
   }
 
   async atualizarPapel(id: string, papel: Papel): Promise<void> {

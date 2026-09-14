@@ -1089,11 +1089,29 @@ alter table pagamentos enable row level security;
 -- Sem grant para `anon`/`authenticated`: e material de troca de senha.
 -- ============================================================================
 
+/*
+ * Para que serve o token (#227).
+ *
+ * A tabela nasceu so para recuperacao de senha; a verificacao de e-mail
+ * usa o mesmo material — segredo aleatorio, guardado em hash, de uso
+ * unico, com prazo — e nao merece uma tabela gemea que diverge na
+ * primeira vez que alguem mexe num lado so.
+ *
+ * O que ela **nao** pode ser e um token que serve para as duas coisas. O
+ * de verificacao e mandado com mais liberdade (no cadastro, e a cada
+ * "reenviar"), e se ele tambem trocasse senha, cada reenvio seria um link
+ * de redefinicao a mais circulando. Por isso a finalidade entra na
+ * instrucao que **consome** o token, junto do hash — e nao numa checagem
+ * antes, que duas requisicoes simultaneas atravessariam.
+ */
+create type finalidade_token as enum ('recuperacao', 'verificacao_email');
+
 create table tokens_recuperacao (
   id         uuid primary key default gen_random_uuid(),
   usuario_id uuid not null references usuarios(id) on delete cascade,
   /* SHA-256 do token, em hex. Unico: dois pedidos nao colidem. */
   token_hash text not null unique,
+  finalidade finalidade_token not null default 'recuperacao',
   expira_em  timestamptz not null,
   /*
    * Uso unico. Marcado na propria instrucao que troca a senha (`where

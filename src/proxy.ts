@@ -131,7 +131,19 @@ const AREAS_FECHADAS: readonly AreaFechada[] = [
  * link é o que prova quem é — e ele é conferido no servidor, na mesma
  * instrução que o gasta.
  */
-const ABERTAS = ["/entrar", "/cadastro", "/esqueci-senha", "/redefinir-senha"];
+/*
+ * `/verificar-email` entra aqui porque a pessoa quase sempre abre o link
+ * do celular, que pode não ser o aparelho onde ela está logada (#227).
+ * Exigir sessão mandaria quem confirmou para o login — e o token, que é de
+ * uso único, já teria sido gasto ou nem chegaria a ser lido.
+ */
+const ABERTAS = [
+  "/entrar",
+  "/cadastro",
+  "/esqueci-senha",
+  "/redefinir-senha",
+  "/verificar-email",
+];
 
 /** Para onde mandar quem não tem sessão. */
 const ENTRADA = "/entrar";
