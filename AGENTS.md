@@ -2024,6 +2024,20 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   quando excluir uma rota, diga onde ela é exercitada, ou admita que não
   é.
 
+  **E aconteceu de novo, pior: com a razão apontando para um arquivo que
+  não cobria nada** (#217). `/admin/painel` dizia ter "cobertura própria
+  em `metricas-empresa.spec.ts`" — spec que exercita as métricas da
+  *empresa* e **não menciona `/admin` em lugar nenhum**. As únicas três
+  referências ao painel na suíte e2e conferem o contrário: que a rota
+  responde 404 para quem não é admin. Nenhum teste jamais o renderizou, e
+  a #207 pôs um bloco novo lá dentro sem nada que o desenhasse.
+
+  Descoberto conferindo se dava para *afirmar* que havia cobertura — a
+  razão escrita dizia que sim. *Razão de exclusão envelhece como código e
+  ninguém a executa: quando ela cita um arquivo, abra o arquivo.* Hoje a
+  razão nomeia o que cobre cada camada e diz, com todas as letras, que
+  não há e2e — e o painel ganhou teste de componente.
+
 - **Suíte e2e não pode falar com banco de verdade.** `npm start` carrega o
   `.env.local`, e quem tem credenciais reais ali roda o e2e contra
   produção sem aviso. Aconteceu: o ajudante de login criou 213 contas na

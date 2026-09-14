@@ -86,7 +86,7 @@ export const ROTAS_NAO_VARRIDAS: Record<string, string> = {
   "/admin":
     "sem sessão de admin responde 404, e a varredura mediria a página de erro dizendo que mede a fila de verificação. O 404 para anônimo é verificado em fluxos.spec.ts",
   "/admin/painel":
-    "mesma razão de /admin: sem sessão de admin a varredura mediria a página de erro. O painel tem cobertura própria em metricas-empresa.spec.ts e no teste de unidade do serviço",
+    "mesma razão de /admin: sem sessão de admin a varredura mediria a página de erro. NÃO há e2e que renderize este painel — a suíte compartilha duas contas, candidata e empresa, e nenhuma delas é admin; as três referências a esta rota no e2e conferem justamente que ela responde 404. O que cobre: o serviço em metricas.test.ts, os dois repositórios em metricas-postgres.test.ts e metricas.test.ts, e os blocos da tela em teste de componente (pressao-nos-tetos-tela.test.tsx). Esta razão já afirmou cobertura em metricas-empresa.spec.ts, que não toca no admin (#217)",
   "/candidatos/[id]":
     "depende de um candidato que tenha ligado 'quero ser encontrado', criado dentro do próprio teste — varrido em visivel-para-empresas.spec.ts",
   "/empresa/candidaturas/[id]": "id resolvido em ROTAS_PROFUNDAS_EMPRESA",
