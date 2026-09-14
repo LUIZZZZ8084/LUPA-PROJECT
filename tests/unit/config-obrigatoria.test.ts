@@ -11,7 +11,7 @@
  * `process.env` dentro de teste vaza para os vizinhos, e o que se quer
  * medir aqui é a decisão, não a leitura.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { conferirConfiguracaoDeProducao } from "@/server/config-obrigatoria";
 
 type Ambiente = Record<string, string | undefined>;
@@ -141,6 +141,58 @@ describe("configuração obrigatória de produção", () => {
           LIMITE_MULTIPLICADOR: "50",
         }),
       ).not.toThrow();
+    });
+  });
+
+  /**
+   * A chave anônima ainda pelo nome publicável (#221).
+   *
+   * **Avisa, não derruba**, e a escolha é a mesma que este arquivo pesa em
+   * todo lugar: derrubar produção por causa de um *nome* de variável
+   * trocaria um risco hipotético por uma indisponibilidade real. O valor
+   * é o mesmo pelos dois nomes; o que muda é a promessa que o nome faz.
+   */
+  describe("nome da chave anônima", () => {
+    let avisos: string[];
+
+    beforeEach(() => {
+      avisos = [];
+      vi.spyOn(console, "warn").mockImplementation((...args: unknown[]) => {
+        avisos.push(args.join(" "));
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("avisa quando só existe o nome com NEXT_PUBLIC_", () => {
+      conferirConfiguracaoDeProducao({
+        ...PRODUCAO_COMPLETA,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "chave",
+      });
+
+      expect(avisos.join(" ")).toMatch(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+    });
+
+    it("cala quando o nome novo existe", () => {
+      conferirConfiguracaoDeProducao({
+        ...PRODUCAO_COMPLETA,
+        SUPABASE_ANON_KEY: "chave",
+        // Mesmo com a antiga ainda por lá, durante a transição.
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "chave",
+      });
+
+      expect(avisos).toEqual([]);
+    });
+
+    /**
+     * Sem Supabase nenhum é o modo demonstração, não uma configuração
+     * errada. Avisar ali ensinaria a ignorar o aviso.
+     */
+    it("cala quando não há chave nenhuma", () => {
+      conferirConfiguracaoDeProducao(PRODUCAO_COMPLETA);
+      expect(avisos).toEqual([]);
     });
   });
 });

@@ -116,6 +116,35 @@ export function conferirConfiguracaoDeProducao(
     );
   }
 
+  /*
+   * A chave anônima ainda pelo nome publicável (#221).
+   *
+   * Avisa, não derruba, e a diferença é a mesma que este arquivo já pesa
+   * em todo lugar: derrubar produção por causa de um **nome** de variável
+   * trocaria um risco hipotético por uma indisponibilidade real. O valor
+   * lido é o mesmo pelos dois nomes; o que muda é a promessa que o nome
+   * faz.
+   *
+   * `NEXT_PUBLIC_` manda o Next embutir o valor no bundle do navegador.
+   * Hoje isso não acontece porque nada no cliente importa `supabase/config`
+   * — e esse módulo agora é `server-only`, então passou a ser erro de
+   * build. O aviso existe para o nome sair da Vercel também, e não ficar
+   * de pé como armadilha para quem vier depois.
+   */
+  const soNomeAntigo =
+    !ambiente.SUPABASE_ANON_KEY?.trim() &&
+    Boolean(ambiente.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
+
+  if (soNomeAntigo) {
+    console.warn(
+      "[config] a chave anônima do Supabase ainda vem de " +
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY. O prefixo manda o Next embutir o " +
+        "valor no JavaScript do navegador, e quem a tiver lê telefone de " +
+        "todo prestador sem login. Crie SUPABASE_ANON_KEY na Vercel " +
+        "(Production) com o mesmo valor, apague a antiga e republique.",
+    );
+  }
+
   if (faltando.length === 0) return;
 
   throw new Error(
