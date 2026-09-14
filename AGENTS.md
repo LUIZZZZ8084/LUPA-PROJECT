@@ -873,6 +873,50 @@ duas, e a sexta passa.
 Contra atacante distribuído continua não bastando. O passo seguinte é rate
 limit na borda, e vale quando aparecer abuso medido — não antes.
 
+**E "abuso medido" passou a ter onde ser lido (#207).** A frase acima
+existia desde sempre pressupondo alguém medindo, e ninguém media: em
+12/09/2026 a pergunta "estamos perto de cair?" foi respondida abrindo o
+painel do Supabase e contando conexão à mão. *Gatilho de decisão que
+ninguém sabe onde consultar é decisão que nunca é tomada.*
+
+A Issue nasceu pedindo tabela nova — contagem por rota e por dia, no
+padrão de `buscas_sem_resultado`. Decisão do Luiz em 14/09/2026: **não se
+cria a tabela.** Duas razões, e a segunda é a que decide:
+
+- **Volume por rota a Vercel já conta**, e é o medidor da fatura dela —
+  justamente o teto que chega primeiro, porque o que acaba não é o banco
+  e sim a cota do plano. Uma cópia nossa seria dois números para a mesma
+  pergunta, e o nosso seria o pior dos dois.
+- **O sinal que faltava já estava no banco.** `tentativas_de_acesso` tem
+  chave, contagem e `bloqueado_ate`. O que não se tem é histórico — e
+  histórico é exatamente a parte que guarda dado. Criar tabela para ter
+  gráfico de tendência é abrir superfície de privacidade nova em troca de
+  um número que já dá para ler.
+
+O que entrou no lugar é a view `metricas_pressao` e um bloco no painel do
+admin: recusa agrupada **por ação**, ao vivo, sem tabela nova e sem
+histórico. Ele responde "está subindo?", que é a pergunta que destrava a
+decisão da borda.
+
+**A agregação mora no banco, e não é preferência de estilo.**
+`tentativas_de_acesso.chave` é `login:<e-mail>`, `cadastro:<ip>`,
+`recuperacao:<ip>` e `acao:<nome>:u:<usuarioId>` — *aquela tabela tem
+endereço de e-mail dentro*. Agregar em JavaScript traria a coluna para
+dentro do processo e deixaria a garantia em "ninguém vai renderizar isso",
+que é o tipo de promessa que este arquivo registra falhando. Na view, a
+chave não atravessa a fronteira: o que chega à aplicação já é contagem, e
+há teste que lista as colunas e reprova qualquer uma a mais.
+
+O segundo motivo é o de `metricas_caixa`: agregar na aplicação funciona
+hoje, com poucas linhas, e para de funcionar **exatamente sob abuso** — o
+único momento em que alguém abre este bloco.
+
+**E a mesma agregação existe duas vezes, porque a demonstração não tem
+banco.** Regra de agregação escrita em SQL e em TypeScript diverge sem
+ninguém ver; a defesa é o `schema.test.ts` rodar as duas sobre a mesma
+entrada e comparar linha a linha. *Quando não dá para ter uma
+implementação só, tenha um teste que prove que as duas concordam.*
+
 **Toda escrita tem teto, e ele é declarativo (#202).** Até 13/09/2026 só
 autenticação tinha limite; candidatar-se, publicar, avaliar, comprar
 crédito e mexer no perfil não tinham nenhum. O que acaba nesse caso não é
@@ -1016,10 +1060,21 @@ cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se
 contém é adivinhação de senha; aqui o que se contém é a criação em si.
 
-**Proteção contra bot ficou de fora de propósito.** Captcha atrapalha
-exatamente o público deste produto: aparelho antigo, dado móvel contado,
-pouca familiaridade digital. A hora de reavaliar é quando aparecer abuso
-real, não antes.
+**Captcha não vai existir, e isto é decisão, não espera.** Este parágrafo
+dizia "a hora de reavaliar é quando aparecer abuso real" — soava prudente e
+era adiamento. Decisão do Luiz em 14/09/2026: *"colocar captcha para
+público leigo e uma simples plataforma de consulta como a nossa é
+desnecessário."*
+
+O argumento é mais forte do que o que estava escrito aqui. Captcha cobra
+seu preço de **todo mundo** — aparelho antigo, dado móvel contado, pouca
+familiaridade digital — para conter um abuso que ainda não existe, e quem
+paga é justamente quem está procurando emprego. Custo certo contra
+benefício hipotético, e o custo recai sobre o público que o produto existe
+para atender.
+
+O que contém abuso aqui é o teto por ação (#202), que não pede nada a
+ninguém.
 
 ### Mato Grosso inteiro, começando por Sinop
 
