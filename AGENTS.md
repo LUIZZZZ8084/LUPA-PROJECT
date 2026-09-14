@@ -993,6 +993,24 @@ publicar não pode ser quem espera o cache vencer.
 
 E a janela é de 60 segundos porque a home promete "novas vagas entram todo
 dia": cache que atrasa a vaga nova quebra a promessa da própria tela.
+**As funções rodam onde o banco está (#213).** O Supabase da Lupa é
+`sa-east-1` (São Paulo) e o padrão da Vercel é `iad1` (Washington) — o
+log de invocação dizia isso em texto. Toda consulta atravessava o
+continente duas vezes: ~110–180 ms de ida e volta **por consulta**, antes
+de o Postgres fazer qualquer trabalho, e uma tela faz várias.
+
+Vale como aviso sobre onde procurar: a varredura media o lado do banco e
+encontrava tudo certo — 3 conexões, 12 MB indexados, consulta em fração
+de milissegundo. **O tempo não estava sendo gasto consultando, estava
+sendo gasto viajando**, e nenhum índice, teto ou cache conserta latência
+de rota. Isso também não aparece em teste local nem no `verify`: aparece
+no celular de quem está em Sinop.
+
+`gru1` fica em `vercel.json`, e **sem comentário junto**: a primeira
+tentativa pôs a explicação numa chave `$comentario-regions` e o deploy
+reprovou — o schema do `vercel.json` recusa propriedade que ele não
+conhece, e JSON não tem comentário. O porquê mora aqui e no PR; o arquivo
+guarda só o valor.
 **Limite de tentativa no cadastro é por origem, não por e-mail.** Quem
 cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se
