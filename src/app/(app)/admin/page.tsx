@@ -56,11 +56,19 @@ export default async function AdminPage() {
         esperar por um trabalho que não vem.
       */}
       <Panel className="mb-5 border-warn/25 bg-warn/5">
+        {/*
+          Este bloco descrevia o descarte de uma imagem que nunca existiu
+          (#233) — `Especie` jamais teve "documento" nem "selfie". Era a
+          mesma promessa que a #133 e a #209 corrigiram noutras telas,
+          deixada para trás aqui, e num quadro intitulado "Retenção de
+          dados": afirmação falsa de conformidade.
+        */}
         <p className="text-xs leading-relaxed text-muted">
-          <strong className="text-ink">Retenção de dados:</strong> ao aprovar ou
-          reprovar, a imagem do documento é excluída do storage e apenas o
-          status permanece no perfil. Isso mantém a Lupa em conformidade com a
-          LGPD sem guardar documento de ninguém.
+          <strong className="text-ink">Retenção de dados:</strong> a Lupa não
+          guarda imagem de documento nem selfie, porque não existe tela para
+          enviá-los — e nunca existiu. O que verifica prestador é o CPF (válido
+          e único) e empresa é o CNPJ, conferido na Receita. Esta fila existe
+          para o dia em que algum caso precisar de gente olhando.
         </p>
       </Panel>
 
