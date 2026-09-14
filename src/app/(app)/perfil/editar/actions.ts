@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { EstadoVerificacao } from "@/app/(app)/perfil/actions";
+import {
+  derrubarCacheDePrestadores,
+  revalidarBuscaDePrestadores,
+} from "@/lib/cache-de-listagem";
 import { criarAcao } from "@/server/action";
 import {
   apagarArquivoDoPerfil,
@@ -76,7 +80,7 @@ export const salvarAnuncio = criarAcao({
     await salvarPerfilDoPapel(usuarioId, papel, dados);
 
     // O anúncio aparece na busca e no perfil público do prestador.
-    revalidatePath("/servicos");
+    revalidarBuscaDePrestadores();
     revalidatePath(`/servicos/${usuarioId}`);
     revalidatePath("/perfil");
     return { salvo: true };
@@ -118,6 +122,7 @@ export async function salvarCnpjDoPrestador(
     revalidatePath("/perfil");
     revalidatePath("/perfil/editar");
     revalidatePath("/servicos", "layout");
+    derrubarCacheDePrestadores();
     return {
       ok: true,
       mensagem: "CNPJ removido. Seu perfil continua com o CPF.",

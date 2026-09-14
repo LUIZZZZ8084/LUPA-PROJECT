@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { revalidarBuscaDePrestadores } from "@/lib/cache-de-listagem";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { avaliarPrestador } from "@/server/avaliacoes/servico";
@@ -39,7 +40,7 @@ export const avaliar = criarAcao({
     // A nota média e a contagem mudam com a avaliação nova, e as duas
     // aparecem também na busca.
     revalidatePath(`/servicos/${prestadorId}`);
-    revalidatePath("/servicos");
+    revalidarBuscaDePrestadores();
 
     return { avaliado: true };
   },

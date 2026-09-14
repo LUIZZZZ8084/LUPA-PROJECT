@@ -33,6 +33,23 @@ function construtor() {
   return builder;
 }
 
+/*
+ * `unstable_cache` precisa do cache incremental do Next, que só existe
+ * dentro de uma requisição de verdade (#206). Aqui o que se mede é a
+ * consulta montada, não a infraestrutura de cache — então o envelope vira
+ * passagem direta.
+ *
+ * Isto é dublê de framework, não de regra nossa: a garantia de que a chave
+ * do cache não carrega sessão mora em `cache-de-listagem.test.ts`, que lê
+ * o código-fonte.
+ */
+vi.mock("next/cache", () => ({
+  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
+  revalidatePath: () => {},
+  revalidateTag: () => {},
+  updateTag: () => {},
+}));
+
 vi.mock("@/lib/supabase/config", () => ({
   isSupabaseConfigured: true,
   SUPABASE_URL: "https://exemplo.supabase.co",
@@ -41,6 +58,15 @@ vi.mock("@/lib/supabase/config", () => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ from: () => construtor() }),
+}));
+
+/*
+ * A busca cacheada usa o cliente **sem cookie** (#206), então é ele que
+ * precisa de dublê — o de `./server` já não é chamado por `getJobs` nem
+ * por `getProviders`.
+ */
+vi.mock("@/lib/supabase/publico", () => ({
+  clientePublico: () => ({ from: () => construtor() }),
 }));
 
 const { getJobs, getProviders } = await import("@/lib/data");

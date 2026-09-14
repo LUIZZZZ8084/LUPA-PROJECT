@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { derrubarCacheDePrestadores } from "@/lib/cache-de-listagem";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { erros } from "@/server/errors";
@@ -31,6 +32,12 @@ export const assinarMensalidade = criarAcao({
 
     revalidatePath("/perfil/assinatura");
     revalidatePath("/perfil");
+    /*
+     * A vitrine filtra por mensalidade em dia, então assinar e cancelar
+     * mudam quem aparece em `/servicos` — e com a consulta cacheada isso
+     * deixou de ser instantâneo por si só (#206).
+     */
+    derrubarCacheDePrestadores();
 
     redirect(checkoutUrl ?? `/pagamento/retorno?assinatura=${assinatura.id}`);
   },
@@ -59,6 +66,12 @@ export const cancelarRenovacaoMensal = criarAcao({
 
     revalidatePath("/perfil/assinatura");
     revalidatePath("/perfil");
+    /*
+     * A vitrine filtra por mensalidade em dia, então assinar e cancelar
+     * mudam quem aparece em `/servicos` — e com a consulta cacheada isso
+     * deixou de ser instantâneo por si só (#206).
+     */
+    derrubarCacheDePrestadores();
     return {};
   },
 });
