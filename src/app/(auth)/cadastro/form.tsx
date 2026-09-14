@@ -350,24 +350,27 @@ export function SignUpForm({ role }: { role: Role }) {
         )}
 
         {/*
-          A terceira ocorrência da mesma promessa, e a que o AGENTS.md cita
-          nominalmente (#209).
+          A quarta ocorrência da mesma promessa, e a pior das quatro (#233).
 
-          Ela descrevia como documento e selfie eram guardados e apagados —
-          texto que lê bem e que passou batido justamente por soar
-          responsável. Só que não há, e nunca houve, tela para enviar
-          nenhum dos dois. O rodapé de `/perfil` foi corrigido na #133; este
-          ficou para trás, que é o padrão registrado neste projeto: regra
-          corrigida num caminho e esquecida no irmão.
+          As três anteriores prometiam recurso inexistente. Esta afirmava
+          algo falso sobre **dado pessoal**, no instante em que a pessoa dá
+          o consentimento: dizia que CPF e CNPJ "não ficam guardados".
 
-          O que está aqui agora é o que de fato acontece: os documentos são
-          conferidos contra a base pública e **não ficam guardados**.
+          Os dois ficam. O AGENTS.md tem uma seção inteira — "CPF mora em
+          `usuarios`, não em `perfis_prestador`" — explicando onde cada um
+          fica e por quê. A tela contradizia a documentação de arquitetura
+          do próprio projeto, e o comentário que estava aqui afirmava, com
+          todas as letras, que descrevia o que de fato acontecia.
+
+          O texto de agora foi escrito lendo o schema, não a tela anterior.
         */}
         <p className="text-xs leading-relaxed text-faint">
           Ao criar a conta você concorda com os termos de uso e com o tratamento
-          dos seus dados conforme a LGPD. CPF e CNPJ são conferidos
-          automaticamente e não ficam guardados — permanece só a confirmação, no
-          seu perfil.
+          dos seus dados conforme a LGPD. Seu CPF fica guardado numa área
+          fechada, que só o servidor alcança, e nunca aparece para outras
+          pessoas — ele serve para conferir que é válido e que não está em uso
+          por outra conta. O CNPJ, por ser registro público, fica visível no seu
+          perfil. Não pedimos documento nem selfie.
         </p>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">

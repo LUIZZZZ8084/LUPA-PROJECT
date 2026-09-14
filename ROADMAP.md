@@ -12,6 +12,33 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 ## Concluído
 
+Segurança, na semana de 13→14/09/2026:
+
+- Teto de volume em toda escrita e teto de linhas em toda listagem
+  ([#202](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/202),
+  [#203](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/203))
+- Cache das listagens e funções na mesma região do banco
+  ([#206](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/206),
+  [#213](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/213))
+- Pressão nos tetos visível no painel, sem guardar quem
+  ([#207](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/207))
+- `search_path` fixo nas funções do banco
+  ([#219](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/219))
+- A chave anônima deixou de se chamar publicável
+  ([#221](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/221),
+  [#231](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/231))
+- CSP com nonce por requisição
+  ([#223](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/223))
+- Trocar a senha derruba as sessões antigas, inclusive pelo script de
+  admin ([#225](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/225),
+  [#230](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/230))
+- Confirmação de e-mail
+  ([#227](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/227))
+- Senha de admin trocada em produção
+  ([#69](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/69)) — a
+  troca só passou a derrubar as sessões antigas com a #230, que entrou
+  antes de o script rodar
+
 Base:
 
 - Autenticação própria (cadastro, login, sessão em JWT, RBAC por papel)
@@ -293,14 +320,16 @@ espalhado. Nada aqui está bloqueado por código.
 
 Trabalho que não é código: alguém precisa fazer com a mão, em produção.
 
-- [ ] Trocar a senha de admin —
-      [#69](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/69)
+- [ ] Ligar o 2FA na conta da Vercel —
+      [#229](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/229)
 
-      **Sem urgência**, decidido em 01/09/2026: só o Luiz e o Paulinho
-      operam a conta. Não há senha de admin no repositório — o
-      `criar-admin.mjs` lê do ambiente ou gera uma. O que a Issue trata é
-      que duas senhas passaram por conversa de chat em 25/08, então a
-      garantia se perdeu; não há indício de vazamento.
+      **Segurado em 14/09/2026**, e com motivo: o Paulinho usa a mesma
+      conta, e o plano Hobby não tem convite de membro — ligar hoje
+      barraria o acesso dele. A Issue traz o caminho que destrava sem
+      custo (semente TOTP compartilhada, que os dois escaneiam).
+
+      Continua sendo o maior risco aberto: aquela conta guarda o token do
+      Mercado Pago, a chave de serviço do Supabase e o `SESSION_SECRET`.
 
 ## Fora do escopo por decisão, não por esquecimento
 

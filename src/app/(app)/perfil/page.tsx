@@ -337,11 +337,39 @@ export default async function PerfilPage() {
           <FileText size={16} className="text-muted" />
           Seus dados e a LGPD
         </h2>
-        <p className="mt-2 text-xs leading-relaxed text-muted">
-          CPF e CNPJ são conferidos automaticamente contra a Receita Federal,
-          sem que você precise enviar documento ou selfie — nenhum dos dois fica
-          guardado em lugar nenhum. Permanece só a confirmação, no seu perfil.
-        </p>
+        {/*
+          Este bloco dizia duas coisas falsas ao mesmo tempo (#233): que o
+          CPF era conferido na Receita, e que nenhum dos dois documentos
+          ficava guardado.
+
+          O CPF nunca vai à Receita — consulta pública gratuita de CPF não
+          existe, é a #120. E os dois ficam guardados, em lugares
+          diferentes e de propósito: um fechado, outro público.
+
+          A diferença entre os dois é a coisa mais importante desta tela, e
+          era justamente o que o texto antigo apagava ao tratá-los como
+          iguais.
+        */}
+        <div className="mt-2 space-y-2 text-xs leading-relaxed text-muted">
+          <p>
+            <strong className="text-ink">
+              Seu CPF não aparece para ninguém.
+            </strong>{" "}
+            Ele fica numa área que só o servidor alcança — a mesma onde fica o
+            hash da sua senha — e serve para conferir que é válido e que não
+            está em uso por outra conta.
+          </p>
+          <p>
+            <strong className="text-ink">
+              O CNPJ é diferente, de propósito.
+            </strong>{" "}
+            É registro público: conferimos na Receita se a empresa existe e está
+            ativa, e mostramos o número no seu perfil junto com a razão social
+            que ela devolveu. Quem vai te contratar tem direito de conferir com
+            quem está tratando.
+          </p>
+          <p>Não pedimos documento nem selfie, e nunca pedimos.</p>
+        </div>
       </Panel>
     </PageShell>
   );

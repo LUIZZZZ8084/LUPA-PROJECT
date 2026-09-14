@@ -38,6 +38,36 @@ const AINDA_NAO_EXISTE: { termos: RegExp; recurso: string; issue: string }[] = [
       "#120 — depende de provedor pago de SMS, e nada no código escreve " +
       "`telefone_verificado = true`",
   },
+  /*
+   * As três de baixo não são promessa de recurso inexistente — são
+   * afirmação **falsa sobre dado pessoal** (#233), e uma delas aparecia no
+   * instante do consentimento. É por isso que elas moram nesta lista, que
+   * até então só cobrava funcionalidade.
+   */
+  {
+    termos: /(CPF|CNPJ)[^.]*n[ãa]o fica/i,
+    recurso: "o descarte de CPF ou CNPJ",
+    issue:
+      "#233 — os dois **ficam guardados**. CPF em `usuarios`, tabela sem " +
+      "grant para `anon`; CNPJ em `perfis_empresa`, que é pública de " +
+      "propósito, porque é registro público",
+  },
+  {
+    termos: /CPF e CNPJ[^.]*Receita/i,
+    recurso: "conferência de CPF na Receita",
+    issue:
+      "#120 — não existe consulta pública gratuita de CPF. Só o CNPJ vai " +
+      "à BrasilAPI; o CPF é validado por dígito e por unicidade, e dizer " +
+      "o contrário promete um rigor que não existe",
+  },
+  {
+    termos: /imagem do documento|documento é exclu[íi]d/i,
+    recurso: "armazenamento e descarte de imagem de documento",
+    issue:
+      "#233 — nenhuma imagem de documento jamais foi enviada; `Especie` " +
+      'nunca teve "documento" nem "selfie". Descrever o descarte de ' +
+      "algo que não existe é afirmação falsa de conformidade",
+  },
   {
     termos: /envie (o )?(documento|selfie)|documento e selfie/i,
     recurso: "envio de documento e selfie",
