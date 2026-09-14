@@ -1,23 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "$comentario-regions": [
-    "As funções rodam onde o banco está (#213).",
-    "",
-    "O Supabase da Lupa é sa-east-1 (São Paulo) e o padrão da Vercel é",
-    "iad1 (Washington). Toda consulta atravessava o continente duas vezes:",
-    "~110-180ms de ida e volta por consulta, antes de o Postgres fazer",
-    "qualquer trabalho — e uma tela faz várias.",
-    "",
-    "Isso não aparece em teste local nem no verify. Aparece no celular de",
-    "quem está em Sinop, que já paga latência de rádio por cima.",
-    "",
-    "Sem contrapartida para este app: todo o público está em Mato Grosso e",
-    "todos os dados em São Paulo. O CDN continua global e serve o estático",
-    "de onde sempre serviu; o que muda é onde a função executa.",
-    "",
-    "iad1 nunca foi decisão — era o padrão."
+  "regions": [
+    "gru1"
   ],
-  "regions": ["gru1"],
   "crons": [
     {
       "path": "/api/cron/reconciliar-pagamentos",
