@@ -166,6 +166,11 @@ export const SEM_ORCAMENTO: Record<string, string> = {
     "não por conta, porque quem quisesse usar isto como canal para mandar " +
     "e-mail em nome da Lupa trocaria de conta a cada tentativa. Mesma " +
     "escolha do cadastro e da recuperação de senha (#227).",
+  "suporte.enviar":
+    "tem limite próprio, por origem, dentro do serviço — e por origem, e " +
+    "não por conta, porque a página é **aberta**: quem não consegue entrar " +
+    "é exatamente quem mais precisa dela. Sem sessão não há por quem " +
+    "limitar, e o que se contém é o envio de e-mail em nome da Lupa (#235).",
   "auth.redefinir_senha":
     "o token é gasto na mesma instrução que o valida, e vale uma vez só — " +
     "não há volume a conter depois disso.",
