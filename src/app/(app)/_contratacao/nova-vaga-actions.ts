@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { revalidarBuscaDeVagas } from "@/lib/cache-de-listagem";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { avisarVagaNova } from "@/server/notificacoes/servico";
@@ -46,7 +47,7 @@ export const publicarVaga = criarAcao({
      * arquivo nao corrige os irmaos.
      */
     for (const base of BASES_DE_CONTRATACAO) revalidatePath(base);
-    revalidatePath("/vagas");
+    revalidarBuscaDeVagas();
     return {};
   },
 });

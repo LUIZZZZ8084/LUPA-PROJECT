@@ -43,10 +43,42 @@ const tabelasConsultadas: string[] = [];
 let respostaAtual: RespostaFalsa = { data: [], error: null };
 let ultimoBuilder: ReturnType<typeof criarQueryBuilder>;
 
+/*
+ * `unstable_cache` precisa do cache incremental do Next, que só existe
+ * dentro de uma requisição de verdade (#206). Aqui o que se mede é a
+ * consulta montada, não a infraestrutura de cache — então o envelope vira
+ * passagem direta.
+ *
+ * Isto é dublê de framework, não de regra nossa: a garantia de que a chave
+ * do cache não carrega sessão mora em `cache-de-listagem.test.ts`, que lê
+ * o código-fonte.
+ */
+vi.mock("next/cache", () => ({
+  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
+  revalidatePath: () => {},
+  revalidateTag: () => {},
+  updateTag: () => {},
+}));
+
 vi.mock("@/lib/supabase/config", () => ({
   SUPABASE_URL: "https://exemplo.supabase.co",
   SUPABASE_ANON_KEY: "chave",
   isSupabaseConfigured: true,
+}));
+
+/*
+ * A busca cacheada usa o cliente sem cookie (#206). Os dois dublês existem
+ * porque `data.ts` tem os dois caminhos: listagem (cacheada, sem cookie) e
+ * detalhe (por requisição).
+ */
+vi.mock("@/lib/supabase/publico", () => ({
+  clientePublico: () => ({
+    from: (tabela: string) => {
+      tabelasConsultadas.push(tabela);
+      ultimoBuilder = criarQueryBuilder(respostaAtual);
+      return ultimoBuilder;
+    },
+  }),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({

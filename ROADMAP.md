@@ -264,6 +264,10 @@ Qualidade:
   os números moram num arquivo só com o porquê de cada um, e onde o
   recorte pode esconder resultado a tela avisa —
   [#203](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/203)
+- Cache nas leituras de listagem, com a chave sem nada de sessão: a
+  consulta é guardada por 60s, a ordenação por proximidade continua por
+  requisição, e quem publica derruba a tag na hora —
+  [#206](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/206)
 
 ## Pendente
 

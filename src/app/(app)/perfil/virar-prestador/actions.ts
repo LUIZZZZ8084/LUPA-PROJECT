@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { derrubarCacheDePrestadores } from "@/lib/cache-de-listagem";
 import { criarAcao } from "@/server/action";
 import { temArmazenamento } from "@/server/arquivos/servico";
 import { criarSessao, sessaoAtual } from "@/server/auth/cookies";
@@ -39,6 +40,8 @@ export const ativarPrestador = criarAcao({
      * de candidato até navegar para longe o bastante.
      */
     revalidatePath("/", "layout");
+    // Ativar o papel muda quem a vitrine pode mostrar (#206).
+    derrubarCacheDePrestadores();
 
     return { papel };
   },

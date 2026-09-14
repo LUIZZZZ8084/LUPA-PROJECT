@@ -951,6 +951,48 @@ reprovaram porque o duble de consulta não tinha `.limit()`**. Não era
 defeito, era falta de espelho — e falso vermelho é o que ensina a
 ignorar teste. Quem acrescentar um método de consulta precisa
 acrescentá-lo aos dubles junto.
+**A consulta das listagens é cacheada; a página, nunca (#206).** O app era
+100% dinâmico — zero `revalidate`, zero `unstable_cache`, oito
+`force-dynamic` — e toda abertura de tela consultava o Postgres. Com 26
+contas isso não aparece; o que ele decide é o formato da conta quando
+aparecer, porque o que a Vercel cobra é invocação de função.
+
+**Cachear a página seria errado, e perigoso.** Ela é pessoal: `/vagas` e
+`/servicos` reordenam por proximidade de quem olha, e o app é todo atrás
+de login. A consulta, essa não é pessoal — depende dos filtros e de mais
+nada. A costura já existia no código, e foi a sorte do desenho:
+
+```
+consulta ao banco  →  recorte  →  ordenarVagas(itens, perto)
+   igual para todos                    personalizado
+```
+
+Então **a chave do cache carrega os filtros e nada de sessão** — inclusive
+não carrega `perto`, que chega junto dos filtros em `JobFilters` e parece
+mais um deles, mas é quem está olhando. Há teste lendo o código-fonte que
+reprova sessão na chave: o erro aqui não falha, ele funciona rápido
+mostrando a lista de alguém para outra pessoa.
+
+**O cliente cacheado é outro, e sem cookie.** `supabase/server.ts` chama
+`cookies()`, que é dado de requisição — e dado de requisição não existe
+dentro de um cache; usá-lo ali é erro em execução, não ineficiência. O
+cookie nunca decidiu nada nestas consultas: a Lupa não usa Supabase Auth,
+e a chave anônima alcança as views por `grant`, não por sessão. Isso é o
+que torna o cache **seguro**, não só possível.
+
+**Quem escreve derruba a tag, e é uma chamada só.** `revalidarBuscaDeVagas()`
+faz o `revalidatePath` e o `updateTag` juntos, porque este projeto já
+esqueceu essa dupla duas vezes (#189 e #193, em arquivos irmãos) — e
+esquecer agora custa o sintoma da #76: a empresa publica, vê a vaga no
+painel revalidado por path e **não se acha na busca**, servida do cache.
+Há teste que reprova `revalidatePath("/vagas")` solto.
+
+**`updateTag`, não `revalidateTag`:** o primeiro dá *read-your-own-writes*
+dentro da própria server action, que é exatamente o caso — quem acabou de
+publicar não pode ser quem espera o cache vencer.
+
+E a janela é de 60 segundos porque a home promete "novas vagas entram todo
+dia": cache que atrasa a vaga nova quebra a promessa da própria tela.
 **Limite de tentativa no cadastro é por origem, não por e-mail.** Quem
 cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se

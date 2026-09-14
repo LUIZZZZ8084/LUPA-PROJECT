@@ -9,6 +9,7 @@ import type { Candidatura } from "@/server/candidaturas/tipos";
 import { repositorioUsuarios } from "@/server/repositories";
 import { RepositorioVagasMemoria, repositorioVagas } from "@/server/vagas";
 import type { Vaga } from "@/server/vagas/tipos";
+import { emCache, TAG_PRESTADORES, TAG_VAGAS } from "./cache-de-listagem";
 import { passouDoPrazo, vagaExpirada } from "./format";
 import {
   type Recorte,
@@ -31,6 +32,7 @@ import {
 } from "./mock-data";
 import { type Origem, porProximidade } from "./proximidade";
 import { isSupabaseConfigured } from "./supabase/config";
+import { clientePublico } from "./supabase/publico";
 import { createClient } from "./supabase/server";
 import { clienteDeServico } from "./supabase/service";
 import type {
@@ -270,30 +272,77 @@ export async function getJobs(
   filters: JobFilters = {},
 ): Promise<Recorte<JobListing>> {
   if (isSupabaseConfigured) {
-    const supabase = await createClient();
+    /*
+     * Cliente **sem cookie**, de propósito: o de `./supabase/server` chama
+     * `cookies()`, e dado de requisição não existe dentro de um cache.
+     * Cookie nunca decidiu nada nesta consulta — a chave anônima alcança a
+     * view por `grant`, não por sessão (#206).
+     */
+    const supabase = clientePublico();
     if (supabase) {
-      let query = supabase
-        .from("job_listings")
-        .select("*")
-        .eq("status", "aberta")
-        // Vaga expirada continua "aberta" no banco até a empresa
-        // reativar — sem este filtro ela vazaria para a busca pública
-        // mesmo sem ninguém ter olhado o painel dela ainda.
-        .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false })
-        .limit(TETO_BUSCA + 1);
+      /*
+       * A chave carrega os filtros e **nada de quem pergunta**.
+       *
+       * `filters.perto` fica de fora por construção: ele não entra na
+       * consulta, entra na ordenação, depois — e é justamente isso que
+       * torna guardar esta resposta seguro. Pôr sessão aqui transformaria
+       * economia de consulta em lista de uma pessoa servida a outra.
+       */
+      const chave = [
+        "vagas",
+        filters.city ?? "",
+        filters.category ?? "",
+        filters.contract_type ?? "",
+        filters.q ?? "",
+      ];
 
-      if (filters.city) query = query.eq("city", filters.city);
-      if (filters.category) query = query.eq("category", filters.category);
-      if (filters.contract_type)
-        query = query.eq("contract_type", filters.contract_type);
-      if (filters.q) {
-        const t = termoParaFiltro(filters.q);
-        query = query.or(`title.ilike.${t},description.ilike.${t}`);
-      }
+      const { data, error } = await emCache(
+        async () => {
+          let query = supabase
+            .from("job_listings")
+            .select("*")
+            .eq("status", "aberta")
+            // Vaga expirada continua "aberta" no banco até a empresa
+            // reativar — sem este filtro ela vazaria para a busca pública
+            // mesmo sem ninguém ter olhado o painel dela ainda.
+            .gt("expires_at", new Date().toISOString())
+            .order("created_at", { ascending: false })
+            .limit(TETO_BUSCA + 1);
 
-      const { data, error } = await query;
-      if (error) throw falhaDeConsulta("job_listings", error);
+          if (filters.city) query = query.eq("city", filters.city);
+          if (filters.category) query = query.eq("category", filters.category);
+          if (filters.contract_type)
+            query = query.eq("contract_type", filters.contract_type);
+          if (filters.q) {
+            const t = termoParaFiltro(filters.q);
+            query = query.or(`title.ilike.${t},description.ilike.${t}`);
+          }
+
+          /*
+           * Sem desestruturar aqui, de propósito.
+           *
+           * `const { data, error }` é o padrão que
+           * `dados-sem-mock-silencioso.test.ts` conta para garantir que todo
+           * erro termina em exceção — e ele conta a linha, não a intenção.
+           * Duas desestruturações por consulta (uma dentro do cache, outra
+           * fora) fariam o teste acusar erro não tratado onde ele só está
+           * sendo atravessado. O invariante continua valendo: quem olha o
+           * erro e lança é o lado de fora.
+           *
+           * E o que cruza a fronteira do cache precisa ser serializável:
+           * o objeto de erro do Supabase não é, a mensagem é.
+           */
+          const resposta = await query;
+          return {
+            data: resposta.data,
+            error: resposta.error ? resposta.error.message : null,
+          };
+        },
+        chave,
+        TAG_VAGAS,
+      );
+
+      if (error) throw falhaDeConsulta("job_listings", { message: error });
       /*
        * Recorta **antes** de ordenar por proximidade.
        *
@@ -429,30 +478,66 @@ export async function getProviders(
   filters: ProviderFilters = {},
 ): Promise<Recorte<ProviderListing>> {
   if (isSupabaseConfigured) {
-    const supabase = await createClient();
+    // Sem cookie, pela mesma razão de `getJobs` (#206).
+    const supabase = clientePublico();
     if (supabase) {
-      let query = supabase
-        .from("provider_listings")
-        .select("*")
-        .eq("doc_verified", true)
-        // Sem mensalidade em dia, o perfil não aparece na busca — os
-        // dados continuam salvos, e a página do próprio perfil não
-        // filtra por isto (mesma razão de `doc_verified`).
-        .gt("subscription_valid_until", new Date().toISOString())
-        .order("avg_rating", { ascending: false })
-        .limit(TETO_BUSCA + 1);
+      // Filtros, nunca sessão — ver o comentário longo em `getJobs`.
+      const chave = [
+        "prestadores",
+        filters.city ?? "",
+        filters.category ?? "",
+        String(filters.min_rating ?? ""),
+        filters.q ?? "",
+      ];
 
-      if (filters.city) query = query.eq("city", filters.city);
-      if (filters.category) query = query.eq("category_slug", filters.category);
-      if (filters.min_rating)
-        query = query.gte("avg_rating", filters.min_rating);
-      if (filters.q) {
-        const t = termoParaFiltro(filters.q);
-        query = query.or(`full_name.ilike.${t},description.ilike.${t}`);
-      }
+      const { data, error } = await emCache(
+        async () => {
+          let query = supabase
+            .from("provider_listings")
+            .select("*")
+            .eq("doc_verified", true)
+            // Sem mensalidade em dia, o perfil não aparece na busca — os
+            // dados continuam salvos, e a página do próprio perfil não
+            // filtra por isto (mesma razão de `doc_verified`).
+            .gt("subscription_valid_until", new Date().toISOString())
+            .order("avg_rating", { ascending: false })
+            .limit(TETO_BUSCA + 1);
 
-      const { data, error } = await query;
-      if (error) throw falhaDeConsulta("provider_listings", error);
+          if (filters.city) query = query.eq("city", filters.city);
+          if (filters.category)
+            query = query.eq("category_slug", filters.category);
+          if (filters.min_rating)
+            query = query.gte("avg_rating", filters.min_rating);
+          if (filters.q) {
+            const t = termoParaFiltro(filters.q);
+            query = query.or(`full_name.ilike.${t},description.ilike.${t}`);
+          }
+
+          /*
+           * Sem desestruturar aqui, de propósito.
+           *
+           * `const { data, error }` é o padrão que
+           * `dados-sem-mock-silencioso.test.ts` conta para garantir que todo
+           * erro termina em exceção — e ele conta a linha, não a intenção.
+           * Duas desestruturações por consulta (uma dentro do cache, outra
+           * fora) fariam o teste acusar erro não tratado onde ele só está
+           * sendo atravessado. O invariante continua valendo: quem olha o
+           * erro e lança é o lado de fora.
+           *
+           * E o que cruza a fronteira do cache precisa ser serializável:
+           * o objeto de erro do Supabase não é, a mensagem é.
+           */
+          const resposta = await query;
+          return {
+            data: resposta.data,
+            error: resposta.error ? resposta.error.message : null,
+          };
+        },
+        chave,
+        TAG_PRESTADORES,
+      );
+
+      if (error) throw falhaDeConsulta("provider_listings", { message: error });
       const { itens, houveCorte } = recortar(
         (data ?? []) as unknown as ProviderListing[],
         TETO_BUSCA,

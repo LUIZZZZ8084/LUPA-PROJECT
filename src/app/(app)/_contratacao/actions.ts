@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidarBuscaDeVagas } from "@/lib/cache-de-listagem";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { schemaMoverCandidatura } from "@/server/candidaturas/schemas";
@@ -37,7 +38,7 @@ export const encerrarVaga = criarAcao({
     await encerrarVagaServico(sessao, id);
 
     revalidarContratacao();
-    revalidatePath("/vagas");
+    revalidarBuscaDeVagas();
     revalidatePath(`/vagas/${id}`);
     return {};
   },
@@ -57,7 +58,7 @@ export const reativarVaga = criarAcao({
     await reativarVagaServico(sessao, id);
 
     revalidarContratacao();
-    revalidatePath("/vagas");
+    revalidarBuscaDeVagas();
     revalidatePath(`/vagas/${id}`);
     return {};
   },
