@@ -2,11 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { z } from "zod";
 import { criarAcao } from "@/server/action";
 import { criarSessao, encerrarSessao } from "@/server/auth/cookies";
 import { schemaCadastro, schemaLogin } from "@/server/auth/schemas";
 import { cadastrar, entrar } from "@/server/auth/servico";
+import { enviarVerificacaoDeEmail } from "@/server/auth/verificacao-email";
+import { urlPublica } from "@/server/url-publica";
 
 /**
  * Server actions de conta.
@@ -43,6 +46,29 @@ export const cadastrarConta = criarAcao({
     // Entra já logado: pedir que a pessoa faça login logo depois de criar a
     // conta é um passo a mais para abandonar.
     await criarSessao(usuario.id, usuario.papel);
+
+    /*
+     * A confirmação de e-mail sai **depois da resposta** (#227).
+     *
+     * Mesma disciplina do aviso de vaga e do registro de visualização:
+     * quem acabou de se cadastrar quer entrar no app, e o e-mail é
+     * consequência. Dentro do caminho, um Resend lento ou fora do ar
+     * atrasaria ou derrubaria o cadastro — e nenhum provedor de terceiro
+     * pode decidir se alguém consegue criar conta aqui. É a mesma razão
+     * que mantém a lista de municípios versionada em vez de buscada no
+     * IBGE em execução.
+     *
+     * Falhar aqui não deixa rastro na tela de propósito: a pessoa não pode
+     * fazer nada a respeito neste segundo, e o perfil dela já mostra o
+     * estado com um botão de reenviar.
+     */
+    const origem = await origemDaRequisicao();
+    after(async () => {
+      await enviarVerificacaoDeEmail(usuario.id, {
+        urlBase: urlPublica(),
+        origem,
+      }).catch(() => {});
+    });
 
     revalidatePath("/", "layout");
 

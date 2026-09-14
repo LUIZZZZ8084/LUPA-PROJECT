@@ -33,6 +33,7 @@ import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
 import { direitoDePublicar } from "@/server/carteiras/servico";
 import { perfilParaEditar } from "@/server/perfil/servico";
+import { ConfirmarEmail } from "./confirmar-email";
 import { VerificarCnpj } from "./verificar-cnpj";
 
 export const metadata: Metadata = {
@@ -256,6 +257,15 @@ export default async function PerfilPage() {
             phoneVerified={usuario.telefoneVerificado}
             docVerified={usuario.docVerificado}
           />
+
+          {/*
+            Só aparece para quem ainda não confirmou (#227). Selo verde
+            permanente para quem já confirmou seria ruído — a pessoa não
+            tem o que fazer com ele —, e é a mesma lição do selo de
+            telefone, que saiu na #209 por dizer a mesma coisa para
+            sempre.
+          */}
+          <ConfirmarEmail verificado={usuario.emailVerificado} />
 
           <div className="mt-5 border-t border-line pt-4">
             <SairButton />

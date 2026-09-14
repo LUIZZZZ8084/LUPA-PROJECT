@@ -34,6 +34,13 @@ export const ROTAS: readonly RotaVarrida[] = [
   { path: "/cadastro?tipo=empresa", nome: "Cadastro de empresa" },
   { path: "/entrar", nome: "Login" },
   { path: "/esqueci-senha", nome: "Esqueci minha senha" },
+  /*
+   * Sem token ela responde 200 com a tela de "link inválido", que é uma
+   * das duas variantes e a única alcançável sem um e-mail de verdade. A
+   * outra — confirmação bem-sucedida — é exercitada em
+   * verificacao-de-email.spec.ts.
+   */
+  { path: "/verificar-email", nome: "Confirmar e-mail" },
   { path: "/perfil", nome: "Perfil" },
   { path: "/perfil/editar", nome: "Editar perfil" },
   { path: "/perfil/candidaturas", nome: "Minhas candidaturas" },

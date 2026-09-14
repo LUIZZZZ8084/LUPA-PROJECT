@@ -590,8 +590,8 @@ Postgres; cadastro e login são exercitáveis sem infraestrutura, o que mantém
 o modo demonstração vivo.
 
 **Perdas.** Verificação de e-mail e recuperação de senha vinham de graça
-e passaram a ter de ser construídas. **A segunda foi, na #174**; a
-primeira continua em aberto.
+e passaram a ter de ser construídas. A segunda foi na #174, e **a
+primeira na #227** — as duas seções abaixo.
 
 ### Esqueci minha senha, e os três cuidados que a fazem segura (#174)
 
@@ -660,6 +660,73 @@ nenhuma das duas leva prefixo `NEXT_PUBLIC_`.
 celular, e template com imagem e botão colorido é o formato que os
 provedores mais pontuam como promoção — justamente o e-mail que precisa
 chegar na caixa de entrada, e rápido.
+
+### Confirmar o e-mail, e o que isso resolve de verdade (#227)
+
+`usuarios.email_verificado` existia desde o começo, era lido pelos
+repositórios, e **nada nunca escreveu nele**. É a armadilha que este
+arquivo já registra três vezes: estado declarado sem produtor — parece
+tratado, e o teste que existe passa, porque ninguém escreveu o caso que
+nunca acontece.
+
+**O dano foi medido antes de a solução ser dimensionada**, e vale registrar
+porque a resposta encolheu o escopo:
+
+- **Não é spam.** O único e-mail que a Lupa manda é o de recuperação de
+  senha, e ele só sai quando alguém digita aquele endereço em "esqueci
+  minha senha". Endereço não confirmado não recebe nada que ninguém pediu.
+- **Não é tomar conta alheia.** Quem se cadastra com o e-mail de outra
+  pessoa fica com uma conta sob um endereço que não controla — e o dono de
+  verdade a retoma pela recuperação, que cai na caixa dele.
+- **É o erro de digitação.** Quem erra o próprio e-mail fica com uma conta
+  que **não tem como ser recuperada**, e descobre no dia em que esquecer a
+  senha. Nesse dia não há suporte possível: não existe como provar que a
+  conta é dele, nem como trocar a senha de alguém sem a antiga.
+
+**Por isso não bloqueia nada.** Nem login, nem candidatar-se, nem publicar.
+Bloquear puniria as contas que já existem por uma verificação que não
+existia quando foram criadas, e puniria quem procura emprego por causa de
+um provedor de e-mail fora do ar. O valor está em a conta ser recuperável,
+não em barrar. *Quando a proteção não é contra um atacante, e sim contra
+um engano, ela informa — não fecha a porta.*
+
+**O token é o mesmo material da recuperação, na mesma tabela** — segredo
+aleatório, guardado em hash, uso único, com prazo. Tabela gêmea divergiria
+na primeira vez que alguém mexesse num lado só.
+
+**O que ele não pode ser é um token que serve para as duas coisas.** O de
+verificação sai com muito mais liberdade — no cadastro e a cada
+"reenviar" —, e se ele também redefinisse senha, cada reenvio seria mais um
+link de redefinição circulando, sem a pessoa ter pedido nenhum. Por isso
+`finalidade` entra na **instrução que consome** o token, junto do hash, e
+não numa checagem antes: é a mesma família de corrida que a aprovação de
+pagamento e o consumo de crédito de vaga já resolvem assim.
+
+**O prazo é de 24 horas, e não de uma como na recuperação.** Os dois links
+respondem a urgências diferentes: quem pede para redefinir a senha está com
+o navegador aberto agora, e o prazo curto limita a janela de um link
+vazado. A confirmação chega junto com o cadastro, e é comum a pessoa
+terminar no celular e só abrir a caixa de entrada à noite — uma hora
+transformaria o link num link morto, e quem clicasse concluiria que o app
+está quebrado.
+
+**O envio sai por `after()`**, depois da resposta, como o aviso de vaga e o
+registro de visualização. Quem acabou de se cadastrar quer entrar no app; e
+nenhum provedor de terceiro pode decidir se alguém consegue criar conta
+aqui — a mesma razão que mantém a lista de municípios versionada em vez de
+buscada no IBGE em execução.
+
+**A tela de confirmação é aberta**, em `(auth)`, e isso não é descuido: a
+pessoa quase sempre clica no link do celular, que pode não ser o aparelho
+onde ela está logada. Exigir sessão mandaria quem confirmou para um login —
+e o token, que é de uso único, já teria sido gasto ou nem chegaria a ser
+lido.
+
+**O perfil só mostra o aviso para quem não confirmou.** Selo verde
+permanente seria ruído: a pessoa não tem o que fazer com ele. É a mesma
+lição do selo de telefone, que saiu na #209 por dizer a mesma coisa para
+sempre — e o texto não dramatiza, porque nada deixa de funcionar sem a
+confirmação. *Aviso que exagera ensina a ignorar aviso.*
 
 ### Argon2id com parâmetros da OWASP
 

@@ -42,10 +42,26 @@ export interface Usuario {
 }
 
 /** O que pode circular pela aplicação: sem hash de senha. */
+/**
+ * Para que serve um token de uso único (#227).
+ *
+ * A tabela nasceu só para recuperação de senha; a verificação de e-mail
+ * usa exatamente o mesmo material — segredo aleatório, guardado em hash,
+ * de uso único, com prazo. Uma tabela gêmea divergiria na primeira vez que
+ * alguém mexesse num lado só.
+ *
+ * O que ela **não** pode ser é um token que serve para as duas coisas. O
+ * de verificação é mandado com mais liberdade — no cadastro, e a cada
+ * "reenviar" — e se ele também trocasse senha, cada reenvio seria mais um
+ * link de redefinição circulando por aí.
+ */
+export type FinalidadeToken = "recuperacao" | "verificacao_email";
+
 export interface NovoTokenDeRecuperacao {
   usuarioId: string;
   tokenHash: string;
   expiraEm: string;
+  finalidade: FinalidadeToken;
 }
 
 export type UsuarioPublico = Omit<Usuario, "senhaHash">;
@@ -254,7 +270,11 @@ export interface RepositorioUsuarios {
    */
   consumirTokenDeRecuperacao(
     tokenHash: string,
+    finalidade: FinalidadeToken,
   ): Promise<{ usuarioId: string } | null>;
+
+  /** Marca o e-mail como confirmado (#227). */
+  definirEmailVerificado(id: string): Promise<void>;
   registrarAcesso(id: string): Promise<void>;
 
   /**

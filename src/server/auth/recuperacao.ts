@@ -139,6 +139,7 @@ export async function pedirRecuperacao(
     usuarioId: usuario.id,
     tokenHash: hashDoToken(token),
     expiraEm: new Date(Date.now() + VALIDADE_MS).toISOString(),
+    finalidade: "recuperacao",
   });
 
   const link = `${opcoes.urlBase}/redefinir-senha?token=${token}`;
@@ -218,7 +219,16 @@ export async function redefinirSenha(
   novaSenha: string,
 ): Promise<{ usuarioId: string; papel: string }> {
   const repo = repositorioUsuarios();
-  const consumido = await repo.consumirTokenDeRecuperacao(hashDoToken(token));
+  const consumido = await repo.consumirTokenDeRecuperacao(
+    hashDoToken(token),
+    /*
+     * Só token de recuperação troca senha (#227). O de verificação de
+     * e-mail sai com muito mais liberdade — no cadastro e a cada
+     * "reenviar" —, e sem esta linha cada reenvio seria mais um link de
+     * redefinição circulando.
+     */
+    "recuperacao",
+  );
 
   if (!consumido) {
     throw erros.validacao(

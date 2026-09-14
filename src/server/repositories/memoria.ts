@@ -5,6 +5,7 @@ import type {
   EdicaoCandidato,
   EdicaoEmpresa,
   EdicaoPrestador,
+  FinalidadeToken,
   NovoTokenDeRecuperacao,
   PerfilCandidato,
   PerfilEmpresa,
@@ -36,7 +37,12 @@ export class RepositorioMemoria implements RepositorioUsuarios {
    */
   private tokensDeRecuperacao = new Map<
     string,
-    { usuarioId: string; expiraEm: string; usado: boolean }
+    {
+      usuarioId: string;
+      expiraEm: string;
+      finalidade: FinalidadeToken;
+      usado: boolean;
+    }
   >();
   private porEmailIndice = new Map<string, string>();
   private cpfs = new Set<string>();
@@ -115,19 +121,29 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.tokensDeRecuperacao.set(dados.tokenHash, {
       usuarioId: dados.usuarioId,
       expiraEm: dados.expiraEm,
+      finalidade: dados.finalidade,
       usado: false,
     });
   }
 
   async consumirTokenDeRecuperacao(
     tokenHash: string,
+    finalidade: FinalidadeToken,
   ): Promise<{ usuarioId: string } | null> {
     const token = this.tokensDeRecuperacao.get(tokenHash);
     if (!token || token.usado) return null;
+    // Finalidade errada é a mesma resposta de token inexistente: quem
+    // pergunta não precisa saber que o token existe para outra coisa.
+    if (token.finalidade !== finalidade) return null;
     if (new Date(token.expiraEm).getTime() <= Date.now()) return null;
 
     this.tokensDeRecuperacao.set(tokenHash, { ...token, usado: true });
     return { usuarioId: token.usuarioId };
+  }
+
+  async definirEmailVerificado(id: string): Promise<void> {
+    const usuario = this.usuarios.get(id);
+    if (usuario) this.usuarios.set(id, { ...usuario, emailVerificado: true });
   }
 
   async atualizarPapel(id: string, papel: Papel): Promise<void> {

@@ -78,6 +78,7 @@ drop function if exists creditar_vaga(uuid, integer) cascade;
 drop function if exists tocar_atualizado_em() cascade;
 
 -- Os tipos enum por último: as colunas que os usavam já se foram.
+drop type if exists finalidade_token cascade;
 drop type if exists status_assinatura cascade;
 drop type if exists status_pagamento cascade;
 drop type if exists tipo_pagamento cascade;
