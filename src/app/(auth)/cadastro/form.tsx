@@ -9,6 +9,7 @@ import {
   CampoCidade,
   useCidade,
 } from "@/components/cidade-e-bairro";
+import { LinksInstitucionais } from "@/components/links-institucionais";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -372,6 +373,8 @@ export function SignUpForm({ role }: { role: Role }) {
           por outra conta. O CNPJ, por ser registro público, fica visível no seu
           perfil. Não pedimos documento nem selfie.
         </p>
+
+        <LinksInstitucionais />
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
           <p className="text-xs text-muted">

@@ -143,6 +143,15 @@ const ABERTAS = [
   "/esqueci-senha",
   "/redefinir-senha",
   "/verificar-email",
+  /*
+   * As três institucionais (#235). Termos e Política precisam ser legíveis
+   * **antes** de criar a conta — é onde a pessoa consente. E o suporte é
+   * aberto porque quem não consegue entrar é exatamente quem mais precisa
+   * dele: exigir sessão ali fecharia a porta no caso mais comum.
+   */
+  "/termos",
+  "/privacidade",
+  "/suporte",
 ];
 
 /** Para onde mandar quem não tem sessão. */
