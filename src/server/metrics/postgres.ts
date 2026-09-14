@@ -8,6 +8,7 @@ import type {
   CadastrosPorDia,
   Caixa,
   DistribuicaoLocal,
+  PressaoNoTeto,
   RepositorioMetricas,
   Totais,
 } from "./tipos";
@@ -135,5 +136,37 @@ export class RepositorioMetricasPostgres implements RepositorioMetricas {
       cobrancas: Number(data?.cobrancas ?? 0),
       contestacoes: Number(data?.contestacoes ?? 0),
     };
+  }
+
+  async pressaoNosTetos(limite: number): Promise<PressaoNoTeto[]> {
+    const supabase = await cliente();
+
+    /*
+     * `select("*")` aqui é o que se quer, e vale dizer por quê: a view
+     * **não tem** a coluna `chave`. Ela foi projetada fora em SQL
+     * justamente para que nenhuma consulta desta camada consiga trazer
+     * e-mail de volta por engano — pedir tudo aqui é seguro porque o
+     * "tudo" já é contagem.
+     *
+     * A ordem põe na frente o que decide alguma coisa: bloqueio primeiro,
+     * porque é o sinal de abuso que a decisão do Cloudflare espera;
+     * chamadas depois, para o dia em que nada estiver bloqueado.
+     */
+    const { data, error } = await supabase
+      .from("metricas_pressao")
+      .select("*")
+      .order("bloqueadas", { ascending: false })
+      .order("chamadas", { ascending: false })
+      .limit(limite);
+
+    if (error) throw erros.indisponivel(`pressão: ${error.message}`);
+
+    return (data ?? []).map((l) => ({
+      rotulo: String(l.rotulo ?? ""),
+      chaves: Number(l.chaves ?? 0),
+      chamadas: Number(l.chamadas ?? 0),
+      bloqueadas: Number(l.bloqueadas ?? 0),
+      pico: Number(l.pico ?? 0),
+    }));
   }
 }
