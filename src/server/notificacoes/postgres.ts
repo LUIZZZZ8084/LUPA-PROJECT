@@ -1,5 +1,6 @@
 import "server-only";
 
+import { TETO_DO_DONO, TETO_ENVIO_DE_AVISO } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
 import type {
@@ -70,7 +71,8 @@ export class RepositorioNotificacoesPostgres
     const { error } = await supabase
       .from("preferencias_notificacao")
       .delete()
-      .eq("usuario_id", usuarioId);
+      .eq("usuario_id", usuarioId)
+      .limit(TETO_DO_DONO);
     if (error) throw erros.indisponivel(error.message);
   }
 
@@ -101,7 +103,8 @@ export class RepositorioNotificacoesPostgres
         .from("preferencias_notificacao")
         .select("usuario_id")
         .eq("cidade", cidade)
-        .is("categoria", null),
+        .is("categoria", null)
+        .limit(TETO_ENVIO_DE_AVISO),
       // Vaga sem categoria só alcança quem pediu tudo: sem o campo, não há
       // como saber se ela interessa a quem escolheu uma área.
       categoria === null
@@ -110,7 +113,8 @@ export class RepositorioNotificacoesPostgres
             .from("preferencias_notificacao")
             .select("usuario_id")
             .eq("cidade", cidade)
-            .eq("categoria", categoria),
+            .eq("categoria", categoria)
+            .limit(TETO_ENVIO_DE_AVISO),
     ]);
 
     const erroPrefs = todaCidade.error ?? daCategoria.error;
@@ -124,7 +128,8 @@ export class RepositorioNotificacoesPostgres
       .select("usuario_id, endpoint, p256dh, auth")
       // `Set` porque as duas consultas acima podem trazer a mesma pessoa
       // se ela tiver preferência com e sem categoria em algum momento.
-      .in("usuario_id", [...new Set(prefs.map((p) => String(p.usuario_id)))]);
+      .in("usuario_id", [...new Set(prefs.map((p) => String(p.usuario_id)))])
+      .limit(TETO_ENVIO_DE_AVISO);
 
     if (error) throw erros.indisponivel(error.message);
     return (data ?? []).map(paraInscricao);
@@ -158,7 +163,8 @@ export class RepositorioNotificacoesPostgres
     const { data, error } = await supabase
       .from("inscricoes_push")
       .select("usuario_id, endpoint, p256dh, auth")
-      .eq("usuario_id", usuarioId);
+      .eq("usuario_id", usuarioId)
+      .limit(TETO_DO_DONO);
 
     if (error) throw erros.indisponivel(error.message);
     return (data ?? []).map(paraInscricao);

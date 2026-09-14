@@ -1,5 +1,6 @@
 import "server-only";
 
+import { TETO_DO_DONO } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
 import type {
@@ -52,7 +53,8 @@ export class RepositorioPublicacoesPostgres implements RepositorioPublicacoes {
       .from("publicacoes")
       .select("*")
       .eq("autor_id", autorId)
-      .order("criado_em", { ascending: false });
+      .order("criado_em", { ascending: false })
+      .limit(TETO_DO_DONO);
 
     if (status) query = query.eq("status", status);
 

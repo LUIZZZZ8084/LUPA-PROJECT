@@ -918,6 +918,39 @@ o ambiente dele que se declara diferente.*
 `>= max`, então quem chama soma 1 — sem isso, um orçamento escrito como 15
 deixaria passar 14, e a tabela mentiria sobre si mesma por uma unidade que
 ninguém confere.
+**E toda listagem tem teto de linhas (#203).** Nenhuma consulta de lista
+tinha — eram 23. Com 8 vagas isso é indistinguível de ter; com 5.000,
+toda abertura de `/vagas` puxa a tabela inteira, e o custo cresce por
+volume de dado, não por número de gente. É o teto que chega primeiro de
+verdade, e chega em silêncio: nada quebra, só fica mais caro e mais lento
+até parar.
+
+Os números moram em `src/lib/limites-de-lista.ts`, com o porquê de cada
+um, e há teste que varre `src/lib` e `src/server` reprovando consulta de
+lista nova sem `.limit()`.
+
+**Por que teto e não paginação de verdade.** `/vagas` e `/servicos`
+buscam e **reordenam por proximidade em JavaScript**. Paginar no banco do
+jeito ingênuo quebraria isso: a página 1 viria pelas mais recentes e a
+proximidade valeria só dentro daquelas — alguém de Sinop deixaria de ver
+a vaga de Sinop porque ela é a 30ª mais recente. Seria recriar a #76. O
+teto preserva o sinal que o banco já ordena (recência para vaga, nota
+para prestador) e a proximidade reordena dentro do recorte. Paginação de
+verdade exige a escada de proximidade em SQL, e isso exige o mapa de
+regiões do IBGE no banco — hoje é arquivo versionado.
+
+**O recorte é dito na tela**, pela mesma razão que a ordenação já era:
+recorte que não se anuncia é filtro invisível. E o total da home virou
+"mais de N" quando há corte — número que para de crescer e continua se
+apresentando como total é a mesma mentira do "faturamento estimado" que
+somava zero, e **ninguém desconfia de número**, que é o que os torna
+caros.
+
+Efeito colateral que vale registrar: **seis testes de repositório
+reprovaram porque o duble de consulta não tinha `.limit()`**. Não era
+defeito, era falta de espelho — e falso vermelho é o que ensina a
+ignorar teste. Quem acrescentar um método de consulta precisa
+acrescentá-lo aos dubles junto.
 **Limite de tentativa no cadastro é por origem, não por e-mail.** Quem
 cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se

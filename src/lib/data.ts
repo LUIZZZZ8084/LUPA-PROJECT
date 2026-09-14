@@ -11,6 +11,15 @@ import { RepositorioVagasMemoria, repositorioVagas } from "@/server/vagas";
 import type { Vaga } from "@/server/vagas/tipos";
 import { passouDoPrazo, vagaExpirada } from "./format";
 import {
+  type Recorte,
+  recortar,
+  TETO_ADMIN,
+  TETO_AVALIACOES,
+  TETO_BUSCA,
+  TETO_CANDIDATOS,
+  TETO_CANDIDATURAS,
+} from "./limites-de-lista";
+import {
   DEMO_COMPANY_ID,
   MOCK_APPLICATIONS,
   MOCK_COMPANIES,
@@ -257,7 +266,9 @@ async function jobsEmDemonstracao(): Promise<JobListing[]> {
   return (await repo.listar()).map(jobListingDaVaga);
 }
 
-export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
+export async function getJobs(
+  filters: JobFilters = {},
+): Promise<Recorte<JobListing>> {
   if (isSupabaseConfigured) {
     const supabase = await createClient();
     if (supabase) {
@@ -269,7 +280,8 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
         // reativar — sem este filtro ela vazaria para a busca pública
         // mesmo sem ninguém ter olhado o painel dela ainda.
         .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(TETO_BUSCA + 1);
 
       if (filters.city) query = query.eq("city", filters.city);
       if (filters.category) query = query.eq("category", filters.category);
@@ -282,10 +294,18 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
 
       const { data, error } = await query;
       if (error) throw falhaDeConsulta("job_listings", error);
-      return ordenarVagas(
+      /*
+       * Recorta **antes** de ordenar por proximidade.
+       *
+       * A linha extra existe só para responder "havia mais"; deixá-la
+       * entrar na ordenação faria uma vaga aparecer ou sumir conforme o
+       * bairro de quem olha, o que é pior que cortar.
+       */
+      const { itens, houveCorte } = recortar(
         (data ?? []) as unknown as JobListing[],
-        filters.perto,
+        TETO_BUSCA,
       );
+      return { itens: ordenarVagas(itens, filters.perto), houveCorte };
     }
   }
 
@@ -315,7 +335,11 @@ export async function getJobs(filters: JobFilters = {}): Promise<JobListing[]> {
     })
     .sort(desempateDeVaga);
 
-  return ordenarVagas(encontradas, filters.perto);
+  const recorte = recortar(encontradas, TETO_BUSCA);
+  return {
+    itens: ordenarVagas(recorte.itens, filters.perto),
+    houveCorte: recorte.houveCorte,
+  };
 }
 
 export async function getJobById(id: string): Promise<JobListing | null> {
@@ -343,8 +367,8 @@ export async function getRelatedJobs(
   job: JobListing,
   limit = 3,
 ): Promise<JobListing[]> {
-  const all = await getJobs({ city: job.city });
-  return all
+  const { itens } = await getJobs({ city: job.city });
+  return itens
     .filter((j) => j.id !== job.id)
     .sort((a, b) => {
       const score = (x: JobListing) =>
@@ -403,7 +427,7 @@ function comAvaliacoesDaSessao(provider: ProviderListing): ProviderListing {
 
 export async function getProviders(
   filters: ProviderFilters = {},
-): Promise<ProviderListing[]> {
+): Promise<Recorte<ProviderListing>> {
   if (isSupabaseConfigured) {
     const supabase = await createClient();
     if (supabase) {
@@ -415,7 +439,8 @@ export async function getProviders(
         // dados continuam salvos, e a página do próprio perfil não
         // filtra por isto (mesma razão de `doc_verified`).
         .gt("subscription_valid_until", new Date().toISOString())
-        .order("avg_rating", { ascending: false });
+        .order("avg_rating", { ascending: false })
+        .limit(TETO_BUSCA + 1);
 
       if (filters.city) query = query.eq("city", filters.city);
       if (filters.category) query = query.eq("category_slug", filters.category);
@@ -428,10 +453,11 @@ export async function getProviders(
 
       const { data, error } = await query;
       if (error) throw falhaDeConsulta("provider_listings", error);
-      return ordenarPrestadores(
+      const { itens, houveCorte } = recortar(
         (data ?? []) as unknown as ProviderListing[],
-        filters.perto,
+        TETO_BUSCA,
       );
+      return { itens: ordenarPrestadores(itens, filters.perto), houveCorte };
     }
   }
 
@@ -460,7 +486,11 @@ export async function getProviders(
     .map(comAvaliacoesDaSessao)
     .sort(desempateDePrestador);
 
-  return ordenarPrestadores(encontrados, filters.perto);
+  const recorte = recortar(encontrados, TETO_BUSCA);
+  return {
+    itens: ordenarPrestadores(recorte.itens, filters.perto),
+    houveCorte: recorte.houveCorte,
+  };
 }
 
 export async function getProviderById(
@@ -493,7 +523,8 @@ export async function getReviews(providerId: string): Promise<Review[]> {
         .from("avaliacoes")
         .select("id, prestador_id, nome_avaliador, nota, comentario, criado_em")
         .eq("prestador_id", providerId)
-        .order("criado_em", { ascending: false });
+        .order("criado_em", { ascending: false })
+        .limit(TETO_AVALIACOES);
       if (error) {
         if (ehIdSemFormaDeUuid(error)) return [];
         throw falhaDeConsulta("avaliacoes", error);
@@ -585,7 +616,8 @@ export async function getCompanyJobs(companyId: string): Promise<JobListing[]> {
         .from("job_listings")
         .select("*")
         .eq("company_id", companyId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(TETO_CANDIDATURAS);
       if (error) {
         if (ehIdSemFormaDeUuid(error)) return [];
         throw falhaDeConsulta("job_listings", error);
@@ -708,7 +740,8 @@ export async function getCompanyApplications(
       .from("company_applications")
       .select("*")
       .eq("company_id", companyId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(TETO_CANDIDATURAS);
     if (error) {
       if (ehIdSemFormaDeUuid(error)) return [];
       throw falhaDeConsulta("company_applications", error);
@@ -738,7 +771,8 @@ export async function getMyApplications(
       .from("candidate_applications")
       .select("*")
       .eq("candidate_id", candidateId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(TETO_CANDIDATURAS);
     if (error) {
       if (ehIdSemFormaDeUuid(error)) return [];
       throw falhaDeConsulta("candidate_applications", error);
@@ -903,7 +937,8 @@ export async function getCandidatosDisponiveis(): Promise<
 
     const { data, error } = await supabase
       .from("candidatos_disponiveis")
-      .select("*");
+      .select("*")
+      .limit(TETO_CANDIDATOS + 1);
 
     if (error) throw falhaDeConsulta("candidatos_disponiveis", error);
     return (data ?? []) as unknown as CandidatoDisponivel[];
@@ -935,7 +970,8 @@ export async function getVerificationQueue(): Promise<VerificationRequest[]> {
       .from("verification_queue")
       .select("*")
       .eq("status", "em_analise")
-      .order("submitted_at", { ascending: true });
+      .order("submitted_at", { ascending: true })
+      .limit(TETO_ADMIN);
     if (error) throw falhaDeConsulta("verification_queue", error);
     return (data ?? []) as unknown as VerificationRequest[];
   }
@@ -964,8 +1000,26 @@ export async function getHomeFeed(perto?: Origem) {
     getProviders({ perto }),
   ]);
   return {
-    jobs: jobs.slice(0, 4),
-    providers: providers.slice(0, 4),
-    totals: { jobs: jobs.length, providers: providers.length },
+    jobs: jobs.itens.slice(0, 4),
+    providers: providers.itens.slice(0, 4),
+    /*
+     * O total vem da listagem, que agora tem teto — então ele pode ser um
+     * piso, não a conta.
+     *
+     * `aoMenos` existe para a tela dizer "mais de 100" em vez de "100".
+     * Um número que para de crescer aos 100 e continua se apresentando
+     * como total é a mesma família de mentira que o "faturamento estimado"
+     * do painel, que somava zero e se anunciava como receita — e ninguém
+     * desconfia de número, que é justamente o que os torna caros.
+     *
+     * Contar de verdade custaria duas consultas a mais numa tela que abre
+     * em 3G, para uma informação que é de contexto, não de decisão.
+     */
+    totals: {
+      jobs: jobs.itens.length,
+      jobsAoMenos: jobs.houveCorte,
+      providers: providers.itens.length,
+      providersAoMenos: providers.houveCorte,
+    },
   };
 }

@@ -89,7 +89,7 @@ export default async function VagasPage({
     perto,
   };
 
-  const jobs = await getJobs(filters);
+  const { itens: jobs, houveCorte } = await getJobs(filters);
 
   /*
    * Busca que não achou nada vira estatística, por `after()`.
@@ -160,11 +160,24 @@ export default async function VagasPage({
         ]}
       />
 
+      {/*
+        O recorte é dito na tela, como a ordenação já era.
+
+        A busca traz no máximo `TETO_BUSCA` linhas — sem isso, com a base
+        crescida, toda abertura desta página puxaria a tabela inteira. Mas
+        cortar em silêncio seria a armadilha da #76 de novo: lá um padrão
+        invisível escondia vaga e a empresa concluía que não tinha
+        publicado. Quem chegou ao teto precisa saber que existe mais, e
+        que o filtro é o caminho.
+      */}
       <p className="mb-3 text-xs text-muted">
-        {pluralize(jobs.length, "vaga encontrada", "vagas encontradas")}
+        {houveCorte
+          ? `Mostrando ${jobs.length} vagas`
+          : pluralize(jobs.length, "vaga encontrada", "vagas encontradas")}
         {ordenadoPorProximidade && jobs.length > 0 && (
           <> · mais perto de você primeiro</>
         )}
+        {houveCorte && <> · há mais: use os filtros para estreitar</>}
       </p>
 
       {jobs.length === 0 ? (

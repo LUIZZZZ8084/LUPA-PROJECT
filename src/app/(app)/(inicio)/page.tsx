@@ -112,14 +112,14 @@ export default async function HomePage() {
               href="/vagas"
               icon={<Briefcase size={20} />}
               title="Procurar emprego"
-              subtitle={`${totals.jobs} vagas abertas`}
+              subtitle={`${totals.jobsAoMenos ? "mais de " : ""}${totals.jobs} vagas abertas`}
               tone="vagas"
             />
             <ActionCard
               href="/servicos"
               icon={<Wrench size={20} />}
               title="Procurar profissional"
-              subtitle={`${totals.providers} perto de você`}
+              subtitle={`${totals.providersAoMenos ? "mais de " : ""}${totals.providers} perto de você`}
               tone="servicos"
             />
             <ActionCard

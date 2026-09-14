@@ -119,10 +119,10 @@ describe("bairro: lista onde existe, texto onde não existe", () => {
  */
 describe("o filtro de cidade separa de verdade", () => {
   it("vaga de Sinop não aparece em outra cidade", async () => {
-    const emSinop = await getJobs({ city: "Sinop" });
+    const emSinop = (await getJobs({ city: "Sinop" })).itens;
     expect(emSinop.length).toBeGreaterThan(0);
 
-    const emSorriso = await getJobs({ city: "Sorriso" });
+    const emSorriso = (await getJobs({ city: "Sorriso" })).itens;
     const idsDeSorriso = new Set(emSorriso.map((j) => j.id));
 
     expect(emSinop.some((j) => idsDeSorriso.has(j.id))).toBe(false);
@@ -130,15 +130,15 @@ describe("o filtro de cidade separa de verdade", () => {
   });
 
   it("sem filtro de cidade, a busca cobre o estado inteiro", async () => {
-    const todas = await getJobs();
-    const soSinop = await getJobs({ city: "Sinop" });
+    const todas = (await getJobs()).itens;
+    const soSinop = (await getJobs({ city: "Sinop" })).itens;
     expect(todas.length).toBeGreaterThanOrEqual(soSinop.length);
   });
 
   it("vale igual para prestador", async () => {
-    const emSinop = await getProviders({ city: "Sinop" });
+    const emSinop = (await getProviders({ city: "Sinop" })).itens;
     expect(emSinop.every((p) => p.city === "Sinop")).toBe(true);
-    expect(await getProviders({ city: "Cuiabá" })).toEqual([]);
+    expect((await getProviders({ city: "Cuiabá" })).itens).toEqual([]);
   });
 });
 

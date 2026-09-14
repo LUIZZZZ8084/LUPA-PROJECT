@@ -61,7 +61,7 @@ export default async function ServicosPage({
 
   // Mesma sobra que escondia vaga fora de Sinop em /vagas: sem cidade na
   // URL, a busca é de todo o estado, como o chip "Todo o MT" já promete.
-  const providers = await getProviders({
+  const { itens: providers, houveCorte } = await getProviders({
     city: cidade,
     category: single("categoria"),
     min_rating: minRating ? Number(minRating) : undefined,
@@ -124,15 +124,19 @@ export default async function ServicosPage({
         ]}
       />
 
+      {/* O recorte é dito na tela; ver o comentário longo em `/vagas`. */}
       <p className="mb-3 text-xs text-muted">
-        {pluralize(
-          providers.length,
-          "profissional encontrado",
-          "profissionais encontrados",
-        )}
+        {houveCorte
+          ? `Mostrando ${providers.length} profissionais`
+          : pluralize(
+              providers.length,
+              "profissional encontrado",
+              "profissionais encontrados",
+            )}
         {ordenadoPorProximidade && providers.length > 0 && (
           <> · mais perto de você primeiro</>
         )}
+        {houveCorte && <> · há mais: use os filtros para estreitar</>}
       </p>
 
       {providers.length === 0 ? (

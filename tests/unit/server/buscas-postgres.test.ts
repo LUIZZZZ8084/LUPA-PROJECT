@@ -23,7 +23,10 @@ function construtor(tabela: string) {
   const builder: Record<string, unknown> = {
     then: (r: (v: Resposta) => unknown) => Promise.resolve(resposta).then(r),
   };
-  for (const metodo of ["select", "eq", "gte"]) {
+  // `limit` entrou com o teto das listagens (#203). Sem ele no duble, a
+  // cadeia quebra e o teste reprova por falta de espelho, não por defeito
+  // — falso vermelho é o que ensina a ignorar teste.
+  for (const metodo of ["select", "eq", "gte", "limit"]) {
     builder[metodo] = (...args: unknown[]) => {
       chamadas.push({ tabela, metodo, args });
       return builder;

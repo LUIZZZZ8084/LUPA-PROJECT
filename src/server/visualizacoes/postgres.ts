@@ -1,5 +1,6 @@
 import "server-only";
 
+import { TETO_DO_DONO, TETO_SERIE_DE_METRICAS } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
 import {
@@ -50,7 +51,8 @@ export class RepositorioVisualizacoesPostgres
     const vagas = await supabase
       .from("vagas")
       .select("id")
-      .eq("empresa_id", empresaId);
+      .eq("empresa_id", empresaId)
+      .limit(TETO_DO_DONO);
 
     if (vagas.error) {
       throw erros.indisponivel(`vagas da empresa: ${vagas.error.message}`);
@@ -68,12 +70,14 @@ export class RepositorioVisualizacoesPostgres
         .from("visualizacoes_vaga")
         .select("dia, total")
         .in("vaga_id", ids)
-        .gte("dia", desde),
+        .gte("dia", desde)
+        .limit(TETO_SERIE_DE_METRICAS),
       supabase
         .from("candidaturas")
         .select("criado_em")
         .in("vaga_id", ids)
-        .gte("criado_em", `${desde}T00:00:00.000Z`),
+        .gte("criado_em", `${desde}T00:00:00.000Z`)
+        .limit(TETO_SERIE_DE_METRICAS),
     ]);
 
     if (vis.error) {
