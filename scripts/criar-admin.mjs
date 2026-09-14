@@ -142,11 +142,30 @@ async function principal() {
   const senhaHash = await hash(senha, PARAMETROS);
 
   if (existente) {
-    // Já existe: promove e regrava a senha, em vez de falhar. É o caminho
-    // usado para recuperar acesso.
+    /*
+     * Já existe: promove e regrava a senha, em vez de falhar. É o caminho
+     * usado para recuperar acesso — e o caminho da #69, onde o ponto é
+     * justamente invalidar o que duas senhas vazadas alcançam.
+     *
+     * Por isso o corte de revogação vai junto, na **mesma instrução**
+     * (#230). Sem ele, a senha muda e qualquer sessão criada com a senha
+     * antiga continua valendo por até 7 dias, com papel de admin: o
+     * script existiria para fechar um buraco e o deixaria aberto por uma
+     * semana, sem nada indicar isso.
+     *
+     * A regra nasceu na #225, dentro de `atualizarSenhaHash`, e este
+     * script não passa por lá — escreve direto na tabela. É a armadilha
+     * que o AGENTS.md nomeia desde a #142: regra corrigida num caminho e
+     * esquecida na irmã. Há teste varrendo o código para a próxima não
+     * depender de alguém lembrar.
+     */
     const { error } = await supabase
       .from("usuarios")
-      .update({ papel: "admin", senha_hash: senhaHash })
+      .update({
+        papel: "admin",
+        senha_hash: senhaHash,
+        sessoes_validas_desde: new Date().toISOString(),
+      })
       .eq("id", existente.id);
 
     if (error) {
