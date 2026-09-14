@@ -70,13 +70,36 @@ export function SignUpForm({ role }: { role: Role }) {
       <Panel className="text-center">
         <CheckCircle2 size={40} className="mx-auto text-vagas" />
         <h2 className="mt-4 text-lg font-bold">Conta criada</h2>
+        {/*
+          O passo seguinte precisa existir (#209).
+
+          Esta frase dizia "verifique o telefone", e essa tela **nunca
+          existiu** — verificação por SMS é a #120, parada por custo. Era a
+          primeira instrução que a pessoa recebia no app, apontando para
+          lugar nenhum; ela procura, não acha, e a conclusão é sobre o app.
+          É a mesma armadilha que a #133 corrigiu no perfil do prestador,
+          e do mesmo jeito: trocar a promessa quebrada pelo que é verdade.
+          (O texto exato daquela promessa não se repete aqui de propósito —
+          a varredura de `promessas-da-tela.test.ts` não distingue citação
+          de oferta, e não deveria mesmo: é mais seguro ela errar para o
+          lado de cobrar.)
+
+          E o que está aqui agora não é só verdadeiro, é o que aumenta a
+          chance de a pessoa ser chamada: sem habilidade declarada ela fica
+          **fora** do mapa de casamento com a vaga, e `visivel_para_empresas`
+          nasce desligada por decisão de privacidade.
+        */}
         <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
-          Sua conta já está ativa. O próximo passo é verificar o telefone — é o
-          selo que faz as pessoas confiarem no seu perfil.
+          Sua conta já está ativa. O próximo passo é completar o perfil: as
+          habilidades que você tem são o que faz a empresa te encontrar entre os
+          currículos que ela recebe.
         </p>
-        <div className="mt-6 flex justify-center gap-3">
-          <ButtonLink href="/" variant={ACCENT[role]} size="sm">
-            Ir para o início
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <ButtonLink href="/perfil/editar" variant={ACCENT[role]} size="sm">
+            Completar perfil
+          </ButtonLink>
+          <ButtonLink href="/vagas" variant="outline" size="sm">
+            Ver vagas
           </ButtonLink>
         </div>
       </Panel>
@@ -326,10 +349,25 @@ export function SignUpForm({ role }: { role: Role }) {
           </p>
         )}
 
+        {/*
+          A terceira ocorrência da mesma promessa, e a que o AGENTS.md cita
+          nominalmente (#209).
+
+          Ela descrevia como documento e selfie eram guardados e apagados —
+          texto que lê bem e que passou batido justamente por soar
+          responsável. Só que não há, e nunca houve, tela para enviar
+          nenhum dos dois. O rodapé de `/perfil` foi corrigido na #133; este
+          ficou para trás, que é o padrão registrado neste projeto: regra
+          corrigida num caminho e esquecida no irmão.
+
+          O que está aqui agora é o que de fato acontece: os documentos são
+          conferidos contra a base pública e **não ficam guardados**.
+        */}
         <p className="text-xs leading-relaxed text-faint">
           Ao criar a conta você concorda com os termos de uso e com o tratamento
-          dos seus dados conforme a LGPD. Documento e selfie, quando enviados,
-          ficam em armazenamento privado e são apagados após a validação.
+          dos seus dados conforme a LGPD. CPF e CNPJ são conferidos
+          automaticamente e não ficam guardados — permanece só a confirmação, no
+          seu perfil.
         </p>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">

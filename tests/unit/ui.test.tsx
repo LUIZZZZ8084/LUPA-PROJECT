@@ -82,8 +82,24 @@ describe("selos de verificação", () => {
 
   it("VerificationRow distingue verificado de não verificado", () => {
     render(<VerificationRow phoneVerified docVerified={false} />);
-    expect(screen.getByText("Telefone verificado")).toBeInTheDocument();
     expect(screen.getByText("Documento não verificado")).toBeInTheDocument();
+  });
+
+  /**
+   * O selo de telefone sumiu enquanto não houver como verificá-lo (#209).
+   *
+   * Ele dizia "Telefone não verificado" para todo mundo, para sempre, e
+   * não havia caminho nenhum para mudar isso — verificação por SMS é a
+   * #120, presa a provedor pago. Aviso de perfil incompleto que a pessoa
+   * não tem como completar não informa: ensina a ignorar o selo, e o
+   * de documento, que é verdade, paga o preço junto.
+   *
+   * Quando a #120 entregar o envio, `VERIFICACAO_DE_TELEFONE_EXISTE` vira
+   * `true` e este teste é quem cobra a volta.
+   */
+  it("não mostra selo de telefone enquanto não houver como verificar", () => {
+    render(<VerificationRow phoneVerified docVerified={false} />);
+    expect(screen.queryByText(/Telefone/)).toBeNull();
   });
 });
 
