@@ -38,9 +38,23 @@ export default async function AdminPage() {
       <PageTitle
         title="Verificações"
         accent="text-warn"
-        description="Aprovação manual de documento e selfie. No V0 a revisão é feita pelo fundador."
+        description="Fila de revisão manual. Hoje ela fica vazia de propósito: a verificação é automática."
       />
 
+      {/*
+        A fila existe e não tem remetente, e a tela passou a dizer isso
+        (#209).
+
+        Ela prometia "assim que alguém enviar documento e selfie" — e
+        nenhuma tela de envio jamais existiu: `Especie` nunca teve
+        "documento" nem "selfie". Desde a #133 a verificação é automática
+        (CPF do prestador, CNPJ da empresa), então o vazio aqui é o estado
+        correto, não uma espera.
+
+        Dizer isso importa porque quem administra precisa distinguir "não
+        chegou nada" de "não chega nada" — a primeira leitura faz alguém
+        esperar por um trabalho que não vem.
+      */}
       <Panel className="mb-5 border-warn/25 bg-warn/5">
         <p className="text-xs leading-relaxed text-muted">
           <strong className="text-ink">Retenção de dados:</strong> ao aprovar ou
@@ -54,7 +68,7 @@ export default async function AdminPage() {
         <EmptyState
           icon={<ShieldCheck size={22} />}
           title="Nenhuma verificação pendente"
-          description="Assim que alguém enviar documento e selfie, o pedido aparece aqui."
+          description="E não é falta de movimento: prestador é verificado pelo CPF e empresa pelo CNPJ, na hora, sem passar por aqui. Esta fila existe para o dia em que algum caso precisar de gente olhando."
         />
       ) : (
         <ul className="space-y-3">
