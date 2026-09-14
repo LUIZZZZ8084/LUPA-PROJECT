@@ -206,7 +206,30 @@ export interface RepositorioUsuarios {
   porEmail(email: string): Promise<Usuario | null>;
   porId(id: string): Promise<Usuario | null>;
   criar(dados: DadosNovoUsuario): Promise<Usuario>;
+  /**
+   * Grava a senha nova **e** corta as sessões antigas, na mesma instrução
+   * (#225).
+   *
+   * As duas coisas andam juntas de propósito, e num lugar só: quem troca a
+   * senha desconfiando de acesso indevido precisa que o invasor caia, e um
+   * segundo método para "revogar" seria o que alguém esquece de chamar no
+   * terceiro caminho de troca de senha. Este projeto já pagou por isso —
+   * `virarPrestador` e `cadastrar`, duas funções irmãs, com a regra
+   * corrigida só numa (#142).
+   */
   atualizarSenhaHash(id: string, senhaHash: string): Promise<void>;
+
+  /**
+   * Quem cortou as próprias sessões nos últimos `dias`, como epoch de
+   * segundos por usuário.
+   *
+   * Lista, e não pergunta por pessoa: perguntar "esta sessão vale?" a cada
+   * requisição seria a consulta por requisição que manteve a sessão fora do
+   * banco desde o começo. A lista é curta por construção — token com mais
+   * de 7 dias já expirou sozinho, então quem trocou a senha mês passado
+   * sai dela.
+   */
+  cortesDeSessao(dias: number): Promise<Map<string, number>>;
 
   // ── Recuperação de senha (#174) ───────────────────────────────────────
 

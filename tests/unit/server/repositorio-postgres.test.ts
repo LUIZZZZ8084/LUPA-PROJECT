@@ -26,7 +26,22 @@ function construtor(tabela: string) {
       Promise.resolve(resposta).then(resolver),
   };
 
-  for (const metodo of ["select", "eq", "insert", "update", "upsert"]) {
+  /*
+   * `gte` e `limit` entraram com os cortes de sessão (#225), e a lição é a
+   * mesma que a #203 já cobrou: duble de consulta sem o método que o
+   * repositório chama reprova sem ser defeito — e falso vermelho é o que
+   * ensina todo mundo a ignorar teste. Método de consulta novo entra aqui
+   * junto.
+   */
+  for (const metodo of [
+    "select",
+    "eq",
+    "gte",
+    "limit",
+    "insert",
+    "update",
+    "upsert",
+  ]) {
     builder[metodo] = (...args: unknown[]) => {
       chamadas.push({ tabela, metodo, args });
       return builder;
@@ -229,11 +244,37 @@ describe("RepositorioPostgres", () => {
     expect(await repo.cnpjEmUso("11222333000181")).toBe(false);
   });
 
-  it("atualizarSenhaHash escreve na coluna senha_hash", async () => {
+  /**
+   * A senha e o corte de sessão vão na **mesma instrução** (#225).
+   *
+   * Duas instruções deixariam uma janela em que a senha já mudou e as
+   * sessões antigas ainda valem — e, pior, deixariam alguém escrever um
+   * terceiro caminho de troca de senha chamando só a primeira. É a lição
+   * da #142: quando duas funções produzem o mesmo efeito por caminhos
+   * diferentes, a regra corrigida numa provavelmente falta na outra.
+   *
+   * Este teste reprovou de verdade quando o corte entrou, e é para isso
+   * que ele serve: escrita de senha que deixe de revogar tem que ficar
+   * vermelha.
+   */
+  it("atualizarSenhaHash grava a senha e o corte de sessão juntos", async () => {
+    const antes = Date.now();
     await repo.atualizarSenhaHash("u1", "novo-hash");
 
     const update = chamadas.find((c) => c.metodo === "update");
-    expect(update?.args[0]).toEqual({ senha_hash: "novo-hash" });
+    const gravado = update?.args[0] as {
+      senha_hash: string;
+      sessoes_validas_desde: string;
+    };
+
+    expect(gravado.senha_hash).toBe("novo-hash");
+    expect(
+      new Date(gravado.sessoes_validas_desde).getTime(),
+    ).toBeGreaterThanOrEqual(antes);
+    expect(Object.keys(gravado).sort()).toEqual([
+      "senha_hash",
+      "sessoes_validas_desde",
+    ]);
   });
 });
 
@@ -541,5 +582,44 @@ describe("gravação de perfil", () => {
         bairro: null,
       }),
     ).rejects.toMatchObject({ codigo: "indisponivel" });
+  });
+});
+
+/**
+ * A lista de cortes de sessão, no Postgres (#225).
+ *
+ * O que importa aqui é ser **uma consulta filtrada por tempo**, e não uma
+ * pergunta por pessoa: perguntar "esta sessão vale?" a cada requisição
+ * seria a consulta por requisição que manteve a sessão fora do banco desde
+ * o começo. E o `.limit()` é a disciplina da #203 — consulta de lista sem
+ * teto é a que fica cara em silêncio.
+ */
+describe("cortes de sessão", () => {
+  const repo = new RepositorioPostgres();
+
+  beforeEach(() => {
+    chamadas.length = 0;
+  });
+
+  it("pede só a janela, com teto, e devolve epoch em segundos", async () => {
+    const quando = new Date("2026-09-10T12:00:00.000Z");
+    resposta = {
+      data: [{ id: "u1", sessoes_validas_desde: quando.toISOString() }],
+      error: null,
+    };
+
+    const cortes = await repo.cortesDeSessao(7);
+
+    expect(cortes.get("u1")).toBe(Math.floor(quando.getTime() / 1000));
+
+    const filtro = chamadas.find((c) => c.metodo === "gte");
+    expect(filtro?.args[0]).toBe("sessoes_validas_desde");
+
+    expect(chamadas.some((c) => c.metodo === "limit")).toBe(true);
+  });
+
+  it("ninguém trocou a senha esta semana: lista vazia, não erro", async () => {
+    resposta = { data: [], error: null };
+    expect((await repo.cortesDeSessao(7)).size).toBe(0);
   });
 });

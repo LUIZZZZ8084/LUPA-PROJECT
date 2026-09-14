@@ -1659,3 +1659,94 @@ describe("search_path das funções", () => {
     expect(r.rows.map((f) => f.nome)).toEqual([]);
   });
 });
+
+/*
+ * O corte de revogação de sessão (#225).
+ *
+ * A sessão continua sendo um JWT fora do banco — a decisão de serverless
+ * não mudou. O que entrou foi **uma data por pessoa**, e a regra de que
+ * todo token emitido antes dela deixa de valer. A diferença entre isso e
+ * "sessão no banco" é o custo: aqui não há consulta por requisição, há uma
+ * lista curta lida a cada 60 segundos.
+ */
+describe("corte de revogação de sessão", () => {
+  let banco: PGlite;
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  /**
+   * Nulo é o normal: quem nunca trocou a senha não tem corte. Se a coluna
+   * fosse `not null default now()`, toda conta nasceria com um corte e a
+   * lista deixaria de ser curta — que é a única coisa que torna este
+   * desenho barato.
+   */
+  it("nasce nula, e a esmagadora maioria continua assim", async () => {
+    const r = await banco.query<{ corte: string | null }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
+       values ('corte@lupa.test', 'h', 'candidato_clt', 'Alguém', '66999110009')
+       returning sessoes_validas_desde as corte`,
+    );
+    expect(r.rows[0].corte).toBeNull();
+  });
+
+  /**
+   * O índice é parcial pela mesma razão: quase toda linha é nula, e índice
+   * cheio aqui seria pagar escrita em toda conta por uma leitura que nunca
+   * olha para elas.
+   */
+  it("o índice existe e é parcial", async () => {
+    const r = await banco.query<{ definicao: string }>(
+      `select indexdef as definicao from pg_indexes
+        where tablename = 'usuarios'
+          and indexname = 'usuarios_sessoes_validas_desde_idx'`,
+    );
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0].definicao).toMatch(
+      /where .*sessoes_validas_desde is not null/i,
+    );
+  });
+
+  /**
+   * A consulta que a aplicação faz, contra um Postgres de verdade: quem
+   * cortou nos últimos 7 dias. Corte mais velho que isso não pode
+   * invalidar nada — não existe token vivo daquela época —, e é o que
+   * mantém a lista curta para sempre, não só hoje.
+   */
+  it("a lista traz só os últimos sete dias", async () => {
+    await banco.query(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone,
+                             sessoes_validas_desde)
+       values ('recente@lupa.test', 'h', 'candidato_clt', 'Recente', '66999110010',
+               now() - interval '2 days'),
+              ('antigo@lupa.test',  'h', 'candidato_clt', 'Antigo',  '66999110011',
+               now() - interval '30 days')`,
+    );
+
+    const r = await banco.query<{ email: string }>(
+      `select email from usuarios
+        where sessoes_validas_desde >= now() - interval '7 days'
+        order by email`,
+    );
+    expect(r.rows.map((l) => l.email)).toEqual(["recente@lupa.test"]);
+  });
+
+  /**
+   * `usuarios` nunca foi legível por `anon`, e a coluna nova não muda
+   * isso — mas o corte diz *quando* alguém trocou a senha, que é sinal de
+   * conta comprometida. Vale conferir junto com a coluna, não confiar que
+   * a linha do `revoke` cobriu.
+   */
+  it("a chave anônima continua sem alcançar a tabela", async () => {
+    const r = await banco.query<{ anon: boolean }>(
+      `select has_table_privilege('anon', 'usuarios', 'SELECT') as anon`,
+    );
+    expect(r.rows[0].anon).toBe(false);
+  });
+});

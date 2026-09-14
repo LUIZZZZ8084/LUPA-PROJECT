@@ -168,6 +168,7 @@ describe("sessão", () => {
       usuarioId: "u1",
       papel: "empresa" as Papel,
       expiraEm: agora + CONFIG_SESSAO.VALIDADE_SEGUNDOS,
+      emitidoEm: agora,
     };
     expect(await renovarSeNecessario(recente)).toBeNull();
 
@@ -175,6 +176,7 @@ describe("sessão", () => {
       usuarioId: "u1",
       papel: "empresa" as Papel,
       expiraEm: agora + 60,
+      emitidoEm: agora - CONFIG_SESSAO.VALIDADE_SEGUNDOS + 60,
     };
     const novo = await renovarSeNecessario(quaseVencendo);
     expect(novo).toBeTruthy();

@@ -196,11 +196,22 @@ export async function pedirRecuperacao(
  * ou um link vazado sendo usado em paralelo, passariam os dois por uma
  * leitura anterior.
  *
- * A troca **não** revoga as sessões antigas, e isso não é esquecimento: a
- * sessão é um JWT de 7 dias e não há como invalidá-la antes de expirar —
- * é o preço registrado no `AGENTS.md` desde que a sessão deixou de morar
- * no banco. O que se faz é emitir uma sessão nova para quem acabou de
- * trocar, e quem chama cuida disso.
+ * **A troca revoga as sessões antigas (#225).** Este parágrafo já disse o
+ * contrário, e era verdade na época: a sessão é um JWT de 7 dias, e sem
+ * estado no banco não havia como invalidá-la. O que mudou não foi a
+ * sessão — ela continua fora do banco —, foi entrar uma data por pessoa
+ * (`usuarios.sessoes_validas_desde`) que corta todo token emitido antes
+ * dela.
+ *
+ * A revogação acontece **dentro** de `atualizarSenhaHash`, na mesma
+ * instrução que grava a senha. Não é chamada daqui de propósito: um
+ * segundo passo seria o que alguém esquece no terceiro caminho de troca
+ * de senha, que é exatamente o defeito da #142.
+ *
+ * Quem chama derruba o cache da lista de revogações e emite a sessão nova
+ * — as duas coisas são de camada de requisição, e este serviço não
+ * conhece requisição. `updateTag` só existe dentro de uma server action, o
+ * que é a mesma fronteira dita de outro jeito.
  */
 export async function redefinirSenha(
   token: string,
