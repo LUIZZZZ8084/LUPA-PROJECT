@@ -109,7 +109,9 @@ create type status_assinatura as enum
 -- ============================================================================
 
 create or replace function tocar_atualizado_em()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+set search_path = public, pg_temp
+as $$
 begin
   new.atualizado_em := now();
   return new;
@@ -459,7 +461,9 @@ create unique index avaliacoes_um_por_pessoa_idx
 
 -- Mantém nota_media e total_avaliacoes em dia a cada avaliação.
 create or replace function atualizar_nota_prestador()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+set search_path = public, pg_temp
+as $$
 declare
   alvo uuid := coalesce(new.prestador_id, old.prestador_id);
 begin
@@ -518,7 +522,9 @@ create trigger publicacoes_atualizado_em
  * de função de agregação.
  */
 create or replace function conferir_limite_publicacoes()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+set search_path = public, pg_temp
+as $$
 declare
   ativas int;
   limite constant int := 10;
@@ -621,6 +627,7 @@ create or replace function registrar_falha_de_acesso(
 )
 returns timestamptz
 language sql
+set search_path = public, pg_temp
 as $$
   insert into tentativas_de_acesso (chave, tentativas, primeira_em)
   values (p_chave, 1, now())
@@ -662,6 +669,7 @@ $$;
 create or replace function limpar_tentativas_vencidas(p_janela_segundos integer)
 returns void
 language sql
+set search_path = public, pg_temp
 as $$
   delete from tentativas_de_acesso
    where primeira_em < now() - make_interval(secs => p_janela_segundos * 4)
@@ -718,6 +726,7 @@ create or replace function registrar_busca_sem_resultado(
 )
 returns void
 language sql
+set search_path = public, pg_temp
 as $$
   insert into buscas_sem_resultado (termo, dia, onde, total)
   values (p_termo, current_date, p_onde, 1)
@@ -766,6 +775,7 @@ create index visualizacoes_vaga_dia_idx on visualizacoes_vaga (dia);
 create or replace function registrar_visualizacao(p_vaga_id uuid)
 returns void
 language sql
+set search_path = public, pg_temp
 as $$
   insert into visualizacoes_vaga (vaga_id, dia, total)
   values (p_vaga_id, current_date, 1)
@@ -888,7 +898,9 @@ alter table carteiras_vaga enable row level security;
 -- se ainda nao existir. Nunca abaixo de zero: quem ja gastou o que
 -- comprou e depois contestou a cobranca para em zero, nao fica devendo.
 create or replace function creditar_vaga(p_usuario uuid, p_quantidade int)
-returns setof carteiras_vaga language sql as $$
+returns setof carteiras_vaga language sql
+set search_path = public, pg_temp
+as $$
   insert into carteiras_vaga (usuario_id, creditos_vaga)
   values (p_usuario, greatest(0, p_quantidade))
   on conflict (usuario_id) do update
@@ -899,7 +911,9 @@ $$;
 -- Gasta um credito, e so se houver. Zero linhas devolvidas quer dizer
 -- "nao tinha" — quem chama le isso como recusa, nao como erro.
 create or replace function consumir_credito_vaga(p_usuario uuid)
-returns setof carteiras_vaga language sql as $$
+returns setof carteiras_vaga language sql
+set search_path = public, pg_temp
+as $$
   update carteiras_vaga
   set creditos_vaga = creditos_vaga - 1
   where usuario_id = p_usuario and creditos_vaga > 0
@@ -912,7 +926,9 @@ create or replace function estender_mensalidade_vaga(
   p_usuario uuid,
   p_dias int
 )
-returns setof carteiras_vaga language sql as $$
+returns setof carteiras_vaga language sql
+set search_path = public, pg_temp
+as $$
   insert into carteiras_vaga (usuario_id, mensalidade_valida_ate)
   values (
     p_usuario,

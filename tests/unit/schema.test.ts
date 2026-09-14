@@ -1564,3 +1564,98 @@ describe("medição de pressão nos tetos", () => {
     expect(r.rows[0].auth).toBe(false);
   });
 });
+
+/*
+ * Toda função do banco fixa o `search_path` (#219).
+ *
+ * Função sem `search_path` fixo resolve nomes pelo caminho de **quem
+ * chama**. Quem conseguir criar um objeto num schema que venha antes
+ * sombreia uma tabela — e `creditar_vaga` passa a creditar na tabela do
+ * atacante, ou `registrar_falha_de_acesso` conta numa cópia e o limite
+ * deixa de limitar.
+ *
+ * Hoje isso não é explorável, e a distinção precisa estar escrita: `anon` e
+ * `authenticated` não têm CREATE em `public`, e não existe nenhuma função
+ * `security definer`. Sem CREATE não há onde plantar o objeto; sem
+ * `security definer` nenhuma função empresta privilégio.
+ *
+ * O que este teste protege é justamente o futuro em que uma das duas
+ * mudar — as duas são mudanças plausíveis, e nenhuma delas viria
+ * acompanhada de um aviso. É a disciplina de `ROTAS_NAO_VARRIDAS`: quando
+ * a cobertura é uma lista, alguém precisa cobrar a lista.
+ */
+describe("search_path das funções", () => {
+  let banco: PGlite;
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  it("nenhuma função de public fica com o caminho mutável", async () => {
+    const r = await banco.query<{ nome: string }>(
+      `select p.proname as nome
+         from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public'
+          and p.proconfig is null
+        order by p.proname`,
+    );
+    expect(r.rows.map((f) => f.nome)).toEqual([]);
+  });
+
+  /**
+   * `pg_temp` por último, e isso não é detalhe: primeiro na lista, uma
+   * tabela temporária criada por quem chama sombrearia a de verdade — seria
+   * trocar um buraco por outro, com a aparência de ter consertado.
+   */
+  it("o caminho é public e depois pg_temp, nessa ordem", async () => {
+    const r = await banco.query<{ nome: string; config: string[] | null }>(
+      `select p.proname as nome, p.proconfig as config
+         from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public'
+        order by p.proname`,
+    );
+
+    expect(r.rows.length).toBeGreaterThan(0);
+    for (const funcao of r.rows) {
+      expect(funcao.config, `${funcao.nome} sem search_path`).toContain(
+        "search_path=public, pg_temp",
+      );
+    }
+  });
+
+  /**
+   * A garantia que sustenta "não era explorável". Se um dia alguém
+   * conceder CREATE, este teste é quem avisa que o raciocínio acima
+   * deixou de valer.
+   */
+  it("anon e authenticated não podem criar objetos em public", async () => {
+    const r = await banco.query<{ anon: boolean; auth: boolean }>(
+      `select has_schema_privilege('anon', 'public', 'CREATE') as anon,
+              has_schema_privilege('authenticated', 'public', 'CREATE') as auth`,
+    );
+    expect(r.rows[0].anon).toBe(false);
+    expect(r.rows[0].auth).toBe(false);
+  });
+
+  /**
+   * Nenhuma função empresta privilégio de quem a criou. No dia em que a
+   * primeira aparecer, ela precisa de uma revisão própria — e este teste
+   * força essa conversa em vez de deixá-la passar num diff.
+   */
+  it("nenhuma função é security definer", async () => {
+    const r = await banco.query<{ nome: string }>(
+      `select p.proname as nome
+         from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public' and p.prosecdef`,
+    );
+    expect(r.rows.map((f) => f.nome)).toEqual([]);
+  });
+});
