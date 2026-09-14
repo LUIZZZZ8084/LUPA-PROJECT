@@ -1,5 +1,6 @@
 import "server-only";
 
+import { TETO_ADMIN } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
 import type { OndeBuscou, RepositorioBuscas, TermoSemResultado } from "./tipos";
@@ -41,7 +42,8 @@ export class RepositorioBuscasPostgres implements RepositorioBuscas {
     const { data, error } = await supabase
       .from("buscas_sem_resultado")
       .select("termo, total")
-      .gte("dia", desde.toISOString().slice(0, 10));
+      .gte("dia", desde.toISOString().slice(0, 10))
+      .limit(TETO_ADMIN);
 
     if (error) {
       throw erros.indisponivel(`buscas sem resultado: ${error.message}`);

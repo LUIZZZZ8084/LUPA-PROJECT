@@ -140,7 +140,7 @@ export default async function ProviderPage({
       category: provider.category.slug,
       city: provider.city,
     })
-  )
+  ).itens
     .filter((p) => p.profile_id !== provider.profile_id)
     .slice(0, 2);
 

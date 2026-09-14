@@ -32,11 +32,11 @@ export class RepositorioMetricasMemoria implements RepositorioMetricas {
       cadastrados.filter((u) => u.papel === papel).length;
 
     return {
-      usuarios: cadastrados.length + prestadores.length,
+      usuarios: cadastrados.length + prestadores.itens.length,
       candidatos: contar("candidato_clt"),
-      prestadores: contar("prestador_servico") + prestadores.length,
+      prestadores: contar("prestador_servico") + prestadores.itens.length,
       empresas: contar("empresa"),
-      vagasAbertas: vagas.length,
+      vagasAbertas: vagas.itens.length,
     };
   }
 
@@ -73,7 +73,7 @@ export class RepositorioMetricasMemoria implements RepositorioMetricas {
     };
 
     for (const u of this.usuarios.todos()) somar(u.cidade, u.bairro);
-    for (const p of await getProviders()) somar(p.city, p.neighborhood);
+    for (const p of (await getProviders()).itens) somar(p.city, p.neighborhood);
 
     return [...contagem.values()]
       .sort((a, b) => b.total - a.total)

@@ -19,7 +19,10 @@ function construtor(tabela: string) {
       Promise.resolve(resposta).then(resolver),
   };
 
-  for (const metodo of ["select", "eq", "insert", "update", "order"]) {
+  // `limit` entrou com o teto das listagens (#203). Sem ele no duble, a
+  // cadeia quebra e o teste reprova por falta de espelho, não por defeito
+  // — falso vermelho é o que ensina a ignorar teste.
+  for (const metodo of ["select", "eq", "insert", "update", "order", "limit"]) {
     builder[metodo] = (...args: unknown[]) => {
       chamadas.push({ tabela, metodo, args });
       return builder;

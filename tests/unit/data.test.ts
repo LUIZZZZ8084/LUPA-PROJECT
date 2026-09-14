@@ -31,47 +31,47 @@ import { repositorioVagas } from "@/server/vagas";
 
 describe("getJobs", () => {
   it("devolve apenas vagas abertas", async () => {
-    const jobs = await getJobs();
+    const { itens: jobs } = await getJobs();
     expect(jobs.length).toBeGreaterThan(0);
     expect(jobs.every((j) => j.status === "aberta")).toBe(true);
   });
 
   it("ordena da mais recente para a mais antiga", async () => {
-    const jobs = await getJobs();
+    const { itens: jobs } = await getJobs();
     const datas = jobs.map((j) => +new Date(j.created_at));
     expect(datas).toEqual([...datas].sort((a, b) => b - a));
   });
 
   it("filtra por categoria", async () => {
-    const jobs = await getJobs({ category: "Agronegócio" });
+    const { itens: jobs } = await getJobs({ category: "Agronegócio" });
     expect(jobs.length).toBeGreaterThan(0);
     expect(jobs.every((j) => j.category === "Agronegócio")).toBe(true);
   });
 
   it("filtra por tipo de contrato", async () => {
-    const jobs = await getJobs({ contract_type: "Estágio" });
+    const { itens: jobs } = await getJobs({ contract_type: "Estágio" });
     expect(jobs.every((j) => j.contract_type === "Estágio")).toBe(true);
   });
 
   it("busca por texto no título", async () => {
-    const jobs = await getJobs({ q: "motorista" });
+    const { itens: jobs } = await getJobs({ q: "motorista" });
     expect(jobs.some((j) => /motorista/i.test(j.title))).toBe(true);
   });
 
   it("busca ignorando acento — quem digita no celular raramente acentua", async () => {
-    const comAcento = await getJobs({ q: "mecânicas" });
-    const semAcento = await getJobs({ q: "mecanicas" });
+    const { itens: comAcento } = await getJobs({ q: "mecânicas" });
+    const { itens: semAcento } = await getJobs({ q: "mecanicas" });
     expect(semAcento.map((j) => j.id)).toEqual(comAcento.map((j) => j.id));
   });
 
   it("busca ignorando maiúsculas", async () => {
-    const a = await getJobs({ q: "OPERADOR" });
-    const b = await getJobs({ q: "operador" });
+    const { itens: a } = await getJobs({ q: "OPERADOR" });
+    const { itens: b } = await getJobs({ q: "operador" });
     expect(a.map((j) => j.id)).toEqual(b.map((j) => j.id));
   });
 
   it("encontra pela empresa, não só pelo cargo", async () => {
-    const jobs = await getJobs({ q: "Agro Norte" });
+    const { itens: jobs } = await getJobs({ q: "Agro Norte" });
     expect(jobs.length).toBeGreaterThan(0);
     expect(jobs.every((j) => /agro norte/i.test(j.company.company_name))).toBe(
       true,
@@ -79,17 +79,17 @@ describe("getJobs", () => {
   });
 
   it("devolve lista vazia sem resultado, em vez de quebrar", async () => {
-    const jobs = await getJobs({ q: "cargo-que-nao-existe-xyz" });
+    const { itens: jobs } = await getJobs({ q: "cargo-que-nao-existe-xyz" });
     expect(jobs).toEqual([]);
   });
 
   it("respeita o filtro de cidade", async () => {
-    expect(await getJobs({ city: "Sorriso" })).toEqual([]);
-    expect((await getJobs({ city: "Sinop" })).length).toBeGreaterThan(0);
+    expect((await getJobs({ city: "Sorriso" })).itens).toEqual([]);
+    expect((await getJobs({ city: "Sinop" })).itens.length).toBeGreaterThan(0);
   });
 
   it("combina filtros de forma restritiva", async () => {
-    const jobs = await getJobs({
+    const { itens: jobs } = await getJobs({
       category: "Agronegócio",
       contract_type: "Estágio",
     });
@@ -112,7 +112,7 @@ describe("getJobs", () => {
 describe("ida e volta pelo repositório de demonstração", () => {
   it("nenhum campo se perde nem troca de lugar", async () => {
     const original = MOCK_JOBS.find((j) => j.id === "job-operador-maquinas");
-    const jobs = await getJobs();
+    const { itens: jobs } = await getJobs();
     const depois = jobs.find((j) => j.id === "job-operador-maquinas");
 
     expect(original, "a vaga de referência sumiu do mock").toBeDefined();
@@ -131,7 +131,7 @@ describe("ida e volta pelo repositório de demonstração", () => {
   });
 
   it("a contagem de candidatos vem das candidaturas, não do mock da vaga", async () => {
-    const jobs = await getJobs();
+    const { itens: jobs } = await getJobs();
 
     for (const job of jobs) {
       const esperado = MOCK_APPLICATIONS.filter(
@@ -183,7 +183,7 @@ describe("getProviders", () => {
    * impressão de cobrir.
    */
   it("não mostra prestador sem documento aprovado", async () => {
-    const lista = await getProviders();
+    const { itens: lista } = await getProviders();
 
     expect(lista.length).toBeGreaterThan(0);
     expect(lista.every((p) => p.doc_verified)).toBe(true);
@@ -213,7 +213,7 @@ describe("getProviders", () => {
    * continuam salvos, só o anúncio some.
    */
   it("não mostra prestador com mensalidade vencida, mesmo verificado", async () => {
-    const lista = await getProviders();
+    const { itens: lista } = await getProviders();
 
     expect(lista.length).toBeGreaterThan(0);
     expect(lista.map((p) => p.full_name)).not.toContain("Roberto Alencar");
@@ -227,18 +227,18 @@ describe("getProviders", () => {
   });
 
   it("filtra por categoria", async () => {
-    const lista = await getProviders({ category: "eletricista" });
+    const { itens: lista } = await getProviders({ category: "eletricista" });
     expect(lista.length).toBeGreaterThan(0);
     expect(lista.every((p) => p.category.slug === "eletricista")).toBe(true);
   });
 
   it("respeita a nota mínima", async () => {
-    const lista = await getProviders({ min_rating: 4.8 });
+    const { itens: lista } = await getProviders({ min_rating: 4.8 });
     expect(lista.every((p) => p.avg_rating >= 4.8)).toBe(true);
   });
 
   it("busca por bairro atendido, não só por nome", async () => {
-    const lista = await getProviders({ q: "Menezes" });
+    const { itens: lista } = await getProviders({ q: "Menezes" });
     expect(
       lista.every((p) =>
         p.service_area.some((b) => b.toLowerCase().includes("menezes")),
@@ -345,7 +345,7 @@ describe("painel da empresa", () => {
  */
 describe("pontuação das vagas relacionadas", () => {
   it("mesma empresa pesa mais que mesma categoria", async () => {
-    const jobs = await getJobs();
+    const { itens: jobs } = await getJobs();
     const real = jobs.find((j) => j.id === "job-operador-maquinas");
     if (!real) throw new Error("vaga de referência sumiu do mock");
 
@@ -376,7 +376,7 @@ describe("pontuação das vagas relacionadas", () => {
   });
 
   it("só traz vagas da mesma cidade", async () => {
-    const jobs = await getJobs();
+    const { itens: jobs } = await getJobs();
     const base = jobs[0];
     for (const j of await getRelatedJobs(base, 20)) {
       expect(j.city).toBe(base.city);
@@ -384,7 +384,7 @@ describe("pontuação das vagas relacionadas", () => {
   });
 
   it("sem limite pedido, traz três", async () => {
-    const jobs = await getJobs();
+    const { itens: jobs } = await getJobs();
     const relacionadas = await getRelatedJobs(jobs[0]);
     expect(relacionadas).toHaveLength(3);
   });
@@ -398,7 +398,7 @@ describe("candidaturas em demonstração", () => {
   });
 
   it("cada candidatura carrega o título da vaga a que se refere", async () => {
-    const jobs = await getJobs();
+    const { itens: jobs } = await getJobs();
     const porId = new Map(jobs.map((j) => [j.id, j.title]));
 
     for (const app of await getCompanyApplications("cmp-agro-norte")) {
@@ -510,8 +510,8 @@ describe("getHomeFeed", () => {
 
   it("os totais refletem a base inteira, não só os destaques", async () => {
     const feed = await getHomeFeed();
-    expect(feed.totals.jobs).toBe((await getJobs()).length);
-    expect(feed.totals.providers).toBe((await getProviders()).length);
+    expect(feed.totals.jobs).toBe((await getJobs()).itens.length);
+    expect(feed.totals.providers).toBe((await getProviders()).itens.length);
   });
 });
 
@@ -545,7 +545,7 @@ describe("busca ordenada pelo mais perto", () => {
     const claudia = await publicarEm("Cláudia", "Vaga de Cláudia");
     const sorriso = await publicarEm("Sorriso", "Vaga de Sorriso");
 
-    const jobs = await getJobs({ perto: { cidade: "Sinop" } });
+    const { itens: jobs } = await getJobs({ perto: { cidade: "Sinop" } });
     const posicao = (id: string) => jobs.findIndex((j) => j.id === id);
 
     // Alguma vaga de Sinop precisa vir antes de todas as outras.
@@ -555,8 +555,8 @@ describe("busca ordenada pelo mais perto", () => {
   });
 
   it("ordenar não é filtrar: nada sai da lista por estar longe", async () => {
-    const semPerto = await getJobs();
-    const comPerto = await getJobs({ perto: { cidade: "Cuiabá" } });
+    const { itens: semPerto } = await getJobs();
+    const { itens: comPerto } = await getJobs({ perto: { cidade: "Cuiabá" } });
 
     expect(comPerto).toHaveLength(semPerto.length);
     expect(new Set(comPerto.map((j) => j.id))).toEqual(
@@ -565,12 +565,12 @@ describe("busca ordenada pelo mais perto", () => {
   });
 
   it("sem `perto`, a ordem continua sendo a data — como antes da #79", async () => {
-    const datas = (await getJobs()).map((j) => +new Date(j.created_at));
+    const datas = (await getJobs()).itens.map((j) => +new Date(j.created_at));
     expect(datas).toEqual([...datas].sort((a, b) => b - a));
   });
 
   it("dentro da mesma cidade, o desempate por data continua valendo", async () => {
-    const jobs = await getJobs({ perto: { cidade: "Sinop" } });
+    const { itens: jobs } = await getJobs({ perto: { cidade: "Sinop" } });
     const datas = jobs
       .filter((j) => j.city === "Sinop")
       .map((j) => +new Date(j.created_at));
@@ -579,7 +579,7 @@ describe("busca ordenada pelo mais perto", () => {
   });
 
   it("o filtro de cidade continua restringindo, com `perto` junto", async () => {
-    const jobs = await getJobs({
+    const { itens: jobs } = await getJobs({
       city: "Cláudia",
       perto: { cidade: "Sinop" },
     });
@@ -589,8 +589,10 @@ describe("busca ordenada pelo mais perto", () => {
 
   it("prestador: o desempate por nota sobrevive à proximidade", async () => {
     // Todos os prestadores de exemplo são de Sinop, então empatam no grau.
-    const providers = await getProviders({ perto: { cidade: "Sinop" } });
-    const semPerto = await getProviders();
+    const { itens: providers } = await getProviders({
+      perto: { cidade: "Sinop" },
+    });
+    const { itens: semPerto } = await getProviders();
 
     expect(providers.map((p) => p.profile_id)).toEqual(
       semPerto.map((p) => p.profile_id),

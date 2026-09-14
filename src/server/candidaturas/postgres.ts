@@ -1,5 +1,6 @@
 import "server-only";
 
+import { TETO_CANDIDATURAS } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
 import type {
@@ -53,7 +54,8 @@ export class RepositorioCandidaturasPostgres
       .from("candidaturas")
       .select("*")
       .eq("vaga_id", vagaId)
-      .order("criado_em", { ascending: false });
+      .order("criado_em", { ascending: false })
+      .limit(TETO_CANDIDATURAS);
 
     if (error) {
       if (ehIdInvalido(error)) return [];
@@ -68,7 +70,8 @@ export class RepositorioCandidaturasPostgres
       .from("candidaturas")
       .select("*")
       .eq("candidato_id", candidatoId)
-      .order("criado_em", { ascending: false });
+      .order("criado_em", { ascending: false })
+      .limit(TETO_CANDIDATURAS);
 
     if (error) {
       if (ehIdInvalido(error)) return [];
@@ -82,7 +85,8 @@ export class RepositorioCandidaturasPostgres
     const { data, error } = await supabase
       .from("candidaturas")
       .select("*")
-      .order("criado_em", { ascending: false });
+      .order("criado_em", { ascending: false })
+      .limit(TETO_CANDIDATURAS);
 
     if (error) throw erros.indisponivel(error.message);
     return (data ?? []).map(paraCandidatura);

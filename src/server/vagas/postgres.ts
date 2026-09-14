@@ -1,6 +1,7 @@
 import "server-only";
 
 import { daquiA } from "@/lib/format";
+import { TETO_DO_DONO } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import { erros } from "../errors";
 import type {
@@ -64,7 +65,8 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
       .from("vagas")
       .select("*")
       .eq("empresa_id", empresaId)
-      .order("criado_em", { ascending: false });
+      .order("criado_em", { ascending: false })
+      .limit(TETO_DO_DONO);
 
     if (error) {
       if (ehIdInvalido(error)) return [];
@@ -78,7 +80,8 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
     const { data, error } = await supabase
       .from("vagas")
       .select("*")
-      .order("criado_em", { ascending: false });
+      .order("criado_em", { ascending: false })
+      .limit(TETO_DO_DONO);
 
     if (error) throw erros.indisponivel(error.message);
     return (data ?? []).map(paraVaga);

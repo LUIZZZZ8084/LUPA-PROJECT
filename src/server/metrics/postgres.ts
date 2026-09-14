@@ -1,5 +1,6 @@
 import "server-only";
 
+import { TETO_ADMIN } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import type { Papel } from "../auth/rbac";
 import { erros } from "../errors";
@@ -61,7 +62,8 @@ export class RepositorioMetricasPostgres implements RepositorioMetricas {
       .from("metricas_cadastros_por_dia")
       .select("*")
       .gte("dia", desdeISO)
-      .order("dia", { ascending: true });
+      .order("dia", { ascending: true })
+      .limit(TETO_ADMIN);
 
     if (error) throw erros.indisponivel(`métricas cadastros: ${error.message}`);
 

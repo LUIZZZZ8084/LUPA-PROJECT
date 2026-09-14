@@ -8,7 +8,7 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 13/09/2026.**
+**Última atualização: 14/09/2026.**
 
 ## Concluído
 
@@ -260,6 +260,10 @@ Qualidade:
   action tem orçamento declarado por nome, cobrado dentro de `criarAcao`,
   e contado por sessão — nunca por IP, que puniria a lan house inteira —
   [#202](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/202)
+- Teto de linhas em toda listagem: nenhuma consulta traz tabela inteira,
+  os números moram num arquivo só com o porquê de cada um, e onde o
+  recorte pode esconder resultado a tela avisa —
+  [#203](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/203)
 
 ## Pendente
 

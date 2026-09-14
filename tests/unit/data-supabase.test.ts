@@ -26,7 +26,10 @@ function criarQueryBuilder(resposta: RespostaFalsa) {
     maybeSingle: vi.fn(async () => resposta),
   };
 
-  for (const metodo of ["select", "eq", "gt", "gte", "or", "order"]) {
+  // `limit` entrou com o teto das listagens (#203): sem ele aqui, o duble
+  // quebra na cadeia e o teste reprova por falta de espelho, não por
+  // defeito — o mesmo tipo de falso vermelho que ensina a ignorar teste.
+  for (const metodo of ["select", "eq", "gt", "gte", "or", "order", "limit"]) {
     builder[metodo] = vi.fn((...args: unknown[]) => {
       chamadas.push({ metodo, args });
       return builder;
@@ -129,7 +132,7 @@ describe("camada de dados com Supabase ligado", () => {
   it("lê vagas da view job_listings, não dos dados de exemplo", async () => {
     respostaAtual = { data: [VAGA_DO_BANCO], error: null };
 
-    const vagas = await getJobs();
+    const { itens: vagas } = await getJobs();
 
     expect(tabelasConsultadas).toContain("job_listings");
     expect(vagas).toHaveLength(1);
@@ -353,7 +356,7 @@ describe("camada de dados com Supabase ligado", () => {
 
   it("lista vazia é lista vazia, não catálogo de exemplo", async () => {
     respostaAtual = { data: [], error: null };
-    expect(await getJobs()).toEqual([]);
+    expect((await getJobs()).itens).toEqual([]);
   });
 });
 
