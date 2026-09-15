@@ -69,6 +69,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "carteiras_vaga",
       "categorias_servico",
       "inscricoes_push",
+      "mensagens_suporte",
       "pagamentos",
       "pedidos_verificacao",
       "perfis_candidato",
@@ -605,6 +606,12 @@ describe("grants de anon e authenticated", () => {
      * guarda as chaves que cifram a mensagem até o aparelho: quem as tiver
      * manda notificação em nome da Lupa.
      */
+    /*
+     * Guarda nome, e-mail e texto livre sobre a situação de quem escreveu
+     * (#235). Nunca pública, nem para quem tem sessão: mensagem de suporte
+     * de outra pessoa não é assunto de ninguém.
+     */
+    "mensagens_suporte",
     "preferencias_notificacao",
     "inscricoes_push",
     "company_applications",
@@ -881,7 +888,8 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(20);
+    // 21 desde a #235, que acrescentou `mensagens_suporte`.
+    expect(tabelas.rows).toHaveLength(21);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
