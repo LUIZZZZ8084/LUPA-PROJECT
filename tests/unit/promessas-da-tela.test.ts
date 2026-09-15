@@ -22,6 +22,12 @@ import { describe, expect, it } from "vitest";
 
 const APP = join(process.cwd(), "src", "app");
 const COMPONENTES = join(process.cwd(), "src", "components");
+/*
+ * `src/server` entrou na varredura com a #237: a mensagem de erro interno
+ * é texto que a pessoa lê, e morava fora do alcance de qualquer teste de
+ * promessa por não estar numa tela.
+ */
+const SERVIDOR = join(process.cwd(), "src", "server");
 
 /**
  * Recursos que a interface **não pode** oferecer como passo, e por quê.
@@ -30,7 +36,26 @@ const COMPONENTES = join(process.cwd(), "src", "components");
  * a #120 entregar o envio de SMS, a linha do telefone sai daqui e o teste
  * deixa de cobrar.
  */
-const AINDA_NAO_EXISTE: { termos: RegExp; recurso: string; issue: string }[] = [
+interface RecursoInexistente {
+  termos: RegExp;
+  recurso: string;
+  issue: string;
+  /**
+   * Arquivos onde o termo pode aparecer, com a razão.
+   *
+   * Existe para um caso só, e ele é legítimo: o componente que **guarda** o
+   * selo desligado até a #120 chegar. Sem a exceção, o teste ficaria
+   * vermelho por código correto — e falso vermelho é o que ensina todo
+   * mundo a ignorar teste, como este projeto já registrou com os dubles sem
+   * `.limit()`.
+   *
+   * A exceção não é cheque em branco: há um segundo teste conferindo que o
+   * arquivo isentado de fato mantém o selo desligado.
+   */
+  excecoes?: string[];
+}
+
+const AINDA_NAO_EXISTE: RecursoInexistente[] = [
   {
     termos: /verificar o telefone|verifique o telefone|verificação por SMS/i,
     recurso: "verificação de telefone",
@@ -68,6 +93,37 @@ const AINDA_NAO_EXISTE: { termos: RegExp; recurso: string; issue: string }[] = [
       'nunca teve "documento" nem "selfie". Descrever o descarte de ' +
       "algo que não existe é afirmação falsa de conformidade",
   },
+  /*
+   * As três de baixo vieram da varredura da #237, na home — a tela onde
+   * alguém decide deixar um estranho entrar em casa. Selo que promete mais
+   * do que confere é pior que selo nenhum: ele substitui o cuidado da
+   * pessoa por uma garantia que ninguém deu.
+   */
+  {
+    termos: /telefone verificado/i,
+    recurso: "verificação de telefone",
+    issue:
+      "#120 — depende de provedor pago, e **nada no código escreve** " +
+      "`telefone_verificado = true`. Em produção, zero contas reais o têm " +
+      "e os 14 que exibiam o selo eram todos do seed",
+    excecoes: ["components/verified-badge.tsx"],
+  },
+  {
+    termos: /identidade confirmada|identidade verificada/i,
+    recurso: "confirmação de identidade",
+    issue:
+      "#237 — CPF válido e único e CNPJ na Receita provam que o documento " +
+      "existe, nunca que é de quem o digitou. Os próprios Termos de Uso " +
+      "dizem isso; a home dizia o contrário",
+  },
+  {
+    termos: /já estamos sabendo/i,
+    recurso: "monitoramento automático de erro",
+    issue:
+      "#237 — o Sentry está no bundle **sem DSN** em produção e não " +
+      "reporta nada. A frase custa o relato: quem lê que já sabemos não " +
+      "escreve para o suporte, e o defeito vive",
+  },
   {
     termos: /envie (o )?(documento|selfie)|documento e selfie/i,
     recurso: "envio de documento e selfie",
@@ -83,7 +139,7 @@ function arquivosDeTela(dir: string): string[] {
     const caminho = join(dir, nome);
     if (statSync(caminho).isDirectory()) {
       achados.push(...arquivosDeTela(caminho));
-    } else if (nome.endsWith(".tsx")) {
+    } else if (nome.endsWith(".tsx") || nome.endsWith(".ts")) {
       achados.push(caminho);
     }
   }
@@ -113,12 +169,13 @@ describe("promessas da tela", () => {
   it("nenhuma tela oferece um passo que não existe", () => {
     const quebradas: string[] = [];
 
-    for (const raiz of [APP, COMPONENTES]) {
+    for (const raiz of [APP, COMPONENTES, SERVIDOR]) {
       for (const arquivo of arquivosDeTela(raiz)) {
         const visivel = textoVisivel(readFileSync(arquivo, "utf8"));
         const curto = arquivo.replace(/\\/g, "/").split("/src/")[1];
 
-        for (const { termos, recurso, issue } of AINDA_NAO_EXISTE) {
+        for (const { termos, recurso, issue, excecoes } of AINDA_NAO_EXISTE) {
+          if (excecoes?.includes(curto)) continue;
           if (termos.test(visivel)) {
             quebradas.push(`${curto} — oferece ${recurso} (${issue})`);
           }
@@ -133,6 +190,26 @@ describe("promessas da tela", () => {
         "\n\nOu o recurso passa a existir, ou a frase muda para algo que " +
         "leve a uma tela que existe. Promessa na tela é contrato.",
     ).toEqual([]);
+  });
+
+  /**
+   * A exceção do selo de telefone só vale enquanto ele estiver desligado.
+   *
+   * O componente guarda o rótulo para o dia em que a #120 entregar o envio
+   * por SMS — e é por isso que ele é isentado. Mas se alguém ligar a
+   * constante sem a #120, o selo volta a dizer "não verificado" para
+   * sempre, que é exatamente o que a #209 tirou. Este teste é o que
+   * transforma a isenção em algo com prazo.
+   */
+  it("o selo de telefone isentado continua desligado", () => {
+    const fonte = readFileSync(join(COMPONENTES, "verified-badge.tsx"), "utf8");
+
+    expect(
+      fonte,
+      "VERIFICACAO_DE_TELEFONE_EXISTE foi ligada sem a #120 entregar o " +
+        "envio por SMS. Nada no código escreve `telefone_verificado = " +
+        "true`, então o selo volta a dizer 'não verificado' para sempre.",
+    ).toMatch(/VERIFICACAO_DE_TELEFONE_EXISTE\s*=\s*false/);
   });
 
   /**

@@ -184,7 +184,7 @@ export default async function VagasPage({
         <EmptyState
           icon={<SearchX size={22} />}
           title="Nenhuma vaga com esses filtros"
-          description="Tente remover um filtro ou buscar por outro cargo. Novas vagas entram todo dia."
+          description="Tente remover um filtro, buscar por outro cargo, ou abrir para toda a região."
           action={
             <ButtonLink href="/vagas" variant="outline" size="sm">
               Limpar busca
