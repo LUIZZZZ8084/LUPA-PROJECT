@@ -10,6 +10,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { JobCard } from "@/components/job-card";
 import { PageShell } from "@/components/layout/page-shell";
@@ -26,18 +27,22 @@ import { type Papel, pode } from "@/server/auth/rbac";
 import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
 
 /**
- * O terceiro card, decidido pelo papel de quem está olhando.
+ * O terceiro card, decidido pelo papel de quem está olhando — e, desde a
+ * #241, também por não ter papel nenhum.
  *
  * Ele apontava sempre para `/cadastro?tipo=prestador_servico` — a tela de
- * criar conta. Só que ninguém vê esta home sem sessão: o app é fechado por
- * login. Mandar quem já tem conta para o cadastro é pedir que ela mantenha
- * duas contas e não ache nenhuma depois.
+ * criar conta. Isso fazia sentido quando ninguém via esta home sem sessão:
+ * mandar quem já tem conta para o cadastro seria pedir que ela mantivesse
+ * duas e não achasse nenhuma depois. Hoje a home é o primeiro lugar que um
+ * visitante vê, e para ele o card precisa voltar a ser exatamente aquele
+ * convite — só que sem prometer um papel que ele ainda não escolheu.
  *
  * Quem pode ativar (candidato) vai para a ativação; quem já é prestador vai
- * para o próprio perfil, que é onde ele edita o anúncio; e para os outros
- * papéis o card deixa de prometer o que não se aplica a eles.
+ * para o próprio perfil, que é onde ele edita o anúncio; para os outros
+ * papéis com sessão o card deixa de prometer o que não se aplica a eles; e
+ * sem sessão nenhuma, o card é o cadastro.
  */
-function cardDeServico(papel: Papel | undefined) {
+function cardDeServico(papel: Papel | undefined, autenticado: boolean) {
   if (papel && pode(papel, "prestador:ativar")) {
     return {
       href: "/perfil/virar-prestador",
@@ -51,6 +56,14 @@ function cardDeServico(papel: Papel | undefined) {
       href: "/perfil",
       titulo: "Meu perfil de prestador",
       legenda: "Edite seu anúncio",
+    };
+  }
+
+  if (!autenticado) {
+    return {
+      href: "/cadastro",
+      titulo: "Criar minha conta",
+      legenda: "Grátis, leva menos de 1 minuto",
     };
   }
 
@@ -68,10 +81,38 @@ export default async function HomePage() {
   const origem = await origemDoUsuario();
   const { jobs, providers, totals } = await getHomeFeed(origem);
   const sessao = await sessaoAtual();
-  const terceiroCard = cardDeServico(sessao?.papel);
+  const terceiroCard = cardDeServico(sessao?.papel, Boolean(sessao));
+
+  /*
+   * O JSON-LD é assinado com o mesmo nonce da CSP (#223) — sem ele, a
+   * política de script-src recusaria este `<script>` do mesmo jeito que
+   * recusaria um script de verdade. `type="application/ld+json"` não roda
+   * nada, mas o navegador não distingue isso ao aplicar a política.
+   */
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Lupa",
+    url: "https://lupapp.com.br",
+    description:
+      "Plataforma de vagas de emprego e prestação de serviços em Mato " +
+      "Grosso, começando por Sinop-MT.",
+    areaServed: {
+      "@type": "State",
+      name: "Mato Grosso",
+    },
+  };
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        nonce={nonce}
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON.stringify de dado nosso, não de entrada.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <section className="aurora border-b border-line">
         <div className="mx-auto max-w-4xl px-4 pt-10 pb-12 sm:px-6 sm:pt-16">
           {/*
@@ -151,7 +192,11 @@ export default async function HomePage() {
             accent="text-servicos"
           >
             {providers.map((provider) => (
-              <ProviderCard key={provider.profile_id} provider={provider} />
+              <ProviderCard
+                key={provider.profile_id}
+                provider={provider}
+                autenticado={Boolean(sessao)}
+              />
             ))}
           </FeedSection>
         </div>

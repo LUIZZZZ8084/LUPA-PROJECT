@@ -38,10 +38,11 @@ function EmailLink({
 /**
  * Instagram e e-mail da Lupa, para quem ainda não tem conta (#239).
  *
- * Vive no layout de `(auth)` — a única parte do app que um visitante vê
- * sem sessão, já que fora daí toda rota redireciona para `/entrar`
- * (`src/proxy.ts`, `ABERTAS`). Não há home pública separada onde isto
- * pudesse ir.
+ * Nasceu só no layout de `(auth)`, que até a #241 era a única parte do
+ * app que um visitante via sem sessão — fora daí, toda rota redirecionava
+ * para `/entrar`. Hoje a home também é pública, e vive em `(app)`; o
+ * layout dali renderiza este componente do mesmo jeito, só que apenas
+ * para quem não tem conta (`src/app/(app)/layout.tsx`).
  *
  * Os dois e-mails têm propósito diferente, e o rótulo diz qual é qual:
  * `contato@` é assunto comercial, `suporte@` é para quem já usa o app.
