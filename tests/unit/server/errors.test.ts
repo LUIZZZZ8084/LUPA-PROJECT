@@ -35,9 +35,18 @@ describe("AppError", () => {
     expect(JSON.stringify(payload)).not.toContain("profiles");
     expect(payload).not.toHaveProperty("stack");
     expect(payload).not.toHaveProperty("detalhe");
-    expect(payload.mensagem).toBe(
-      "Algo deu errado do nosso lado. Já estamos sabendo.",
-    );
+    /*
+     * Mede a propriedade, não a frase (#237).
+     *
+     * O literal antigo era "Já estamos sabendo", e era falso — o Sentry
+     * está em produção sem DSN. Travar a frase inteira faria este teste
+     * defender o texto contra correção, que é o oposto do que ele quer: o
+     * que precisa continuar valendo é que a mensagem não vaza detalhe
+     * técnico **e** pede o relato, já que ninguém é avisado sozinho.
+     */
+    expect(payload.mensagem).toMatch(/algo deu errado do nosso lado/i);
+    expect(payload.mensagem).toMatch(/avise o suporte/i);
+    expect(payload.mensagem).not.toMatch(/já estamos sabendo/i);
   });
 
   it("carrega um id que aparece para a pessoa e no log", () => {

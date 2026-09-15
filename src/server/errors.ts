@@ -51,7 +51,20 @@ const MENSAGEM_PADRAO: Record<CodigoErro, string> = {
   limite_excedido: "Você atingiu o limite deste plano.",
   muitas_tentativas: "Muitas tentativas. Espere um minuto e tente de novo.",
   indisponivel: "Serviço temporariamente indisponível. Tente em instantes.",
-  interno: "Algo deu errado do nosso lado. Já estamos sabendo.",
+  /*
+   * Dizia "Já estamos sabendo" (#237). Não estávamos: o Sentry está no
+   * bundle sem DSN em produção e não reporta nada — conferido varrendo os
+   * chunks, zero menções ao endpoint de ingestão.
+   *
+   * A frase custava o relato: quem lê "já sabemos" não escreve para o
+   * suporte, e o defeito vive. Pedir o aviso é o oposto disso, e o código
+   * do erro existe justamente para a pessoa ter o que dizer.
+   *
+   * Quando o Sentry ganhar DSN, a frase pode voltar — e aí será verdade.
+   */
+  interno:
+    "Algo deu errado do nosso lado. Se puder, avise o suporte com o código " +
+    "acima — é o que nos deixa achar o problema.",
 };
 
 /** Alfabeto sem caracteres ambíguos: ninguém confunde 0 com O ao ditar. */
