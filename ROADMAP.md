@@ -8,9 +8,15 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 14/09/2026.**
+**Última atualização: 15/09/2026.**
 
 ## Concluído
+
+Em 15/09/2026:
+
+- Home pública, sem exigir login — o resto do app continua fechado
+  ([#241](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/241)).
+  `robots.txt` e `sitemap.xml` junto, para o Google indexar.
 
 Segurança, na semana de 13→14/09/2026:
 
@@ -42,8 +48,8 @@ Segurança, na semana de 13→14/09/2026:
 Base:
 
 - Autenticação própria (cadastro, login, sessão em JWT, RBAC por papel)
-- App fechado por login, com 404 de verdade em vez de 403 onde faz
-  sentido
+- App fechado por login — a home é a única exceção, desde a #241 — com
+  404 de verdade em vez de 403 onde faz sentido
 - Perfil por papel (candidato CLT, prestador, empresa) com edição em
   `/perfil/editar`
 - Envio de foto de perfil, currículo em PDF e logo de empresa, com

@@ -946,7 +946,7 @@ apareceria com 0% ao lado do nome — e a empresa aprenderia a ignorar o
 selo, ou descartaria quem só não preencheu um campo. Achado testando na
 tela, não lendo o código.
 
-### Navegação pública, revertida
+### Navegação pública, revertida — e parcialmente revertida de novo
 
 O V0 nasceu com vagas e prestadores abertos a qualquer visitante. A razão
 era boa: buscador indexando "vaga de operador em Sinop" traz gente que
@@ -954,15 +954,48 @@ nunca ouviu falar da Lupa, de graça e sem esforço de divulgação.
 
 Em 21/08/2026 isso foi revertido a pedido do Luiz. O raciocínio: só quem
 tem perfil se candidata, vê dado de empresa ou entra em contato — e é o
-cadastro que vira lead. Vitrine aberta gera visita; visita não é lead.
+cadastro que vira lead. Vitrine aberta gera visita; visita não é lead. O
+preço, aceito de olhos abertos: o app saiu da busca do Google, e ninguém
+mais chegava sozinho — todo mundo entrava por link recebido.
 
-**O preço, aceito de olhos abertos:** o app sai da busca do Google. Não
-existe mais quem chegue sozinho; todo mundo entra por link recebido. Se um
-dia a origem do tráfego virar problema, é aqui que se olha primeiro.
+**Em 15/09/2026 a home saiu de novo do muro (#241), e o resto continua
+fechado.** O preço de 21/08 tinha um custo que só ficou visível depois de
+o app estar no ar: quem recebia o link caía direto num formulário de
+cadastro, sem ver uma vaga, um prestador ou uma linha sequer do que a Lupa
+é. A barreira de conversão da primeira tela custava mais do que o
+fechamento total rendia — e o app inteiro atrás de login também não existe
+para o Google, que é exatamente o "chegar sozinho" que a decisão de 21/08
+tinha desistido de ter.
 
-O que sobreviveu: o modo demonstração. Ele responde por *de onde vêm os
-dados*, não por *quem pode entrar*, e continua sendo o que permite mostrar
-o produto sem infraestrutura.
+**O que mudou é só `/`.** `/vagas`, `/servicos`, `/perfil`, `/empresa`,
+candidatar-se, ver contato — continuam exigindo login, e isso é automático
+pelo `proxy.ts`: só a home saiu de `AREAS_FECHADAS`/entrou em `ABERTAS`, o
+resto da navegação cai na regra padrão de sempre. O raciocínio de 21/08
+sobre *funcionalidade* continua valendo integralmente; o que se reconsiderou
+foi só a *vitrine*.
+
+**A home pública não podia vazar o que o resto do app protege**, e quase
+vazou: o card de prestador ali mostra um botão de WhatsApp que, autenticado,
+carrega o telefone de verdade no HTML. `ProviderCard` ganhou a prop
+`autenticado` — falsa só nesta home, sem sessão —, e nesse caso o telefone
+não é lido em JSX nenhum, então não sai no HTML; o que aparece no lugar do
+botão é um convite para entrar. O componente é de servidor, então "não
+renderizar" aqui é "nunca existir na resposta", não CSS escondendo algo que
+o inspetor do navegador ainda revelaria.
+
+O que sobreviveu das duas decisões: o modo demonstração. Ele responde por
+*de onde vêm os dados*, não por *quem pode entrar*, e continua sendo o que
+permite mostrar o produto sem infraestrutura.
+
+**SEO básico entrou junto**, porque uma home pública sem `robots.txt`,
+`sitemap.xml` e dado estruturado ainda não existe para o Google — só existe
+para quem já tem o link. `src/app/robots.ts` e `src/app/sitemap.ts` seguem
+o mesmo padrão de rota gerada que `manifest.ts`, `icon.tsx` e `apple-icon.tsx`
+já usavam, e precisaram da mesma exceção no matcher do proxy que o manifesto
+já tinha exigido: um crawler não tem sessão, e sem a exceção o muro
+responderia com um redirecionamento para `/entrar` que nenhum crawler segue
+para descobrir a política — a mesma armadilha do item esquecido no matcher,
+registrada mais abaixo neste arquivo.
 
 ### Segurança: o que já vale, e o que se decidiu não fazer
 

@@ -3,11 +3,11 @@ import { expect, test } from "@playwright/test";
 /**
  * O muro de login, e o que fica de fora dele.
  *
- * O app é fechado por decisão de produto: sem conta não se navega. Mas o
- * muro roda na borda, antes de a página existir, e o que ele cobre é
- * decidido por uma expressão regular no `matcher` de `src/proxy.ts` — o
- * tipo de lugar onde um item esquecido não quebra tela nenhuma e ninguém
- * percebe.
+ * O app é fechado por decisão de produto: sem conta não se navega — exceto
+ * a home, pública desde a #241. Mas o muro roda na borda, antes de a
+ * página existir, e o que ele cobre é decidido por uma expressão regular
+ * no `matcher` de `src/proxy.ts` — o tipo de lugar onde um item esquecido
+ * não quebra tela nenhuma e ninguém percebe.
  *
  * Foi o que aconteceu com o manifesto: `icon` e `apple-icon` estavam na
  * lista, `manifest.webmanifest` não. Como ele não quebra nenhuma tela,
@@ -79,12 +79,12 @@ test.describe("muro de login", () => {
   });
 
   /**
-   * A outra metade, e a que importa mais: abrir o manifesto não pode ter
-   * afrouxado o muro. Uma regex mal escrita no matcher derruba a proteção
-   * inteira sem quebrar nada visível.
+   * A outra metade, e a que importa mais: abrir o manifesto — e, desde a
+   * #241, a home — não pode ter afrouxado o resto do muro. Uma regex mal
+   * escrita no matcher derruba a proteção inteira sem quebrar nada visível.
    */
   test("rota de navegação continua barrada sem sessão", async ({ request }) => {
-    for (const rota of ["/", "/vagas", "/perfil", "/empresa", "/candidatos"]) {
+    for (const rota of ["/vagas", "/perfil", "/empresa", "/candidatos"]) {
       const resposta = await request.get(rota, { maxRedirects: 0 });
 
       expect(
@@ -104,5 +104,46 @@ test.describe("muro de login", () => {
       const resposta = await request.get(rota, { maxRedirects: 0 });
       expect(resposta.status(), `${rota} devia abrir`).toBe(200);
     }
+  });
+
+  /**
+   * A home saiu do muro na #241: é o que resolve a barreira de conversão
+   * de cair direto num formulário sem nunca ver o produto.
+   */
+  test("a home abre sem sessão", async ({ request }) => {
+    const resposta = await request.get("/", { maxRedirects: 0 });
+    expect(resposta.status()).toBe(200);
+  });
+
+  /**
+   * O motivo de a home ter saído do muro: sem sessão, nenhuma página
+   * pública existia para o Google indexar. `robots.txt` e `sitemap.xml`
+   * são rota gerada, do mesmo jeito que o manifesto — e precisam da mesma
+   * exceção no matcher, ou um crawler sem cookie bate num redirecionamento
+   * para `/entrar` em vez de encontrar a política.
+   */
+  test("robots.txt e sitemap.xml respondem sem sessão", async ({ request }) => {
+    const robots = await request.get("/robots.txt", { maxRedirects: 0 });
+    expect(robots.status()).toBe(200);
+    expect(await robots.text()).toContain("Sitemap:");
+
+    const sitemap = await request.get("/sitemap.xml", { maxRedirects: 0 });
+    expect(sitemap.status()).toBe(200);
+    expect(await sitemap.text()).toContain("<urlset");
+  });
+
+  /**
+   * O que quase vazou junto com a home: o card de prestador tem um botão
+   * de WhatsApp que, autenticado, carrega o telefone de verdade no HTML.
+   * Sem sessão, o número não pode estar em lugar nenhum da resposta — não
+   * é sobre esconder com CSS, é sobre nunca ter sido lido para dentro do
+   * JSX (`src/components/provider-card.tsx`).
+   */
+  test("a home não expõe telefone de prestador sem sessão", async ({
+    request,
+  }) => {
+    const resposta = await request.get("/");
+    const html = await resposta.text();
+    expect(html).not.toContain("wa.me");
   });
 });

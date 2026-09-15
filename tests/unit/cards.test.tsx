@@ -77,6 +77,44 @@ describe("ProviderCard", () => {
       screen.queryByLabelText("Perfil verificado"),
     ).not.toBeInTheDocument();
   });
+
+  /**
+   * A home pública (#241) renderiza este card sem sessão. O telefone não
+   * pode aparecer em lugar nenhum do HTML — nem escondido, ausente — e o
+   * que substitui o botão do WhatsApp é um convite para entrar.
+   */
+  it("sem sessão, esconde o telefone e convida para o login", () => {
+    const { container } = render(
+      <ProviderCard provider={provider} autenticado={false} />,
+    );
+
+    expect(container.innerHTML).not.toContain(provider.phone);
+    expect(container.innerHTML).not.toContain("wa.me");
+
+    const entrar = screen.getByRole("link", {
+      name: new RegExp(
+        `entrar para ver o contato de ${provider.full_name}`,
+        "i",
+      ),
+    });
+    expect(entrar).toHaveAttribute(
+      "href",
+      `/entrar?destino=/servicos/${provider.profile_id}`,
+    );
+  });
+
+  /*
+   * Com sessão (o padrão de `autenticado`) o card volta a ser o de sempre
+   * — sem convite de login no lugar do contato. O botão de WhatsApp em si,
+   * incluindo o caso sem número configurado em demonstração, já tem a
+   * própria suíte em `tests/unit/contato-whatsapp.test.tsx`.
+   */
+  it("com sessão, não mostra o convite de login", () => {
+    render(<ProviderCard provider={provider} autenticado />);
+    expect(
+      screen.queryByLabelText(/entrar para ver o contato/i),
+    ).not.toBeInTheDocument();
+  });
 });
 
 /**

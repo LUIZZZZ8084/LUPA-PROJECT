@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { Lock, MapPin } from "lucide-react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ export function ProviderCard({
   provider,
   perto,
   className,
+  autenticado = true,
 }: {
   provider: ProviderListing;
   /**
@@ -22,6 +23,14 @@ export function ProviderCard({
    */
   perto?: Origem;
   className?: string;
+  /**
+   * Falso só na home pública (#241), o único lugar onde este card renderiza
+   * sem sessão. `provider.phone` nunca entra no WhatsApp: entra num convite
+   * para o login, com o perfil como destino. Não é esconder o botão com
+   * CSS — o telefone simplesmente não é lido em nenhum JSX deste ramo, e
+   * como o componente é de servidor, o que não é lido não sai no HTML.
+   */
+  autenticado?: boolean;
 }) {
   const noSeuBairro =
     Boolean(perto?.cidade) &&
@@ -80,11 +89,21 @@ export function ProviderCard({
       </div>
 
       <div className="relative z-10 self-center">
-        <WhatsAppIconButton
-          phone={provider.phone}
-          providerName={provider.full_name}
-          context={provider.category.name}
-        />
+        {autenticado ? (
+          <WhatsAppIconButton
+            phone={provider.phone}
+            providerName={provider.full_name}
+            context={provider.category.name}
+          />
+        ) : (
+          <Link
+            href={`/entrar?destino=/servicos/${provider.profile_id}`}
+            aria-label={`Entrar para ver o contato de ${provider.full_name}`}
+            className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-panel-2 text-muted transition-colors hover:bg-panel-3"
+          >
+            <Lock size={16} />
+          </Link>
+        )}
       </div>
     </div>
   );

@@ -115,21 +115,34 @@ const AREAS_FECHADAS: readonly AreaFechada[] = [
 /**
  * O que continua aberto sem sessão.
  *
- * O app é fechado: sem conta não se navega. A razão é de produto — só quem
- * tem perfil se candidata, vê dados de empresa ou entra em contato, e é o
- * cadastro que vira lead.
+ * O app é fechado por padrão: sem conta, nenhuma funcionalidade de verdade
+ * se usa — candidatar-se, ver contato, publicar vaga. Isso não mudou.
  *
- * Isto reverte, de propósito, a navegação pública que o AGENTS.md
- * registrava como requisito. O custo aceito é sair da busca do Google:
- * deixa de existir quem chega sozinho.
+ * O que mudou, em 15/09/2026, foi a home. Até aqui ela também exigia
+ * sessão, e quem recebia o link caía direto num formulário de cadastro sem
+ * nunca ver o produto — a barreira de conversão custava mais do que o
+ * fechamento total rendia. E um app inteiro atrás de login não existe para
+ * o Google: ninguém encontra a Lupa buscando "vaga em Sinop", porque não
+ * havia página nenhuma que um crawler sem sessão conseguisse ler (#241).
  *
- * A lista é curta por segurança: o padrão é fechado, e abrir é explícito.
+ * A home aberta não expõe nada que a lista de "Áreas fechadas" já não
+ * decida em outro lugar: os cards de vaga não têm telefone, e o de
+ * prestador — que tem — só renderiza o botão de WhatsApp com sessão; sem
+ * ela, `ProviderCard` troca o contato por um convite para entrar (ver
+ * `src/components/provider-card.tsx`). O restante da navegação — `/vagas`,
+ * `/servicos`, `/perfil`, `/empresa` — continua de fora desta lista, e cai
+ * na regra padrão: sem sessão, login.
+ *
+ * A lista continua curta por segurança: o padrão é fechado, e abrir é
+ * explícito, rota por rota.
  */
 /*
- * Quatro rotas abertas, e as duas últimas por necessidade: quem esqueceu
- * a senha não tem como estar logado para recuperá-la (#174). O token no
- * link é o que prova quem é — e ele é conferido no servidor, na mesma
- * instrução que o gasta.
+ * `/` é a home, aberta desde a #241.
+ *
+ * Cinco rotas depois dela, e as duas últimas por necessidade: quem
+ * esqueceu a senha não tem como estar logado para recuperá-la (#174). O
+ * token no link é o que prova quem é — e ele é conferido no servidor, na
+ * mesma instrução que o gasta.
  */
 /*
  * `/verificar-email` entra aqui porque a pessoa quase sempre abre o link
@@ -138,6 +151,7 @@ const AREAS_FECHADAS: readonly AreaFechada[] = [
  * uso único, já teria sido gasto ou nem chegaria a ser lido.
  */
 const ABERTAS = [
+  "/",
   "/entrar",
   "/cadastro",
   "/esqueci-senha",
@@ -325,7 +339,15 @@ export const config = {
      * deixava de ser instalável justamente para quem ainda não tem conta,
      * que é quem acabou de receber o link. Não é navegação e não tem o que
      * proteger; o que ele diz (nome, cor, ícone) já é público.
+     *
+     * `robots.txt` e `sitemap.xml` entraram com a home pública (#241), pela
+     * mesma classe de defeito do manifesto: quem os busca é sempre um
+     * crawler, sempre sem sessão, e sem esta exceção o muro os barraria com
+     * um redirecionamento para `/entrar` — um crawler não segue esse
+     * redirecionamento para descobrir a política, só desiste de tentar de
+     * novo. `ABERTAS` não resolve, pela mesma razão do manifesto: aquela
+     * lista é de rota de navegação, e `sitemap.xml` não é uma.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|api/webhooks|api/cron|icon|apple-icon|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|api/webhooks|api/cron|icon|apple-icon|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };
