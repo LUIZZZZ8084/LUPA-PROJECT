@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LupaLogo } from "@/components/brand/logo";
+import { CanalDeContato } from "@/components/canal-de-contato";
 import { AlternarTema } from "@/components/theme-toggle";
 
 /**
@@ -27,6 +28,15 @@ export default function AuthLayout({
         <AlternarTema />
       </div>
       <div className="flex-1">{children}</div>
+
+      {/*
+        Instagram e e-mail, no rodapé das quatro telas que um visitante vê
+        sem sessão (#239). Não é gateado por `CONTROLADOR`: diferente de
+        Termos e Privacidade, isto não é documento legal.
+      */}
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        <CanalDeContato />
+      </div>
     </div>
   );
 }
