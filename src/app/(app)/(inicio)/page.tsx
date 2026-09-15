@@ -203,37 +203,72 @@ export default async function HomePage() {
 
         {/* Confiança — o que faz alguém contratar um desconhecido */}
         <Reveal>
+          {/*
+            Este bloco anunciava três verificações que o produto não entrega
+            (#237), na tela onde alguém decide deixar um estranho entrar em
+            casa.
+
+            "Telefone verificado" não existe — nada no código escreve
+            `telefone_verificado = true`, e os 14 perfis que exibiam o selo
+            em produção eram todos do seed. "Identidade confirmada" é a
+            alegação mais forte possível e a mais falsa: CPF válido e único
+            não prova que o documento é de quem o digitou, como os próprios
+            Termos de Uso dizem. E "a experiência de quem já contratou"
+            descrevia 17 avaliações das quais 16 eram semeadas — e nada liga
+            avaliação a contratação.
+
+            O que ficou é o que de fato é conferido, **com o alcance de cada
+            conferência dito junto**. Selo que promete mais do que confere
+            substitui o cuidado da pessoa por uma garantia que ninguém deu —
+            e é pior que selo nenhum, porque ela para de olhar.
+          */}
           <Panel className="mt-10">
             <h2 className="text-lg font-bold">
-              Confiança que <span className="text-vagas">faz a diferença</span>
+              O que a gente <span className="text-vagas">confere</span>
             </h2>
             <p className="mt-1.5 max-w-lg text-sm text-muted">
-              Perfis verificados, avaliações reais e recomendações — para você
-              escolher com segurança quem entra na sua casa ou na sua empresa.
+              E o que cada conferência prova, para você saber o que ainda
+              depende de você antes de contratar alguém.
             </p>
 
             <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-4">
               <TrustItem
-                icon={<MessageCircle size={22} />}
-                title="Telefone verificado"
-                description="Mais segurança nas conversas"
-              />
-              <TrustItem
                 icon={<BadgeCheck size={22} />}
-                title="Documento verificado"
-                description="Identidade confirmada"
-              />
-              <TrustItem
-                icon={<Star size={22} />}
-                title="Avaliações reais"
-                description="A experiência de quem já contratou"
+                title="CNPJ na Receita"
+                description="Conferimos que a empresa existe e está ativa"
               />
               <TrustItem
                 icon={<ShieldCheck size={22} />}
-                title="Profissionais locais"
-                description="Gente da sua cidade e da região"
+                title="Um CPF, uma conta"
+                description="Válido e sem repetir — não prova de quem é"
+              />
+              <TrustItem
+                icon={<Star size={22} />}
+                title="Uma avaliação por pessoa"
+                description="E ninguém avalia a si mesmo"
+              />
+              <TrustItem
+                icon={<MessageCircle size={22} />}
+                title="Gente daqui"
+                description="Da sua cidade e da sua região"
               />
             </div>
+
+            {/*
+              A frase que faltava.
+
+              Nenhuma das quatro conferências prova quem a pessoa é, e quem
+              vai abrir a porta de casa merece saber disso antes, não depois.
+              Sem alarde: produtor rural e autônomo contratam de verdade, e
+              tratar todo mundo como suspeito afastaria justamente quem o app
+              existe para atender.
+            */}
+            <p className="mt-5 border-t border-line pt-4 text-xs leading-relaxed text-muted">
+              Nada disso prova quem a pessoa é. Combine o primeiro encontro num
+              lugar movimentado, confira o serviço antes de pagar, e desconfie
+              de quem cobra qualquer taxa para você se candidatar — isso não
+              existe na Lupa.
+            </p>
           </Panel>
         </Reveal>
 
