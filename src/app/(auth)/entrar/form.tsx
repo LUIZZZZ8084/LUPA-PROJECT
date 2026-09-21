@@ -92,7 +92,16 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
           </Field>
 
           {state.erro && (
-            <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            <p
+              /*
+               * `alert` é o que `Field` já usa para erro de campo, e aqui
+               * faz o leitor de tela anunciar a recusa sem a pessoa ter de
+               * procurar — ela acabou de apertar "Entrar" e a mensagem
+               * aparece acima do botão, fora do foco.
+               */
+              role="alert"
+              className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+            >
               {state.erro}
             </p>
           )}

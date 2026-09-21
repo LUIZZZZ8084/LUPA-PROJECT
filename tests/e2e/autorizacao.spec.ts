@@ -287,7 +287,21 @@ test.describe("a tela de entrada", () => {
       await page.getByLabel("Senha").fill("senha-errada-de-proposito");
       await page.getByRole("button", { name: "Entrar" }).click();
 
-      const erro = page.locator("form p").first();
+      /*
+       * `getByRole("alert")`, e não `form p` (#243).
+       *
+       * O formulário tem outro `<p>` sempre visível — "Esqueci minha
+       * senha" —, então `form p` combinado com `.first()` casava com ele
+       * enquanto a mensagem ainda não tinha renderizado: o
+       * `toBeVisible()` resolvia na hora, contra o elemento errado, e o
+       * teste comparava um link com uma mensagem de erro. Passava local e
+       * reprovava na CI, que é mais lenta — a mesma assimetria que o
+       * `LIMITE_MULTIPLICADOR` já registrou.
+       *
+       * O papel só existe quando existe erro, então esperar por ele é
+       * esperar pela coisa certa.
+       */
+      const erro = page.getByRole("alert");
       await expect(erro).toBeVisible({ timeout: 15_000 });
       mensagens.push(((await erro.textContent()) ?? "").trim());
     }
