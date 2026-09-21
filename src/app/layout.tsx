@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s · Lupa",
   },
   description:
-    "Vagas de emprego, prestadores de serviço verificados e empresas " +
+    "Vagas de emprego, prestadores de serviço e empresas " +
     "contratando em Sinop-MT. Filtrado por bairro e categoria, sem se perder " +
     "em grupo de WhatsApp.",
   applicationName: "Lupa",
