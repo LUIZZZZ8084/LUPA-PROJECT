@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Lupa — Trabalho e profissionais perto de você",
     description:
-      "Vagas, serviços e empresas em Sinop-MT. Perfis verificados, contato direto no WhatsApp.",
+      "Vagas, serviços e empresas em Sinop-MT e no resto de Mato Grosso. Contato direto pelo WhatsApp.",
     locale: "pt_BR",
     type: "website",
   },
