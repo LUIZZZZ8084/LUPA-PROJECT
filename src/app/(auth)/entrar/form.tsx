@@ -92,7 +92,25 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
           </Field>
 
           {state.erro && (
-            <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            <p
+              /*
+               * `alert` é o que `Field` já usa para erro de campo, e aqui
+               * faz o leitor de tela anunciar a recusa sem a pessoa ter de
+               * procurar — ela acabou de apertar "Entrar" e a mensagem
+               * aparece acima do botão, fora do foco.
+               */
+              role="alert"
+              /*
+               * O id é o que o e2e procura. `getByRole("alert")` não
+               * serve: o App Router injeta um `__next-route-announcer__`
+               * com o mesmo papel, vazio, e o seletor casaria com os
+               * dois. O par está em `tests/e2e/autorizacao.spec.ts` —
+               * mesmo tipo de acoplamento que a suíte já tem com o rótulo
+               * dos campos e o nome do botão.
+               */
+              id="erro-de-entrada"
+              className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+            >
               {state.erro}
             </p>
           )}

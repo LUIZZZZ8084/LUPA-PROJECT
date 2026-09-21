@@ -287,7 +287,24 @@ test.describe("a tela de entrada", () => {
       await page.getByLabel("Senha").fill("senha-errada-de-proposito");
       await page.getByRole("button", { name: "Entrar" }).click();
 
-      const erro = page.locator("form p").first();
+      /*
+       * O id do erro, e não `form p` nem `getByRole("alert")` (#243).
+       *
+       * `form p` com `.first()` casava com "Esqueci minha senha", que
+       * está sempre visível: o `toBeVisible()` resolvia na hora, contra o
+       * elemento errado, e a comparação final punha um link contra uma
+       * mensagem.
+       *
+       * `getByRole("alert")` trocou um seletor frágil por outro: o App
+       * Router injeta `__next-route-announcer__`, uma `<div
+       * role="alert">` vazia, no `body` de toda página — então o papel
+       * casa com dois elementos e o modo estrito reprova, ou casa só com
+       * o anunciador vazio e o teste mede "".
+       *
+       * O id existe **só** quando existe erro, e é nosso. Esperar por ele
+       * é esperar pela coisa certa.
+       */
+      const erro = page.locator("#erro-de-entrada");
       await expect(erro).toBeVisible({ timeout: 15_000 });
       mensagens.push(((await erro.textContent()) ?? "").trim());
     }

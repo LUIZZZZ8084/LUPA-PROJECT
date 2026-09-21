@@ -133,7 +133,18 @@ const AINDA_NAO_EXISTE: RecursoInexistente[] = [
    * descrever um registro e vender uma garantia.
    */
   {
-    termos: /perfis verificados/i,
+    /*
+     * Qualquer sujeito plural, não só "perfis" (#243).
+     *
+     * A primeira versão desta regra dizia `/perfis verificados/` — escrita
+     * olhando para as ocorrências que eu tinha na mão. A `metadata
+     * .description` do site inteiro dizia "prestadores de serviço
+     * verificados": mesma promessa, sujeito diferente, e passou batido
+     * pela varredura que existia justamente para pegá-la. Regra que só
+     * reconhece a redação que alguém já viu é uma lista disfarçada de
+     * regra.
+     */
+    termos: /(perfis|prestadores|profissionais)[^.]{0,40}verificad[oa]s/i,
     recurso: "verificação de todos os perfis",
     issue:
       "#237 — o plural promete a plataforma inteira conferida. O que " +

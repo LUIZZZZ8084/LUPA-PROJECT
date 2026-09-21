@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Lupa — Trabalho e profissionais perto de você",
     short_name: "Lupa",
     description:
-      "Vagas de emprego, prestadores de serviço verificados e empresas contratando em Sinop-MT.",
+      "Vagas de emprego, prestadores de serviço e empresas contratando em Sinop-MT.",
     start_url: "/",
     scope: "/",
     display: "standalone",
