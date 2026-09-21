@@ -29,14 +29,14 @@ export async function generateMetadata({
   if (cidade) {
     return {
       title: `Profissionais e serviços em ${cidade}`,
-      description: `Eletricista, diarista, pintor, encanador e mais em ${cidade}-${ESTADO}. Perfis verificados, avaliações reais e contato direto no WhatsApp.`,
+      description: `Eletricista, diarista, pintor, encanador e mais em ${cidade}-${ESTADO}. Contato direto pelo WhatsApp.`,
     };
   }
 
   return {
     title: "Profissionais e serviços em Mato Grosso",
     description:
-      "Eletricista, diarista, pintor, encanador e mais em Mato Grosso, começando por Sinop. Perfis verificados, avaliações reais e contato direto no WhatsApp.",
+      "Eletricista, diarista, pintor, encanador e mais em Mato Grosso, começando por Sinop. Contato direto pelo WhatsApp.",
   };
 }
 

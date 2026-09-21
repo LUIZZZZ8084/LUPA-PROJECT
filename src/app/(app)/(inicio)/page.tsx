@@ -144,8 +144,8 @@ export default async function HomePage() {
           </h1>
 
           <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted sm:text-base">
-            Vagas de emprego, prestação de serviços e profissionais qualificados
-            na sua região — com perfil verificado e contato direto no WhatsApp.
+            Vagas de emprego e prestadores de serviço na sua região, com contato
+            direto pelo WhatsApp.
           </p>
 
           <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3">

@@ -116,6 +116,38 @@ const AINDA_NAO_EXISTE: RecursoInexistente[] = [
       "existe, nunca que é de quem o digitou. Os próprios Termos de Uso " +
       "dizem isso; a home dizia o contrário",
   },
+  /*
+   * As duas de baixo entraram quando a home virou pública (#242), e são a
+   * mesma afirmação num lugar pior: a **meta description**, que é o texto
+   * que o buscador mostra como resumo. Ninguém precisa abrir o site para
+   * ler a promessa — ela chega antes dele.
+   *
+   * "Perfis verificados", no plural, não nomeia um perfil que passou por
+   * conferência: promete que todos passaram, e promete a conferência que
+   * não existe.
+   *
+   * Nenhuma das duas precisa de exceção para `verified-badge.tsx`. O selo
+   * se chama "Perfil verificado" — singular, sem o "com" — e nomear o
+   * estado de um perfil que de fato passou continua sendo verdade. A
+   * diferença entre as duas frases é exatamente a diferença entre
+   * descrever um registro e vender uma garantia.
+   */
+  {
+    termos: /perfis verificados/i,
+    recurso: "verificação de todos os perfis",
+    issue:
+      "#237 — o plural promete a plataforma inteira conferida. O que " +
+      "existe é CPF válido e único, e CNPJ na Receita, um perfil por vez " +
+      "— e nenhum dos dois prova identidade",
+  },
+  {
+    termos: /com perfil verificado/i,
+    recurso: "verificação de perfil como característica do produto",
+    issue:
+      "#237 — a chamada da home oferecia isso como o que a Lupa é, e não " +
+      "como o estado de um anúncio. O selo continua valendo; o que não " +
+      "vale é vendê-lo como promessa de entrada",
+  },
   {
     termos: /já estamos sabendo/i,
     recurso: "monitoramento automático de erro",
