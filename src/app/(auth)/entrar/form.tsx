@@ -100,6 +100,15 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
                * aparece acima do botão, fora do foco.
                */
               role="alert"
+              /*
+               * O id é o que o e2e procura. `getByRole("alert")` não
+               * serve: o App Router injeta um `__next-route-announcer__`
+               * com o mesmo papel, vazio, e o seletor casaria com os
+               * dois. O par está em `tests/e2e/autorizacao.spec.ts` —
+               * mesmo tipo de acoplamento que a suíte já tem com o rótulo
+               * dos campos e o nome do botão.
+               */
+              id="erro-de-entrada"
               className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
             >
               {state.erro}
