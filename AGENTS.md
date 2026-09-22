@@ -1918,14 +1918,14 @@ tão importante quanto o que entrou:
 | Recurso | Estado |
 |---|---|
 | Perfil público: razão social, setor, porte, site, redes, descrição, logo | Pronto |
-| Publicar, editar e encerrar vaga | Pronto |
+| Publicar e encerrar vaga | Pronto — **editar não existe**: a vaga é revisada antes de publicar, e a tela de compra diz isso |
 | Ver candidaturas por estágio, e mover entre eles | Pronto |
 | Ficha do candidato, com currículo e contato | Pronto |
 | % de casamento com a vaga, na lista de currículos | Pronto |
 | Buscar entre quem pediu para ser encontrado | Pronto |
-| Publicações no perfil, até 10 ativas | Pronto |
+| Publicações no perfil | **Não é da empresa** — o feed é de prestador e candidato desde 03/09/2026; quem representa a empresa é a logo e o cartão |
 | Métricas próprias: visualizações e candidaturas por dia, 30 dias | Pronto |
-| Plano e cobrança | `trial`/`mensal` no schema; sem integração |
+| Plano e cobrança | Pronto — Mercado Pago, vaga avulsa, pacotes de 5 e 10, plano mensal ilimitado (#172, #179) |
 
 **"Recomendados para você" é ordenação, não descoberta.** O painel põe na
 frente, entre **quem já se candidatou**, quem tem as habilidades que a vaga
