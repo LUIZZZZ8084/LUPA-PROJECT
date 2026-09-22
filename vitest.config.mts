@@ -1,3 +1,4 @@
+import { cpus, totalmem } from "node:os";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
@@ -24,6 +25,25 @@ export default defineConfig({
     exclude: ["tests/e2e/**", "node_modules/**"],
     // O pool de forks trava no Windows; threads é estável nos dois sistemas.
     pool: "threads",
+    /*
+     * Workers limitados pela memória, não pelos núcleos (#265).
+     *
+     * O padrão abre um worker por núcleo. Na máquina do Luiz são 16 núcleos
+     * lógicos e 7,7 GB de RAM: ~15 workers, cada um com jsdom e o grafo do
+     * servidor carregados, não cabem, e a máquina começa a paginar. Aí tudo
+     * fica lento ao mesmo tempo — o `verify` reprovava por tempo em testes
+     * triviais (um clique de botão estourando 5 s) e sempre no primeiro
+     * teste dos arquivos que reimportam o serviço de pagamentos. O log
+     * mostrava 705 s de setup acumulado numa suíte de 224 s.
+     *
+     * ~1,2 GB por worker, medido pelo que cabe: aqui dá 6. Numa máquina de
+     * CI com mais memória que núcleos, quem limita são os núcleos, como
+     * antes.
+     */
+    maxWorkers: Math.max(
+      2,
+      Math.min(cpus().length - 1, Math.floor(totalmem() / 1.2e9)),
+    ),
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "json-summary"],
