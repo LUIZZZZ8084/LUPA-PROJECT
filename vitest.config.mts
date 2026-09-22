@@ -1,3 +1,4 @@
+import { cpus, totalmem } from "node:os";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
@@ -25,23 +26,24 @@ export default defineConfig({
     // O pool de forks trava no Windows; threads é estável nos dois sistemas.
     pool: "threads",
     /*
-     * 30 s de hook, e não os 10 s padrão (#265).
+     * Workers limitados pela memória, não pelos núcleos (#265).
      *
-     * Os arquivos de pagamentos fazem `vi.resetModules()` e reimportam o
-     * serviço no `beforeEach`. O primeiro import de cada arquivo é frio —
-     * ~900 ms com a máquina parada; os seguintes, ~10 ms. No começo da
-     * suíte, com todos os arquivos subindo em paralelo, esse primeiro
-     * import passava de 10 s, e o primeiro teste de cada um desses arquivos
-     * reprovava. Mais arquivos, mais disputa: bastou uma branch somar cinco
-     * arquivos de teste para voltar.
+     * O padrão abre um worker por núcleo. Na máquina do Luiz são 16 núcleos
+     * lógicos e 7,7 GB de RAM: ~15 workers, cada um com jsdom e o grafo do
+     * servidor carregados, não cabem, e a máquina começa a paginar. Aí tudo
+     * fica lento ao mesmo tempo — o `verify` reprovava por tempo em testes
+     * triviais (um clique de botão estourando 5 s) e sempre no primeiro
+     * teste dos arquivos que reimportam o serviço de pagamentos. O log
+     * mostrava 705 s de setup acumulado numa suíte de 224 s.
      *
-     * É espera por trabalho determinístico — o import do grafo —, não por
-     * uma condição que pode não acontecer. O preço aceito é que um hook
-     * travado de verdade demora 30 s para reprovar. Reduzir os workers
-     * resolveria também, deixando a suíte inteira mais lenta por cinco
-     * arquivos.
+     * ~1,2 GB por worker, medido pelo que cabe: aqui dá 6. Numa máquina de
+     * CI com mais memória que núcleos, quem limita são os núcleos, como
+     * antes.
      */
-    hookTimeout: 30_000,
+    maxWorkers: Math.max(
+      2,
+      Math.min(cpus().length - 1, Math.floor(totalmem() / 1.2e9)),
+    ),
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "json-summary"],
