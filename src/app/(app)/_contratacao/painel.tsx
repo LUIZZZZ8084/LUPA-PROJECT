@@ -466,7 +466,7 @@ export async function PainelDeContratacao({
         )}
       </section>
 
-      <Recomendados vagas={recomendados} />
+      <Recomendados vagas={recomendados} base={area.base} />
 
       {/* Currículos recebidos */}
       <section className="mt-8">
@@ -482,7 +482,17 @@ export async function PainelDeContratacao({
             {applications.map((app) => (
               <li
                 key={app.id}
-                className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
+                /*
+                  Duas linhas no celular, uma no desktop (#252).
+
+                  Numa fileira só, avatar, %, WhatsApp e o seletor de
+                  estágio não encolhem — quem encolhia era o nome. Em
+                  360 px a empresa lia "E…", "W.", "P": não conseguia
+                  saber quem tinha se candidatado. A varredura de rolagem
+                  lateral passava verde, porque nada vazava; o `truncate`
+                  fazia exatamente o que promete.
+                */
+                className="flex flex-col gap-2 p-4 transition-colors hover:bg-panel-2 sm:flex-row sm:items-center sm:gap-3"
               >
                 {/*
                   A linha inteira abre a ficha: nome, bairro e vaga não
@@ -490,7 +500,7 @@ export async function PainelDeContratacao({
                   havia para onde clicar.
                 */}
                 <Link
-                  href={`/empresa/candidaturas/${app.id}`}
+                  href={`${area.base}/candidaturas/${app.id}`}
                   className="group flex min-w-0 flex-1 items-center gap-3"
                 >
                   <Avatar
@@ -512,29 +522,39 @@ export async function PainelDeContratacao({
                   </div>
                 </Link>
 
-                <SeloDeMatch match={match.get(app.id)} />
-
                 {/*
+                  Recuo de `pl-12` no celular: alinha os controles com o
+                  texto, e não com o avatar, para a segunda linha ler como
+                  parte da mesma pessoa.
+                */}
+                <div className="flex items-center gap-2 pl-12 sm:pl-0">
+                  <SeloDeMatch match={match.get(app.id)} />
+
+                  {/*
                   Atalho de contato na própria lista: o caminho entre
                   receber o currículo e chamar a pessoa não deveria ter
                   uma tela no meio.
                 */}
-                {app.candidate.phone && (
-                  <a
-                    href={whatsappLink(
-                      app.candidate.phone,
-                      `Olá! Vimos sua candidatura para a vaga de ${app.job_title} na Lupa e gostaríamos de conversar.`,
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Falar com ${app.candidate.full_name} no WhatsApp`}
-                    className="flex-none rounded-lg border border-line p-2 text-muted transition-colors hover:border-vagas hover:text-vagas"
-                  >
-                    <MessageCircle size={16} />
-                  </a>
-                )}
+                  {app.candidate.phone && (
+                    <a
+                      href={whatsappLink(
+                        app.candidate.phone,
+                        `Olá! Vimos sua candidatura para a vaga de ${app.job_title} na Lupa e gostaríamos de conversar.`,
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Falar com ${app.candidate.full_name} no WhatsApp`}
+                      className="flex-none rounded-lg border border-line p-2 text-muted transition-colors hover:border-vagas hover:text-vagas"
+                    >
+                      <MessageCircle size={16} />
+                    </a>
+                  )}
 
-                <MoverCandidaturaSelect id={app.id} statusAtual={app.status} />
+                  <MoverCandidaturaSelect
+                    id={app.id}
+                    statusAtual={app.status}
+                  />
+                </div>
               </li>
             ))}
           </ul>

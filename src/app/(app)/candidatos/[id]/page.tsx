@@ -26,6 +26,7 @@ import {
   listarPublicacoes,
   resumo as resumoDePublicacoes,
 } from "@/server/publicacoes/servico";
+import { areaDoPapel } from "../../_contratacao/area";
 
 export const metadata: Metadata = {
   title: "Candidato",
@@ -218,7 +219,12 @@ export default async function CandidatoPage({
                     </p>
                     <div className="mt-3">
                       <ButtonLink
-                        href={`/empresa/candidaturas/${candidaturaId}`}
+                        /*
+                          A área de quem olha, não `/empresa` fixo (#252):
+                          o prestador que contrata cairia na área da
+                          empresa, lendo "Voltar para Minha Empresa".
+                        */
+                        href={`${(sessao && areaDoPapel(sessao.papel)?.base) || "/empresa"}/candidaturas/${candidaturaId}`}
                         variant="empresas"
                         size="sm"
                       >

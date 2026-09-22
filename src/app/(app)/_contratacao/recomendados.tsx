@@ -8,6 +8,7 @@ import type {
   Recomendado,
   VagaComRecomendados,
 } from "@/server/candidaturas/recomendados";
+import type { AreaDeContratacao } from "./area";
 
 /**
  * "Recomendados para você".
@@ -21,7 +22,18 @@ import type {
  * candidatou levantou a mão para esta vaga; quem está disponível pediu
  * para ser encontrado, mas ainda não escolheu você.
  */
-export function Recomendados({ vagas }: { vagas: VagaComRecomendados[] }) {
+export function Recomendados({
+  vagas,
+  base,
+}: {
+  vagas: VagaComRecomendados[];
+  /**
+   * A área de quem está olhando, para o link da ficha (#252). Era
+   * `/empresa` escrito à mão, e o prestador caía na área da empresa lendo
+   * "Voltar para Minha Empresa".
+   */
+  base: AreaDeContratacao["base"];
+}) {
   // Sem nada a recomendar, o bloco não aparece. Título com estado vazio
   // ocuparia a parte mais valiosa da tela para dizer "nada aqui".
   if (vagas.length === 0) return null;
@@ -53,6 +65,7 @@ export function Recomendados({ vagas }: { vagas: VagaComRecomendados[] }) {
                 titulo="Entre quem se candidatou"
                 pessoas={vaga.candidatos}
                 vaga={vaga.titulo}
+                base={base}
               />
             )}
 
@@ -62,6 +75,7 @@ export function Recomendados({ vagas }: { vagas: VagaComRecomendados[] }) {
                 dica="Pediram para ser encontrados. Ainda não se candidataram a esta vaga."
                 pessoas={vaga.disponiveis}
                 vaga={vaga.titulo}
+                base={base}
               />
             )}
           </Panel>
@@ -76,11 +90,13 @@ function Lista({
   dica,
   pessoas,
   vaga,
+  base,
 }: {
   titulo: string;
   dica?: string;
   pessoas: Recomendado[];
   vaga: string;
+  base: AreaDeContratacao["base"];
 }) {
   return (
     <div className="mt-4 border-t border-line pt-3 first:mt-3">
@@ -92,7 +108,7 @@ function Lista({
       <ul className="mt-2 space-y-2">
         {pessoas.map((p) => (
           <li key={p.id}>
-            <Pessoa pessoa={p} vaga={vaga} />
+            <Pessoa pessoa={p} vaga={vaga} base={base} />
           </li>
         ))}
       </ul>
@@ -100,7 +116,15 @@ function Lista({
   );
 }
 
-function Pessoa({ pessoa, vaga }: { pessoa: Recomendado; vaga: string }) {
+function Pessoa({
+  pessoa,
+  vaga,
+  base,
+}: {
+  pessoa: Recomendado;
+  vaga: string;
+  base: AreaDeContratacao["base"];
+}) {
   const corpo = (
     <>
       <Avatar name={pessoa.nome} src={pessoa.avatarUrl} size="sm" />
@@ -138,7 +162,7 @@ function Pessoa({ pessoa, vaga }: { pessoa: Recomendado; vaga: string }) {
       */}
       {pessoa.candidaturaId ? (
         <Link
-          href={`/empresa/candidaturas/${pessoa.candidaturaId}`}
+          href={`${base}/candidaturas/${pessoa.candidaturaId}`}
           className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-2 transition-colors hover:bg-panel-2"
         >
           {corpo}
