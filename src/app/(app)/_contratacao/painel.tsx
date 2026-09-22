@@ -232,6 +232,25 @@ export async function PainelDeContratacao({
     );
   }
 
+  /*
+   * A busca de candidatos só aparece para quem a matriz deixa entrar (#251).
+   *
+   * O painel é o mesmo para empresa e prestador (#189), e mostrava os dois
+   * links para `/candidatos` aos dois — só que o prestador não tem
+   * `candidato:buscar_disponiveis`, e o link dele dava 404. Link que
+   * aparece e devolve erro é a armadilha que o AGENTS.md já registra.
+   *
+   * **Esconder, e não dar a permissão, é decisão de consentimento.** Quem
+   * liga a opção lê "Quero que *empresas* me encontrem". O prestador
+   * contrata como pessoa física; abrir a busca a ele ampliaria, sem aviso,
+   * quem vê o contato de gente que pediu discrição. Se um dia a busca for
+   * dele, o texto da caixa muda primeiro.
+   *
+   * Pela matriz e não pela área: se a capacidade chegar ao prestador, os
+   * links voltam sozinhos, sem ninguém lembrar deste arquivo.
+   */
+  const buscaCandidatos = pode(sessao.papel, "candidato:buscar_disponiveis");
+
   return (
     <PageShell>
       {/*
@@ -247,10 +266,12 @@ export async function PainelDeContratacao({
         description="Acompanhe suas vagas e os currículos recebidos."
         action={
           <div className="flex flex-wrap gap-2">
-            <ButtonLink href="/candidatos" variant="outline">
-              <UserSearch size={17} />
-              Candidatos
-            </ButtonLink>
+            {buscaCandidatos && (
+              <ButtonLink href="/candidatos" variant="outline">
+                <UserSearch size={17} />
+                Candidatos
+              </ButtonLink>
+            )}
             <ButtonLink href={`${area.base}/vagas/nova`} variant="empresas">
               <Plus size={17} />
               Publicar nova vaga
@@ -322,7 +343,9 @@ export async function PainelDeContratacao({
         ganham espaço, e cada um diz o que a pessoa encontra do outro
         lado: atalho sem explicação é atalho que ninguém clica.
       */}
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div
+        className={`mt-6 grid grid-cols-1 gap-3 ${buscaCandidatos ? "sm:grid-cols-2" : ""}`}
+      >
         <Link
           href={`${area.base}/creditos`}
           className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
@@ -346,19 +369,21 @@ export async function PainelDeContratacao({
           </p>
         </Link>
 
-        <Link
-          href="/candidatos"
-          className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
-        >
-          <div className="flex items-center gap-2">
-            <UserSearch size={18} className="flex-none text-empresas" />
-            <h2 className="font-bold text-sm">Buscar candidatos</h2>
-          </div>
-          <p className="mt-1 text-muted text-sm leading-relaxed">
-            Procure por habilidade e área entre quem pediu para ser encontrado —
-            sem esperar alguém se candidatar.
-          </p>
-        </Link>
+        {buscaCandidatos && (
+          <Link
+            href="/candidatos"
+            className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
+          >
+            <div className="flex items-center gap-2">
+              <UserSearch size={18} className="flex-none text-empresas" />
+              <h2 className="font-bold text-sm">Buscar candidatos</h2>
+            </div>
+            <p className="mt-1 text-muted text-sm leading-relaxed">
+              Procure por habilidade e área entre quem pediu para ser encontrado
+              — sem esperar alguém se candidatar.
+            </p>
+          </Link>
+        )}
       </div>
 
       {/* Vagas publicadas */}

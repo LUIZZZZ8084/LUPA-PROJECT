@@ -129,6 +129,21 @@ test.describe("sessão de empresa", () => {
     }
   });
 
+  /*
+   * O outro lado da #251: esconder o link do prestador não pode ter levado
+   * o da empresa junto. A capacidade é dela, e o painel é o mesmo arquivo.
+   */
+  test("o painel oferece a busca de candidatos, e ela abre", async ({
+    page,
+  }) => {
+    await page.goto("/empresa");
+
+    await expect(page.locator('a[href="/candidatos"]')).toHaveCount(2);
+
+    const resposta = await page.goto("/candidatos");
+    expect(resposta?.status()).toBe(200);
+  });
+
   test("não alcança a área administrativa", async ({ page }) => {
     for (const rota of SO_DE_ADMIN) {
       const resposta = await page.goto(rota);

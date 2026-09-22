@@ -193,6 +193,14 @@ test.describe("virar prestador", () => {
     await expect(page.locator('a[href^="/cadastro"]')).toHaveCount(0);
 
     /*
+     * Nem link para a busca de candidatos (#251). O painel é o mesmo da
+     * empresa, e mostrava os dois atalhos para `/candidatos` — que responde
+     * 404 ao prestador, porque quem marcou "quero que empresas me
+     * encontrem" consentiu com empresas, não com pessoa física.
+     */
+    await expect(page.locator('a[href="/candidatos"]')).toHaveCount(0);
+
+    /*
      * O estado vazio em si não é alcançável aqui, e isso é do modo
      * demonstração: `empresaDoPainel()` mapeia qualquer sessão para a
      * empresa de exemplo, então `company` nunca vem nulo. O que este

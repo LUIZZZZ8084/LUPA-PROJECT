@@ -373,8 +373,21 @@ provável era o pior: compra dez vagas, vai publicar, e o app manda criar
 outra conta. O saldo fica preso na primeira, e ele paga duas vezes.
 
 Decisão do Luiz em 10/09/2026: o prestador ganha `/contratar`, com a
-mesma estrutura. A visualização de candidatos (`/candidatos`) continua
-sendo **a mesma para os dois** — já era, e não muda.
+mesma estrutura.
+
+**A busca de candidatos (`/candidatos`) não é do prestador** (#251). Este
+parágrafo dizia que ela era "a mesma para os dois — já era, e não muda", e
+estava errado nas duas metades: `candidato:buscar_disponiveis` nunca foi do
+`prestador_servico`, e o painel compartilhado mostrava a ele dois links
+que davam 404. Achado na varredura de lançamento de 22/09/2026.
+
+O conserto foi esconder os links, e não dar a capacidade, por uma razão
+de consentimento: quem liga a opção lê "Quero que **empresas** me
+encontrem". O prestador contrata como pessoa física, e abrir a busca a ele
+ampliaria, sem aviso, quem vê o contato de gente que pediu discrição. Se um
+dia a busca for dele, **o texto da caixa muda antes** — quem já marcou,
+marcou sob a redação antiga. Os links são decididos por `pode()`, então
+voltam sozinhos no dia em que a matriz mudar.
 
 **Duas rotas, uma implementação.** Os corpos das telas moram em
 `src/app/(app)/_contratacao/` e recebem a área por parâmetro; `/empresa/**`
