@@ -6,21 +6,30 @@
  * identidade do responsável escrita em três lugares é documento que um dia
  * diverge. É a mesma razão de `PRECO_CENTAVOS` morar num arquivo só.
  *
- * ## Os dois campos pendentes, e por que não invento nenhum
+ * ## Os campos pendentes, e por que não invento nenhum
  *
- * `cnpj` e `email` estão nulos porque **ainda não existem**: a PALU está
- * em constituição (decisão do Luiz em 14/09/2026) e o endereço de contato
- * ainda vai ser criado.
+ * `razaoSocial` e `cnpj` estão nulos porque **ainda não existem**: a PALU
+ * está em constituição (decisão do Luiz em 14/09/2026). A razão social não
+ * é o que o rodapé já diz ("Palu Soluções Digitais") até o registro sair —
+ * ela precisa ser a da Receita, letra por letra, porque é o que identifica
+ * o controlador perante o titular.
+ *
+ * O `email` estava nulo pelo mesmo motivo, e deixou de estar em 22/09/2026:
+ * a #240 criou e testou `suporte@lupapp.com.br`. Vem de `contato-lupa.ts`,
+ * e não é repetido aqui, para o endereço do rodapé e o do documento legal
+ * não divergirem.
  *
  * Política de privacidade sem controlador identificável não cumpre o
  * art. 9º da LGPD, e endereço de contato que ninguém lê é a mesma
  * promessa quebrada que este projeto registra quatro vezes — só que num
  * documento que promete um canal de direitos do titular.
  *
- * Por isso as páginas **não são publicadas** enquanto os dois forem
- * nulos: `PRONTO_PARA_PUBLICAR` responde isso, e há teste que trava.
- * Preencher os dois é o que libera.
+ * Por isso as páginas **não são publicadas** enquanto faltar qualquer um:
+ * `PRONTO_PARA_PUBLICAR` responde isso, e há teste que trava. Preencher
+ * razão social e CNPJ é o que libera.
  */
+
+import { EMAIL_SUPORTE } from "./contato-lupa";
 
 export interface Controlador {
   /** Nome pelo qual a plataforma se apresenta. */
@@ -40,7 +49,7 @@ export const CONTROLADOR: Controlador = {
   nomeFantasia: "Lupa",
   razaoSocial: null,
   cnpj: null,
-  email: null,
+  email: EMAIL_SUPORTE,
   cidade: "Sinop",
   uf: "MT",
 };

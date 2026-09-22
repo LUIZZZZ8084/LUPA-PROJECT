@@ -10,8 +10,8 @@
  * `PRONTO_PARA_PUBLICAR` existe e as páginas respondem 404 até ele ser
  * verdadeiro.
  *
- * Os valores de hoje são nulos de propósito: a PALU está em constituição, e
- * o endereço de contato ainda vai ser criado. **O teste do estado atual é
+ * Razão social e CNPJ são nulos de propósito: a PALU está em constituição.
+ * O e-mail já existe (#240) e vem de `contato-lupa.ts`. **O teste do estado atual é
  * temporário por construção** — ele sai quando os campos forem preenchidos,
  * e é o lembrete de que existe uma pendência real.
  */

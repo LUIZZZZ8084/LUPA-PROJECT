@@ -15,6 +15,7 @@ import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
 import type { Role } from "@/lib/types";
+import { ConsentimentoDoCadastro } from "./consentimento";
 import { SelecaoDePlanoEmpresa } from "./selecao-plano-empresa";
 import { SelecaoDePlanoPrestador } from "./selecao-plano-prestador";
 
@@ -365,14 +366,7 @@ export function SignUpForm({ role }: { role: Role }) {
 
           O texto de agora foi escrito lendo o schema, não a tela anterior.
         */}
-        <p className="text-xs leading-relaxed text-faint">
-          Ao criar a conta você concorda com os termos de uso e com o tratamento
-          dos seus dados conforme a LGPD. Seu CPF fica guardado numa área
-          fechada, que só o servidor alcança, e nunca aparece para outras
-          pessoas — ele serve para conferir que é válido e que não está em uso
-          por outra conta. O CNPJ, por ser registro público, fica visível no seu
-          perfil. Não pedimos documento nem selfie.
-        </p>
+        <ConsentimentoDoCadastro />
 
         <LinksInstitucionais />
 

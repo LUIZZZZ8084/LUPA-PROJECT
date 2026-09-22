@@ -54,6 +54,13 @@ create index if not exists mensagens_suporte_abertas_idx
   on mensagens_suporte (criado_em desc)
   where respondida_em is null;
 
+-- Chave estrangeira com índice (22/09/2026). Faltou quando a tabela nasceu;
+-- apagar uma conta varria a tabela para achar as mensagens dela. O advisor
+-- do Supabase pegou em produção, e `schema.test.ts` agora reprova FK sem
+-- índice.
+create index if not exists mensagens_suporte_usuario_idx
+  on mensagens_suporte (usuario_id);
+
 alter table mensagens_suporte enable row level security;
 revoke select on mensagens_suporte from anon, authenticated;
 

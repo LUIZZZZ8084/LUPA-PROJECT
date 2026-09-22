@@ -51,6 +51,45 @@ afterAll(async () => {
   await db?.close();
 });
 
+/*
+ * Toda chave estrangeira tem índice cobrindo.
+ *
+ * Postgres indexa a chave primária sozinho; a estrangeira, não. Sem índice,
+ * apagar ou mexer na linha **pai** varre a tabela filha inteira — e
+ * `on delete cascade` em `usuarios` é o caminho de toda exclusão de conta.
+ *
+ * A #210 corrigiu três à mão. A primeira tabela criada depois dela
+ * (`mensagens_suporte`) repetiu a omissão, e quem pegou foi o advisor do
+ * Supabase, em produção. Correção à mão é lista, e lista envelhece: este
+ * teste pergunta ao banco em vez de confiar em quem escreve a próxima
+ * tabela.
+ *
+ * "Cobrindo" é o índice cujas primeiras colunas são exatamente as da chave,
+ * na mesma ordem — é o que o planejador usa para achar os filhos.
+ */
+describe("toda chave estrangeira tem índice", () => {
+  it("nenhuma FK do schema público fica sem índice cobrindo", async () => {
+    const r = await db.query<{ tabela: string; restricao: string }>(`
+      select c.conrelid::regclass::text as tabela, c.conname as restricao
+        from pg_constraint c
+       where c.contype = 'f'
+         and c.connamespace = 'public'::regnamespace
+         and not exists (
+           select 1
+             from pg_index i
+            where i.indrelid = c.conrelid
+              and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] = c.conkey
+         )
+       order by 1, 2
+    `);
+
+    expect(
+      r.rows.map((l) => `${l.tabela} (${l.restricao})`),
+      "chave estrangeira sem índice — crie um que comece pelas colunas dela",
+    ).toEqual([]);
+  });
+});
+
 describe("schema.sql roda de uma vez num banco limpo", () => {
   it("cria todas as tabelas esperadas", async () => {
     const r = await db.query<{ table_name: string }>(

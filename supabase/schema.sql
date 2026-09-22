@@ -749,6 +749,13 @@ create table mensagens_suporte (
   constraint suporte_email_com_formato check (position('@' in email) > 1)
 );
 
+-- A chave estrangeira precisa de índice próprio: apagar uma conta varre a
+-- tabela para achar as mensagens dela. Faltou quando a tabela nasceu, e foi
+-- o advisor do Supabase que pegou; o teste "toda chave estrangeira tem
+-- índice", em schema.test.ts, é o que impede a próxima.
+create index mensagens_suporte_usuario_idx
+  on mensagens_suporte (usuario_id);
+
 -- A fila do admin le por data, e so o que ainda nao foi respondido.
 create index mensagens_suporte_abertas_idx
   on mensagens_suporte (criado_em desc)
