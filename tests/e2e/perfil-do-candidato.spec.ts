@@ -23,6 +23,19 @@ test.describe("perfil do candidato", () => {
    * 404 e não 403: confirmar que a área existe é informação de graça para
    * quem está sondando.
    */
+  /*
+   * O candidato não tem verificação de documento no produto (#253). Antes,
+   * todo candidato via "Documento não verificado" para sempre, logo abaixo
+   * do nome, sem tela nem botão que mudasse isso.
+   */
+  test("o perfil não mostra selo de documento que ele não tem como ganhar", async ({
+    page,
+  }) => {
+    await page.goto("/perfil");
+    await expect(page.getByText(/documento não verificado/i)).toHaveCount(0);
+    await expect(page.getByText(/documento verificado/i)).toHaveCount(0);
+  });
+
   test("a busca de candidatos continua fechada", async ({ page }) => {
     const resposta = await page.goto("/candidatos");
     expect(resposta?.status()).toBe(404);

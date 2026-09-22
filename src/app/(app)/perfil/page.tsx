@@ -23,7 +23,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
-import { VerificationRow } from "@/components/verified-badge";
+import {
+  temVerificacaoDeDocumento,
+  VerificationRow,
+} from "@/components/verified-badge";
 import { ROLE_LABELS } from "@/lib/constants";
 import { getProviderById } from "@/lib/data";
 import { formatPhone } from "@/lib/format";
@@ -256,6 +259,7 @@ export default async function PerfilPage() {
             className="mt-5"
             phoneVerified={usuario.telefoneVerificado}
             docVerified={usuario.docVerificado}
+            mostrarDocumento={temVerificacaoDeDocumento(usuario.papel)}
           />
 
           {/*

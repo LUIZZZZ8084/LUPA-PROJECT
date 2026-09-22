@@ -38,13 +38,43 @@ export function VerifiedMark({
  */
 const VERIFICACAO_DE_TELEFONE_EXISTE = false;
 
+/**
+ * Quem tem verificação de documento no produto (#253).
+ *
+ * `doc_verificado` só vira `true` por três caminhos: o prestador ao ativar
+ * o perfil (CPF válido e único, #133), a empresa que entra por CPF, e a
+ * empresa que confere o CNPJ na Receita. **Nenhum é do candidato** — ele
+ * dá um CPF no cadastro, e não existe tela, botão nem fluxo que mude o
+ * selo dele.
+ *
+ * Sem esta lista, todo candidato — o papel mais numeroso do app — via
+ * "Documento não verificado" para sempre, logo abaixo do nome. É a mesma
+ * lição do selo de telefone logo acima: aviso de perfil incompleto que a
+ * pessoa não tem como completar não informa, e ainda sugere que há algo
+ * errado com a conta dela.
+ *
+ * Lista explícita, e não "todo papel menos candidato": papel novo nasce
+ * sem selo até alguém decidir que ele tem verificação.
+ */
+const PAPEIS_COM_VERIFICACAO_DE_DOCUMENTO: readonly string[] = [
+  "prestador_servico",
+  "empresa",
+];
+
+export function temVerificacaoDeDocumento(papel: string): boolean {
+  return PAPEIS_COM_VERIFICACAO_DE_DOCUMENTO.includes(papel);
+}
+
 export function VerificationRow({
   phoneVerified,
   docVerified,
+  mostrarDocumento = true,
   className,
 }: {
   phoneVerified: boolean;
   docVerified: boolean;
+  /** Falso para quem não tem verificação de documento — ver acima. */
+  mostrarDocumento?: boolean;
   className?: string;
 }) {
   const items = [
@@ -72,13 +102,21 @@ export function VerificationRow({
           },
         ]
       : []),
-    {
-      on: docVerified,
-      icon: ShieldCheck,
-      label: "Documento verificado",
-      off: "Documento não verificado",
-    },
+    ...(mostrarDocumento
+      ? [
+          {
+            on: docVerified,
+            icon: ShieldCheck,
+            label: "Documento verificado",
+            off: "Documento não verificado",
+          },
+        ]
+      : []),
   ];
+
+  // Sem selo nenhum, sem linha: uma `div` vazia ainda carregaria a margem
+  // de quem a posicionou.
+  if (items.length === 0) return null;
 
   return (
     <div className={cn("flex flex-wrap gap-2", className)}>

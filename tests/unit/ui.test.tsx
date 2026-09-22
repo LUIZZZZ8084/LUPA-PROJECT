@@ -7,7 +7,11 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardTitle, Panel, Stat } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { RatingInline, Stars } from "@/components/ui/stars";
-import { VerificationRow, VerifiedMark } from "@/components/verified-badge";
+import {
+  temVerificacaoDeDocumento,
+  VerificationRow,
+  VerifiedMark,
+} from "@/components/verified-badge";
 
 describe("Button", () => {
   it("dispara o clique", async () => {
@@ -78,6 +82,28 @@ describe("selos de verificação", () => {
   it("VerifiedMark tem rótulo acessível", () => {
     render(<VerifiedMark />);
     expect(screen.getByLabelText("Perfil verificado")).toBeInTheDocument();
+  });
+
+  /*
+   * O candidato não tem verificação de documento no produto (#253), e via
+   * "Documento não verificado" para sempre, sem nada que pudesse fazer.
+   */
+  it("só prestador e empresa têm selo de documento", () => {
+    expect(temVerificacaoDeDocumento("prestador_servico")).toBe(true);
+    expect(temVerificacaoDeDocumento("empresa")).toBe(true);
+    expect(temVerificacaoDeDocumento("candidato_clt")).toBe(false);
+    expect(temVerificacaoDeDocumento("admin")).toBe(false);
+  });
+
+  it("sem selo de documento e sem telefone, a linha não existe", () => {
+    const { container } = render(
+      <VerificationRow
+        phoneVerified={false}
+        docVerified={false}
+        mostrarDocumento={false}
+      />,
+    );
+    expect(container.innerHTML).toBe("");
   });
 
   it("VerificationRow distingue verificado de não verificado", () => {
