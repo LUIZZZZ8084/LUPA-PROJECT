@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/nextjs";
 import { isSentryEnabled, scrubSensitiveData } from "@/lib/observability";
 import type { AppError } from "./errors";
 
@@ -103,21 +102,35 @@ export const log = {
      * onde procurar. Com ela, o código cola na busca do Sentry e cai no
      * evento exato, com linha e deploy.
      *
-     * O `if` não é otimização: sem DSN, `captureException` é uma chamada a
-     * um SDK não inicializado em todo erro interno.
+     * **O SDK é carregado aqui dentro, e só aqui (#255).** Ele já foi
+     * importado no topo deste arquivo, e o logger está no grafo de quase
+     * todo o servidor: toda função e todo teste passou a carregar o
+     * Sentry, com ou sem DSN — +440 ms no import frio do serviço de
+     * pagamentos, o bastante para os testes que reimportam o serviço a
+     * cada caso passarem do tempo de hook sob carga. Sem DSN, o `if` nunca
+     * entra e o SDK nunca carrega. Com DSN, o `instrumentation.ts` já o
+     * carregou na subida, e o `import()` resolve do cache.
+     *
+     * `void` e `catch` vazio de propósito: relatar é melhor esforço. Uma
+     * falha ao mandar para o Sentry não pode derrubar quem só queria
+     * registrar o erro — e a linha do log acima já saiu.
      */
     if (!esperado && isSentryEnabled) {
-      Sentry.captureException(erro, {
-        tags: { erroId: erro.id, codigo: erro.codigo },
-        /*
-         * O contexto não é filtrado aqui de propósito: o `beforeSend` dos
-         * dois `sentry.*.config.ts` já passa todo evento por
-         * `scrubSensitiveData`. Limpar duas vezes criaria um segundo lugar
-         * para a regra divergir — e o que viaja para produção é a
-         * configuração, não esta chamada.
-         */
-        extra: { ...contexto, ...erro.contexto },
-      });
+      void import("@sentry/nextjs")
+        .then((Sentry) =>
+          Sentry.captureException(erro, {
+            tags: { erroId: erro.id, codigo: erro.codigo },
+            /*
+             * O contexto não é filtrado aqui de propósito: o `beforeSend` dos
+             * dois `sentry.*.config.ts` já passa todo evento por
+             * `scrubSensitiveData`. Limpar duas vezes criaria um segundo lugar
+             * para a regra divergir — e o que viaja para produção é a
+             * configuração, não esta chamada.
+             */
+            extra: { ...contexto, ...erro.contexto },
+          }),
+        )
+        .catch(() => {});
     }
   },
 };

@@ -83,7 +83,16 @@ describe("avisos de vaga", () => {
 
     // `findByText` porque o estado muda depois do clique, e a asserção
     // síncrona corre contra a re-renderização.
-    expect(await screen.findByText(/não recebe avisos/i)).toBeTruthy();
+    //
+    // Cinco segundos, e não o 1 s padrão (#255): o clique dispara a ação do
+    // formulário, que grava a preferência antes de checar o suporte — uma
+    // transition do React. Sob a carga da suíte inteira ela passava de 1 s,
+    // e o teste reprovava com o formulário inicial ainda na tela, nas duas
+    // rodadas seguidas; isolado, passava sempre. Esperar mais por uma
+    // condição determinística só custa tempo quando ela não acontece.
+    expect(
+      await screen.findByText(/não recebe avisos/i, {}, { timeout: 5_000 }),
+    ).toBeTruthy();
     expect(screen.getByText(/tela de início/i)).toBeTruthy();
   });
 
@@ -99,7 +108,12 @@ describe("avisos de vaga", () => {
 
     expect(desligar).toHaveBeenCalledOnce();
     expect(
-      await screen.findByRole("button", { name: /ligar avisos/i }),
+      await screen.findByRole(
+        "button",
+        { name: /ligar avisos/i },
+        // Mesma razão do teste acima: a ação é uma transition.
+        { timeout: 5_000 },
+      ),
     ).toBeTruthy();
   });
 });

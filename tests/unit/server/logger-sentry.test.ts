@@ -38,14 +38,17 @@ describe("erro inesperado chega ao Sentry", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
-  it("manda o interno, com o código do erro como tag", () => {
+  it("manda o interno, com o código do erro como tag", async () => {
     const erro = new AppError("interno", {
       contexto: { acao: "vaga.publicar" },
     });
 
     log.erro(erro);
 
-    expect(sentry.captureException).toHaveBeenCalledTimes(1);
+    // O SDK é carregado sob demanda (#255), então o envio é assíncrono.
+    await vi.waitFor(() =>
+      expect(sentry.captureException).toHaveBeenCalledTimes(1),
+    );
     const [enviado, opcoes] = sentry.captureException.mock.calls[0];
     expect(enviado).toBe(erro);
     /*
@@ -58,9 +61,11 @@ describe("erro inesperado chega ao Sentry", () => {
     expect(opcoes.extra.acao).toBe("vaga.publicar");
   });
 
-  it("manda o indisponivel, que também é inesperado", () => {
+  it("manda o indisponivel, que também é inesperado", async () => {
     log.erro(new AppError("indisponivel"));
-    expect(sentry.captureException).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() =>
+      expect(sentry.captureException).toHaveBeenCalledTimes(1),
+    );
   });
 
   it("não manda o que é o sistema funcionando", () => {
@@ -90,5 +95,23 @@ describe("erro inesperado chega ao Sentry", () => {
      * o modo demonstração precisa rodar sem nenhuma peça externa.
      */
     expect(sentry.captureException).not.toHaveBeenCalled();
+  });
+});
+
+/*
+ * O logger não carrega o SDK no topo (#255).
+ *
+ * O logger está no grafo de quase todo o servidor. Com o import estático,
+ * toda função e todo teste passava a carregar o Sentry — com ou sem DSN —,
+ * e o import frio do serviço de pagamentos subiu de 641 para 1.079 ms: o
+ * bastante para os testes que reimportam o serviço a cada caso passarem do
+ * tempo de hook sob carga. Lê o código-fonte porque o que se protege é o
+ * formato do import, não o comportamento.
+ */
+describe("o logger carrega o Sentry sob demanda", () => {
+  it("não há import estático de @sentry/nextjs", async () => {
+    const { readFileSync } = await import("node:fs");
+    const fonte = readFileSync("src/server/logger.ts", "utf8");
+    expect(fonte).not.toMatch(/^import[^;]*from "@sentry\/nextjs"/m);
   });
 });
