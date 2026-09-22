@@ -65,18 +65,28 @@ values
 -- Perfis de prestador
 -- ----------------------------------------------------------------------------
 
+-- `mensalidade_valida_ate` é o que põe o prestador na vitrine: `getProviders`
+-- filtra `> now()`. Sem gravar aqui, a coluna nasce nula e os nove perfis de
+-- exemplo **não aparecem na busca** num banco recém-criado — eles só estavam
+-- visíveis em produção por causa de uma carência antiga, e ninguém tinha
+-- percebido porque produção nunca foi reconstruída (#245).
+--
+-- A sentinela é 2099: data obviamente artificial, fácil de achar por busca
+-- no dia em que alguém perguntar por que este perfil não vence. Nulo não
+-- serve, porque `null > now()` é nulo e o filtro descarta.
 insert into perfis_prestador
-  (usuario_id, categoria_id, descricao, preco_inicial, anos_experiencia, bairros_atendidos)
+  (usuario_id, categoria_id, descricao, preco_inicial, anos_experiencia,
+   bairros_atendidos, mensalidade_valida_ate)
 values
-  ('11111111-1111-4111-8111-000000000001', 1, 'Instalações elétricas residenciais e comerciais, manutenção preventiva, troca de quadro de disjuntores e reparos em geral. Atendo Sinop e região com orçamento sem compromisso.', 150, 7,  array['Centro','Jardim Botânico','Jardim Paraíso','Menezes']),
-  ('11111111-1111-4111-8111-000000000002', 4, 'Encanador com atendimento de emergência. Conserto de vazamentos, desentupimento, instalação de caixa d''água, aquecedor e louças sanitárias. Atendo também aos finais de semana.', 120, 12, array['Centro','Setor Comercial','Jardim Itália']),
-  ('11111111-1111-4111-8111-000000000003', 3, 'Pintura residencial e comercial, textura, grafiato e massa corrida. Faço o serviço completo, da preparação da parede à limpeza final.', 200, 9,  array['Jardim das Palmeiras','Residencial Florença','Centro']),
-  ('11111111-1111-4111-8111-000000000004', 5, 'Pedreiro para obras pequenas e médias: alvenaria, reboco, contrapiso, assentamento de piso e azulejo. Trabalho com ajudante próprio.', 180, 15, array['Jardim Primavera','Boa Esperança','Jacarandá']),
-  ('11111111-1111-4111-8111-000000000005', 2, 'Diarista com referências. Faxina completa, limpeza pesada pós-obra e organização de armários. Levo meu próprio material se preferir.', 140, 6,  array['Jardim Celeste','Centro','Aquarela Brasil']),
-  ('11111111-1111-4111-8111-000000000006', 7, 'Cuidadora de idosos com curso técnico e experiência hospitalar. Acompanhamento em casa ou no hospital, medicação por horário e apoio na higiene.', 180, 8,  array['Menezes','Centro','Jardim Botânico']),
-  ('11111111-1111-4111-8111-000000000007', 6, 'Manutenção de jardim, corte de grama, poda de árvores e cerca viva, plantio e adubação. Atendo casas e condomínios.', 100, 5,  array['Boa Esperança','Residencial Florença','Jardim Itália']),
-  ('11111111-1111-4111-8111-000000000008', 2, 'Faxina residencial e limpeza de escritório. Trabalho por diária ou duas vezes por semana com valor fechado.', 130, 4,  array['Aquarela Brasil','Jardim Paraíso','Setor Comercial']),
-  ('11111111-1111-4111-8111-000000000009', 1, 'Eletricista especializado em ar-condicionado split: instalação, limpeza, recarga de gás e manutenção. Também faço rede elétrica para climatização.', 220, 11, array['Setor Comercial','Centro','Setor Industrial']);
+  ('11111111-1111-4111-8111-000000000001', 1, 'Instalações elétricas residenciais e comerciais, manutenção preventiva, troca de quadro de disjuntores e reparos em geral. Atendo Sinop e região com orçamento sem compromisso.', 150, 7,  array['Centro','Jardim Botânico','Jardim Paraíso','Menezes'], '2099-12-31'),
+  ('11111111-1111-4111-8111-000000000002', 4, 'Encanador com atendimento de emergência. Conserto de vazamentos, desentupimento, instalação de caixa d''água, aquecedor e louças sanitárias. Atendo também aos finais de semana.', 120, 12, array['Centro','Setor Comercial','Jardim Itália'], '2099-12-31'),
+  ('11111111-1111-4111-8111-000000000003', 3, 'Pintura residencial e comercial, textura, grafiato e massa corrida. Faço o serviço completo, da preparação da parede à limpeza final.', 200, 9,  array['Jardim das Palmeiras','Residencial Florença','Centro'], '2099-12-31'),
+  ('11111111-1111-4111-8111-000000000004', 5, 'Pedreiro para obras pequenas e médias: alvenaria, reboco, contrapiso, assentamento de piso e azulejo. Trabalho com ajudante próprio.', 180, 15, array['Jardim Primavera','Boa Esperança','Jacarandá'], '2099-12-31'),
+  ('11111111-1111-4111-8111-000000000005', 2, 'Diarista com referências. Faxina completa, limpeza pesada pós-obra e organização de armários. Levo meu próprio material se preferir.', 140, 6,  array['Jardim Celeste','Centro','Aquarela Brasil'], '2099-12-31'),
+  ('11111111-1111-4111-8111-000000000006', 7, 'Cuidadora de idosos com curso técnico e experiência hospitalar. Acompanhamento em casa ou no hospital, medicação por horário e apoio na higiene.', 180, 8,  array['Menezes','Centro','Jardim Botânico'], '2099-12-31'),
+  ('11111111-1111-4111-8111-000000000007', 6, 'Manutenção de jardim, corte de grama, poda de árvores e cerca viva, plantio e adubação. Atendo casas e condomínios.', 100, 5,  array['Boa Esperança','Residencial Florença','Jardim Itália'], '2099-12-31'),
+  ('11111111-1111-4111-8111-000000000008', 2, 'Faxina residencial e limpeza de escritório. Trabalho por diária ou duas vezes por semana com valor fechado.', 130, 4,  array['Aquarela Brasil','Jardim Paraíso','Setor Comercial'], '2099-12-31'),
+  ('11111111-1111-4111-8111-000000000009', 1, 'Eletricista especializado em ar-condicionado split: instalação, limpeza, recarga de gás e manutenção. Também faço rede elétrica para climatização.', 220, 11, array['Setor Comercial','Centro','Setor Industrial'], '2099-12-31');
 
 -- ----------------------------------------------------------------------------
 -- Perfis de empresa
@@ -103,34 +113,38 @@ values
 -- Vagas
 -- ----------------------------------------------------------------------------
 
+-- `expira_em` é `not null default (now() + interval '30 days')`, então sem
+-- gravar aqui as cinco vagas de exemplo somem da busca um mês depois de
+-- qualquer instalação nova. Mesma sentinela e mesma razão do bloco de
+-- prestadores acima (#245).
 insert into vagas
   (id, empresa_id, titulo, descricao, categoria, cidade, bairro, tipo_contrato,
-   salario_min, salario_max, criado_em)
+   salario_min, salario_max, criado_em, expira_em)
 values
   ('44444444-4444-4444-8444-000000000001', '22222222-2222-4222-8222-000000000001',
    'Operador de Máquinas Agrícolas',
    E'Operação de colheitadeiras e tratores em lavoura de soja e milho.\n\nRequisitos: CNH categoria C, experiência comprovada, disponibilidade para trabalhar em fazenda durante a safra.\n\nOferecemos: alojamento, alimentação e adicional de safra.',
-   'Agronegócio', 'Sinop', 'Setor Industrial', 'CLT', 3200, 4200, now() - interval '2 hours'),
+   'Agronegócio', 'Sinop', 'Setor Industrial', 'CLT', 3200, 4200, now() - interval '2 hours', '2099-12-31'),
 
   ('44444444-4444-4444-8444-000000000002', '22222222-2222-4222-8222-000000000002',
    'Auxiliar Administrativo',
    E'Rotinas administrativas do escritório: emissão de notas, contas a pagar e receber, atendimento e organização de documentos.\n\nRequisitos: ensino médio completo, pacote Office intermediário.\n\nHorário comercial. Vale-transporte e vale-refeição.',
-   'Administrativo', 'Sinop', 'Centro', 'CLT', 1800, 2200, now() - interval '4 hours'),
+   'Administrativo', 'Sinop', 'Centro', 'CLT', 1800, 2200, now() - interval '4 hours', '2099-12-31'),
 
   ('44444444-4444-4444-8444-000000000003', '22222222-2222-4222-8222-000000000001',
    'Auxiliar de Produção',
    E'Apoio na linha de beneficiamento de grãos: abastecimento de máquinas, ensaque, paletização e limpeza do setor.\n\nRequisitos: ensino fundamental completo, disponibilidade para turnos.\n\nAdicional noturno e transporte fretado.',
-   'Indústria e Produção', 'Sinop', 'Setor Industrial', 'CLT', 1650, 1900, now() - interval '1 day'),
+   'Indústria e Produção', 'Sinop', 'Setor Industrial', 'CLT', 1650, 1900, now() - interval '1 day', '2099-12-31'),
 
   ('44444444-4444-4444-8444-000000000004', '22222222-2222-4222-8222-000000000003',
    'Vendedor Interno — Material de Construção',
    E'Atendimento na loja, elaboração de orçamentos e acompanhamento de pedidos até a entrega.\n\nRequisitos: experiência em vendas no varejo.\n\nSalário fixo mais comissão, sem teto.',
-   'Comércio e Vendas', 'Sinop', 'Setor Comercial', 'CLT', 1600, null, now() - interval '6 hours'),
+   'Comércio e Vendas', 'Sinop', 'Setor Comercial', 'CLT', 1600, null, now() - interval '6 hours', '2099-12-31'),
 
   ('44444444-4444-4444-8444-000000000005', '22222222-2222-4222-8222-000000000001',
    'Estágio em Agronomia',
    E'Acompanhamento de campo: monitoramento de pragas, coleta de amostras de solo e registro de dados.\n\nRequisitos: cursando a partir do 5º semestre, CNH B.\n\nBolsa-auxílio e possibilidade de efetivação.',
-   'Agronegócio', 'Sinop', 'Setor Industrial', 'Estágio', 1200, null, now() - interval '4 days');
+   'Agronegócio', 'Sinop', 'Setor Industrial', 'Estágio', 1200, null, now() - interval '4 days', '2099-12-31');
 
 -- ----------------------------------------------------------------------------
 -- Candidaturas
