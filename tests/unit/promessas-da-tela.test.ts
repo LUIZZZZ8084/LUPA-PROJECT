@@ -160,6 +160,14 @@ const AINDA_NAO_EXISTE: RecursoInexistente[] = [
       "vale é vendê-lo como promessa de entrada",
   },
   {
+    termos: /emprego formal/i,
+    recurso: "emprego formal para toda vaga",
+    issue:
+      "#257 — os tipos aceitos incluem Freelance, e o prestador publica " +
+      "vaga como pessoa física desde a #129. Para quem procura trabalho, " +
+      '"formal" quer dizer carteira assinada, e nem toda vaga daqui é',
+  },
+  {
     termos: /já estamos sabendo/i,
     recurso: "monitoramento automático de erro",
     issue:
