@@ -13,6 +13,7 @@ import { Panel } from "@/components/ui/card";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { formatStartingPrice } from "@/lib/format";
 import type { ProviderListing } from "@/lib/types";
+import { motivoForaDaVitrine } from "@/lib/vitrine";
 import type {
   PerfilCandidato as DadosCandidato,
   PerfilEmpresa as PerfilEmpresaDados,
@@ -199,6 +200,10 @@ export function PerfilPrestador({
   }
 
   const categoria = SERVICE_CATEGORIES.find((c) => c.id === perfil.categoriaId);
+  const foraDaVitrine = motivoForaDaVitrine({
+    docVerificado,
+    mensalidadeValidaAte: perfil.mensalidadeValidaAte,
+  });
 
   return (
     <Secao
@@ -273,7 +278,7 @@ export function PerfilPrestador({
        * já está gravado, só falta alguém regravar a confirmação, e isso é
        * caso de suporte, como a correção de CNPJ e cidade.
        */}
-      {!docVerificado && (
+      {foraDaVitrine === "documento" && (
         <div className="mt-4 rounded-xl border border-warn/30 bg-warn/8 p-4">
           <p className="font-medium text-sm">
             Seu perfil ainda não aparece na busca
@@ -283,6 +288,29 @@ export function PerfilPrestador({
             automaticamente. Fale com o suporte para regularizar — contas novas
             já confirmam na hora, seja pelo cadastro ou ao virar prestador.
           </p>
+        </div>
+      )}
+
+      {/*
+       * A outra metade da regra (#256). A vitrine também exige mensalidade
+       * em dia desde a #170, e este aviso só olhava o documento: quem tinha
+       * CPF confirmado mas não tinha assinado — ou cancelou, ou teve o
+       * cartão recusado — lia "Como você aparece na busca" sem aparecer em
+       * busca nenhuma. Aqui há o que fazer, então há botão.
+       */}
+      {foraDaVitrine === "assinatura" && (
+        <div className="mt-4 rounded-xl border border-warn/30 bg-warn/8 p-4">
+          <p className="font-medium text-sm">Seu perfil não aparece na busca</p>
+          <p className="mt-1 text-muted text-sm leading-relaxed">
+            Sem assinatura em dia, o anúncio fica fora da vitrine de quem
+            procura profissional. Seus dados continuam salvos — é só ativar para
+            voltar.
+          </p>
+          <div className="mt-3">
+            <ButtonLink href="/perfil/assinatura" variant="servicos" size="sm">
+              Ver assinatura
+            </ButtonLink>
+          </div>
         </div>
       )}
 

@@ -215,6 +215,48 @@ describe("prestador", () => {
     ).toBeNull();
   });
 
+  /*
+   * A outra metade da vitrine (#256). Com CPF confirmado mas sem
+   * assinatura em dia, o card "Como você aparece na busca" dizia nada — e a
+   * pessoa não aparecia em busca nenhuma. Aqui há o que fazer, então o aviso
+   * leva a quem resolve.
+   */
+  it("sem assinatura, avisa que não aparece e leva à assinatura", () => {
+    render(
+      <PerfilPrestador
+        perfil={{ ...ANUNCIO, mensalidadeValidaAte: null }}
+        listagem={LISTAGEM}
+        docVerificado
+      />,
+    );
+    expect(screen.getByText(/seu perfil não aparece na busca/i)).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: /ver assinatura/i }),
+    ).toHaveAttribute("href", "/perfil/assinatura");
+  });
+
+  it("assinatura vencida conta como sem assinatura", () => {
+    render(
+      <PerfilPrestador
+        perfil={{ ...ANUNCIO, mensalidadeValidaAte: "2020-01-01T00:00:00Z" }}
+        listagem={LISTAGEM}
+        docVerificado
+      />,
+    );
+    expect(screen.getByText(/seu perfil não aparece na busca/i)).toBeTruthy();
+  });
+
+  it("na vitrine, não avisa nada", () => {
+    render(
+      <PerfilPrestador
+        perfil={{ ...ANUNCIO, mensalidadeValidaAte: "2099-12-31T00:00:00Z" }}
+        listagem={LISTAGEM}
+        docVerificado
+      />,
+    );
+    expect(screen.queryByText(/não aparece na busca/i)).toBeNull();
+  });
+
   /** Ver o próprio anúncio como o cliente vê é o que revela o que falta. */
   it("leva ao próprio perfil público", () => {
     render(

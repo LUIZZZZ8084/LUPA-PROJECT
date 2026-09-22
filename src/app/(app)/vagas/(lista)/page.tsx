@@ -126,7 +126,7 @@ export default async function VagasPage({
       <PageTitle
         title="Vagas"
         accent="text-vagas"
-        description="Emprego formal em todo o Mato Grosso, direto de quem está contratando."
+        description="Vagas de emprego em todo o Mato Grosso, direto de quem está contratando."
       />
 
       <FilterBar

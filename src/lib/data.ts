@@ -10,7 +10,7 @@ import { repositorioUsuarios } from "@/server/repositories";
 import { RepositorioVagasMemoria, repositorioVagas } from "@/server/vagas";
 import type { Vaga } from "@/server/vagas/tipos";
 import { emCache, TAG_PRESTADORES, TAG_VAGAS } from "./cache-de-listagem";
-import { passouDoPrazo, vagaExpirada } from "./format";
+import { vagaExpirada } from "./format";
 import {
   type Recorte,
   recortar,
@@ -46,6 +46,7 @@ import type {
   ProviderListing,
   Review,
 } from "./types";
+import { motivoForaDaVitrine } from "./vitrine";
 
 /**
  * Camada de acesso a dados.
@@ -498,7 +499,8 @@ export async function getProviders(
             .eq("doc_verified", true)
             // Sem mensalidade em dia, o perfil não aparece na busca — os
             // dados continuam salvos, e a página do próprio perfil não
-            // filtra por isto (mesma razão de `doc_verified`).
+            // filtra por isto (mesma razão de `doc_verified`). É a regra de
+            // `motivoForaDaVitrine`, em SQL porque quem recorta é o banco.
             .gt("subscription_valid_until", new Date().toISOString())
             .order("avg_rating", { ascending: false })
             .limit(TETO_BUSCA + 1);
@@ -547,12 +549,14 @@ export async function getProviders(
   }
 
   const encontrados = MOCK_PROVIDERS.filter((p) => {
-    // Mesma regra do banco: as duas camadas não podem divergir, senão o
-    // que se demonstra deixa de ser o que roda.
-    if (!p.doc_verified) return false;
+    // Mesma regra do banco, e da mesma fonte que o aviso do perfil (#256):
+    // as camadas não podem divergir, senão o que se demonstra deixa de ser
+    // o que roda.
     if (
-      !p.subscription_valid_until ||
-      passouDoPrazo(p.subscription_valid_until)
+      motivoForaDaVitrine({
+        docVerificado: p.doc_verified,
+        mensalidadeValidaAte: p.subscription_valid_until,
+      })
     )
       return false;
     if (filters.city && p.city !== filters.city) return false;
