@@ -1,4 +1,5 @@
-import { scrubSensitiveData } from "@/lib/observability";
+import * as Sentry from "@sentry/nextjs";
+import { isSentryEnabled, scrubSensitiveData } from "@/lib/observability";
 import type { AppError } from "./errors";
 
 /**
@@ -81,6 +82,43 @@ export const log = {
       codigo: erro.codigo,
       ...(esperado ? {} : { stack: erro.stack }),
     });
+
+    /*
+     * O inesperado também vai para o Sentry (#247).
+     *
+     * Sem isto, o painel só recebia erro **não tratado** — e o `criarAcao`
+     * não deixa nenhum passar, porque existe justamente para que exceção
+     * não vire tela de erro do Next. O efeito era um painel que nunca
+     * ficaria vermelho pelo caminho por onde as 31 actions passam: o
+     * episódio dos R$ 29,90 (#196) não apareceria lá nem com DSN ligado.
+     *
+     * **O corte é o mesmo de cima, e é o ponto.** Validação, senha errada
+     * e sem permissão são o sistema funcionando; mandá-las para lá daria um
+     * alerta que toca o dia inteiro e que todo mundo aprende a ignorar —
+     * a mesma lição do selo que dizia a mesma coisa para sempre.
+     *
+     * **O `id` vira tag** porque é o código curto que a pessoa lê na tela,
+     * junto do pedido para avisar o suporte. Sem a tag esse código não
+     * leva a lugar nenhum: alguém liga dizendo "deu erro K7M2PQ" e não há
+     * onde procurar. Com ela, o código cola na busca do Sentry e cai no
+     * evento exato, com linha e deploy.
+     *
+     * O `if` não é otimização: sem DSN, `captureException` é uma chamada a
+     * um SDK não inicializado em todo erro interno.
+     */
+    if (!esperado && isSentryEnabled) {
+      Sentry.captureException(erro, {
+        tags: { erroId: erro.id, codigo: erro.codigo },
+        /*
+         * O contexto não é filtrado aqui de propósito: o `beforeSend` dos
+         * dois `sentry.*.config.ts` já passa todo evento por
+         * `scrubSensitiveData`. Limpar duas vezes criaria um segundo lugar
+         * para a regra divergir — e o que viaja para produção é a
+         * configuração, não esta chamada.
+         */
+        extra: { ...contexto, ...erro.contexto },
+      });
+    }
   },
 };
 

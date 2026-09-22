@@ -52,15 +52,22 @@ const MENSAGEM_PADRAO: Record<CodigoErro, string> = {
   muitas_tentativas: "Muitas tentativas. Espere um minuto e tente de novo.",
   indisponivel: "Serviço temporariamente indisponível. Tente em instantes.",
   /*
-   * Dizia "Já estamos sabendo" (#237). Não estávamos: o Sentry está no
-   * bundle sem DSN em produção e não reporta nada — conferido varrendo os
-   * chunks, zero menções ao endpoint de ingestão.
+   * Dizia "Já estamos sabendo" (#237). Não estávamos: o Sentry estava no
+   * bundle sem DSN e não reportava nada.
    *
    * A frase custava o relato: quem lê "já sabemos" não escreve para o
    * suporte, e o defeito vive. Pedir o aviso é o oposto disso, e o código
    * do erro existe justamente para a pessoa ter o que dizer.
    *
-   * Quando o Sentry ganhar DSN, a frase pode voltar — e aí será verdade.
+   * **E ela continua não voltando, mesmo agora que o erro interno chega ao
+   * Sentry** (#247). O parágrafo anterior daqui previa o contrário — que
+   * com DSN a frase seria verdade —, e isso estava errado por medir a
+   * coisa errada. Saber que houve um erro não é saber o que a pessoa
+   * estava tentando fazer, e é esse segundo pedaço que conserta o defeito.
+   * O `id` agora é tag pesquisável no painel: o código que ela dita por
+   * telefone cai no evento exato. O relato passou a valer mais, não menos
+   * — e uma frase que encerra a conversa desperdiçaria justamente o que
+   * ficou melhor.
    */
   interno:
     "Algo deu errado do nosso lado. Se puder, avise o suporte com o código " +
