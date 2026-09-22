@@ -24,6 +24,24 @@ export default defineConfig({
     exclude: ["tests/e2e/**", "node_modules/**"],
     // O pool de forks trava no Windows; threads é estável nos dois sistemas.
     pool: "threads",
+    /*
+     * 30 s de hook, e não os 10 s padrão (#265).
+     *
+     * Os arquivos de pagamentos fazem `vi.resetModules()` e reimportam o
+     * serviço no `beforeEach`. O primeiro import de cada arquivo é frio —
+     * ~900 ms com a máquina parada; os seguintes, ~10 ms. No começo da
+     * suíte, com todos os arquivos subindo em paralelo, esse primeiro
+     * import passava de 10 s, e o primeiro teste de cada um desses arquivos
+     * reprovava. Mais arquivos, mais disputa: bastou uma branch somar cinco
+     * arquivos de teste para voltar.
+     *
+     * É espera por trabalho determinístico — o import do grafo —, não por
+     * uma condição que pode não acontecer. O preço aceito é que um hook
+     * travado de verdade demora 30 s para reprovar. Reduzir os workers
+     * resolveria também, deixando a suíte inteira mais lenta por cinco
+     * arquivos.
+     */
+    hookTimeout: 30_000,
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "json-summary"],
