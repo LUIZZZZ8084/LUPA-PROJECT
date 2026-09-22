@@ -193,6 +193,14 @@ test.describe("virar prestador", () => {
     await expect(page.locator('a[href^="/cadastro"]')).toHaveCount(0);
 
     /*
+     * Nem link para a busca de candidatos (#251). O painel é o mesmo da
+     * empresa, e mostrava os dois atalhos para `/candidatos` — que responde
+     * 404 ao prestador, porque quem marcou "quero que empresas me
+     * encontrem" consentiu com empresas, não com pessoa física.
+     */
+    await expect(page.locator('a[href="/candidatos"]')).toHaveCount(0);
+
+    /*
      * O estado vazio em si não é alcançável aqui, e isso é do modo
      * demonstração: `empresaDoPainel()` mapeia qualquer sessão para a
      * empresa de exemplo, então `company` nunca vem nulo. O que este
@@ -203,6 +211,31 @@ test.describe("virar prestador", () => {
      */
     await expect(
       page.getByRole("heading", { name: /contratar/i }),
+    ).toBeVisible();
+  });
+
+  /*
+   * A ficha do currículo abre na área do prestador (#252).
+   *
+   * O link era `/empresa/candidaturas/…` escrito à mão, no painel, nos
+   * recomendados e no perfil do candidato. O prestador entrava na ficha pela
+   * porta da empresa, lia "Voltar para Minha Empresa", tocava e era
+   * devolvido — o defeito de texto de identidade que a #189 registrou.
+   */
+  test("a ficha de um currículo abre na área do prestador", async () => {
+    await page.goto("/contratar");
+
+    await expect(page.locator('a[href^="/empresa/candidaturas/"]')).toHaveCount(
+      0,
+    );
+
+    const ficha = page.locator('a[href^="/contratar/candidaturas/"]').first();
+    await expect(ficha).toBeVisible();
+    await ficha.click();
+
+    await page.waitForURL(/\/contratar\/candidaturas\//);
+    await expect(
+      page.getByRole("link", { name: /voltar para contratar/i }),
     ).toBeVisible();
   });
 

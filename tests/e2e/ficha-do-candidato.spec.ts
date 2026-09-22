@@ -19,6 +19,34 @@ test.describe("ficha do candidato", () => {
    */
   test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
 
+  /*
+   * No celular o nome precisa caber (#252).
+   *
+   * Numa fileira só, avatar, %, WhatsApp e o seletor de estágio não
+   * encolhiam, e quem encolhia era o nome: em 360 px a empresa lia "E…",
+   * "W.", "P". A varredura de rolagem lateral não pega isso — nada vaza, o
+   * `truncate` faz o que promete. O que se mede aqui é a largura que sobra
+   * para o nome, que é o que a pessoa precisa ler.
+   */
+  test("no celular, o nome de quem se candidatou cabe na linha", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto("/empresa");
+
+    const nomes = page
+      .locator("section", { hasText: "Currículos recebidos" })
+      .locator('a[href*="/candidaturas/"] p.font-semibold');
+    await expect(nomes.first()).toBeVisible();
+
+    const larguras = await nomes.evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect().width),
+    );
+    // Um nome de verdade ("Everton Rodrigues") precisa de uns 130 px em
+    // 14 px de fonte. Antes eram 12 — uma letra e as reticências.
+    for (const largura of larguras) expect(largura).toBeGreaterThan(150);
+  });
+
   test("a linha da lista abre a pessoa", async ({ page }) => {
     await page.goto("/empresa");
 

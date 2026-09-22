@@ -232,6 +232,25 @@ export async function PainelDeContratacao({
     );
   }
 
+  /*
+   * A busca de candidatos só aparece para quem a matriz deixa entrar (#251).
+   *
+   * O painel é o mesmo para empresa e prestador (#189), e mostrava os dois
+   * links para `/candidatos` aos dois — só que o prestador não tem
+   * `candidato:buscar_disponiveis`, e o link dele dava 404. Link que
+   * aparece e devolve erro é a armadilha que o AGENTS.md já registra.
+   *
+   * **Esconder, e não dar a permissão, é decisão de consentimento.** Quem
+   * liga a opção lê "Quero que *empresas* me encontrem". O prestador
+   * contrata como pessoa física; abrir a busca a ele ampliaria, sem aviso,
+   * quem vê o contato de gente que pediu discrição. Se um dia a busca for
+   * dele, o texto da caixa muda primeiro.
+   *
+   * Pela matriz e não pela área: se a capacidade chegar ao prestador, os
+   * links voltam sozinhos, sem ninguém lembrar deste arquivo.
+   */
+  const buscaCandidatos = pode(sessao.papel, "candidato:buscar_disponiveis");
+
   return (
     <PageShell>
       {/*
@@ -247,10 +266,12 @@ export async function PainelDeContratacao({
         description="Acompanhe suas vagas e os currículos recebidos."
         action={
           <div className="flex flex-wrap gap-2">
-            <ButtonLink href="/candidatos" variant="outline">
-              <UserSearch size={17} />
-              Candidatos
-            </ButtonLink>
+            {buscaCandidatos && (
+              <ButtonLink href="/candidatos" variant="outline">
+                <UserSearch size={17} />
+                Candidatos
+              </ButtonLink>
+            )}
             <ButtonLink href={`${area.base}/vagas/nova`} variant="empresas">
               <Plus size={17} />
               Publicar nova vaga
@@ -322,7 +343,9 @@ export async function PainelDeContratacao({
         ganham espaço, e cada um diz o que a pessoa encontra do outro
         lado: atalho sem explicação é atalho que ninguém clica.
       */}
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div
+        className={`mt-6 grid grid-cols-1 gap-3 ${buscaCandidatos ? "sm:grid-cols-2" : ""}`}
+      >
         <Link
           href={`${area.base}/creditos`}
           className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
@@ -346,19 +369,21 @@ export async function PainelDeContratacao({
           </p>
         </Link>
 
-        <Link
-          href="/candidatos"
-          className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
-        >
-          <div className="flex items-center gap-2">
-            <UserSearch size={18} className="flex-none text-empresas" />
-            <h2 className="font-bold text-sm">Buscar candidatos</h2>
-          </div>
-          <p className="mt-1 text-muted text-sm leading-relaxed">
-            Procure por habilidade e área entre quem pediu para ser encontrado —
-            sem esperar alguém se candidatar.
-          </p>
-        </Link>
+        {buscaCandidatos && (
+          <Link
+            href="/candidatos"
+            className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
+          >
+            <div className="flex items-center gap-2">
+              <UserSearch size={18} className="flex-none text-empresas" />
+              <h2 className="font-bold text-sm">Buscar candidatos</h2>
+            </div>
+            <p className="mt-1 text-muted text-sm leading-relaxed">
+              Procure por habilidade e área entre quem pediu para ser encontrado
+              — sem esperar alguém se candidatar.
+            </p>
+          </Link>
+        )}
       </div>
 
       {/* Vagas publicadas */}
@@ -441,7 +466,7 @@ export async function PainelDeContratacao({
         )}
       </section>
 
-      <Recomendados vagas={recomendados} />
+      <Recomendados vagas={recomendados} base={area.base} />
 
       {/* Currículos recebidos */}
       <section className="mt-8">
@@ -457,7 +482,17 @@ export async function PainelDeContratacao({
             {applications.map((app) => (
               <li
                 key={app.id}
-                className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
+                /*
+                  Duas linhas no celular, uma no desktop (#252).
+
+                  Numa fileira só, avatar, %, WhatsApp e o seletor de
+                  estágio não encolhem — quem encolhia era o nome. Em
+                  360 px a empresa lia "E…", "W.", "P": não conseguia
+                  saber quem tinha se candidatado. A varredura de rolagem
+                  lateral passava verde, porque nada vazava; o `truncate`
+                  fazia exatamente o que promete.
+                */
+                className="flex flex-col gap-2 p-4 transition-colors hover:bg-panel-2 sm:flex-row sm:items-center sm:gap-3"
               >
                 {/*
                   A linha inteira abre a ficha: nome, bairro e vaga não
@@ -465,7 +500,7 @@ export async function PainelDeContratacao({
                   havia para onde clicar.
                 */}
                 <Link
-                  href={`/empresa/candidaturas/${app.id}`}
+                  href={`${area.base}/candidaturas/${app.id}`}
                   className="group flex min-w-0 flex-1 items-center gap-3"
                 >
                   <Avatar
@@ -487,29 +522,39 @@ export async function PainelDeContratacao({
                   </div>
                 </Link>
 
-                <SeloDeMatch match={match.get(app.id)} />
-
                 {/*
+                  Recuo de `pl-12` no celular: alinha os controles com o
+                  texto, e não com o avatar, para a segunda linha ler como
+                  parte da mesma pessoa.
+                */}
+                <div className="flex items-center gap-2 pl-12 sm:pl-0">
+                  <SeloDeMatch match={match.get(app.id)} />
+
+                  {/*
                   Atalho de contato na própria lista: o caminho entre
                   receber o currículo e chamar a pessoa não deveria ter
                   uma tela no meio.
                 */}
-                {app.candidate.phone && (
-                  <a
-                    href={whatsappLink(
-                      app.candidate.phone,
-                      `Olá! Vimos sua candidatura para a vaga de ${app.job_title} na Lupa e gostaríamos de conversar.`,
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Falar com ${app.candidate.full_name} no WhatsApp`}
-                    className="flex-none rounded-lg border border-line p-2 text-muted transition-colors hover:border-vagas hover:text-vagas"
-                  >
-                    <MessageCircle size={16} />
-                  </a>
-                )}
+                  {app.candidate.phone && (
+                    <a
+                      href={whatsappLink(
+                        app.candidate.phone,
+                        `Olá! Vimos sua candidatura para a vaga de ${app.job_title} na Lupa e gostaríamos de conversar.`,
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Falar com ${app.candidate.full_name} no WhatsApp`}
+                      className="flex-none rounded-lg border border-line p-2 text-muted transition-colors hover:border-vagas hover:text-vagas"
+                    >
+                      <MessageCircle size={16} />
+                    </a>
+                  )}
 
-                <MoverCandidaturaSelect id={app.id} statusAtual={app.status} />
+                  <MoverCandidaturaSelect
+                    id={app.id}
+                    statusAtual={app.status}
+                  />
+                </div>
               </li>
             ))}
           </ul>
