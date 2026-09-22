@@ -347,7 +347,12 @@ export const config = {
      * redirecionamento para descobrir a política, só desiste de tentar de
      * novo. `ABERTAS` não resolve, pela mesma razão do manifesto: aquela
      * lista é de rota de navegação, e `sitemap.xml` não é uma.
+     *
+     * `opengraph-image` entrou com a prévia do link (#259), antes de
+     * quebrar desta vez: quem busca a imagem é o servidor do WhatsApp, sem
+     * sessão, e o muro a trocaria por um redirecionamento para `/entrar`
+     * — a prévia sairia sem miniatura, e ninguém veria por quê.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|api/webhooks|api/cron|icon|apple-icon|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|api/webhooks|api/cron|icon|apple-icon|opengraph-image|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };

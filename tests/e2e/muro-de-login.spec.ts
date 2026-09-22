@@ -132,6 +132,31 @@ test.describe("muro de login", () => {
     expect(await sitemap.text()).toContain("<urlset");
   });
 
+  /*
+   * A prévia do link no WhatsApp (#259). Três coisas precisam valer juntas,
+   * e cada uma já quebrou sozinha em outra rota deste app:
+   *
+   * - a meta existe — não existia;
+   * - aponta para o endereço público, e não para `VERCEL_URL` (#195);
+   * - a imagem abre **sem sessão**, porque quem a busca é o servidor do
+   *   WhatsApp — o muro já barrou o manifesto do mesmo jeito.
+   */
+  test("a prévia do link tem imagem, e ela abre sem sessão", async ({
+    request,
+    baseURL,
+  }) => {
+    const home = await (await request.get("/")).text();
+    const meta = home.match(/<meta property="og:image" content="([^"]+)"/)?.[1];
+
+    expect(meta, "a home não tem og:image").toBeTruthy();
+    expect(meta?.startsWith(String(baseURL))).toBe(true);
+
+    const caminho = new URL(String(meta)).pathname;
+    const imagem = await request.get(caminho, { maxRedirects: 0 });
+    expect(imagem.status()).toBe(200);
+    expect(imagem.headers()["content-type"]).toContain("image/png");
+  });
+
   /**
    * O que quase vazou junto com a home: o card de prestador tem um botão
    * de WhatsApp que, autenticado, carrega o telefone de verdade no HTML.

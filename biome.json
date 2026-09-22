@@ -139,7 +139,11 @@
       }
     },
     {
-      "includes": ["src/app/icon.tsx", "src/app/apple-icon.tsx"],
+      "includes": [
+        "src/app/icon.tsx",
+        "src/app/apple-icon.tsx",
+        "src/app/opengraph-image.tsx"
+      ],
       "linter": {
         "rules": {
           "a11y": {

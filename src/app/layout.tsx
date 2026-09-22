@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { DemoBanner } from "@/components/demo-banner";
 import { RouteProgress } from "@/components/motion/route-progress";
 import { SCRIPT_TEMA_INICIAL } from "@/lib/theme";
+import { urlPublica } from "@/server/url-publica";
 import "./globals.css";
 
 const geist = Geist({
@@ -13,6 +14,14 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
+  /*
+   * A raiz das URLs absolutas que saem nos metadados — a da imagem da
+   * prévia do link, principalmente (#259). Sem isto o Next usa
+   * `VERCEL_URL`, que nunca é o domínio próprio e muda a cada deploy: a
+   * mesma classe de defeito do `urlBase()` da #195. `urlPublica()` é a
+   * fonte única e recusa produção sem configuração.
+   */
+  metadataBase: new URL(urlPublica()),
   title: {
     default: "Lupa — Trabalho e profissionais perto de você",
     template: "%s · Lupa",
