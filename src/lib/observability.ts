@@ -43,14 +43,43 @@ export const IGNORED_ERRORS = [
 ];
 
 /**
+ * Chaves que a máscara não percorre, porque nunca saem do processo.
+ *
+ * `sdkProcessingMetadata` é onde o SDK do Sentry guarda o próprio estado
+ * durante o processamento — num evento de transação, a instância de
+ * `Scope` em que o span nasceu, que aponta para si mesma. O SDK a apaga
+ * antes de montar o envelope (`createEventEnvelope`, em `@sentry/core`),
+ * então não há dado pessoal ali para mascarar. Percorrê-la custava toda a
+ * medição de desempenho (#273).
+ */
+const INTERNAS_DO_SDK = new Set(["sdkProcessingMetadata"]);
+
+/**
  * Remove dado pessoal antes do envio.
  *
  * O Lupa lida com telefone, CPF/CNPJ e documento. Nada disso pode sair para
  * um serviço de terceiro — é exigência da LGPD, não preferência.
+ *
+ * **Ciclo não derruba a máscara (#273).** Ela percorria o evento sem
+ * lembrar por onde já tinha passado, e o evento de transação carrega um
+ * objeto do SDK com referência circular: a função dava voltas até estourar
+ * a pilha. Uma exceção no `beforeSendTransaction` faz o SDK descartar a
+ * transação e mandar no lugar um erro interno, que **não passa pelo
+ * `beforeSend`** — então a quebra não só perdia a medição como produzia o
+ * único evento que sai sem máscara. Hoje o que já está sendo visitado vira
+ * `"[circular]"`: um objeto que contém a si mesmo não tem como ser
+ * serializado de qualquer forma.
  */
 export function scrubSensitiveData<T>(event: T): T {
   const CAMPOS_SENSIVEIS =
     /(phone|telefone|whatsapp|cpf|cnpj|documento|document|selfie|password|senha|token|secret|resume|curriculo)/i;
+
+  /*
+   * Só o caminho atual, não tudo que já foi visto: o mesmo objeto
+   * aparecendo em dois galhos do evento é repetição, não ciclo, e tem de
+   * ser mascarado nos dois.
+   */
+  const noCaminho = new WeakSet<object>();
 
   const limpar = (valor: unknown, chave?: string): unknown => {
     if (chave && CAMPOS_SENSIVEIS.test(chave)) return "[removido]";
@@ -98,18 +127,22 @@ export function scrubSensitiveData<T>(event: T): T {
       );
     }
 
-    if (Array.isArray(valor)) return valor.map((v) => limpar(v));
+    if (!valor || typeof valor !== "object") return valor;
+    if (noCaminho.has(valor)) return "[circular]";
 
-    if (valor && typeof valor === "object") {
+    noCaminho.add(valor);
+    try {
+      if (Array.isArray(valor)) return valor.map((v) => limpar(v));
+
       return Object.fromEntries(
         Object.entries(valor as Record<string, unknown>).map(([k, v]) => [
           k,
-          limpar(v, k),
+          INTERNAS_DO_SDK.has(k) ? v : limpar(v, k),
         ]),
       );
+    } finally {
+      noCaminho.delete(valor);
     }
-
-    return valor;
   };
 
   return limpar(event) as T;
