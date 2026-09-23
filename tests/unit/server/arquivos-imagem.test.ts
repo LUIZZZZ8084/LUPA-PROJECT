@@ -36,13 +36,26 @@ async function medir(bytes: Uint8Array) {
   return sharp(bytes).metadata();
 }
 
-/** Se o bloco de EXIF aponta para um diretório de GPS (tag 0x8825). */
+/**
+ * Se o EXIF tem um diretório de GPS: a tag 0x8825 no primeiro IFD.
+ *
+ * Lê a estrutura, e não procura os bytes soltos: a sequência 0x88 0x25
+ * aparece por acaso no meio de outros dados, e uma busca simples acusou
+ * GPS em fotos de produção que não tinham nenhum.
+ */
 function temGps(exif: Buffer | undefined): boolean {
   if (!exif) return false;
-  return (
-    exif.includes(Buffer.from([0x88, 0x25])) ||
-    exif.includes(Buffer.from([0x25, 0x88]))
-  );
+  const o = exif.toString("latin1", 0, 6) === "Exif\0\0" ? 6 : 0;
+  const le = exif.toString("latin1", o, o + 2) === "II";
+  const u16 = (p: number) =>
+    le ? exif.readUInt16LE(o + p) : exif.readUInt16BE(o + p);
+  const u32 = (p: number) =>
+    le ? exif.readUInt32LE(o + p) : exif.readUInt32BE(o + p);
+  const ifd0 = u32(4);
+  for (let i = 0; i < u16(ifd0); i++) {
+    if (u16(ifd0 + 2 + i * 12) === 0x8825) return true;
+  }
+  return false;
 }
 
 describe("redução da foto", () => {
@@ -100,6 +113,12 @@ describe("metadados", () => {
     );
     // Controle: a entrada tem mesmo o metadado que o teste diz tirar.
     expect(temGps((await medir(comGps)).exif)).toBe(true);
+    // E o leitor não acusa GPS onde não há.
+    const semGps = await sharp(await fotoDeCelular(80, 60))
+      .withExif({ IFD0: { Copyright: "x" } })
+      .jpeg()
+      .toBuffer();
+    expect(temGps((await medir(semGps)).exif)).toBe(false);
     expect(Buffer.from(comGps).includes("marca-de-teste-lupa")).toBe(true);
 
     const reduzida = await reduzirImagem(comGps, "publicacao");
