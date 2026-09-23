@@ -41,6 +41,16 @@
  */
 type Ambiente = Record<string, string | undefined>;
 
+/**
+ * O tamanho mínimo do segredo que assina a sessão.
+ *
+ * Mora aqui, e não em `auth/session.ts`, porque este arquivo é carregado
+ * pela `instrumentation.ts` e não importa nada — trazer o módulo de sessão
+ * para a subida do processo arrastaria `jose` e o logger junto. A sessão
+ * importa daqui, e as duas regras são uma só.
+ */
+export const SEGREDO_DE_SESSAO_MINIMO = 32;
+
 interface Exigencia {
   nome: string;
   /** Por que ela é obrigatória, na voz de quem vai ler o deploy vermelho. */
@@ -52,11 +62,38 @@ interface Exigencia {
    * sentido onde existe cobrança de verdade.
    */
   exigida: (ambiente: Ambiente) => boolean;
+  /**
+   * Se o valor presente serve. Sem ela, qualquer valor não vazio serve.
+   *
+   * Existe para o segredo da sessão: um valor curto demais não é
+   * "configurado errado, mas funcionando" — `segredo()` o recusa na hora
+   * de assinar, e ninguém consegue entrar.
+   */
+  valida?: (valor: string) => boolean;
 }
 
 const sempre = () => true;
 
 const EXIGENCIAS: Exigencia[] = [
+  {
+    nome: "SESSION_SECRET",
+    porque:
+      "é a chave que assina o login. Sem ela, ou com menos de " +
+      `${SEGREDO_DE_SESSAO_MINIMO} caracteres, o site abriria normalmente ` +
+      "e ninguém conseguiria entrar: toda sessão seria lida como " +
+      "inexistente, e o login falharia com erro interno. Gere uma com " +
+      "node -e \"console.log(require('crypto').randomBytes(48).toString('base64'))\" " +
+      "e cadastre como Secret",
+    exigida: sempre,
+    /*
+     * A mesma regra de `segredo()`, e não uma parecida (#271).
+     *
+     * Aquela função já recusava valor curto, só que tarde: na hora de
+     * assinar, com `lerSessao` engolindo a exceção em silêncio. Aqui a
+     * recusa acontece antes de atender alguém.
+     */
+    valida: (valor) => valor.length >= SEGREDO_DE_SESSAO_MINIMO,
+  },
   {
     nome: "NEXT_PUBLIC_APP_URL",
     porque:
@@ -96,9 +133,12 @@ export function conferirConfiguracaoDeProducao(
 ): void {
   if (ambiente.VERCEL_ENV !== "production") return;
 
-  const faltando = EXIGENCIAS.filter(
-    (e) => e.exigida(ambiente) && !ambiente[e.nome]?.trim(),
-  );
+  const faltando = EXIGENCIAS.filter((e) => {
+    if (!e.exigida(ambiente)) return false;
+    const valor = ambiente[e.nome]?.trim();
+    if (!valor) return true;
+    return e.valida ? !e.valida(valor) : false;
+  });
 
   /*
    * O multiplicador de limite é de suíte de teste, e em produção seria
@@ -148,7 +188,7 @@ export function conferirConfiguracaoDeProducao(
   if (faltando.length === 0) return;
 
   throw new Error(
-    `Configuração obrigatória ausente em produção: ${faltando
+    `Configuração obrigatória ausente ou inválida em produção: ${faltando
       .map((e) => e.nome)
       .join(", ")}.\n\n${faltando
       .map((e) => `• ${e.nome} — ${e.porque}.`)

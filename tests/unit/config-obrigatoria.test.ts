@@ -18,6 +18,8 @@ type Ambiente = Record<string, string | undefined>;
 
 const PRODUCAO_COMPLETA: Ambiente = {
   VERCEL_ENV: "production",
+  // Valor de teste, não segredo: 40 caracteres, acima do mínimo de 32.
+  SESSION_SECRET: "segredo-de-teste-com-quarenta-caracteres",
   NEXT_PUBLIC_APP_URL: "https://lupapp.com.br",
   MERCADO_PAGO_ACCESS_TOKEN: "APP_USR-token",
   MERCADO_PAGO_WEBHOOK_SECRET: "segredo",
@@ -51,6 +53,55 @@ describe("configuração obrigatória de produção", () => {
     expect(() =>
       conferirConfiguracaoDeProducao(semA("NEXT_PUBLIC_APP_URL")),
     ).toThrow(/NEXT_PUBLIC_APP_URL/);
+  });
+
+  /**
+   * O segredo da sessão (#271).
+   *
+   * Sem ele o site subia e ninguém entrava: `lerSessao` engole a recusa de
+   * `segredo()` e devolve "sem sessão", e o login falha com erro interno.
+   * A home abre, os crons rodam, e nada fica vermelho — a falha silenciosa
+   * que a #196 fechou para o webhook, na porta de entrada do app inteiro.
+   */
+  describe("segredo da sessão", () => {
+    it("sem ele, derruba", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao(semA("SESSION_SECRET")),
+      ).toThrow(/SESSION_SECRET/);
+    });
+
+    /**
+     * Presença não basta: `segredo()` recusa valor curto na hora de
+     * assinar, então um valor de 31 caracteres produz o mesmo site onde
+     * ninguém entra.
+     */
+    it("com menos de 32 caracteres, derruba e diz o mínimo", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          ...PRODUCAO_COMPLETA,
+          SESSION_SECRET: "a".repeat(31),
+        }),
+      ).toThrow(/SESSION_SECRET[\s\S]*32 caracteres/);
+    });
+
+    it("com exatamente 32, deixa subir", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          ...PRODUCAO_COMPLETA,
+          SESSION_SECRET: "a".repeat(32),
+        }),
+      ).not.toThrow();
+    });
+
+    /** Espaço colado junto não conta para o tamanho. */
+    it("espaço sobrando não completa o mínimo", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          ...PRODUCAO_COMPLETA,
+          SESSION_SECRET: `${"a".repeat(30)}   `,
+        }),
+      ).toThrow(/SESSION_SECRET/);
+    });
   });
 
   it("com cobrança ligada e sem o segredo do webhook, derruba", () => {
