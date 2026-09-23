@@ -181,3 +181,75 @@ describe("bordas das expressões", () => {
     expect(limpar("falha ao gravar a vaga")).toBe("falha ao gravar a vaga");
   });
 });
+
+/*
+ * O evento que dava voltas (#273).
+ *
+ * Em produção, toda transação amostrada terminava em `RangeError: Maximum
+ * call stack size exceeded` dentro desta função: o evento de transação
+ * carrega, em `sdkProcessingMetadata`, a instância de `Scope` do SDK em que
+ * o span nasceu — e ela aponta para si mesma. O SDK descartava a medição e
+ * mandava no lugar um erro interno, que não passa pelo `beforeSend` e sai
+ * sem máscara nenhuma.
+ */
+describe("ciclo e estado interno do SDK", () => {
+  it("objeto que aponta para si mesmo não estoura a pilha", () => {
+    const contexto: Record<string, unknown> = { obs: "ligar 66999110001" };
+    contexto.eu = contexto;
+
+    const limpo = scrubSensitiveData({ contexto }) as {
+      contexto: Record<string, unknown>;
+    };
+
+    expect(limpo.contexto.eu).toBe("[circular]");
+    // O resto do objeto continua passando pela máscara.
+    expect(limpo.contexto.obs).toBe("ligar [telefone]");
+  });
+
+  it("ciclo dentro de lista também para", () => {
+    const lista: unknown[] = ["66999110001"];
+    lista.push(lista);
+
+    expect(scrubSensitiveData(lista)).toEqual(["[telefone]", "[circular]"]);
+  });
+
+  /*
+   * Repetição não é ciclo. Guardar tudo que já foi visto, em vez de só o
+   * caminho atual, trocaria a segunda aparição por "[circular]" — e se a
+   * troca fosse para o valor cru, o telefone sairia na segunda.
+   */
+  it("o mesmo objeto em dois galhos é mascarado nos dois", () => {
+    const contato = { obs: "66999110001" };
+
+    expect(scrubSensitiveData({ a: contato, b: contato })).toEqual({
+      a: { obs: "[telefone]" },
+      b: { obs: "[telefone]" },
+    });
+  });
+
+  it("não percorre nem recria o estado interno do SDK", () => {
+    // O formato de `tracing/sentrySpan.js`, em `@sentry/core`.
+    const escopo: Record<string, unknown> = { _cliente: {} };
+    (escopo._cliente as Record<string, unknown>).escopo = escopo;
+    const metadata = {
+      capturedSpanScope: escopo,
+      capturedSpanIsolationScope: escopo,
+    };
+
+    const limpo = scrubSensitiveData({
+      type: "transaction",
+      transaction: "/vagas/:id",
+      extra: { telefone: "66999110001" },
+      sdkProcessingMetadata: metadata,
+    });
+
+    /*
+     * A mesma referência, e não uma cópia: o SDK ainda lê esse objeto
+     * depois do `beforeSendTransaction` (o contexto de amostragem sai
+     * dali), e o apaga antes de enviar — não há o que mascarar.
+     */
+    expect(limpo.sdkProcessingMetadata).toBe(metadata);
+    expect(limpo.sdkProcessingMetadata.capturedSpanScope).toBe(escopo);
+    expect(limpo.extra).toEqual({ telefone: "[removido]" });
+  });
+});
