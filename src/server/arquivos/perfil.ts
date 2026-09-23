@@ -2,7 +2,12 @@ import type { Papel } from "../auth/rbac";
 import { erros } from "../errors";
 import { repositorioUsuarios } from "../repositories";
 import type { Especie } from "./regras";
-import { enviarArquivo, removerArquivo, urlAssinada } from "./servico";
+import {
+  enviarArquivo,
+  removerArquivo,
+  removerVersoesAnteriores,
+  urlAssinada,
+} from "./servico";
 
 /**
  * Liga o envio de arquivo ao perfil de quem enviou.
@@ -60,7 +65,11 @@ export async function trocarArquivoDoPerfil(
     throw erros.interno("foto de publicação não é arquivo de perfil");
   }
 
-  const { referencia } = await enviarArquivo(usuarioId, especie, arquivo);
+  const { referencia, caminho } = await enviarArquivo(
+    usuarioId,
+    especie,
+    arquivo,
+  );
   const repo = repositorioUsuarios();
 
   if (especie === "avatar") await repo.definirAvatar(usuarioId, referencia);
@@ -68,6 +77,13 @@ export async function trocarArquivoDoPerfil(
   if (especie === "curriculo") {
     await repo.definirCurriculo(usuarioId, referencia);
   }
+
+  /*
+   * Só agora, com o banco apontando para o arquivo novo: a foto antiga em
+   * outra extensão sai do bucket (#283). Antes daqui, uma falha no banco
+   * deixaria o perfil apontando para o que acabou de ser apagado.
+   */
+  await removerVersoesAnteriores(usuarioId, especie, caminho);
 }
 
 export async function apagarArquivoDoPerfil(

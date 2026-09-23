@@ -12,6 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const armazenamento = vi.hoisted(() => ({
   enviados: [] as { usuarioId: string; especie: string }[],
   removidos: [] as { usuarioId: string; especie: string }[],
+  limpezas: [] as { especie: string; caminho: string }[],
+  /** A sequência entre banco e limpeza, para conferir a ordem. */
+  ordem: [] as string[],
   falharEnvio: false,
 }));
 
@@ -20,7 +23,18 @@ vi.mock("@/server/arquivos/servico", () => ({
   enviarArquivo: async (usuarioId: string, especie: string) => {
     if (armazenamento.falharEnvio) throw new Error("storage fora do ar");
     armazenamento.enviados.push({ usuarioId, especie });
-    return { referencia: `https://exemplo/${especie}/${usuarioId}` };
+    return {
+      referencia: `https://exemplo/${especie}/${usuarioId}`,
+      caminho: `${especie}/${usuarioId}.webp`,
+    };
+  },
+  removerVersoesAnteriores: async (
+    _usuarioId: string,
+    especie: string,
+    caminho: string,
+  ) => {
+    armazenamento.ordem.push("limpeza");
+    armazenamento.limpezas.push({ especie, caminho });
   },
   removerArquivo: async (usuarioId: string, especie: string) => {
     armazenamento.removidos.push({ usuarioId, especie });
@@ -58,6 +72,8 @@ beforeEach(() => {
   restaurar = usarRepositorio(repo);
   armazenamento.enviados.length = 0;
   armazenamento.removidos.length = 0;
+  armazenamento.limpezas.length = 0;
+  armazenamento.ordem.length = 0;
   armazenamento.falharEnvio = false;
 });
 
@@ -124,6 +140,38 @@ describe("ordem entre bucket e banco", () => {
     ).rejects.toThrow();
 
     expect((await repo.porId(id))?.avatarUrl).toBeNull();
+  });
+
+  /**
+   * A foto antiga em outra extensão só sai depois que o banco aponta para
+   * a nova (#283). Na ordem inversa, uma falha entre os dois passos
+   * deixaria o perfil apontando para o que acabou de ser apagado.
+   */
+  it("a versão antiga sai só depois de o banco apontar para a nova", async () => {
+    const id = await criar("candidato_clt");
+    const gravar = repo.definirAvatar.bind(repo);
+    vi.spyOn(repo, "definirAvatar").mockImplementation(async (...args) => {
+      armazenamento.ordem.push("banco");
+      return gravar(...args);
+    });
+
+    await trocarArquivoDoPerfil(id, "candidato_clt", "avatar", FOTO);
+
+    expect(armazenamento.ordem).toEqual(["banco", "limpeza"]);
+    expect(armazenamento.limpezas).toEqual([
+      { especie: "avatar", caminho: `avatar/${id}.webp` },
+    ]);
+  });
+
+  it("se o banco falha, a versão antiga fica", async () => {
+    const id = await criar("candidato_clt");
+    vi.spyOn(repo, "definirAvatar").mockRejectedValue(new Error("banco fora"));
+
+    await expect(
+      trocarArquivoDoPerfil(id, "candidato_clt", "avatar", FOTO),
+    ).rejects.toThrow();
+
+    expect(armazenamento.limpezas).toEqual([]);
   });
 
   /** Na remoção a ordem se inverte, pela mesma razão. */

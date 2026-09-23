@@ -870,6 +870,21 @@ envio. Na ordem inversa, o banco apontaria para arquivo inexistente e a
 tela mostraria imagem quebrada. Na remoção a ordem se inverte, pelo mesmo
 raciocínio.
 
+**A foto é reduzida antes de gravar, não só na entrega (#283).** A #268
+passou a foto pelo otimizador do Next, e o celular passou a receber WebP do
+tamanho da tela — mas o bucket continuava guardando o original de 1 a 2 MB.
+Hoje o servidor decodifica, aplica a orientação do celular, reduz (512 px
+para perfil e logo, 1600 para o feed) e grava WebP **sem metadado**. O
+metadado era o problema maior: foto de celular leva o GPS de onde foi
+tirada, os buckets de foto são públicos, e a URL do original aparece no
+HTML como parâmetro do otimizador. Decodificar também é o que prova que o
+arquivo é imagem — `conferirArquivo` só confere o tipo declarado. O
+currículo em PDF passa como veio.
+
+Como tudo virou `.webp`, a foto de perfil antiga em `.jpg` ficaria órfã no
+caminho fixo. `removerVersoesAnteriores` a apaga — **depois** de o banco
+apontar para a nova, pela mesma ordem de sempre.
+
 **Sem Supabase não há Storage.** A tela diz isso em vez de aceitar o envio
 e perder o arquivo — aceitar em silêncio faria a pessoa achar que salvou.
 
