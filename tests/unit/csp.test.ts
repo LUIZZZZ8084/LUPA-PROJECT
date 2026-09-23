@@ -72,6 +72,18 @@ describe("política de segurança", () => {
     expect(connect).not.toMatch(/connect-src\s+\*/);
   });
 
+  /**
+   * O worker da gravação de sessão do Sentry nasce de uma URL `blob:`
+   * (#281). Sem `worker-src`, o navegador usa `script-src`, recusa o
+   * worker e registra um erro de console em toda página de produção.
+   */
+  it("libera worker de blob, e só worker", () => {
+    const politica = politicaDeSeguranca("n", "production");
+    expect(diretiva(politica, "worker-src")).toBe("worker-src 'self' blob:");
+    // Liberar worker não pode virar liberar script.
+    expect(diretiva(politica, "script-src")).not.toContain("blob:");
+  });
+
   it("fecha o resto do que precisa ficar fechado", () => {
     const politica = politicaDeSeguranca("n", "production");
     for (const esperada of [
