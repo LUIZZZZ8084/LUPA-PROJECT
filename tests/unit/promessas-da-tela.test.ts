@@ -168,6 +168,14 @@ const AINDA_NAO_EXISTE: RecursoInexistente[] = [
       '"formal" quer dizer carteira assinada, e nem toda vaga daqui é',
   },
   {
+    termos: /filtrad[oa]s? por [^.]*bairro|busque [^.]*por bairro/i,
+    recurso: "filtro por bairro",
+    issue:
+      "#285 — as buscas filtram por cidade, categoria e tipo ou " +
+      "avaliação. O bairro só ordena por proximidade, e não existe " +
+      "catálogo de bairro para os 142 municípios",
+  },
+  {
     termos: /já estamos sabendo/i,
     recurso: "monitoramento automático de erro",
     issue:

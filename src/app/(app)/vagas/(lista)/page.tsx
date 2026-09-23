@@ -42,7 +42,7 @@ export async function generateMetadata({
   if (cidade) {
     return {
       title: `Vagas de emprego em ${cidade}`,
-      description: `Vagas CLT, estágio e temporárias em ${cidade}-${ESTADO}, filtradas por categoria, bairro e tipo de contrato.`,
+      description: `Vagas CLT, estágio e temporárias em ${cidade}-${ESTADO}, filtradas por categoria e tipo de contrato.`,
     };
   }
 

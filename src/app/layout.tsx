@@ -26,10 +26,15 @@ export const metadata: Metadata = {
     default: "Lupa — Trabalho e profissionais perto de você",
     template: "%s · Lupa",
   },
+  /*
+   * É o texto que o Google mostra embaixo do título e o WhatsApp mostra na
+   * prévia do link. Dizia "filtrado por bairro", e esse filtro não existe:
+   * o bairro só ordena por proximidade (#285).
+   */
   description:
-    "Vagas de emprego, prestadores de serviço e empresas " +
-    "contratando em Sinop-MT. Filtrado por bairro e categoria, sem se perder " +
-    "em grupo de WhatsApp.",
+    "Vagas de emprego, prestadores de serviço e empresas contratando em " +
+    "Sinop e em todo o Mato Grosso, do mais perto de você ao mais longe. " +
+    "Sem se perder em grupo de WhatsApp.",
   applicationName: "Lupa",
   manifest: "/manifest.webmanifest",
   appleWebApp: {

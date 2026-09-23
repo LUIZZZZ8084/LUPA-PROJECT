@@ -18,7 +18,7 @@ const ROLES = [
     tone: "vagas" as const,
     title: "Quero um emprego",
     description:
-      "Busque vagas CLT por bairro e categoria, e candidate-se em um toque.",
+      "Busque vagas por cidade e categoria, e candidate-se em um toque.",
   },
   {
     role: "prestador_servico" as const,
