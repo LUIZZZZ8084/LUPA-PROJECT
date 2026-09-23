@@ -68,10 +68,17 @@ const INTERNAS_DO_SDK = new Set(["sdkProcessingMetadata"]);
  * identificador; o formato garante que o valor é mesmo só hexadecimal. Um
  * texto com telefone numa chave chamada `trace_id` continua mascarado — a
  * exceção vale para o que o SDK gera, não para o nome do campo.
+ *
+ * **O `release` entrou pelo mesmo motivo (#277).** É o hash do commit do
+ * deploy, 40 caracteres hexadecimais, e o de 23/09 começava com 14
+ * dígitos: saía `[cnpj]d995dd…`. A transação era aceita, mas ficava sem
+ * ligação com o deploy — e é por release que o Sentry diz em que versão um
+ * erro apareceu. Depende do sorteio do hash, por isso passou por um deploy
+ * inteiro sem ninguém ver.
  */
 const CHAVES_DE_RASTREIO =
-  /^(?:__span|(?:sentry\.)?(?:trace_id|span_id|parent_span_id|segment_id|event_id|replay_id|profile_id|previous_trace))$/;
-const FORMATO_DE_RASTREIO = /^[0-9a-f]{16,32}(?:-[0-9a-f]{16}(?:-[01])?)?$/i;
+  /^(?:__span|(?:sentry\.)?(?:release|trace_id|span_id|parent_span_id|segment_id|event_id|replay_id|profile_id|previous_trace))$/;
+const FORMATO_DE_RASTREIO = /^[0-9a-f]{16,40}(?:-[0-9a-f]{16}(?:-[01])?)?$/i;
 
 /**
  * Remove dado pessoal antes do envio.

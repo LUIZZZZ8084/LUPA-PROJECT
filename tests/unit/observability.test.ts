@@ -327,6 +327,23 @@ describe("identificadores de rastreio", () => {
     );
   });
 
+  /*
+   * O release é o hash do commit do deploy (#277). O de 23/09 começava com
+   * 14 dígitos, e a regra de CNPJ o trocava por "[cnpj]d995dd…": a
+   * transação era aceita, mas perdia a ligação com a versão.
+   */
+  it("o release com hash de commit passa intacto", () => {
+    const SHA = "50799703251002d995dd63da76b9683f0001da52";
+    expect(scrubSensitiveData({ texto: SHA }).texto).toContain("[cnpj]");
+    expect(scrubSensitiveData({ release: SHA }).release).toBe(SHA);
+  });
+
+  it("release que não é hash continua mascarado", () => {
+    expect(scrubSensitiveData({ release: "v1 66999110001" }).release).toBe(
+      "v1 [telefone]",
+    );
+  });
+
   it("hexadecimal fora de uma chave de identificador continua mascarado", () => {
     expect(scrubSensitiveData({ obs: TRACE }).obs).toContain("[telefone]");
   });
