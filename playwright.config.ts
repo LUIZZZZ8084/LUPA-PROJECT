@@ -76,10 +76,9 @@ export default defineConfig({
            * arquivo existe na máquina de quem roda.
            */
           NEXT_PUBLIC_SUPABASE_URL: "",
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
-          // O nome novo da chave anônima (#221). Esquecer esta linha faria
-          // a suíte falar com o banco de verdade — já custou 213 contas
-          // criadas na base real.
+          // A chave anônima, pelo único nome que o app lê (#221, #279).
+          // Esquecer esta linha faria a suíte falar com o banco de verdade
+          // — já custou 213 contas criadas na base real.
           SUPABASE_ANON_KEY: "",
           SUPABASE_SERVICE_ROLE_KEY: "",
           /*

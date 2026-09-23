@@ -21,7 +21,7 @@ describe("resolveContact", () => {
 
   it("em demonstração sem número configurado, não devolve telefone nenhum", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.stubEnv("SUPABASE_ANON_KEY", "");
     vi.stubEnv("NEXT_PUBLIC_LUPA_DEMO_WHATSAPP", "");
 
     const { resolveContact, isDemoMode } = await import("@/lib/demo");
@@ -34,7 +34,7 @@ describe("resolveContact", () => {
 
   it("em demonstração com número configurado, redireciona para ele", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.stubEnv("SUPABASE_ANON_KEY", "");
     vi.stubEnv("NEXT_PUBLIC_LUPA_DEMO_WHATSAPP", "5566988887777");
 
     const { resolveContact } = await import("@/lib/demo");
@@ -48,7 +48,7 @@ describe("resolveContact", () => {
 
   it("com Supabase configurado, o contato vai para o prestador real", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://exemplo.supabase.co");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "chave-anonima");
+    vi.stubEnv("SUPABASE_ANON_KEY", "chave-anonima");
 
     const { resolveContact, isDemoMode } = await import("@/lib/demo");
 
@@ -60,7 +60,7 @@ describe("resolveContact", () => {
 
   it("espaço em branco na variável conta como não configurado", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.stubEnv("SUPABASE_ANON_KEY", "");
     vi.stubEnv("NEXT_PUBLIC_LUPA_DEMO_WHATSAPP", "   ");
 
     const { resolveContact } = await import("@/lib/demo");

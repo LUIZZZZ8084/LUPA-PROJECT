@@ -134,7 +134,7 @@ esses ids.
 | Onde aparece | Variável | Vai para |
 |---|---|---|
 | Project URL | `NEXT_PUBLIC_SUPABASE_URL` | Navegador |
-| `anon` `public` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Navegador |
+| `anon` `public` | `SUPABASE_ANON_KEY` | Só o servidor (#221) |
 | `service_role` `secret` | `SUPABASE_SERVICE_ROLE_KEY` | **Só o servidor** |
 
 **A chave `service_role` ignora todas as regras de segurança do banco.** Ela
@@ -148,7 +148,7 @@ tem acesso irrestrito ao banco. Há um teste que trava isso.
 
 ```
 NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 SESSION_SECRET
 

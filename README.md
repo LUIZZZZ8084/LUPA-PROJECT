@@ -33,7 +33,7 @@ produto para alguém.
 2. No **SQL Editor**, rode `supabase/schema.sql` (tabelas, RLS, triggers,
    views e buckets).
 3. Copie `.env.example` para `.env.local` e preencha `NEXT_PUBLIC_SUPABASE_URL`
-   e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Project Settings → API).
+   e `SUPABASE_ANON_KEY` (Project Settings → API).
 4. Reinicie o `npm run dev`. A camada de dados passa a ler do banco sozinha.
 
 Para dados de desenvolvimento em ambiente **local**, rode também

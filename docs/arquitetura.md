@@ -242,9 +242,9 @@ virar depósito de versões pagas.
 
 | Variável | Onde vive | Sem ela |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | navegador e servidor | modo demonstração |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | navegador e servidor | modo demonstração |
-| `SUPABASE_SERVICE_ROLE_KEY` | **só servidor** | erro claro em vez de RLS confusa |
+| `NEXT_PUBLIC_SUPABASE_URL` | navegador e servidor | modo demonstração; em produção, recusa subir (#279) |
+| `SUPABASE_ANON_KEY` | só servidor | modo demonstração; em produção, recusa subir (#279) |
+| `SUPABASE_SERVICE_ROLE_KEY` | **só servidor** | erro claro em vez de RLS confusa; em produção, recusa subir (#279) |
 | `SESSION_SECRET` | só servidor | produção recusa subir (#271) |
 | `NEXT_PUBLIC_SENTRY_DSN` | navegador | nada é enviado |
 
