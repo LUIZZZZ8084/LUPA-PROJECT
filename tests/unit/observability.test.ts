@@ -253,3 +253,81 @@ describe("ciclo e estado interno do SDK", () => {
     expect(limpo.extra).toEqual({ telefone: "[removido]" });
   });
 });
+
+/*
+ * Os identificadores de rastreio (#275).
+ *
+ * Um hexadecimal aleatório tem, com frequência, uma sequência de 10 ou 11
+ * dígitos — e a regra de telefone a trocava por `[telefone]`. O Sentry
+ * recusa a transação cujo `trace_id` não tem 32 caracteres hexadecimais:
+ * depois da #273, 2 de cada 3 voltavam como `invalid_transaction`.
+ */
+describe("identificadores de rastreio", () => {
+  // 19 + 10 dígitos seguidos + 3 = 32 caracteres hexadecimais.
+  const TRACE = "71624d67c92d40a1afa1234567890b94";
+  // 1 + 11 dígitos seguidos + 4 = 16.
+  const SPAN = "a12345678901bcde";
+
+  it("a regra de telefone pegaria estes identificadores", () => {
+    // O controle: sem a exceção, os dois seriam picotados.
+    expect(scrubSensitiveData({ texto: TRACE }).texto).toContain("[telefone]");
+    expect(scrubSensitiveData({ texto: SPAN }).texto).toContain("[telefone]");
+  });
+
+  it("uma transação no formato do SDK passa com os identificadores intactos", () => {
+    const limpo = scrubSensitiveData({
+      event_id: "0123456789a0123456789b0123456789",
+      contexts: {
+        trace: {
+          trace_id: TRACE,
+          span_id: SPAN,
+          data: { "sentry.previous_trace": `${TRACE}-${SPAN}-1` },
+          links: [{ trace_id: TRACE, span_id: SPAN }],
+        },
+      },
+      spans: [
+        {
+          trace_id: TRACE,
+          span_id: SPAN,
+          parent_span_id: SPAN,
+          description: "ligar 66999110001",
+        },
+      ],
+      // Como o SDK liga um fetch ao span em que ele aconteceu.
+      breadcrumbs: [{ category: "fetch", data: { __span: SPAN } }],
+    });
+
+    expect(limpo.event_id).toBe("0123456789a0123456789b0123456789");
+    expect(limpo.contexts.trace.trace_id).toBe(TRACE);
+    expect(limpo.contexts.trace.span_id).toBe(SPAN);
+    expect(limpo.contexts.trace.data["sentry.previous_trace"]).toBe(
+      `${TRACE}-${SPAN}-1`,
+    );
+    expect(limpo.contexts.trace.links[0]).toEqual({
+      trace_id: TRACE,
+      span_id: SPAN,
+    });
+    expect(limpo.spans[0].trace_id).toBe(TRACE);
+    expect(limpo.spans[0].parent_span_id).toBe(SPAN);
+    expect(limpo.breadcrumbs[0].data.__span).toBe(SPAN);
+    // O resto do mesmo evento continua passando pela máscara.
+    expect(limpo.spans[0].description).toBe("ligar [telefone]");
+  });
+
+  /*
+   * A exceção é do valor que o SDK gera, não do nome do campo. Um texto
+   * numa chave chamada `trace_id` é só texto, e continua mascarado.
+   */
+  it("chave de identificador com valor que não é hexadecimal é mascarada", () => {
+    expect(scrubSensitiveData({ trace_id: "ligar 66999110001" }).trace_id).toBe(
+      "ligar [telefone]",
+    );
+    expect(scrubSensitiveData({ span_id: "123.456.789-09" }).span_id).toBe(
+      "[cpf]",
+    );
+  });
+
+  it("hexadecimal fora de uma chave de identificador continua mascarado", () => {
+    expect(scrubSensitiveData({ obs: TRACE }).obs).toContain("[telefone]");
+  });
+});

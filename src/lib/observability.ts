@@ -55,6 +55,25 @@ export const IGNORED_ERRORS = [
 const INTERNAS_DO_SDK = new Set(["sdkProcessingMetadata"]);
 
 /**
+ * Identificadores de rastreio do SDK, que a máscara não pode tocar (#275).
+ *
+ * São hexadecimais aleatórios, e um hexadecimal aleatório tem com
+ * frequência uma sequência de 10 ou 11 dígitos — que a regra de telefone
+ * trocava por `[telefone]`, deixando `71624d67c92d40a1afa[telefone]b94`
+ * no lugar do `trace_id`. O Sentry recusa a transação inteira quando o
+ * identificador não tem o formato certo: depois da #273, 2 de cada 3
+ * chegavam lá e voltavam como `invalid_transaction`.
+ *
+ * **As duas condições, e não uma.** A chave diz que o campo é um
+ * identificador; o formato garante que o valor é mesmo só hexadecimal. Um
+ * texto com telefone numa chave chamada `trace_id` continua mascarado — a
+ * exceção vale para o que o SDK gera, não para o nome do campo.
+ */
+const CHAVES_DE_RASTREIO =
+  /^(?:__span|(?:sentry\.)?(?:trace_id|span_id|parent_span_id|segment_id|event_id|replay_id|profile_id|previous_trace))$/;
+const FORMATO_DE_RASTREIO = /^[0-9a-f]{16,32}(?:-[0-9a-f]{16}(?:-[01])?)?$/i;
+
+/**
  * Remove dado pessoal antes do envio.
  *
  * O Lupa lida com telefone, CPF/CNPJ e documento. Nada disso pode sair para
@@ -83,6 +102,15 @@ export function scrubSensitiveData<T>(event: T): T {
 
   const limpar = (valor: unknown, chave?: string): unknown => {
     if (chave && CAMPOS_SENSIVEIS.test(chave)) return "[removido]";
+
+    if (
+      chave &&
+      typeof valor === "string" &&
+      CHAVES_DE_RASTREIO.test(chave) &&
+      FORMATO_DE_RASTREIO.test(valor)
+    ) {
+      return valor;
+    }
 
     if (typeof valor === "string") {
       /*
