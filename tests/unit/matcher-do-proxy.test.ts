@@ -29,6 +29,8 @@ describe("matcher do proxy", () => {
     "/opengraph-image",
     "/api/webhooks/mercado-pago",
     "/api/cron/reconciliar-pagamentos",
+    // O túnel do Sentry (#269): erro de quem não está logado se perdia.
+    "/monitoring",
   ])("%s fica fora do muro — quem busca não tem sessão", (caminho) => {
     expect(casa(caminho)).toBe(false);
   });
