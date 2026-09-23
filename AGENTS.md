@@ -97,7 +97,11 @@ descritor curto em português com hífens.
   conta e entrar. É o que permite demonstrar antes de existir
   infraestrutura, e é requisito de negócio, não atalho técnico. O login
   continua obrigatório aqui: o que muda é de onde vêm os dados, não quem
-  entra.
+  entra. **No domínio de produção isso não vale** (#279): sem
+  `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_ANON_KEY` ou
+  `SUPABASE_SERVICE_ROLE_KEY`, o deploy recusa subir. Cair em demonstração
+  ali seria servir dado de exemplo como real, com conta criada numa
+  memória que some no próximo deploy, e sem nada ficar vermelho.
 - **Banco.** `supabase/schema.sql` é a fonte da verdade e roda de uma vez num
   banco limpo. Ele é **executado por teste** contra um Postgres real
   (`tests/unit/schema.test.ts`, via PGlite) — schema não executado é schema

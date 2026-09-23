@@ -74,7 +74,41 @@ interface Exigencia {
 
 const sempre = () => true;
 
+/**
+ * O que produção diz quando uma variável do Supabase falta (#279).
+ *
+ * Sem banco, o app não quebra: ele entra em modo demonstração, que é o que
+ * permite rodá-lo sem infraestrutura. Em `lupapp.com.br` isso é o pior
+ * jeito de falhar — dado de exemplo servido como se fosse real, e conta
+ * criada numa memória que some no próximo deploy, sem nada ficar
+ * vermelho.
+ */
+const SEM_BANCO =
+  "sem ela o app não quebra: entra em modo demonstração, mostra os dados " +
+  "de exemplo como se fossem reais, e quem criar conta cria numa memória " +
+  "que some no próximo deploy";
+
 const EXIGENCIAS: Exigencia[] = [
+  {
+    nome: "NEXT_PUBLIC_SUPABASE_URL",
+    porque: `é o endereço do banco; ${SEM_BANCO}`,
+    exigida: sempre,
+  },
+  {
+    nome: "SUPABASE_ANON_KEY",
+    porque:
+      `é a chave anônima do banco; ${SEM_BANCO}. Se a Vercel ainda tem ` +
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY, é o nome antigo (#221): crie " +
+      "SUPABASE_ANON_KEY com o mesmo valor e apague a antiga",
+    exigida: sempre,
+  },
+  {
+    nome: "SUPABASE_SERVICE_ROLE_KEY",
+    porque:
+      "é a única chave que alcança a tabela de usuários. Sem ela, ninguém " +
+      "entra nem cria conta, e as telas que dependem dela mostram erro",
+    exigida: sempre,
+  },
   {
     nome: "SESSION_SECRET",
     porque:
@@ -153,35 +187,6 @@ export function conferirConfiguracaoDeProducao(
         "produção, e isso afrouxa o teto de volume de todas as ações. Ele " +
         "existe só para a suíte e2e, onde uma conta faz o trabalho de " +
         "muitas. Remova a variável na Vercel e republique.",
-    );
-  }
-
-  /*
-   * A chave anônima ainda pelo nome publicável (#221).
-   *
-   * Avisa, não derruba, e a diferença é a mesma que este arquivo já pesa
-   * em todo lugar: derrubar produção por causa de um **nome** de variável
-   * trocaria um risco hipotético por uma indisponibilidade real. O valor
-   * lido é o mesmo pelos dois nomes; o que muda é a promessa que o nome
-   * faz.
-   *
-   * `NEXT_PUBLIC_` manda o Next embutir o valor no bundle do navegador.
-   * Hoje isso não acontece porque nada no cliente importa `supabase/config`
-   * — e esse módulo agora é `server-only`, então passou a ser erro de
-   * build. O aviso existe para o nome sair da Vercel também, e não ficar
-   * de pé como armadilha para quem vier depois.
-   */
-  const soNomeAntigo =
-    !ambiente.SUPABASE_ANON_KEY?.trim() &&
-    Boolean(ambiente.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
-
-  if (soNomeAntigo) {
-    console.warn(
-      "[config] a chave anônima do Supabase ainda vem de " +
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY. O prefixo manda o Next embutir o " +
-        "valor no JavaScript do navegador, e quem a tiver lê telefone de " +
-        "todo prestador sem login. Crie SUPABASE_ANON_KEY na Vercel " +
-        "(Production) com o mesmo valor, apague a antiga e republique.",
     );
   }
 
