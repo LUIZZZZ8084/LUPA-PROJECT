@@ -1,6 +1,7 @@
 import "server-only";
 
 import { jwtVerify, SignJWT } from "jose";
+import { SEGREDO_DE_SESSAO_MINIMO } from "../config-obrigatoria";
 import { log } from "../logger";
 import { ehPapel, type Papel } from "./rbac";
 
@@ -49,10 +50,18 @@ export interface Sessao {
 /**
  * Segredo de assinatura.
  *
- * Em produção, faltar `SESSION_SECRET` derruba a aplicação na inicialização,
- * de propósito: subir com um segredo padrão significa que qualquer um que
- * leia o repositório consegue forjar uma sessão de admin. Falhar cedo e
- * barulhento é melhor do que a alternativa.
+ * Em produção não existe segredo padrão, de propósito: subir com um
+ * segredo versionado significa que qualquer um que leia o repositório
+ * consegue forjar uma sessão de admin.
+ *
+ * **O que derruba a subida não é esta função, e sim
+ * `conferirConfiguracaoDeProducao()` (#271).** Este comentário dizia que
+ * faltar a variável "derruba a aplicação na inicialização", e não
+ * derrubava: esta função só roda quando alguém lê ou assina uma sessão, e
+ * `lerSessao` a chama dentro de um `try` que devolve `null`. Sem a
+ * variável, o site subia, todo mundo aparecia deslogado em silêncio e o
+ * login falhava com erro interno. A recusa daqui continua, como segunda
+ * camada — só que ela, sozinha, nunca foi barulhenta.
  */
 let segredoCache: Uint8Array | null = null;
 
@@ -61,11 +70,11 @@ function segredo(): Uint8Array {
 
   const bruto = process.env.SESSION_SECRET;
 
-  if (!bruto || bruto.length < 32) {
+  if (!bruto || bruto.length < SEGREDO_DE_SESSAO_MINIMO) {
     if (process.env.NODE_ENV === "production") {
       throw new Error(
-        "SESSION_SECRET ausente ou com menos de 32 caracteres. " +
-          "Gere um com: openssl rand -base64 48",
+        `SESSION_SECRET ausente ou com menos de ${SEGREDO_DE_SESSAO_MINIMO} caracteres. ` +
+          "Gere um com: node -e \"console.log(require('crypto').randomBytes(48).toString('base64'))\"",
       );
     }
     log.warn(

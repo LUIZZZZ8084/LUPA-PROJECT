@@ -798,6 +798,16 @@ reproduzir.
 Sem `SESSION_SECRET`, produção recusa subir. Segredo padrão versionado
 significa sessão de admin forjável por qualquer um que leia o repositório.
 
+**Até a #271 esta frase era falsa.** A recusa morava só em `segredo()`,
+que roda quando alguém lê ou assina uma sessão — e `lerSessao` a chama
+dentro de um `try` que devolve `null`. Sem a variável o site subia, todo
+mundo aparecia deslogado e o login dava erro interno, sem nada vermelho.
+Hoje quem recusa é `conferirConfiguracaoDeProducao()`, na subida, com o
+mesmo mínimo de 32 caracteres. Achado ao trocar a variável para o tipo
+Secret na Vercel, em 23/09/2026 — e eu tinha acabado de repetir a frase ao
+Luiz sem abrir o código. *Afirmação sobre modo de falha se confere no
+caminho que falha, não no comentário que o descreve.*
+
 ### RBAC como matriz declarativa
 
 `src/server/auth/rbac.ts` é a fonte da verdade e cabe numa tela. Permissão

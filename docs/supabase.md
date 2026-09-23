@@ -164,6 +164,11 @@ O `SESSION_SECRET` assina a sessão. Gere com:
 node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 ```
 
+Na Vercel, cadastre como **Secret**, não como Config: Config fica legível
+para qualquer um com acesso ao projeto, e quem lê este valor forja a
+sessão de qualquer conta, inclusive a de admin. Trocar o valor desloga
+todo mundo uma vez.
+
 Funciona em qualquer terminal. O `openssl` que a maioria dos tutoriais
 sugere não vem instalado no Windows, onde este projeto é desenvolvido.
 
