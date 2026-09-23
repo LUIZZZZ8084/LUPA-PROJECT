@@ -352,7 +352,16 @@ export const config = {
      * quebrar desta vez: quem busca a imagem é o servidor do WhatsApp, sem
      * sessão, e o muro a trocaria por um redirecionamento para `/entrar`
      * — a prévia sairia sem miniatura, e ninguém veria por quê.
+     *
+     * `monitoring` é o túnel do Sentry (`tunnelRoute` no `next.config.ts`,
+     * #269): os erros do navegador vão por um caminho do próprio domínio
+     * para não serem engolidos por bloqueador de anúncio. Barrado, todo
+     * erro de quem não está logado se perdia em silêncio — o SDK manda o
+     * evento, recebe HTML de login e desiste. E as telas sem sessão são a
+     * home pública, entrar e cadastro. Achado conferindo se o Sentry tinha
+     * ligado, antes de ele ligar. O túnel não é porta aberta: só repassa ao
+     * Sentry, que confere se o destino é o projeto do DSN.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|api/webhooks|api/cron|icon|apple-icon|opengraph-image|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|api/webhooks|api/cron|monitoring|icon|apple-icon|opengraph-image|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };
