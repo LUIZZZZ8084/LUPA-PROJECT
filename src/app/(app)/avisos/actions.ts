@@ -14,12 +14,12 @@ import {
 } from "@/server/notificacoes/servico";
 
 /**
- * Avisos de vaga nova (#48).
+ * Avisos de vaga nova (#48), na tela própria desde a #288.
  *
- * Ficam em arquivo próprio, e não junto das actions de perfil, porque são
- * assunto separado com botão separado — a mesma razão que já divide o
- * formulário de perfil em um por assunto. Um erro ao inscrever o aparelho
- * não pode impedir alguém de corrigir o telefone.
+ * Nasceram em arquivo próprio, e não junto das actions de perfil, por serem
+ * assunto separado com botão separado — um erro ao inscrever o aparelho não
+ * pode impedir alguém de corrigir o telefone. Quando a tela saiu de
+ * "Editar perfil", o arquivo foi junto.
  */
 
 export const salvarAvisos = criarAcao({

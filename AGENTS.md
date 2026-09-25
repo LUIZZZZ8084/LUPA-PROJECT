@@ -1398,6 +1398,21 @@ preferência é gravada **antes** do pedido, para que negar não custe a
 escolha. Pedir ao abrir a tela queimaria a única chance com quem ainda não
 entendeu a oferta.
 
+**A porta de entrada é o sininho do cabeçalho (#288).** Os avisos
+nasceram no fim de "Editar perfil", depois de nome, telefone, anúncio e
+CNPJ — e ninguém abre "Editar perfil" para pedir aviso de vaga. Enquanto
+não havia chave VAPID em produção, o esconderijo não custava nada; no dia
+em que as chaves entraram (24/09/2026), passou a custar o recurso inteiro.
+Hoje moram em `/avisos`, a um toque de qualquer tela, e saíram do perfil:
+dois lugares para a mesma escolha divergiriam na primeira mudança.
+
+**O sininho aparece para quem pode se candidatar**, e só. Aviso de vaga
+nova para quem não pode se candidatar levaria a uma vaga sem botão — a
+armadilha do "botão que só recusa depois do clique". A rota continua
+aberta a qualquer conta com sessão, como o serviço já permitia: quem
+decide mostrar o atalho é o cabeçalho, não o portão, e quem chega por
+link não cai num 404.
+
 **Ninguém é avisado da própria vaga.** Parece óbvio e não é: quem publica
 está na mesma cidade e quase sempre na mesma categoria, então sem essa
 linha a primeira notificação que a pessoa recebe é a dela mesma — e a
