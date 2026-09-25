@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin } from "lucide-react";
+import { Bell, MapPin } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LupaLogo } from "@/components/brand/logo";
@@ -42,8 +42,19 @@ function links(papel: string | undefined) {
  * neste projeto — o conteúdo era transmitido e ficava preso num
  * `<template>`.
  */
-export function AppHeader({ usuario }: { usuario?: UsuarioDoMenu | null }) {
+export function AppHeader({
+  usuario,
+  avisosDeVaga = false,
+}: {
+  usuario?: UsuarioDoMenu | null;
+  /**
+   * Se o sininho aparece (#288). Decidido no layout, pela matriz de papéis:
+   * este componente é de cliente e não importa a regra de negócio.
+   */
+  avisosDeVaga?: boolean;
+}) {
   const pathname = usePathname();
+  const emAvisos = pathname.startsWith("/avisos");
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-lg">
@@ -83,6 +94,26 @@ export function AppHeader({ usuario }: { usuario?: UsuarioDoMenu | null }) {
             <MapPin size={14} className="text-vagas" />
             {usuario ? rotuloDaCidade(usuario.cidade) : ESTADO_NOME}
           </span>
+          {/*
+            Os avisos de vaga, a um toque (#288). Moravam no fim de "Editar
+            perfil", onde ninguém os achava. Só aparece para quem pode se
+            candidatar: aviso de vaga para quem não pode seria convite para
+            uma tela sem botão.
+          */}
+          {avisosDeVaga && (
+            <Link
+              href="/avisos"
+              aria-label="Avisos de vaga"
+              title="Avisos de vaga"
+              aria-current={emAvisos ? "page" : undefined}
+              className={cn(
+                "flex h-11 w-11 flex-none items-center justify-center rounded-full transition-colors hover:bg-panel-2 hover:text-ink",
+                emAvisos ? "bg-panel-2 text-vagas" : "text-muted",
+              )}
+            >
+              <Bell size={18} aria-hidden />
+            </Link>
+          )}
           <AlternarTema />
           {usuario ? (
             <MenuDoUsuario usuario={usuario} />

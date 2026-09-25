@@ -125,6 +125,33 @@ test.describe("navegação", () => {
     await expect(page).toHaveURL(/\/servicos/);
   });
 
+  /**
+   * Os avisos de vaga a um toque (#288).
+   *
+   * Moravam no fim de "Editar perfil", depois do anúncio e do CNPJ, e
+   * ninguém os achava. No celular, que é onde a pessoa vai querer ligar.
+   */
+  test("o sininho leva aos avisos de vaga", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    const sino = page.getByRole("link", { name: "Avisos de vaga" });
+    await expect(sino).toBeVisible();
+    await sino.click();
+
+    await expect(page).toHaveURL(/\/avisos$/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Avisos de vaga" }),
+    ).toBeVisible();
+    await expect(sino).toHaveAttribute("aria-current", "page");
+  });
+
+  /** Dois lugares para a mesma escolha divergiriam na primeira mudança. */
+  test("os avisos saíram de Editar perfil", async ({ page }) => {
+    await page.goto("/perfil/editar");
+    await expect(page.getByText("Avisos de vaga nova")).toHaveCount(0);
+  });
+
   test("página inexistente mostra o 404 do Lupa, não um erro cru", async ({
     page,
   }) => {

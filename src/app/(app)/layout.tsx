@@ -2,6 +2,7 @@ import { CanalDeContato } from "@/components/canal-de-contato";
 import { AppHeader } from "@/components/layout/app-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
 
 /**
@@ -32,6 +33,9 @@ export default async function AppLayout({
             cidade: usuario.cidade,
           }
         }
+        avisosDeVaga={Boolean(
+          sessao && usuario && pode(sessao.papel, "candidatura:criar"),
+        )}
       />
       <div className="flex-1">{children}</div>
       {/*
