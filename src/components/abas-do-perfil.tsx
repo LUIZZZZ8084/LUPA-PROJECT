@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { cn } from "@/lib/utils";
 
 /**
@@ -380,6 +381,7 @@ function FormularioDeEdicao({
   pronto: () => void;
 }) {
   const [estado, acao, pendente] = useActionState(editar, {});
+  const envio = useEnvioQueNaoApaga(acao, estado);
 
   const [ultimoOk, setUltimoOk] = useState(false);
   const okAgora = Boolean(estado.ok);
@@ -389,7 +391,7 @@ function FormularioDeEdicao({
   }
 
   return (
-    <form action={acao} className="space-y-4">
+    <form action={acao} className="space-y-4" {...envio}>
       <input type="hidden" name="id" value={trabalho.id} />
 
       <div>
@@ -481,6 +483,7 @@ export function GerenciarTrabalhos({
   ) => Promise<{ erro?: string; ok?: boolean }>;
 }) {
   const [estado, acao, pendente] = useActionState(publicar, {});
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const [abrindo, setAbrindo] = useState(false);
 
   /*
@@ -520,7 +523,7 @@ export function GerenciarTrabalhos({
           </Button>
         </div>
       ) : (
-        <form action={acao}>
+        <form action={acao} {...envio}>
           <Panel className="space-y-4">
             <div>
               <label htmlFor="t-titulo" className="font-medium text-sm">

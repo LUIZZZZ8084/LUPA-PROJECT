@@ -752,6 +752,24 @@ serverless — parâmetro que derruba a função em produção não protege
 ninguém. `precisaRehash()` permite subir o custo depois sem pedir troca de
 senha a ninguém.
 
+### Senha de 6 caracteres, e o número num lugar só (#290)
+
+O servidor exigia 10 caracteres desde 20/08, e as duas telas que pedem
+senha diziam 8 desde 22/08. Durante um mês, quem seguia a dica levava
+erro, e o formulário ainda apagava tudo (#291). **Decisão do Luiz em
+25/09/2026: o mínimo é 6.** Dez era demais para quem digita no celular.
+
+O NIST recomenda 8, e isso fica registrado de olhos abertos. O que segura
+a senha curta aqui é o resto da proteção: limite de tentativas de login
+por e-mail, Argon2id no hash e a mesma resposta de login exista a conta ou
+não. Continua sem regra de composição.
+
+**O número mora em `SENHA_MINIMA`, em `src/lib/constants.ts`**, e dali o
+leem o schema do servidor, as dicas das telas e o `minLength` dos campos.
+A divergência de um mês foi possível porque a regra morava no servidor e a
+dica era texto solto na tela. *Número que aparece na tela e é cobrado no
+servidor precisa vir da mesma constante.*
+
 ### Sessão em JWT, não em banco
 
 Serverless não tem processo de longa duração, e cada consulta a mais é
@@ -2114,6 +2132,21 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   ela ainda deixa o teste para trás, em vez de um clique que ninguém
   repete.
 
+- **O React 19 apaga o formulário depois de toda action, até da que
+  devolveu erro.** Para ele, `<form action={...}>` que terminou é
+  formulário enviado, e ele chama `form.reset()`. O servidor apontava o
+  CPF errado, e a mensagem chegava num cadastro já em branco: a pessoa
+  preenchia tudo de novo por causa de um campo (#291). No login, errar a
+  senha apagava também o e-mail. Hoje todo formulário com
+  `useActionState` passa por `useEnvioQueNaoApaga`
+  (`src/components/ui/formulario.ts`): o `onSubmit` chama a action dentro
+  de uma transição, caminho em que o React não limpa, e a tela rola até o
+  primeiro campo com erro. O `action` continua no `<form>` para o envio
+  funcionar antes de o JavaScript carregar. Há teste que varre
+  `src/app` e `src/components` e reprova formulário novo sem a proteção,
+  com as exceções e o porquê de cada uma escritos no próprio teste.
+  **Erro de validação é resposta normal para o usuário, e o framework não
+  sabe disso: quem sabe é a aplicação.**
 - **`useSearchParams()` exige `<Suspense>`, e esse boundary pode nunca
   resolver.** A barra de filtros ficou invisível e inerte: o conteúdo era
   transmitido mas ficava preso num `<template>`. Hoje os valores descem por

@@ -6,12 +6,14 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { type EstadoRecuperacao, pedirComEstado } from "./actions";
 
 const inicial: EstadoRecuperacao = {};
 
 export function EsqueciSenhaForm() {
   const [state, action, pendente] = useActionState(pedirComEstado, inicial);
+  const envio = useEnvioQueNaoApaga(action, state);
 
   /*
    * A confirmação não diz se a conta existe.
@@ -43,7 +45,7 @@ export function EsqueciSenhaForm() {
   }
 
   return (
-    <form action={action}>
+    <form action={action} {...envio}>
       <Panel className="space-y-5">
         <div>
           <h1 className="font-bold text-lg">Esqueci minha senha</h1>

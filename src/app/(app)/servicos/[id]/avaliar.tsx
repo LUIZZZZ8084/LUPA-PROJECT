@@ -5,6 +5,7 @@ import { useActionState, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Textarea } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { avaliarComEstado, type EstadoAvaliacao } from "./actions";
 
 const inicial: EstadoAvaliacao = {};
@@ -72,6 +73,7 @@ export function FormularioDeAvaliacao({
   nomeDoPrestador: string;
 }) {
   const [state, action, pendente] = useActionState(avaliarComEstado, inicial);
+  const envio = useEnvioQueNaoApaga(action, state);
 
   if (state.ok) {
     return (
@@ -90,7 +92,7 @@ export function FormularioDeAvaliacao({
   }
 
   return (
-    <form action={action}>
+    <form action={action} {...envio}>
       <Panel className="mt-5 space-y-5">
         <div>
           <h2 className="font-bold text-base">

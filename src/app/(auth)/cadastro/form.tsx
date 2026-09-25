@@ -12,7 +12,12 @@ import {
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
+import {
+  JOB_CATEGORIES,
+  SENHA_MINIMA,
+  SERVICE_CATEGORIES,
+} from "@/lib/constants";
 import type { Role } from "@/lib/types";
 import { SelecaoDePlanoEmpresa } from "./selecao-plano-empresa";
 import { SelecaoDePlanoPrestador } from "./selecao-plano-prestador";
@@ -36,6 +41,7 @@ export function SignUpForm({ role }: { role: Role }) {
    * válido e único para o outro.
    */
   const [tipoDocumento, setTipoDocumento] = useState<"cnpj" | "cpf">("cnpj");
+  const envio = useEnvioQueNaoApaga(action, state);
 
   if (state.ok) {
     /*
@@ -107,7 +113,7 @@ export function SignUpForm({ role }: { role: Role }) {
   }
 
   return (
-    <form action={action}>
+    <form action={action} {...envio}>
       {/*
         O nome é `papel`, não `role`: o schema é uma união discriminada em
         `papel`, e um campo com outro nome faz o Zod recusar sem descobrir
@@ -333,12 +339,13 @@ export function SignUpForm({ role }: { role: Role }) {
           label="Senha"
           required
           error={state.campos?.senha}
-          hint="Mínimo de 8 caracteres."
+          hint={`Mínimo de ${SENHA_MINIMA} caracteres.`}
         >
           <Input
             name="senha"
             type="password"
             autoComplete="new-password"
+            minLength={SENHA_MINIMA}
             required
           />
         </Field>

@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { ARQUIVO_SESSAO_EMPRESA, aguardarHidratacao } from "./helpers";
+import {
+  ARQUIVO_SESSAO_EMPRESA,
+  aguardarHidratacao,
+  cpfDeTeste,
+} from "./helpers";
 
 test.describe("busca de vagas", () => {
   test("filtra por categoria e mantém o filtro na URL", async ({ page }) => {
@@ -337,6 +341,79 @@ test.describe("telas de autenticação", () => {
     await expect(
       page.getByRole("link", { name: "Vagas", exact: true }),
     ).toHaveCount(0);
+  });
+});
+
+test.describe("cadastro que dá erro", () => {
+  test.use({
+    storageState: { cookies: [], origins: [] },
+    /*
+     * Origem própria para o limite de cadastro, que é de 5 tentativas por
+     * origem em 15 minutos e não tem multiplicador: a suíte já cria as
+     * contas dela a partir do mesmo endereço, e as duas tentativas deste
+     * teste em cada navegador estouravam o teto no meio da execução. O app
+     * lê a origem do `x-forwarded-for`, como em produção atrás da Vercel.
+     * O endereço é da faixa reservada para documentação (RFC 5737).
+     */
+    extraHTTPHeaders: { "x-forwarded-for": "203.0.113.91" },
+  });
+
+  /**
+   * Quem erra um campo corrige só aquele campo (#291).
+   *
+   * O formulário voltava inteiro em branco depois de qualquer erro, e a
+   * pessoa preenchia tudo de novo. Relato do Luiz em 25/09/2026. A senha de
+   * 6 caracteres prova junto a #290: o mínimo é 6, e a dica diz o mesmo.
+   */
+  test("guarda o que foi digitado e leva ao campo errado", async ({ page }) => {
+    await page.goto("/cadastro?tipo=candidato_clt");
+    await aguardarHidratacao(page, "form");
+
+    await expect(page.getByText("Mínimo de 6 caracteres.")).toBeVisible();
+
+    const email = `e2e-erro-${Date.now()}@teste.lupa`;
+    await page.getByLabel("Nome completo").fill("Pessoa de Teste");
+    await page.getByLabel("E-mail").fill(email);
+    await page.getByLabel("WhatsApp").fill("66999999999");
+    // Dígito verificador errado: o certo seria 12345678909.
+    await page.getByLabel("CPF").fill("12345678900");
+    await page.getByLabel("Área desejada").selectOption({ index: 1 });
+    await page.getByLabel("Senha").fill("abc123");
+    await page.getByRole("button", { name: /criar conta/i }).click();
+
+    const cpf = page.getByLabel("CPF");
+    await expect(cpf).toHaveAttribute("aria-invalid", "true");
+    await expect(cpf).toBeFocused();
+
+    await expect(page.getByLabel("Nome completo")).toHaveValue(
+      "Pessoa de Teste",
+    );
+    await expect(page.getByLabel("E-mail")).toHaveValue(email);
+    await expect(page.getByLabel("WhatsApp")).toHaveValue("66999999999");
+    await expect(page.getByLabel("Área desejada")).not.toHaveValue("");
+    await expect(page.getByLabel("Senha")).toHaveValue("abc123");
+    await expect(page.getByLabel("Nome completo")).not.toHaveAttribute(
+      "aria-invalid",
+    );
+
+    // Corrigido só o CPF, a conta sai.
+    await cpf.fill(cpfDeTeste());
+    await page.getByRole("button", { name: /criar conta/i }).click();
+    await expect(page.getByText(/Conta criada/i)).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
+  /** O navegador barra antes de enviar, sem ida ao servidor. */
+  test("senha com menos de 6 caracteres nem chega a sair", async ({ page }) => {
+    await page.goto("/cadastro?tipo=candidato_clt");
+    const senha = page.getByLabel("Senha");
+    await senha.fill("abc12");
+    expect(
+      await senha.evaluate(
+        (campo: HTMLInputElement) => campo.validity.tooShort,
+      ),
+    ).toBe(true);
   });
 });
 

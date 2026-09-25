@@ -4,10 +4,17 @@ import type { ComponentProps, ReactElement, ReactNode } from "react";
 import { cloneElement, isValidElement, useId } from "react";
 import { cn } from "@/lib/utils";
 
+/*
+ * O campo com erro ganha borda vermelha, e ela vale também com o cursor
+ * dentro (#291). Só a mensagem embaixo, em letra pequena, não bastava para a
+ * pessoa achar o que errou num formulário comprido. `Field` põe o
+ * `aria-invalid` no campo quando recebe `error`.
+ */
 const control =
   "w-full rounded-xl border border-line bg-panel-2 px-3.5 text-sm text-ink " +
   "placeholder:text-faint transition-colors duration-[var(--duration-fast)] " +
   "hover:border-panel-3 focus:border-vagas focus:outline-none " +
+  "aria-[invalid=true]:border-danger aria-[invalid=true]:focus:border-danger " +
   "disabled:opacity-50";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ehCidadeAtendida } from "@/lib/constants";
+import { ehCidadeAtendida, SENHA_MINIMA } from "@/lib/constants";
 import { onlyDigits } from "@/lib/format";
 import { type ErroCampo, erros } from "./errors";
 import { falha, ok, type Resultado } from "./result";
@@ -88,15 +88,16 @@ export const zEmail = z
   .pipe(z.email("E-mail inválido."));
 
 /**
- * Senha: mínimo de 10 caracteres, sem exigir símbolo nem maiúscula.
+ * Senha: mínimo de `SENHA_MINIMA` caracteres, sem exigir símbolo nem
+ * maiúscula.
  *
  * Regra de composição empurra a pessoa para "Senha@123" e para o papelzinho
- * colado no monitor. Comprimento protege mais, e o público aqui inclui gente
- * digitando no celular. O teto de 200 evita ataque por senha gigante.
+ * colado no monitor. O público aqui inclui gente digitando no celular. O
+ * teto de 200 evita ataque por senha gigante.
  */
 export const zSenha = z
   .string()
-  .min(10, "Use pelo menos 10 caracteres.")
+  .min(SENHA_MINIMA, `Use pelo menos ${SENHA_MINIMA} caracteres.`)
   .max(200, "Senha longa demais.");
 
 export const zNome = z

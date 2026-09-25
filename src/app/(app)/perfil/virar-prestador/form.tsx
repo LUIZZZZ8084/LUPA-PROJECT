@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { ativarPrestadorComEstado, type EstadoAtivacao } from "./actions";
 
@@ -97,6 +98,7 @@ export function AtivarPrestadorForm({
     ativarPrestadorComEstado,
     inicial,
   );
+  const envio = useEnvioQueNaoApaga(action, state);
   /*
    * Não há navegação no cliente aqui de propósito.
    *
@@ -113,7 +115,7 @@ export function AtivarPrestadorForm({
     <>
       <AvisoDaTroca />
 
-      <form action={action}>
+      <form action={action} {...envio}>
         <Panel className="space-y-5">
           {!temCpf && (
             <Field
