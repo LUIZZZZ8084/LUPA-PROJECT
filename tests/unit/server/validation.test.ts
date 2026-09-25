@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { SENHA_MINIMA } from "@/lib/constants";
 import {
   camposDoZod,
   celularValido,
@@ -94,10 +95,20 @@ describe("schemas", () => {
   });
 
   it("zSenha exige comprimento, não composição", () => {
-    expect(validar(zSenha, "curtinha").ok).toBe(false);
+    expect(validar(zSenha, "curta").ok).toBe(false);
     // Sem símbolo nem maiúscula, e passa: comprimento protege mais do que
     // regra de composição, que empurra para senha anotada no papel.
     expect(validar(zSenha, "minha senha longa").ok).toBe(true);
+  });
+
+  /**
+   * Seis, decisão do Luiz em 25/09/2026 (#290). O servidor exigia 10 enquanto
+   * as telas prometiam 8, e quem seguia a dica levava erro.
+   */
+  it("zSenha aceita a partir de 6 caracteres", () => {
+    expect(SENHA_MINIMA).toBe(6);
+    expect(validar(zSenha, "a".repeat(5)).ok).toBe(false);
+    expect(validar(zSenha, "a".repeat(6)).ok).toBe(true);
   });
 
   it("zSenha tem teto, para não aceitar carga enorme", () => {

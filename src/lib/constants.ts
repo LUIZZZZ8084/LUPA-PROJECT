@@ -18,6 +18,21 @@ export const ESTADO_NOME = "Mato Grosso";
 
 export const CIDADES = CIDADES_MT;
 
+/**
+ * O menor tamanho de senha que o app aceita (#290).
+ *
+ * Mora aqui, e não só no schema do servidor, porque a dica da tela e a regra
+ * precisam dizer o mesmo número. Ficaram um mês dizendo números diferentes:
+ * o servidor exigia 10 e as duas telas de senha prometiam 8. Quem seguia a
+ * dica levava erro, e o formulário ainda apagava tudo (#291).
+ *
+ * Seis é decisão do Luiz em 25/09/2026: o público digita no celular, e dez
+ * era demais. O NIST recomenda no mínimo 8. O que segura a senha curta aqui é
+ * o resto da proteção: limite de tentativas de login por e-mail, Argon2id no
+ * hash e a mesma resposta de login exista a conta ou não.
+ */
+export const SENHA_MINIMA = 6;
+
 export function ehCidadeAtendida(valor: string): boolean {
   return (CIDADES as readonly string[]).includes(valor);
 }
