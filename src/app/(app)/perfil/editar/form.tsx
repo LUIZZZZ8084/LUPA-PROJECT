@@ -7,6 +7,7 @@ import { CampoBairro } from "@/components/cidade-e-bairro";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
 import type { Experience } from "@/lib/types";
 import type { PerfilCompleto } from "@/server/perfil/servico";
@@ -91,10 +92,11 @@ function Conta({ perfil }: { perfil: PerfilCompleto }) {
     salvarContaComEstado,
     inicial,
   );
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const u = perfil.usuario;
 
   return (
-    <form action={acao}>
+    <form action={acao} {...envio}>
       <Secao
         titulo="Sua conta"
         descricao="Nome e telefone aparecem para quem entra em contato com você."
@@ -301,6 +303,7 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
     salvarCurriculoComEstado,
     inicial,
   );
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const c = perfil.candidato;
 
   // O caminho de um erro dentro do array é "experiencias.0.role", não
@@ -311,7 +314,7 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
   )?.[1];
 
   return (
-    <form action={acao}>
+    <form action={acao} {...envio}>
       <Secao
         titulo="Currículo"
         descricao="É o que a empresa lê ao receber sua candidatura. Não aparece em busca pública."
@@ -383,10 +386,11 @@ function Anuncio({ perfil }: { perfil: PerfilCompleto }) {
     salvarAnuncioComEstado,
     inicial,
   );
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const p = perfil.prestador;
 
   return (
-    <form action={acao}>
+    <form action={acao} {...envio}>
       <Secao
         titulo="Seu anúncio"
         descricao="É como você aparece para quem procura profissional em Sinop."
@@ -499,10 +503,11 @@ function CnpjDaEmpresa({ perfil }: { perfil: PerfilCompleto }) {
     salvarCnpjDoPrestador,
     inicialVerificacao,
   );
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const p = perfil.prestador;
 
   return (
-    <form action={acao}>
+    <form action={acao} {...envio}>
       <Panel className="mb-5 space-y-3">
         <div>
           <h2 className="font-bold text-lg">CNPJ da sua empresa</h2>
@@ -564,10 +569,11 @@ function Empresa({ perfil }: { perfil: PerfilCompleto }) {
     salvarEmpresaComEstado,
     inicial,
   );
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const e = perfil.empresa;
 
   return (
-    <form action={acao}>
+    <form action={acao} {...envio}>
       <Secao
         titulo="Sua empresa"
         descricao="É o que a candidata lê antes de decidir se confia na vaga."

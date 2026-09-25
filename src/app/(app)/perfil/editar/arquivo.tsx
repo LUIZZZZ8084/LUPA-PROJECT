@@ -6,6 +6,7 @@ import { useActionState, useRef, useTransition } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import type { EstadoEdicao } from "./actions";
 
 const inicial: EstadoEdicao = {};
@@ -48,6 +49,8 @@ export function CampoDeArquivo({
   children: React.ReactNode;
 }) {
   const [estado, acao, enviando] = useActionState(enviar, inicial);
+  // A prévia mostra a foto nova depois de enviar; o campo volta vazio.
+  const envio = useEnvioQueNaoApaga(acao, estado, { limparAoConcluir: true });
   const [removendo, iniciarRemocao] = useTransition();
   const router = useRouter();
   const entrada = useRef<HTMLInputElement>(null);
@@ -62,7 +65,7 @@ export function CampoDeArquivo({
       <div className="flex items-center gap-4">{children}</div>
 
       {disponivel ? (
-        <form action={acao} className="space-y-3">
+        <form action={acao} className="space-y-3" {...envio}>
           <input
             ref={entrada}
             type="file"

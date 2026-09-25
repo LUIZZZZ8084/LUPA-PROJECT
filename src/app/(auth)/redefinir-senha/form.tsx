@@ -6,15 +6,18 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
+import { SENHA_MINIMA } from "@/lib/constants";
 import { type EstadoRedefinicao, redefinirComEstado } from "./actions";
 
 const inicial: EstadoRedefinicao = {};
 
 export function RedefinirSenhaForm({ token }: { token: string }) {
   const [state, action, pendente] = useActionState(redefinirComEstado, inicial);
+  const envio = useEnvioQueNaoApaga(action, state);
 
   return (
-    <form action={action}>
+    <form action={action} {...envio}>
       <Panel className="space-y-5">
         <div>
           <h1 className="font-bold text-lg">Criar uma senha nova</h1>
@@ -36,12 +39,13 @@ export function RedefinirSenhaForm({ token }: { token: string }) {
           label="Nova senha"
           required
           error={state.campos?.senha}
-          hint="Pelo menos 8 caracteres."
+          hint={`Pelo menos ${SENHA_MINIMA} caracteres.`}
         >
           <Input
             name="senha"
             type="password"
             autoComplete="new-password"
+            minLength={SENHA_MINIMA}
             required
           />
         </Field>

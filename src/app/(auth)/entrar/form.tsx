@@ -9,6 +9,7 @@ import { LupaMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 
 const inicial: EstadoFormulario = {};
 
@@ -44,6 +45,7 @@ function destinoSeguro(bruto: string | undefined): string | null {
 
 export function SignInForm({ destino: pretendido }: { destino?: string }) {
   const [state, action, pending] = useActionState(entrarComEstado, inicial);
+  const envio = useEnvioQueNaoApaga(action, state);
   const router = useRouter();
 
   /**
@@ -76,7 +78,7 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
         </p>
       </div>
 
-      <form action={action}>
+      <form action={action} {...envio}>
         <Panel className="space-y-5">
           <Field label="E-mail" required>
             <Input name="email" type="email" autoComplete="email" required />
