@@ -8,9 +8,48 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 15/09/2026.**
+**Última atualização: 27/09/2026.**
 
 ## Concluído
+
+Preparação para o lançamento, de 15 a 25/09/2026:
+
+- Avisos de vaga a um toque: sininho no cabeçalho, para quem pode se
+  candidatar, em vez de escondidos no fim de "Editar perfil" —
+  [#288](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/288)
+- Erro num campo não apaga mais o formulário: o que foi digitado fica, e a
+  tela leva ao campo errado, com borda vermelha. Vale para todo formulário
+  do app, com teste que cobra o próximo —
+  [#291](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/291)
+- Senha mínima de 6 caracteres, decisão do Luiz. O servidor exigia 10 e as
+  telas diziam 8; hoje o número vem de uma constante só —
+  [#290](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/290)
+- Foto entregue no tamanho da tela, e gravada já reduzida, em WebP e sem o
+  GPS do celular — [#267](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/267), [#283](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/283)
+- Envio de foto bloqueado em produção pelo WAF do Cloudflare, antes de
+  chegar à Vercel. Resolvido com o domínio em DNS only —
+  [#287](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/287)
+- Sentry recebendo de verdade: os erros que o `criarAcao` captura, os de
+  quem não está logado, e as transações que a máscara de dados corrompia
+  ou descartava — [#247](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/247), [#269](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/269), [#273](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/273), [#275](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/275), [#277](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/277),
+  [#281](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/281), [#255](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/255)
+- Produção não sobe sem `SESSION_SECRET` válido nem sem as três variáveis
+  do Supabase. Sem elas, o site subia com todo mundo deslogado, ou servia
+  dado de demonstração como real — [#271](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/271), [#279](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/279)
+- Página de erro em português, com caminho de volta, no lugar da tela
+  preta do Next — [#249](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/249)
+- A tela para de prometer o que não entrega: verificação que o produto não
+  faz ([#237](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/237), [#243](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/243)), filtro por bairro ([#285](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/285)), "emprego
+  formal" num app que aceita freela e vaga de pessoa física ([#257](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/257)),
+  "Documento não verificado" para sempre no perfil do candidato
+  ([#253](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/253)), e prestador sem assinatura lendo "como você aparece na
+  busca" sem aparecer ([#256](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/256))
+- Currículos recebidos legíveis no celular, e o painel do prestador sem os
+  links de busca de candidatos que davam 404 — [#252](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/252), [#251](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/251)
+- Canal de contato (Instagram e e-mail) visível antes do login, e link da
+  Lupa com imagem de prévia no WhatsApp — [#239](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/239), [#259](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/259)
+- As vagas e os prestadores de demonstração não vencem mais, e o seed
+  passou a reproduzi-los — [#245](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/245)
 
 Em 15/09/2026:
 
@@ -54,18 +93,21 @@ Base:
   `/perfil/editar`
 - Envio de foto de perfil, currículo em PDF e logo de empresa, com
   caminho derivado da sessão
-- Busca de vagas e de prestadores, com filtro por cidade, bairro e
-  categoria
+- Busca de vagas e de prestadores, com filtro por cidade e categoria (e
+  tipo de contrato, nas vagas). Bairro não filtra: ele entra na ordem por
+  proximidade, e a promessa de filtro saiu das telas na #285
 - Candidatura a vaga, e acompanhamento em "Minhas candidaturas"
 - Aviso de vaga nova por cidade e categoria, via Web Push (#48)
 - Publicações no perfil do prestador, com limite de 10 ativas
-- Painel administrativo: fila de verificação manual, métricas básicas
+- Painel administrativo: métricas, caixa (#179) e pressão nos tetos
+  (#207). A fila de verificação manual existe no banco, mas nunca teve
+  tela de envio; a verificação do prestador é o CPF desde a #133
 - Schema único (`supabase/schema.sql`), executado por teste contra
   Postgres real
 - Modo demonstração (roda sem Supabase configurado)
 - Contraste WCAG AA em todas as rotas, com teste automático
 
-Painel da empresa — completo, menos cobrança:
+Painel da empresa:
 
 - Busca entre quem pediu para ser encontrado, com filtro por habilidade e
   área, e perfil do candidato —
@@ -86,7 +128,8 @@ Painel da empresa — completo, menos cobrança:
   [#71](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/71),
   PR [#72](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/72)
 
-- Publicar, editar e encerrar vaga —
+- Publicar e encerrar vaga. Editar existiu até a #173, que trocou a
+  edição pela revisão antes de publicar —
   [#43](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/43),
   PR [#51](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/51)
 - Mover candidatura entre estágios —
@@ -118,7 +161,7 @@ Prestador:
   nova — com aviso do que a troca de papel custa —
   [#112](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/112)
 - A busca de serviços só mostra quem passou pela verificação; o perfil
-  continua alcançável e diz que está em análise —
+  continua alcançável e diz por que ainda não aparece —
   [#114](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/114)
 - O feed de trabalhos do prestador, que tinha backend e nenhuma tela — e
   o atalho do perfil que apontava para a busca pública —
@@ -234,7 +277,8 @@ Qualidade:
   crédito — [#173](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/173)
 - "Esqueci minha senha", com token de uso único guardado em hash. Fecha
   metade da dívida que a migração 0001 abriu ao trocar o Supabase Auth por
-  autenticação própria; a verificação de e-mail continua em aberto —
+  autenticação própria; a outra metade, a confirmação de e-mail, veio
+  na #227 —
   [#174](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/174)
 - A busca de candidatos ficou alcançável pelo painel da empresa: existia
   desde a #83 e só tinha um botão pequeno no cabeçalho —
@@ -309,17 +353,26 @@ duas redes de proteção que o episódio da primeira venda expôs.
 
 **Tudo o que sobrou vai junto com o empacotamento em APK** — decisão do
 Luiz em 01/09/2026, que reúne numa etapa só o que antes estava
-espalhado. Nada aqui está bloqueado por código.
+espalhado.
 
+Antes do lançamento, fora disso:
 
+- [ ] Termos de Uso, Política de Privacidade e página de suporte —
+      [#235](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/235)
 
+      O texto está pronto no PR #236. Espera o CNPJ da PALU, a empresa por
+      trás da Lupa, para ter quem assina como controladora dos dados. É o
+      item mais sério da lista: o cadastro já diz "ao criar a conta você
+      concorda com os termos de uso", e a página ainda não existe.
 
 ## Depende de decisão, não de código
 
 | O que | Quem decide | Por que está parado |
 |---|---|---|
 | Verificação por SMS e CPF (#120) | Luiz | Depende de provedor pago |
-| Cloudflare | Luiz | Só com abuso real medido — o passo antes é o #67 |
+| Plano Pro da Vercel | Luiz | O Hobby não permite uso comercial, e a Lupa cobra. O Luiz já concluiu que é o passo certo; falta assinar. O Pro também destrava o 2FA da #229, porque permite convidar o Paulinho como membro |
+| Backup do banco (plano pago do Supabase) | Luiz | Nada pago por enquanto, decisão de 23/09. O gratuito não tem backup automático |
+| Proxy e WAF do Cloudflare | Luiz | O domínio está no Cloudflare em DNS only desde a #287: a regra gratuita do WAF bloqueava envio de foto. Religar só com abuso medido, e com a exceção da regra feita antes |
 | Busca vetorial | Luiz | Só com o dado do #66 na mão |
 
 ## Depende de uma ação manual
