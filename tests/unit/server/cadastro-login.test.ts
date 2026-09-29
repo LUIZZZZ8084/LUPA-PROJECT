@@ -225,6 +225,71 @@ describe("cadastro e login", () => {
       ).rejects.toMatchObject({ codigo: "conflito" });
     });
 
+    /*
+     * O CNPJ vale com e sem pontuação (#295).
+     *
+     * A pessoa cola do cartão do CNPJ ("11.222.333/0001-81") ou digita só os
+     * números, e no celular o teclado numérico nem oferece ponto e barra.
+     * As duas têm que chegar ao mesmo valor: se o cadastro guardasse o texto
+     * como veio, "com" e "sem" pontuação seriam dois CNPJs para a checagem
+     * de duplicidade, e a mesma empresa abriria duas contas.
+     */
+    describe("CNPJ com e sem pontuação", () => {
+      const formas = [
+        ["com pontuação", "11.222.333/0001-81"],
+        ["só números", "11222333000181"],
+        ["com espaços ao redor", "  11.222.333/0001-81  "],
+        ["com parte da pontuação", "11222333/0001-81"],
+        ["só com pontos", "11.222.333.0001.81"],
+      ] as const;
+
+      it.each(formas)("%s grava só os dígitos", async (_forma, cnpj) => {
+        const e = await cadastrar(validarOk({ ...empresa, cnpj }));
+
+        expect((await repo.perfilEmpresa(e.id))?.cnpj).toBe("11222333000181");
+      });
+
+      it("pontuado e depois só números: a segunda conta é recusada", async () => {
+        await cadastrar(validarOk({ ...empresa, cnpj: "11.222.333/0001-81" }));
+
+        await expect(
+          cadastrar(
+            validarOk({
+              ...empresa,
+              email: "outro@agronorte.teste",
+              cnpj: "11222333000181",
+            }),
+          ),
+        ).rejects.toMatchObject({ codigo: "conflito" });
+      });
+
+      it("só números e depois pontuado: a segunda conta é recusada", async () => {
+        await cadastrar(validarOk({ ...empresa, cnpj: "11222333000181" }));
+
+        await expect(
+          cadastrar(
+            validarOk({
+              ...empresa,
+              email: "outro@agronorte.teste",
+              cnpj: "11.222.333/0001-81",
+            }),
+          ),
+        ).rejects.toMatchObject({ codigo: "conflito" });
+      });
+
+      /** A pontuação não afrouxa a conferência: o dígito errado continua errado. */
+      it("dígito errado é recusado também com pontuação", () => {
+        const r = validar(schemaCadastro, {
+          ...empresa,
+          cnpj: "11.222.333/0001-82",
+        });
+
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.erro.campos?.some((c) => c.campo === "cnpj")).toBe(true);
+      });
+    });
+
     /**
      * A mesma regra do CNPJ, para as duas pessoas físicas — inclusive
      * entre papéis diferentes: um CPF é de uma pessoa só, não de um papel.
