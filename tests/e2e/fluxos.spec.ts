@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   ARQUIVO_SESSAO_EMPRESA,
   aguardarHidratacao,
+  cnpjAlfanumericoDeTeste,
   cpfDeTeste,
 } from "./helpers";
 
@@ -414,6 +415,73 @@ test.describe("cadastro que dá erro", () => {
         (campo: HTMLInputElement) => campo.validity.tooShort,
       ),
     ).toBe(true);
+  });
+});
+
+test.describe("cadastro de empresa com CNPJ alfanumérico", () => {
+  test.use({
+    storageState: { cookies: [], origins: [] },
+    // Origem própria, pela mesma razão do cadastro que dá erro: o limite de
+    // cadastro é por origem e não tem multiplicador.
+    extraHTTPHeaders: { "x-forwarded-for": "203.0.113.92" },
+  });
+
+  /**
+   * Desde julho de 2026 a Receita emite CNPJ com letras (#297). O servidor
+   * já aceita; aqui se prova o caminho de quem digita: o campo deixa
+   * escrever letra, em minúscula e com pontuação, e a conta é criada.
+   */
+  test("aceita o CNPJ com letras, em minúscula e com pontuação", async ({
+    page,
+  }) => {
+    await page.goto("/cadastro?tipo=empresa");
+    await aguardarHidratacao(page, "form");
+
+    const cnpj = page.getByLabel("CNPJ");
+    // Sem teclado numérico: no celular ele não oferece letra nenhuma.
+    await expect(cnpj).not.toHaveAttribute("inputmode", "numeric");
+    await expect(cnpj).toHaveAttribute("autocapitalize", "characters");
+
+    const numero = cnpjAlfanumericoDeTeste();
+    const pontuado = `${numero.slice(0, 2)}.${numero.slice(2, 5)}.${numero.slice(5, 8)}/${numero.slice(8, 12)}-${numero.slice(12)}`;
+
+    await page.getByLabel("Nome do responsável").fill("Responsável de Teste");
+    await page.getByLabel("Nome da empresa").fill("Filial Nova Ltda");
+    await cnpj.fill(pontuado.toLowerCase());
+    await page.getByLabel("E-mail").fill(`e2e-alfa-${Date.now()}@teste.lupa`);
+    await page.getByLabel("WhatsApp").fill("66999999999");
+    await page.getByLabel("Senha").fill("abc123");
+    await page.getByRole("button", { name: /criar conta/i }).click();
+
+    await expect(page.getByText(/Conta criada/i)).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
+  test("o dígito verificador errado continua sendo recusado", async ({
+    page,
+  }) => {
+    await page.goto("/cadastro?tipo=empresa");
+    await aguardarHidratacao(page, "form");
+
+    const numero = cnpjAlfanumericoDeTeste();
+    const errado = `${numero.slice(0, 13)}${(Number(numero[13]) + 1) % 10}`;
+
+    await page.getByLabel("Nome do responsável").fill("Responsável de Teste");
+    await page.getByLabel("Nome da empresa").fill("Filial Nova Ltda");
+    await page.getByLabel("CNPJ").fill(errado);
+    await page
+      .getByLabel("E-mail")
+      .fill(`e2e-alfa-ruim-${Date.now()}@teste.lupa`);
+    await page.getByLabel("WhatsApp").fill("66999999999");
+    await page.getByLabel("Senha").fill("abc123");
+    await page.getByRole("button", { name: /criar conta/i }).click();
+
+    await expect(page.getByLabel("CNPJ")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await expect(page.getByText("CNPJ inválido.")).toBeVisible();
   });
 });
 

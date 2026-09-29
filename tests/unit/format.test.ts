@@ -7,6 +7,7 @@ import {
   formatSalaryRange,
   formatStartingPrice,
   initials,
+  normalizarCnpj,
   onlyDigits,
   pluralize,
   prazoDaVaga,
@@ -105,6 +106,30 @@ describe("formatCnpj", () => {
 
   it("devolve a entrada quando o tamanho não bate", () => {
     expect(formatCnpj("123")).toBe("123");
+  });
+
+  it("formata o alfanumérico e põe em maiúscula (#297)", () => {
+    expect(formatCnpj("12abc34501de35")).toBe("12.ABC.345/01DE-35");
+    expect(formatCnpj("12.ABC.345/01DE-35")).toBe("12.ABC.345/01DE-35");
+  });
+});
+
+describe("normalizarCnpj", () => {
+  it("tira a pontuação e os espaços, e põe em maiúscula", () => {
+    expect(normalizarCnpj("12.345.678/0001-90")).toBe("12345678000190");
+    expect(normalizarCnpj("  12.abc.345/01de-35 ")).toBe("12ABC34501DE35");
+    expect(normalizarCnpj("12ABC34501DE35")).toBe("12ABC34501DE35");
+  });
+
+  /** Não valida: quem confere o formato e o dígito é `cnpjValido`. */
+  it("não decide se o CNPJ é válido", () => {
+    expect(normalizarCnpj("abc")).toBe("ABC");
+    expect(normalizarCnpj("")).toBe("");
+  });
+
+  it("não deixa letra acentuada virar letra sem acento", () => {
+    // "ß".toUpperCase() é "SS": sem filtrar antes, viraria duas letras do nada.
+    expect(normalizarCnpj("1ß2")).toBe("12");
   });
 });
 

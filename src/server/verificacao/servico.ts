@@ -1,6 +1,6 @@
 import "server-only";
 
-import { onlyDigits } from "@/lib/format";
+import { normalizarCnpj } from "@/lib/format";
 import { type Autenticado, exigirCapacidade } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
@@ -211,7 +211,7 @@ export async function definirCnpjDoPrestador(
     throw erros.semPermissao("Este CNPJ é do perfil de prestador.");
   }
 
-  const cnpj = onlyDigits(cnpjInformado);
+  const cnpj = normalizarCnpj(cnpjInformado);
   if (!cnpjValido(cnpj)) {
     return { ok: false, motivo: "CNPJ inválido." };
   }

@@ -138,6 +138,24 @@ describe("configuração de amostragem", () => {
 describe("bordas das expressões", () => {
   const limpar = (m: string) => scrubSensitiveData({ m }).m;
 
+  /*
+   * CNPJ alfanumérico (#297): só na forma com pontuação. Sem ela são 14
+   * caracteres de letra e número, iguais a um `trace_id` ou a um hash de
+   * commit, e máscara larga já corrompeu os dois (#275, #277).
+   */
+  it("CNPJ alfanumérico com pontuação é mascarado", () => {
+    expect(limpar("12.ABC.345/01DE-35")).toBe("[cnpj]");
+    expect(limpar("12.abc.345/01de-35")).toBe("[cnpj]");
+    expect(limpar("empresa 12.ABC.345/01DE-35 cadastrada")).toBe(
+      "empresa [cnpj] cadastrada",
+    );
+  });
+
+  it("o alfanumérico sem pontuação não é tocado: seria indistinguível de um identificador", () => {
+    expect(limpar("12ABC34501DE35")).toBe("12ABC34501DE35");
+    expect(limpar("d995dd12ab34ef")).toBe("d995dd12ab34ef");
+  });
+
   it("CNPJ é reconhecido antes de CPF — os 11 primeiros dígitos coincidem", () => {
     // Sem a ordem certa, "12.345.678/0001-90" viraria "[cpf]" + sobra.
     expect(limpar("12345678000190")).toBe("[cnpj]");
