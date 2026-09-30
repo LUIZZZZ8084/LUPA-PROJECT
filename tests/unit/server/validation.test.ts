@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { SENHA_MINIMA } from "@/lib/constants";
+import { formatCnpj } from "@/lib/format";
 import {
   camposDoZod,
   celularValido,
@@ -62,6 +63,65 @@ describe("cnpjValido", () => {
   it("rejeita repetidos e comprimento errado", () => {
     expect(cnpjValido("11111111111111")).toBe(false);
     expect(cnpjValido("112223330001")).toBe(false);
+  });
+
+  /*
+   * CNPJ alfanumérico (#297). A Receita emite com letras desde julho de
+   * 2026 (IN RFB 2.229/2024): 12 posições de letra ou número e 2 dígitos
+   * verificadores. `12ABC34501DE35` é o exemplo da documentação dela, e os
+   * outros dois foram calculados pela mesma regra (código ASCII menos 48,
+   * módulo 11) — não à mão, não copiados de uma implementação.
+   */
+  describe("alfanumérico", () => {
+    const VALIDOS = ["12ABC34501DE35", "AB1CD2EF000170", "K7M3N9P2000101"];
+
+    it.each(VALIDOS)("aceita %s, em qualquer forma de escrever", (cnpj) => {
+      expect(cnpjValido(cnpj)).toBe(true);
+      expect(cnpjValido(cnpj.toLowerCase())).toBe(true);
+      expect(cnpjValido(formatCnpj(cnpj))).toBe(true);
+      expect(cnpjValido(` ${formatCnpj(cnpj.toLowerCase())} `)).toBe(true);
+    });
+
+    it("a forma com pontuação é a da Receita: 12.ABC.345/01DE-35", () => {
+      expect(formatCnpj("12abc34501de35")).toBe("12.ABC.345/01DE-35");
+    });
+
+    it("rejeita dígito verificador errado, em qualquer das duas posições", () => {
+      expect(cnpjValido("12ABC34501DE36")).toBe(false);
+      expect(cnpjValido("12ABC34501DE45")).toBe(false);
+    });
+
+    /** Uma letra trocada por outra muda a soma, e o dígito não fecha. */
+    it("rejeita letra trocada", () => {
+      expect(cnpjValido("12ABD34501DE35")).toBe(false);
+      expect(cnpjValido("12ABC34501DF35")).toBe(false);
+    });
+
+    /**
+     * Confundir "O" com "0" é o erro de digitação mais comum. Antes, a letra
+     * era apagada e o CNPJ ficava curto; agora ela conta, e o dígito não
+     * fecha — o resultado para quem digitou é o mesmo, "CNPJ inválido".
+     */
+    it("rejeita o O digitado no lugar do zero", () => {
+      expect(cnpjValido("11.222.333/OOO1-81")).toBe(false);
+    });
+
+    it("o dígito verificador é sempre número", () => {
+      expect(cnpjValido("12ABC34501DEAB")).toBe(false);
+      expect(cnpjValido("12ABC34501DE3A")).toBe(false);
+    });
+
+    it("rejeita tamanho errado e caractere repetido", () => {
+      expect(cnpjValido("12ABC34501DE3")).toBe(false);
+      expect(cnpjValido("12ABC34501DE355")).toBe(false);
+      expect(cnpjValido("AAAAAAAAAAAAAA")).toBe(false);
+      expect(cnpjValido("")).toBe(false);
+    });
+
+    /** O que antes valia por acaso: letras soltas eram apagadas e o resto passava. */
+    it("não aceita mais letra perdida no meio de um CNPJ numérico", () => {
+      expect(cnpjValido("11222333000181x")).toBe(false);
+    });
   });
 });
 
@@ -121,6 +181,26 @@ describe("schemas", () => {
 
     const cnpj = validar(zCnpj, "11.222.333/0001-81");
     expect(cnpj.ok && cnpj.valor).toBe("11222333000181");
+  });
+
+  /** O valor guardado é um só, e é o que a checagem de duplicidade compara. */
+  it("zCnpj devolve o alfanumérico em maiúscula e sem pontuação (#297)", () => {
+    for (const forma of [
+      "12.ABC.345/01DE-35",
+      "12ABC34501DE35",
+      "12.abc.345/01de-35",
+      "  12abc34501de35  ",
+    ]) {
+      const r = validar(zCnpj, forma);
+      expect(r.ok && r.valor, forma).toBe("12ABC34501DE35");
+    }
+  });
+
+  it("zCnpj recusa o alfanumérico de dígito errado com a mensagem de sempre", () => {
+    const r = validar(zCnpj, "12.ABC.345/01DE-36");
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erro.campos?.[0]?.mensagem).toBe("CNPJ inválido.");
   });
 
   it("zTexto respeita mínimo e máximo com mensagem em português", () => {

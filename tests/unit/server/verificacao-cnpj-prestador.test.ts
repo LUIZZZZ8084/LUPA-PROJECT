@@ -102,6 +102,51 @@ describe("CNPJ de MEI do prestador", () => {
     expect(perfil?.cnpjVerificado).toBe(true);
   });
 
+  /*
+   * CNPJ alfanumérico (#297): quem trabalha por uma empresa aberta ou por
+   * uma filial criada depois de julho de 2026 pode ter letras no número. O
+   * que se grava e o que vai à Receita é a forma normalizada — maiúscula,
+   * sem pontuação —, seja qual for o jeito de digitar.
+   */
+  it.each(["12.ABC.345/01DE-35", "12ABC34501DE35", "12abc34501de35"])(
+    "CNPJ alfanumérico %s é salvo normalizado e confere na Receita",
+    async (informado) => {
+      let urlChamada = "";
+      const espiao = (async (url: string) => {
+        urlChamada = url;
+        return new Response(
+          JSON.stringify({
+            ...ATIVA_NO_NOME_DE("Quem Presta"),
+            cnpj: "12ABC34501DE35",
+          }),
+          { status: 200 },
+        );
+      }) as unknown as typeof fetch;
+
+      const r = await definir(sessao(), informado, espiao);
+
+      expect(r.ok).toBe(true);
+      expect(urlChamada).toMatch(/\/12ABC34501DE35$/);
+      const perfil = await repo.perfilPrestador(prestadorId);
+      expect(perfil?.cnpj).toBe("12ABC34501DE35");
+      expect(perfil?.cnpjVerificado).toBe(true);
+    },
+  );
+
+  it("alfanumérico de dígito errado é recusado antes de qualquer consulta", async () => {
+    const nuncaChama = (() => {
+      throw new Error("não devia consultar");
+    }) as unknown as typeof fetch;
+
+    const r = await definir(sessao(), "12.ABC.345/01DE-36", nuncaChama);
+
+    expect(r.ok).toBe(false);
+    expect(await repo.perfilPrestador(prestadorId)).toMatchObject({
+      cnpj: null,
+      cnpjVerificado: false,
+    });
+  });
+
   it("CNPJ mal formado é recusado antes de qualquer consulta", async () => {
     const nuncaChama = (() => {
       throw new Error("não devia consultar");

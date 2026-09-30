@@ -134,7 +134,23 @@ export function scrubSensitiveData<T>(event: T): T {
        */
       return (
         valor
-          // CNPJ, com ou sem máscara.
+          /*
+           * CNPJ alfanumérico, só na forma com pontuação (#297).
+           *
+           * Sem pontuação são 14 caracteres de letra e número, e isso é
+           * indistinguível de um `trace_id` ou de um hash de commit: a
+           * lição das duas transações descartadas (#275, #277) é que
+           * máscara larga corrompe identificador. Com ponto, barra e
+           * traço no lugar certo, não há o que confundir. O CNPJ é
+           * registro público, então o que sobra sem máscara é texto solto
+           * com o número corrido, e o campo chamado `cnpj` já é mascarado
+           * pelo nome da chave.
+           */
+          .replace(
+            /(?<![0-9A-Za-z])[0-9A-Z]{2}\.[0-9A-Z]{3}\.[0-9A-Z]{3}\/[0-9A-Z]{4}-\d{2}(?![0-9A-Za-z])/gi,
+            "[cnpj]",
+          )
+          // CNPJ numérico, com ou sem máscara.
           .replace(
             /(?<!\d)\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}(?!\d)/g,
             "[cnpj]",

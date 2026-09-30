@@ -481,6 +481,52 @@ uma empresa alheia e sair verificado com o nome dela. Isso não piorou com
 a mudança — era exatamente assim antes, só que com uma etapa a mais que
 dava impressão de estar barrando algo.
 
+### CNPJ com letras, e o valor que a Lupa guarda (#297)
+
+Desde julho de 2026 a Receita emite CNPJ alfanumérico (IN RFB 2.229/2024).
+A adoção é gradual, e vale para empresa nova **e para filial nova de
+empresa antiga**: uma raiz numérica pode ter, na ordem do estabelecimento,
+letras. O que já existe não muda. São 14 caracteres — 12 de letra ou
+número e 2 dígitos verificadores, sempre numéricos.
+
+Até 29/09/2026 a Lupa apagava toda letra antes de validar (`onlyDigits`), e
+o exemplo oficial, `12.ABC.345/01DE-35`, voltava "CNPJ inválido" com o
+dígito certo. A empresa que abriu depois de julho seria barrada e leria
+uma mensagem que a faz achar que errou o número.
+
+**O valor guardado é um só: maiúscula, sem pontuação** (`normalizarCnpj`,
+em `src/lib/format.ts`). É o que a checagem de duplicidade compara e o que
+a BrasilAPI espera — ela não converte minúscula e responde "não
+encontrado" para o CNPJ certo. Sem normalizar, `12abc…` e `12ABC…` seriam
+duas empresas e abririam duas contas.
+
+**A conta do dígito é a de sempre, e por isso o CNPJ numérico não ganhou
+caminho à parte.** O valor de cada caractere é o código ASCII menos 48: para
+número dá o próprio número, para a letra A dá 17. Conferido contra o
+exemplo da documentação da Receita e contra a validação da BrasilAPI, que
+aceita o dígito calculado. A letra O digitada no lugar do zero também
+reprova: o dígito não fecha.
+
+**O teclado do campo é de texto, não numérico.** `inputMode="numeric"` faz
+o celular oferecer só números — o servidor aceitando e o campo não deixando
+digitar seria o mesmo defeito por outra porta. O preço, aceito: quem tem
+CNPJ numérico, que é quase todo mundo hoje, digita num teclado completo em
+vez do teclado de números. Há teste que lê o código-fonte dos dois
+formulários e reprova a volta do `numeric`.
+
+**O que a Lupa não sabe:** se a BrasilAPI já devolve os dados de uma empresa
+real com letras. Ela entende o formato — 404 para o válido que não existe,
+400 para o dígito errado —, mas não foi possível testar com uma empresa de
+verdade. O cadastro não depende disso (só confere o dígito); o botão
+"Conferir CNPJ" pode dizer "não encontrado" para uma empresa recém-aberta
+até ela entrar na base pública, e essa mensagem já existe.
+
+**O filtro do Sentry só mascara a forma com pontuação.** Sem ponto, barra e
+traço, o CNPJ alfanumérico são 14 caracteres iguais a um `trace_id` ou a um
+hash de commit, e máscara larga já corrompeu os dois (#275, #277). O CNPJ é
+registro público, e o campo chamado `cnpj` já é mascarado pelo nome da
+chave.
+
 ### Nem todo prestador é só CPF, nem toda empresa é CNPJ
 
 Pedido do Luiz em 03/09/2026 (#138): "alguns prestadores são PF, outros

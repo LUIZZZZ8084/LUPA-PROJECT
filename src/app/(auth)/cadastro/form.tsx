@@ -180,11 +180,27 @@ export function SignUpForm({ role }: { role: Role }) {
                 <Input name="razaoSocial" required />
               </Field>
               {tipoDocumento === "cnpj" ? (
-                <Field label="CNPJ" required error={state.campos?.cnpj}>
+                <Field
+                  label="CNPJ"
+                  required
+                  error={state.campos?.cnpj}
+                  hint="Com ou sem pontuação. CNPJ novo pode ter letras."
+                >
+                  {/*
+                    Teclado de texto, e não numérico (#297): desde julho de
+                    2026 a Receita emite CNPJ com letras, e o teclado
+                    numérico do celular não deixa digitar nenhuma. A
+                    maiúscula é só na tela — o servidor normaliza de
+                    qualquer jeito.
+                  */}
                   <Input
                     key="cnpj"
                     name="cnpj"
-                    inputMode="numeric"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="uppercase"
                     placeholder="00.000.000/0000-00"
                     required
                   />

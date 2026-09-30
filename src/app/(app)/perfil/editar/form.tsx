@@ -518,10 +518,18 @@ function CnpjDaEmpresa({ perfil }: { perfil: PerfilCompleto }) {
           </p>
         </div>
 
-        <Field label="CNPJ">
+        <Field
+          label="CNPJ"
+          hint="Com ou sem pontuação. CNPJ novo pode ter letras."
+        >
+          {/* Teclado de texto: CNPJ novo pode ter letras (#297). */}
           <Input
             name="cnpj"
-            inputMode="numeric"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            autoComplete="off"
+            spellCheck={false}
+            className="uppercase"
             defaultValue={p?.cnpj ?? ""}
             placeholder="00.000.000/0000-00"
           />

@@ -277,6 +277,53 @@ describe("cadastro e login", () => {
         ).rejects.toMatchObject({ codigo: "conflito" });
       });
 
+      /*
+       * CNPJ alfanumérico (#297). O exemplo é o da documentação da Receita.
+       * Vale nas mesmas formas do numérico, e o valor guardado é um só —
+       * maiúscula, sem pontuação —, porque é ele que a checagem de duplicidade
+       * compara: "12abc…" e "12ABC…" abririam duas contas para uma empresa.
+       */
+      const ALFANUMERICAS = [
+        ["com pontuação", "12.ABC.345/01DE-35"],
+        ["sem pontuação", "12ABC34501DE35"],
+        ["em minúscula", "12abc34501de35"],
+        ["minúscula com pontuação", "12.abc.345/01de-35"],
+      ] as const;
+
+      it.each(ALFANUMERICAS)(
+        "alfanumérico %s grava em maiúscula, sem pontuação",
+        async (_forma, cnpj) => {
+          const e = await cadastrar(validarOk({ ...empresa, cnpj }));
+
+          expect((await repo.perfilEmpresa(e.id))?.cnpj).toBe("12ABC34501DE35");
+        },
+      );
+
+      it("alfanumérico em minúscula e depois em maiúscula: a segunda conta é recusada", async () => {
+        await cadastrar(validarOk({ ...empresa, cnpj: "12abc34501de35" }));
+
+        await expect(
+          cadastrar(
+            validarOk({
+              ...empresa,
+              email: "outro@agronorte.teste",
+              cnpj: "12.ABC.345/01DE-35",
+            }),
+          ),
+        ).rejects.toMatchObject({ codigo: "conflito" });
+      });
+
+      it("alfanumérico de dígito errado é recusado no cadastro", () => {
+        const r = validar(schemaCadastro, {
+          ...empresa,
+          cnpj: "12.ABC.345/01DE-36",
+        });
+
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.erro.campos?.some((c) => c.campo === "cnpj")).toBe(true);
+      });
+
       /** A pontuação não afrouxa a conferência: o dígito errado continua errado. */
       it("dígito errado é recusado também com pontuação", () => {
         const r = validar(schemaCadastro, {

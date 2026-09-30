@@ -1,5 +1,7 @@
 import "server-only";
 
+import { FORMATO_CNPJ, normalizarCnpj } from "@/lib/format";
+
 /**
  * Conferir um CNPJ na Receita, pela BrasilAPI.
  *
@@ -73,11 +75,11 @@ export async function consultarCnpj(
   cnpj: string,
   buscar: typeof fetch = fetch,
 ): Promise<ResultadoConsulta> {
-  const digitos = cnpj.replace(/\D/g, "");
-  if (digitos.length !== 14) return { tipo: "nao_encontrado" };
+  const normalizado = normalizarCnpj(cnpj);
+  if (!FORMATO_CNPJ.test(normalizado)) return { tipo: "nao_encontrado" };
 
   try {
-    const resposta = await buscar(`${BASE}/${digitos}`, {
+    const resposta = await buscar(`${BASE}/${normalizado}`, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { accept: "application/json" },
       /*
@@ -105,7 +107,7 @@ export async function consultarCnpj(
     return {
       tipo: "encontrado",
       empresa: {
-        cnpj: digitos,
+        cnpj: normalizado,
         razaoSocial,
         situacao: situacao.toUpperCase(),
         uf: texto(dados.uf),
