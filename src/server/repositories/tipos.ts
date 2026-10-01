@@ -32,7 +32,6 @@ export interface Usuario {
   cpf: string | null;
   telefone: string;
   cidade: string;
-  bairro: string | null;
   avatarUrl: string | null;
   emailVerificado: boolean;
   telefoneVerificado: boolean;
@@ -83,7 +82,6 @@ export interface DadosNovoUsuario {
   cpf?: string | null;
   telefone: string;
   cidade: string;
-  bairro?: string | null;
   avatarUrl?: string | null;
 }
 
@@ -113,7 +111,6 @@ export interface PerfilPrestador {
   descricao: string | null;
   precoInicial: number | null;
   anosExperiencia: number | null;
-  bairrosAtendidos: string[];
   instagram: string | null;
   facebook: string | null;
   /**
@@ -181,7 +178,6 @@ export interface PerfilCandidato {
  */
 export interface EdicaoBasica {
   telefone: string;
-  bairro: string | null;
 }
 
 export interface EdicaoCandidato {
@@ -199,7 +195,6 @@ export interface EdicaoPrestador {
   descricao: string;
   precoInicial: number | null;
   anosExperiencia: number | null;
-  bairrosAtendidos: string[];
   instagram: string | null;
   facebook: string | null;
 }

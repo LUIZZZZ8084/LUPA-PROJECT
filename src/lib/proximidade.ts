@@ -26,6 +26,14 @@ import { REGIOES } from "./regioes";
  * nenhum: está no próprio valor gravado ("Sinop - MT"). É o degrau que
  * separa "longe, mas no mesmo estado" de "outro canto do país".
  *
+ * SEM BAIRRO
+ * ──────────
+ * Esta escada já começou em "mesmo bairro". Saiu em 01/10/2026 (#321),
+ * por decisão do Luiz: não existe lista de bairros para os municípios do
+ * país, o campo era texto livre onde "Jd. Botânico" e "Jardim Botanico"
+ * não se encontram, e o bairro de uma pessoa não é o que decide se uma
+ * vaga lhe serve. O primeiro degrau passou a ser a cidade.
+ *
  * ORDENAR NÃO É FILTRAR
  * ─────────────────────
  * Nada sai da lista por estar longe. O grau só decide a ordem, e o filtro
@@ -36,33 +44,22 @@ import { REGIOES } from "./regioes";
 
 /** Menor é mais perto. */
 export const GRAU = {
-  MESMO_BAIRRO: 0,
-  MESMA_CIDADE: 1,
-  MESMA_REGIAO_IMEDIATA: 2,
-  MESMA_REGIAO_INTERMEDIARIA: 3,
-  MESMO_ESTADO: 4,
-  RESTO_DO_PAIS: 5,
+  MESMA_CIDADE: 0,
+  MESMA_REGIAO_IMEDIATA: 1,
+  MESMA_REGIAO_INTERMEDIARIA: 2,
+  MESMO_ESTADO: 3,
+  RESTO_DO_PAIS: 4,
 } as const;
 
 export interface Origem {
   cidade: string;
-  bairro?: string | null;
 }
 
 export interface Local {
   cidade: string;
-  bairro?: string | null;
-  /**
-   * Bairros que o prestador declara atender.
-   *
-   * Para prestador, "perto" é onde ele trabalha, não onde ele mora. O
-   * eletricista que mora no Jacarandá e atende o Centro está perto de quem
-   * é do Centro — usar o endereço dele responderia a pergunta errada.
-   */
-  atende?: readonly string[] | null;
 }
 
-/** Minúsculas e sem acento: "Jd. Botânico" e "jd botanico" são o mesmo. */
+/** Minúsculas e sem acento: "Cuiabá" e "cuiaba" são a mesma cidade. */
 const norm = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
@@ -86,14 +83,7 @@ export function grauDeProximidade(
 ): number {
   if (!origem?.cidade) return GRAU.RESTO_DO_PAIS;
 
-  if (mesmoTexto(origem.cidade, local.cidade)) {
-    const atendeOBairro = (local.atende ?? []).some((b) =>
-      mesmoTexto(b, origem.bairro),
-    );
-    return mesmoTexto(origem.bairro, local.bairro) || atendeOBairro
-      ? GRAU.MESMO_BAIRRO
-      : GRAU.MESMA_CIDADE;
-  }
+  if (mesmoTexto(origem.cidade, local.cidade)) return GRAU.MESMA_CIDADE;
 
   const daOrigem = REGIOES[origem.cidade];
   const doLocal = REGIOES[local.cidade];

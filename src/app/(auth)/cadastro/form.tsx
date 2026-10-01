@@ -4,11 +4,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { cadastrarComEstado, type EstadoFormulario } from "@/app/conta/actions";
-import {
-  CampoBairro,
-  CampoCidade,
-  useCidade,
-} from "@/components/cidade-e-bairro";
+import { CampoCidade, useCidade } from "@/components/campo-cidade";
 import { BackLink, PageTitle } from "@/components/layout/page-shell";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
@@ -300,18 +296,11 @@ export function SignUpForm({ role }: { role: Role }) {
           </Field>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <CampoCidade
-            value={cidade}
-            onChange={setCidade}
-            error={state.campos?.cidade}
-          />
-          <CampoBairro
-            key={cidade}
-            cidade={cidade}
-            error={state.campos?.bairro}
-          />
-        </div>
+        <CampoCidade
+          value={cidade}
+          onChange={setCidade}
+          error={state.campos?.cidade}
+        />
 
         {role === "candidato_clt" && (
           <Field

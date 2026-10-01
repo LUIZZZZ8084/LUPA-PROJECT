@@ -59,7 +59,6 @@ function candidatura(
     candidate: {
       full_name: `Pessoa ${id}`,
       avatar_url: null,
-      neighborhood: null,
       city: "Sinop - MT",
       email: null,
       phone: null,

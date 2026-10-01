@@ -53,7 +53,6 @@ describe("CNPJ de MEI do prestador", () => {
       descricao: "Instalações elétricas.",
       precoInicial: null,
       anosExperiencia: null,
-      bairrosAtendidos: [],
       instagram: null,
       facebook: null,
       cnpj: null,

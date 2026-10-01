@@ -3,7 +3,6 @@
 import { Check, Loader2, Plus, Trash2 } from "lucide-react";
 import { useActionState, useId, useRef, useState } from "react";
 import type { EstadoVerificacao } from "@/app/(app)/perfil/actions";
-import { CampoBairro } from "@/components/cidade-e-bairro";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -142,11 +141,6 @@ function Conta({ perfil }: { perfil: PerfilCompleto }) {
           mudança de contexto inteiro, não correção de campo. Enquanto não
           houver essa tela, é caso de suporte, com gente olhando.
         */}
-        <CampoBairro
-          cidade={u.cidade}
-          defaultValue={u.bairro}
-          error={estado.campos?.bairro}
-        />
       </Secao>
     </form>
   );
@@ -463,15 +457,6 @@ function Anuncio({ perfil }: { perfil: PerfilCompleto }) {
             />
           </Field>
         </div>
-
-        {/*
-         * "Bairros atendidos" saiu.
-         *
-         * Era lista curada por cidade, e não existe lista pronta de bairro
-         * para os 142 municípios de MT — a mesma razão que já tinha
-         * derrubado o enum de bairro. O bairro que vale é o que a pessoa
-         * informou no cadastro. Decisão do Luiz em 03/09/2026.
-         */}
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Instagram" error={estado.campos?.instagram}>

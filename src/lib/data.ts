@@ -97,11 +97,7 @@ const desempateDePrestador = (a: ProviderListing, b: ProviderListing) => {
 
 const ordenarVagas = (jobs: JobListing[], perto: Origem | undefined) =>
   jobs.sort(
-    porProximidade(
-      perto,
-      (j) => ({ cidade: j.city, bairro: j.neighborhood }),
-      desempateDeVaga,
-    ),
+    porProximidade(perto, (j) => ({ cidade: j.city }), desempateDeVaga),
   );
 
 const ordenarPrestadores = (
@@ -109,15 +105,7 @@ const ordenarPrestadores = (
   perto: Origem | undefined,
 ) =>
   providers.sort(
-    porProximidade(
-      perto,
-      (p) => ({
-        cidade: p.city,
-        bairro: p.neighborhood,
-        atende: p.service_area,
-      }),
-      desempateDePrestador,
-    ),
+    porProximidade(perto, (p) => ({ cidade: p.city }), desempateDePrestador),
   );
 
 /**
@@ -356,7 +344,7 @@ export async function getJobs(
        *
        * A linha extra existe só para responder "havia mais"; deixá-la
        * entrar na ordenação faria uma vaga aparecer ou sumir conforme o
-       * bairro de quem olha, o que é pior que cortar.
+       * cidade de quem olha, o que é pior que cortar.
        */
       const { itens, houveCorte } = recortar(
         (data ?? []) as unknown as JobListing[],
@@ -578,10 +566,7 @@ export async function getProviders(
     if (filters.min_rating && p.avg_rating < filters.min_rating) return false;
     if (
       filters.q &&
-      !matches(
-        [p.full_name, p.description ?? "", p.category.name, ...p.service_area],
-        filters.q,
-      )
+      !matches([p.full_name, p.description ?? "", p.category.name], filters.q)
     )
       return false;
     return true;
@@ -772,7 +757,6 @@ async function candidatoParaDemo(
     return {
       full_name: usuario.nomeCompleto,
       avatar_url: usuario.avatarUrl,
-      neighborhood: usuario.bairro,
       city: usuario.cidade,
       email: usuario.email,
       phone: usuario.telefone,
@@ -1012,7 +996,6 @@ export interface CandidatoDisponivel {
   full_name: string;
   avatar_url: string | null;
   city: string;
-  neighborhood: string | null;
   email: string | null;
   phone: string | null;
   desired_area: string | null;
@@ -1054,7 +1037,6 @@ export async function getCandidatosDisponiveis(): Promise<
     full_name: usuario.nomeCompleto,
     avatar_url: usuario.avatarUrl,
     city: usuario.cidade,
-    neighborhood: usuario.bairro,
     email: usuario.email,
     phone: usuario.telefone,
     desired_area: perfil.areaDesejada,

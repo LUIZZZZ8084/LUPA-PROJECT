@@ -43,7 +43,6 @@ export interface Recomendado {
   avatarUrl: string | null;
   /** Onde a pessoa está, para a tela mostrar e a ordem usar. */
   cidade: string | null;
-  bairro: string | null;
   telefone: string | null;
   /** As habilidades que casaram, com o texto que a pessoa escreveu. */
   casadas: HabilidadeCasada[];
@@ -98,7 +97,7 @@ export async function recomendadosParaEmpresa(
      * quem está em Sorriso. Medir da sede poria os vizinhos da empresa na
      * frente de quem consegue chegar ao trabalho.
      */
-    const perto: Origem = { cidade: vaga.city, bairro: vaga.neighborhood };
+    const perto: Origem = { cidade: vaga.city };
 
     const candidatos = ordenar(
       candidaturas
@@ -151,7 +150,6 @@ function deCandidatura(
     nome: c.candidate.full_name,
     avatarUrl: c.candidate.avatar_url,
     cidade: c.candidate.city,
-    bairro: c.candidate.neighborhood,
     telefone: c.candidate.phone,
     casadas,
     deQuantas: pedidas.length,
@@ -166,7 +164,6 @@ function deDisponivel(d: CandidatoDisponivel, pedidas: string[]): Recomendado {
     nome: d.full_name,
     avatarUrl: d.avatar_url,
     cidade: d.city,
-    bairro: d.neighborhood,
     telefone: d.phone,
     casadas,
     deQuantas: pedidas.length,
@@ -196,10 +193,7 @@ function ordenar(lista: Recomendado[], perto: Origem): Recomendado[] {
       }
 
       const grau = (r: Recomendado) =>
-        grauDeProximidade(perto, {
-          cidade: r.cidade ?? "",
-          bairro: r.bairro,
-        });
+        grauDeProximidade(perto, { cidade: r.cidade ?? "" });
 
       const diferenca = grau(a) - grau(b);
       if (diferenca !== 0) return diferenca;

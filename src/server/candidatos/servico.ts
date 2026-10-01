@@ -97,16 +97,13 @@ export async function candidatosDisponiveis(
    * que ao menos é estável entre recargas.
    */
   const daEmpresa: Origem | null = quemBusca
-    ? { cidade: quemBusca.cidade, bairro: quemBusca.bairro }
+    ? { cidade: quemBusca.cidade }
     : null;
 
   return encontrados.sort((a, b) => {
     if (daEmpresa) {
       const grau = (c: CandidatoNaBusca) =>
-        grauDeProximidade(daEmpresa, {
-          cidade: c.city,
-          bairro: c.neighborhood,
-        });
+        grauDeProximidade(daEmpresa, { cidade: c.city });
 
       const diferenca = grau(a) - grau(b);
       if (diferenca !== 0) return diferenca;
@@ -183,7 +180,6 @@ export async function perfilDoCandidato(
         full_name: usuario.nomeCompleto,
         avatar_url: usuario.avatarUrl,
         city: usuario.cidade,
-        neighborhood: usuario.bairro,
         email: usuario.email,
         phone: usuario.telefone,
         desired_area: perfil?.areaDesejada ?? null,

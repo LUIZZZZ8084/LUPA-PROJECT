@@ -18,8 +18,8 @@ import type { InscricaoPush, PreferenciaNotificacao } from "./tipos";
  * lembrar.
  *
  * **Bairro ficou de fora**, e é decisão de 26/08/2026: não existe catálogo
- * de bairro para os municípios do país, só para Sinop. Notificar por bairro
- * funcionaria bem numa cidade e mal em todas as outras.
+ * de bairro para os municípios do país. Desde a #321 nem a Lupa guarda o
+ * bairro de uma pessoa, então não haveria o que comparar.
  */
 
 /** Sem capacidade própria: qualquer conta com sessão escolhe ser avisada. */

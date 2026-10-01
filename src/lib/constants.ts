@@ -26,58 +26,6 @@ import type { ContractType, ServiceCategory, WorkMode } from "./types";
 export const SENHA_MINIMA = 6;
 
 /**
- * Bairros conhecidos, por cidade.
- *
- * Só entra cidade cuja lista alguém conferiu. O resto usa texto livre —
- * ver `bairroLivre()` abaixo.
- *
- * A lista existe porque é ela que mantém o filtro de bairro utilizável:
- * digitado à mão, "Jd. Botânico", "Jardim Botanico" e "JARDIM BOTÂNICO"
- * viram três bairros diferentes e o filtro deixa de agrupar. O preço de
- * exigir lista para todo mundo seria manter os bairros de mais de 5.500
- * municípios, o que não existe pronto em lugar nenhum e envelheceria
- * sozinho. A chave é a cidade no formato gravado ("Sinop - MT").
- */
-export const BAIRROS_POR_CIDADE: Record<string, readonly string[]> = {
-  "Sinop - MT": [
-    "Centro",
-    "Jardim Botânico",
-    "Jardim Paraíso",
-    "Jardim das Palmeiras",
-    "Setor Comercial",
-    "Setor Industrial",
-    "Residencial Florença",
-    "Jardim Primavera",
-    "Jardim Itália",
-    "Menezes",
-    "Boa Esperança",
-    "Jacarandá",
-    "Jardim Celeste",
-    "Aquarela Brasil",
-  ],
-};
-
-/**
- * Os bairros que a cidade oferece numa lista. Vazio significa texto livre —
- * é assim que a tela decide entre `select` e `input`.
- */
-export function bairrosDe(
-  cidade: string | null | undefined,
-): readonly string[] {
-  if (!cidade) return [];
-  return BAIRROS_POR_CIDADE[cidade] ?? [];
-}
-
-/**
- * Quantos bairros um prestador pode marcar como atendidos.
- *
- * Era 14 — o número de bairros de Sinop — e por isso quebrava em qualquer
- * outra cidade. Vinte é folga suficiente para o prestador dizer onde
- * atende sem que a lista vire "a cidade inteira", que não informa nada.
- */
-export const MAX_BAIRROS_ATENDIDOS = 20;
-
-/**
  * As sete primeiras são o V0 — mão de obra manual, o público mais
  * numeroso do piloto. As dez de 8 a 17 entraram em 03/09/2026, a pedido
  * do Luiz: o prestador não é só quem trabalha com as mãos, e faltava

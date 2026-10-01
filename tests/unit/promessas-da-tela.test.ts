@@ -172,8 +172,8 @@ const AINDA_NAO_EXISTE: RecursoInexistente[] = [
     recurso: "filtro por bairro",
     issue:
       "#285 — as buscas filtram por cidade, categoria e tipo ou " +
-      "avaliação. O bairro só ordena por proximidade, e não existe " +
-      "catálogo de bairro para os 142 municípios",
+      "avaliação. Não há filtro por bairro, e desde a #321 nem o bairro " +
+      "de uma pessoa existe na Lupa",
   },
   {
     termos: /já estamos sabendo/i,

@@ -2,7 +2,7 @@
 
 import { BellOff, BellRing } from "lucide-react";
 import { useState, useTransition } from "react";
-import { CampoCidade } from "@/components/cidade-e-bairro";
+import { CampoCidade } from "@/components/campo-cidade";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Select } from "@/components/ui/field";

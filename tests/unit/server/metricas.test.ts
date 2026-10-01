@@ -208,17 +208,16 @@ describe("painel administrativo", () => {
   });
 
   describe("distribuição por local", () => {
-    it("agrupa por bairro e ordena do maior", async () => {
+    it("agrupa por cidade e ordena do maior", async () => {
       const usuarios = new RepositorioMemoria();
-      for (const bairro of ["Centro", "Centro", "Menezes"]) {
+      for (const cidade of ["Sorriso - MT", "Sorriso - MT", "Cuiabá - MT"]) {
         await usuarios.criar({
-          email: `${bairro}-${Math.random()}@teste.lupa`,
+          email: `${cidade}-${Math.random()}@teste.lupa`,
           senhaHash: "x",
           papel: "candidato_clt",
           nomeCompleto: "Teste",
           telefone: "66999110001",
-          cidade: "Sinop - MT",
-          bairro,
+          cidade,
         });
       }
 
@@ -230,9 +229,9 @@ describe("painel administrativo", () => {
       const totais = locais.map((l) => l.total);
 
       expect(totais).toEqual([...totais].sort((a, b) => b - a));
-      expect(locais.find((l) => l.bairro === "Centro")?.total).toBeGreaterThan(
-        1,
-      );
+      expect(
+        locais.find((l) => l.cidade === "Sorriso - MT")?.total,
+      ).toBeGreaterThan(1);
     });
   });
 
@@ -256,7 +255,7 @@ describe("métricas no modo demonstração", () => {
 
   let sequencia = 0;
 
-  async function criar(papel: Papel, bairro?: string) {
+  async function criar(papel: Papel) {
     sequencia += 1;
     return usuarios.criar({
       email: `${papel}-${sequencia}@teste.lupa`,
@@ -265,7 +264,6 @@ describe("métricas no modo demonstração", () => {
       nomeCompleto: "Teste",
       telefone: "66999110001",
       cidade: "Sinop - MT",
-      bairro,
     });
   }
 
@@ -307,10 +305,14 @@ describe("métricas no modo demonstração", () => {
     expect((await repo.distribuicaoPorLocal(2)).length).toBeLessThanOrEqual(2);
   });
 
-  it("agrupa bairro não informado sem quebrar", async () => {
+  it("a mesma cidade aparece uma vez só, com tudo somado", async () => {
     await criar("candidato_clt");
+    await criar("empresa");
     const locais = await repo.distribuicaoPorLocal(20);
-    expect(locais.some((l) => l.bairro === null)).toBe(true);
+    const sinop = locais.filter((l) => l.cidade === "Sinop - MT");
+
+    expect(sinop).toHaveLength(1);
+    expect(sinop[0].total).toBeGreaterThanOrEqual(2);
   });
 });
 

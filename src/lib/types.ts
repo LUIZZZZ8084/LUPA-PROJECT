@@ -45,7 +45,6 @@ export interface Profile {
   phone: string;
   role: Role;
   city: string;
-  neighborhood: string | null;
   avatar_url: string | null;
   phone_verified: boolean;
   doc_verified: boolean;
@@ -82,7 +81,6 @@ export interface ProviderProfile {
   description: string | null;
   starting_price: number | null;
   years_experience: number | null;
-  service_area: string[];
   photo_urls: string[];
   avg_rating: number;
   review_count: number;
@@ -112,8 +110,8 @@ export interface Job {
   city: string;
   neighborhood: string | null;
   /** Rua, número, ponto de referência — texto livre, sem geocodificação.
-   * Informativo: não entra no ranking de proximidade, que usa só bairro
-   * e cidade. `null` em vaga publicada antes deste campo existir. */
+   * Informativo: não entra no ranking de proximidade, que usa só a
+   * cidade, a região e o estado. `null` em vaga publicada antes deste campo existir. */
   address: string | null;
   contract_type: ContractType | null;
   /** `null` em vaga publicada antes de o campo existir — sem selo. */
@@ -173,7 +171,6 @@ export interface ProviderListing extends ProviderProfile {
   full_name: string;
   phone: string;
   city: string;
-  neighborhood: string | null;
   avatar_url: string | null;
   phone_verified: boolean;
   doc_verified: boolean;
@@ -190,7 +187,7 @@ export interface ApplicationWithCandidate extends Application {
    * que filtra sempre pela empresa da sessão, mais o `revoke` da view
    * para a chave anônima. Este objeto nunca chega a uma tela pública.
    */
-  candidate: Pick<Profile, "full_name" | "avatar_url" | "neighborhood"> & {
+  candidate: Pick<Profile, "full_name" | "avatar_url"> & {
     city: string | null;
     email: string | null;
     phone: string | null;

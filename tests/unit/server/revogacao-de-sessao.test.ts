@@ -133,7 +133,6 @@ describe("a lista de cortes é curta por construção", () => {
       nomeCompleto: "Alguém",
       telefone: "66999110012",
       cidade: "Sinop - MT",
-      bairro: null,
     });
 
     // Nada antes da troca: quem nunca trocou a senha não tem corte.

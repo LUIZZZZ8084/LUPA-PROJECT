@@ -61,7 +61,6 @@ export async function salvarBasicos(
 ): Promise<void> {
   await repositorioUsuarios().atualizarBasicos(usuarioId, {
     telefone: dados.telefone,
-    bairro: dados.bairro,
   });
 }
 

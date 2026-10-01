@@ -205,9 +205,7 @@ export default async function ProviderPage({
             <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted sm:justify-start">
               <span className="inline-flex items-center gap-1.5">
                 <MapPin size={13} />
-                {provider.neighborhood
-                  ? `${provider.neighborhood}, ${provider.city}`
-                  : provider.city}
+                {provider.city}
               </span>
               {provider.years_experience && (
                 <span className="inline-flex items-center gap-1.5">
@@ -230,13 +228,9 @@ export default async function ProviderPage({
         />
 
         {/*
-         * "Bairros atendidos" saiu daqui.
-         *
-         * Era uma lista curada por cidade, e não existe lista pronta de
-         * bairro para os 142 municípios de MT — foi por isso que o enum de
-         * bairro já tinha caído antes. O bairro que vale é o que a pessoa
-         * informou no cadastro, e ele já aparece na linha de localização
-         * acima. Decisão do Luiz em 03/09/2026.
+         * Sem bairro, atendido ou de moradia (#321): não existe lista de
+         * bairro para o país, e o que a pessoa escrevia ali não servia a
+         * filtro nenhum. A localização é a cidade.
          */}
         <AbasDoPerfil
           trabalhos={trabalhos.map((t) => ({

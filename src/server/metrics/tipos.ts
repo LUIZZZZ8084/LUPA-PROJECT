@@ -16,8 +16,34 @@ export interface CadastrosPorDia {
 
 export interface DistribuicaoLocal {
   cidade: string;
-  bairro: string | null;
   total: number;
+}
+
+/**
+ * Soma por cidade as linhas de `metricas_por_local`.
+ *
+ * A view ainda agrupa por cidade **e** bairro, porque o banco não mudou
+ * (#321): `usuarios.bairro` continua lá, com o que as contas antigas
+ * informaram. A tela, não — não há mais bairro de pessoa na Lupa, e o
+ * painel mostrava "Centro, Sinop" como se isso ainda fosse uma dimensão do
+ * produto. Somar aqui, e não na view, é o que dispensa mexer em produção.
+ */
+export function somarPorCidade(
+  linhas: ReadonlyArray<{ cidade: string; total: number }>,
+  limite: number,
+): DistribuicaoLocal[] {
+  const porCidade = new Map<string, number>();
+  for (const linha of linhas) {
+    porCidade.set(
+      linha.cidade,
+      (porCidade.get(linha.cidade) ?? 0) + linha.total,
+    );
+  }
+
+  return [...porCidade]
+    .map(([cidade, total]) => ({ cidade, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, limite);
 }
 
 /**

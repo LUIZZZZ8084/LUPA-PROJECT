@@ -61,7 +61,6 @@ export default async function VirarPrestadorPage() {
 
       <AtivarPrestadorForm
         precisaDeFoto={precisaDeFoto}
-        bairro={usuario.bairro}
         temCpf={Boolean(usuario.cpf)}
       />
     </PageShell>

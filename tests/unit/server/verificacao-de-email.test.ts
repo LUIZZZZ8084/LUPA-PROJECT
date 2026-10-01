@@ -62,7 +62,6 @@ describe("verificação de e-mail", () => {
       nomeCompleto: "Maria Souza",
       telefone: "66999110001",
       cidade: "Sinop - MT",
-      bairro: null,
     });
     usuarioId = usuario.id;
   });

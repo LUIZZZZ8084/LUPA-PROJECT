@@ -392,7 +392,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     full_name: "João Silva",
     phone: "66000000001",
     city: "Sinop - MT",
-    neighborhood: "Jardim Botânico",
     avatar_url: `/avatares/prv-joao-silva.svg`,
     phone_verified: true,
     doc_verified: true,
@@ -404,7 +403,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
       "geral. Atendo Sinop e região com orçamento sem compromisso.",
     starting_price: 150,
     years_experience: 7,
-    service_area: ["Centro", "Jardim Botânico", "Jardim Paraíso", "Menezes"],
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
@@ -416,7 +414,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     full_name: "Carlos Souza",
     phone: "66000000002",
     city: "Sinop - MT",
-    neighborhood: "Centro",
     avatar_url: `/avatares/prv-carlos-souza.svg`,
     phone_verified: true,
     doc_verified: true,
@@ -426,7 +423,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
       "Encanador com atendimento de emergência. Conserto de vazamentos, " + "desentupimento, instalação de caixa d'água, aquecedor e louças " + "sanitárias. Atendo também aos finais de semana.",
     starting_price: 120,
     years_experience: 12,
-    service_area: ["Centro", "Setor Comercial", "Jardim Itália"],
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
@@ -438,7 +434,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     full_name: "Marcos Lima",
     phone: "66000000003",
     city: "Sinop - MT",
-    neighborhood: "Jardim das Palmeiras",
     avatar_url: `/avatares/prv-marcos-lima.svg`,
     phone_verified: true,
     doc_verified: true,
@@ -447,7 +442,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     description: "Pintura residencial e comercial, textura, grafiato e massa corrida. " + "Faço o serviço completo, da preparação da parede à limpeza final. " + "Orçamento por metro quadrado.",
     starting_price: 200,
     years_experience: 9,
-    service_area: ["Jardim das Palmeiras", "Residencial Florença", "Centro"],
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
@@ -459,7 +453,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     full_name: "José Moreira",
     phone: "66000000004",
     city: "Sinop - MT",
-    neighborhood: "Jardim Primavera",
     avatar_url: `/avatares/prv-jose-moreira.svg`,
     phone_verified: true,
     doc_verified: false,
@@ -468,7 +461,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     description: "Pedreiro para obras pequenas e médias: alvenaria, reboco, contrapiso, " + "assentamento de piso e azulejo, pequenas reformas. Trabalho com " + "ajudante próprio.",
     starting_price: 180,
     years_experience: 15,
-    service_area: ["Jardim Primavera", "Boa Esperança", "Jacarandá"],
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
@@ -480,7 +472,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     full_name: "Ana Paula Ribeiro",
     phone: "66000000005",
     city: "Sinop - MT",
-    neighborhood: "Jardim Celeste",
     avatar_url: `/avatares/prv-ana-paula.svg`,
     phone_verified: true,
     doc_verified: true,
@@ -490,7 +481,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
       "Diarista com referências. Faxina completa, limpeza pesada pós-obra e " + "organização de armários. Levo meu próprio material de limpeza se " + "preferir. Disponível de segunda a sábado.",
     starting_price: 140,
     years_experience: 6,
-    service_area: ["Jardim Celeste", "Centro", "Aquarela Brasil"],
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
@@ -502,7 +492,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     full_name: "Rosa Mendes",
     phone: "66000000006",
     city: "Sinop - MT",
-    neighborhood: "Menezes",
     avatar_url: `/avatares/prv-rosa-mendes.svg`,
     phone_verified: true,
     doc_verified: true,
@@ -514,7 +503,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
       "horário e apoio na higiene e alimentação. Diária ou plantão.",
     starting_price: 180,
     years_experience: 8,
-    service_area: ["Menezes", "Centro", "Jardim Botânico"],
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
@@ -526,7 +514,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     full_name: "Pedro Alves",
     phone: "66000000007",
     city: "Sinop - MT",
-    neighborhood: "Boa Esperança",
     avatar_url: `/avatares/prv-pedro-alves.svg`,
     phone_verified: true,
     doc_verified: false,
@@ -535,7 +522,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     description: "Manutenção de jardim, corte de grama, poda de árvores e cerca viva, " + "plantio e adubação. Atendo casas e condomínios, com contrato mensal ou " + "serviço avulso.",
     starting_price: 100,
     years_experience: 5,
-    service_area: ["Boa Esperança", "Residencial Florença", "Jardim Itália"],
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
@@ -547,7 +533,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     full_name: "Luciana Costa",
     phone: "66000000008",
     city: "Sinop - MT",
-    neighborhood: "Aquarela Brasil",
     avatar_url: `/avatares/prv-luciana-costa.svg`,
     phone_verified: true,
     doc_verified: true,
@@ -556,7 +541,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     description: "Faxina residencial e limpeza de escritório. Trabalho por diária ou " + "duas vezes por semana com valor fechado. Passo roupa mediante combinado.",
     starting_price: 130,
     years_experience: 4,
-    service_area: ["Aquarela Brasil", "Jardim Paraíso", "Setor Comercial"],
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
@@ -568,7 +552,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     full_name: "Antônio Ferreira",
     phone: "66000000009",
     city: "Sinop - MT",
-    neighborhood: "Setor Comercial",
     avatar_url: `/avatares/prv-antonio-ferreira.svg`,
     phone_verified: true,
     doc_verified: true,
@@ -577,7 +560,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     description: "Eletricista especializado em ar-condicionado split: instalação, " + "limpeza, recarga de gás e manutenção. Também faço rede elétrica para " + "climatização de lojas e escritórios.",
     starting_price: 220,
     years_experience: 11,
-    service_area: ["Setor Comercial", "Centro", "Setor Industrial"],
     photo_urls: [],
     avg_rating: 0, // derivado de MOCK_REVIEWS
     review_count: 0,
@@ -594,7 +576,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     full_name: "Roberto Alencar",
     phone: "66000000099",
     city: "Sinop - MT",
-    neighborhood: "Centro",
     avatar_url: null,
     phone_verified: true,
     doc_verified: true,
@@ -603,7 +584,6 @@ const MOCK_PROVIDERS_BASE: ProviderBase[] = [
     description: "Perfil de teste com mensalidade vencida.",
     starting_price: 100,
     years_experience: 3,
-    service_area: ["Centro"],
     photo_urls: [],
     avg_rating: 0,
     review_count: 0,
@@ -725,7 +705,6 @@ export const MOCK_APPLICATIONS: ApplicationWithCandidate[] = [
     candidate: {
       full_name: "Everton Rodrigues",
       avatar_url: "/avatares/cnd-everton-rodrigues.svg",
-      neighborhood: "Jardim Primavera",
       desired_area: "Agronegócio",
       city: "Sinop - MT",
       email: "everton@teste.lupa",
@@ -748,7 +727,6 @@ export const MOCK_APPLICATIONS: ApplicationWithCandidate[] = [
     candidate: {
       full_name: "Wesley Barbosa",
       avatar_url: "/avatares/cnd-wesley-barbosa.svg",
-      neighborhood: "Boa Esperança",
       desired_area: "Agronegócio",
       city: "Sinop - MT",
       email: "wesley@teste.lupa",
@@ -771,7 +749,6 @@ export const MOCK_APPLICATIONS: ApplicationWithCandidate[] = [
     candidate: {
       full_name: "Adriano Klein",
       avatar_url: "/avatares/cnd-adriano-klein.svg",
-      neighborhood: "Setor Industrial",
       desired_area: "Agronegócio",
       city: "Sinop - MT",
       email: "simone@teste.lupa",
@@ -794,7 +771,6 @@ export const MOCK_APPLICATIONS: ApplicationWithCandidate[] = [
     candidate: {
       full_name: "Simone Batista",
       avatar_url: "/avatares/cnd-simone-batista.svg",
-      neighborhood: "Menezes",
       desired_area: "Indústria e Produção",
       city: "Sinop - MT",
       email: "adriano@teste.lupa",
@@ -817,7 +793,6 @@ export const MOCK_APPLICATIONS: ApplicationWithCandidate[] = [
     candidate: {
       full_name: "Priscila Nogueira",
       avatar_url: "/avatares/cnd-priscila-nogueira.svg",
-      neighborhood: "Centro",
       desired_area: "Administrativo",
       city: "Sinop - MT",
       email: "priscila@teste.lupa",
@@ -840,7 +815,6 @@ export const MOCK_APPLICATIONS: ApplicationWithCandidate[] = [
     candidate: {
       full_name: "Lucas Trindade",
       avatar_url: "/avatares/cnd-lucas-trindade.svg",
-      neighborhood: "Jardim Botânico",
       desired_area: "Agronegócio",
       city: "Sinop - MT",
       email: "lucas@teste.lupa",

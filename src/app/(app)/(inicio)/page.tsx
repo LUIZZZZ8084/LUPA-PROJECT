@@ -130,11 +130,7 @@ export default async function HomePage() {
            */}
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
             <MapPin size={12} className="text-vagas" />
-            {origem?.cidade
-              ? origem.bairro
-                ? `${origem.bairro}, ${origem.cidade}`
-                : origem.cidade
-              : "Vagas e serviços em todo o Brasil"}
+            {origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
           </span>
 
           <h1 className="mt-5 text-[2rem] leading-[1.1] font-bold tracking-tight sm:text-5xl">

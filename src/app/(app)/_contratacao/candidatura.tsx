@@ -116,8 +116,7 @@ export async function FichaDaCandidatura({
 
         <dl className="mt-3 space-y-3 text-sm">
           <Linha icone={<MapPin size={15} />} rotulo="Onde mora">
-            {[c.neighborhood, c.city].filter(Boolean).join(" · ") ||
-              "Não informado"}
+            {c.city ?? "Não informado"}
           </Linha>
           <Linha icone={<Briefcase size={15} />} rotulo="Área desejada">
             {c.desired_area ?? "Não informada"}

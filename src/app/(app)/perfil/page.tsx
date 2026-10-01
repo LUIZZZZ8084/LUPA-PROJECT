@@ -241,9 +241,7 @@ export default async function PerfilPage() {
                 {usuario.email}
               </p>
               <p className="mt-0.5 text-xs text-muted">
-                {formatPhone(usuario.telefone)}
-                {usuario.bairro ? ` · ${usuario.bairro}` : ""} ·{" "}
-                {usuario.cidade}
+                {formatPhone(usuario.telefone)} · {usuario.cidade}
               </p>
               <div className="mt-2.5">
                 <Badge tone="neutral">

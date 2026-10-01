@@ -143,7 +143,6 @@ describe("mensalidade de prestador", () => {
       descricao: "Teste",
       precoInicial: null,
       anosExperiencia: null,
-      bairrosAtendidos: [],
       instagram: null,
       facebook: null,
       cnpj: null,

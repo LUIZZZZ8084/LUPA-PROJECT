@@ -19,41 +19,26 @@ import {
 
 describe("dados da conta", () => {
   it("aceita o mínimo", () => {
-    const r = schemaBasico.safeParse({
-      telefone: "66999110005",
-      bairro: "",
-    });
+    const r = schemaBasico.safeParse({ telefone: "66999110005" });
     expect(r.success).toBe(true);
-    expect(r.success && r.data.bairro).toBeNull();
   });
 
   it("recusa telefone que não é celular", () => {
-    const r = schemaBasico.safeParse({
-      telefone: "6635110001",
-      bairro: "",
-    });
+    const r = schemaBasico.safeParse({ telefone: "6635110001" });
     expect(r.success).toBe(false);
   });
 
   /*
-   * Bairro virou texto quando o app abriu para Mato Grosso inteiro. Enum
-   * exigiria a lista dos 142 municípios, que não existe pronta — e
-   * recusaria loteamento novo até em Sinop, onde a cidade cresce todo ano.
+   * Bairro de pessoa saiu (#321): não existe lista para o país e nada
+   * filtra por ele. Um `bairro` que ainda chegue — formulário em cache, ou
+   * alguém forjando — é descartado, não gravado.
    */
-  it("aceita bairro que não está em nenhuma lista curada", () => {
+  it("descarta bairro enviado no formulário", () => {
     const r = schemaBasico.safeParse({
       telefone: "66999110005",
-      bairro: "Residencial Nova Fronteira",
+      bairro: "Centro",
     });
-    expect(r.success).toBe(true);
-  });
-
-  it("recusa bairro de uma letra — isso é engano de digitação", () => {
-    const r = schemaBasico.safeParse({
-      telefone: "66999110005",
-      bairro: "X",
-    });
-    expect(r.success).toBe(false);
+    expect(r.success && Object.keys(r.data)).not.toContain("bairro");
   });
 
   /**
@@ -64,7 +49,6 @@ describe("dados da conta", () => {
     const r = schemaBasico.safeParse({
       nomeCompleto: "Nome Trocado",
       telefone: "66999110005",
-      bairro: "",
     });
     expect(r.success && Object.keys(r.data)).not.toContain("nomeCompleto");
   });
@@ -251,7 +235,6 @@ describe("anúncio do prestador", () => {
     descricao: "Instalações elétricas residenciais e comerciais em Sinop.",
     precoInicial: "",
     anosExperiencia: "",
-    bairrosAtendidos: [],
     instagram: "",
     facebook: "",
   };
@@ -301,19 +284,13 @@ describe("anúncio do prestador", () => {
     ).toBe(false);
   });
 
-  /** Um bairro só chega como string; vários, como lista. */
-  it("aceita um bairro ou vários", () => {
-    const um = schemaPrestador.safeParse({
-      ...base,
-      bairrosAtendidos: "Centro",
-    });
-    expect(um.success && um.data.bairrosAtendidos).toEqual(["Centro"]);
-
-    const varios = schemaPrestador.safeParse({
+  /** Área de atendimento por bairro saiu (#321): o que chegar é descartado. */
+  it("descarta bairros atendidos enviados no formulário", () => {
+    const r = schemaPrestador.safeParse({
       ...base,
       bairrosAtendidos: ["Centro", "Menezes"],
     });
-    expect(varios.success && varios.data.bairrosAtendidos).toHaveLength(2);
+    expect(r.success && Object.keys(r.data)).not.toContain("bairrosAtendidos");
   });
 
   it("instagram e facebook são opcionais", () => {

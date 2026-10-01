@@ -44,7 +44,7 @@ export default async function PainelAdminPage() {
       <PageTitle
         title="Painel"
         accent="text-warn"
-        description="Cadastros, faturamento e distribuição por cidade e bairro."
+        description="Cadastros, faturamento e distribuição por cidade."
       />
       <PainelCliente inicial={inicial} />
       <BuscasSemResultado termos={termos} dias={DIAS_DA_JANELA} />
