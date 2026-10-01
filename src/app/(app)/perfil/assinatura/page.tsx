@@ -14,7 +14,7 @@ import { AssinarButton } from "./assinar-button";
 import { CancelarRenovacaoButton } from "./cancelar-button";
 
 export const metadata: Metadata = {
-  title: "Assinatura",
+  title: "Assinatura de prestador",
 };
 
 export default async function AssinaturaPage() {
