@@ -131,7 +131,10 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
             senha perdia a conta, e o suporte também não tinha o que fazer.
           */}
           <p className="text-center text-muted text-xs">
-            <Link href="/esqueci-senha" className="underline hover:text-ink">
+            <Link
+              href="/esqueci-senha"
+              className="inline-flex min-h-11 items-center px-3 underline hover:text-ink"
+            >
               Esqueci minha senha
             </Link>
           </p>
@@ -142,7 +145,7 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
         Ainda não tem conta?{" "}
         <Link
           href="/cadastro"
-          className="font-medium text-vagas hover:underline"
+          className="inline-flex min-h-11 items-center font-medium text-vagas hover:underline"
         >
           Criar conta gratuita
         </Link>

@@ -117,7 +117,7 @@ export function AppHeader({
           {usuario ? (
             <MenuDoUsuario usuario={usuario} />
           ) : (
-            <ButtonLink href="/entrar" variant="outline" size="sm">
+            <ButtonLink href="/entrar" variant="outline" size="md">
               Entrar
             </ButtonLink>
           )}
