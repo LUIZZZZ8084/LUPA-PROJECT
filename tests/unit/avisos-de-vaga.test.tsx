@@ -22,7 +22,7 @@ function montar(props: Partial<Parameters<typeof AvisosDeVaga>[0]> = {}) {
   return render(
     <AvisosDeVaga
       preferencia={null}
-      cidadePadrao="Sinop"
+      cidadePadrao="Sinop - MT"
       pushDisponivel
       chavePublica="chave"
       {...acoes}
@@ -47,16 +47,18 @@ describe("avisos de vaga", () => {
   it("oferece cidade e área, com a cidade da conta já escolhida", () => {
     montar();
 
-    expect(screen.getByLabelText(/cidade/i)).toHaveValue("Sinop");
+    expect(screen.getByLabelText(/cidade/i)).toHaveValue("Sinop - MT");
     expect(screen.getByLabelText(/área/i)).toHaveValue("");
     expect(screen.getByRole("button", { name: /ligar avisos/i })).toBeTruthy();
   });
 
   /** Quem já ligou vê o que escolheu, e o caminho para desligar. */
   it("com preferência salva, mostra o estado e o botão de desligar", () => {
-    montar({ preferencia: { cidade: "Sorriso", categoria: "Agronegócio" } });
+    montar({
+      preferencia: { cidade: "Sorriso - MT", categoria: "Agronegócio" },
+    });
 
-    expect(screen.getByLabelText(/cidade/i)).toHaveValue("Sorriso");
+    expect(screen.getByLabelText(/cidade/i)).toHaveValue("Sorriso - MT");
     expect(screen.getByLabelText(/área/i)).toHaveValue("Agronegócio");
     expect(
       screen.getByRole("button", { name: /atualizar avisos/i }),
@@ -100,7 +102,7 @@ describe("avisos de vaga", () => {
   it("desligar chama a ação e volta ao estado inicial", async () => {
     const desligar = vi.fn(async () => ({ ok: true }));
     montar({
-      preferencia: { cidade: "Sinop", categoria: null },
+      preferencia: { cidade: "Sinop - MT", categoria: null },
       desligar,
     });
 

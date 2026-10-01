@@ -18,7 +18,6 @@ import { Reveal } from "@/components/motion/reveal";
 import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
-import { CIDADE_INICIAL, ESTADO_NOME, rotuloDaCidade } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
 import { formatPrecoBRL } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
@@ -96,11 +95,11 @@ export default async function HomePage() {
     name: "Lupa",
     url: "https://lupapp.com.br",
     description:
-      "Plataforma de vagas de emprego e prestação de serviços em Mato " +
-      "Grosso, começando por Sinop-MT.",
+      "Plataforma de vagas de emprego e prestação de serviços, com o que " +
+      "está mais perto de quem procura primeiro.",
     areaServed: {
-      "@type": "State",
-      name: "Mato Grosso",
+      "@type": "Country",
+      name: "Brasil",
     },
   };
 
@@ -123,18 +122,19 @@ export default async function HomePage() {
            * mesmo valor aqui é a diferença entre um selo de abrangência e
            * uma promessa que o ícone já fazia sem cumprir.
            *
-           * Sem sessão o home nem renderiza (app fechado por login), e
-           * `cidade` tem padrão no cadastro — mas se algum dia vier vazia,
-           * cai de volta no selo antigo em vez de mostrar um pino sem
-           * legenda.
+           * Sem sessão (a home é pública desde a #241), ou com uma conta
+           * sem cidade, o selo diz o alcance do app — o Brasil inteiro desde
+           * a #301 — em vez de mostrar um pino sem legenda. A cidade já é
+           * gravada com o estado ("Sinop - MT"), então não há rótulo a
+           * montar.
            */}
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
             <MapPin size={12} className="text-vagas" />
             {origem?.cidade
               ? origem.bairro
-                ? `${origem.bairro}, ${rotuloDaCidade(origem.cidade)}`
-                : rotuloDaCidade(origem.cidade)
-              : `${ESTADO_NOME} · começando por ${CIDADE_INICIAL}`}
+                ? `${origem.bairro}, ${origem.cidade}`
+                : origem.cidade
+              : "Vagas e serviços em todo o Brasil"}
           </span>
 
           <h1 className="mt-5 text-[2rem] leading-[1.1] font-bold tracking-tight sm:text-5xl">

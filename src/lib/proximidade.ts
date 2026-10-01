@@ -1,16 +1,19 @@
-import { REGIOES_MT } from "./regioes-mt";
+import { ufDaCidade } from "./cidades";
+import { REGIOES } from "./regioes";
 
 /**
  * Quão perto de quem está olhando.
  *
- * A busca cobre Mato Grosso inteiro desde a #76, e o estado tem 903 mil
- * km². Ordenar só por data faz a primeira coisa que alguém de Sinop vê ser
- * uma vaga em Cuiabá, a 500km — o oposto do que "hiperlocal" promete.
+ * A busca cobre o Brasil inteiro desde a #301 (e Mato Grosso, antes dela,
+ * desde a #76). Ordenar só por data faz a primeira coisa que alguém de
+ * Sinop vê ser uma vaga em Porto Alegre — o oposto do que "perto de você"
+ * promete.
  *
  * MEDIR PERTO SEM COORDENADAS
  * ───────────────────────────
  * A API do IBGE que já gera a lista de municípios não devolve latitude e
- * longitude, mas devolve **região imediata** e **região intermediária**.
+ * longitude, mas devolve **região imediata** e **região intermediária**,
+ * para os 5.571 municípios do país.
  *
  * A região imediata agrupa municípios pelo deslocamento real das pessoas
  * para bens e serviços. É a pergunta certa para um app de emprego — até
@@ -18,6 +21,10 @@ import { REGIOES_MT } from "./regioes-mt";
  * estado onde quem decide o tempo de viagem é a estrada: 200km de asfalto
  * e 200km de terra não são a mesma distância. Duas cidades na mesma região
  * imediata já são, por definição, cidades entre as quais se circula.
+ *
+ * Depois da intermediária vem o **estado**, que não precisa de mapa
+ * nenhum: está no próprio valor gravado ("Sinop - MT"). É o degrau que
+ * separa "longe, mas no mesmo estado" de "outro canto do país".
  *
  * ORDENAR NÃO É FILTRAR
  * ─────────────────────
@@ -33,7 +40,8 @@ export const GRAU = {
   MESMA_CIDADE: 1,
   MESMA_REGIAO_IMEDIATA: 2,
   MESMA_REGIAO_INTERMEDIARIA: 3,
-  RESTO_DO_ESTADO: 4,
+  MESMO_ESTADO: 4,
+  RESTO_DO_PAIS: 5,
 } as const;
 
 export interface Origem {
@@ -76,7 +84,7 @@ export function grauDeProximidade(
   origem: Origem | null | undefined,
   local: Local,
 ): number {
-  if (!origem?.cidade) return GRAU.RESTO_DO_ESTADO;
+  if (!origem?.cidade) return GRAU.RESTO_DO_PAIS;
 
   if (mesmoTexto(origem.cidade, local.cidade)) {
     const atendeOBairro = (local.atende ?? []).some((b) =>
@@ -87,20 +95,25 @@ export function grauDeProximidade(
       : GRAU.MESMA_CIDADE;
   }
 
-  const daOrigem = REGIOES_MT[origem.cidade];
-  const doLocal = REGIOES_MT[local.cidade];
+  const daOrigem = REGIOES[origem.cidade];
+  const doLocal = REGIOES[local.cidade];
+
+  if (daOrigem && doLocal) {
+    if (daOrigem[0] === doLocal[0]) return GRAU.MESMA_REGIAO_IMEDIATA;
+    if (daOrigem[1] === doLocal[1]) return GRAU.MESMA_REGIAO_INTERMEDIARIA;
+  }
 
   /*
-   * Cidade fora do mapa cai no último degrau em vez de quebrar. Acontece
-   * com dado antigo, com cidade de outro estado que tenha entrado antes da
-   * validação, e com o município novo entre a criação pelo IBGE e alguém
-   * rodar o gerador de novo.
+   * Cidade fora do mapa não quebra: cai no degrau do estado, que vem do
+   * próprio valor, ou no último. Acontece com dado gravado antes da
+   * migração para "Cidade - UF" e com município novo entre a criação pelo
+   * IBGE e alguém rodar o gerador de novo.
    */
-  if (!daOrigem || !doLocal) return GRAU.RESTO_DO_ESTADO;
-
-  if (daOrigem[0] === doLocal[0]) return GRAU.MESMA_REGIAO_IMEDIATA;
-  if (daOrigem[1] === doLocal[1]) return GRAU.MESMA_REGIAO_INTERMEDIARIA;
-  return GRAU.RESTO_DO_ESTADO;
+  const ufOrigem = ufDaCidade(origem.cidade);
+  if (ufOrigem && ufOrigem === ufDaCidade(local.cidade)) {
+    return GRAU.MESMO_ESTADO;
+  }
+  return GRAU.RESTO_DO_PAIS;
 }
 
 /**

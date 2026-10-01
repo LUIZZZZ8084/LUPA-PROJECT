@@ -1,6 +1,8 @@
 # Lupa — notas para agentes
 
-Plataforma hiperlocal de emprego e serviços. Cidade-piloto: Sinop-MT.
+Plataforma de emprego e serviços para o Brasil inteiro, com o que está mais
+perto de quem procura primeiro. Começou em Sinop-MT, abriu para Mato Grosso
+e, desde a #301, aceita qualquer município do país.
 O brief completo do produto está em `docs/brief-tecnico.md`.
 
 **Leia a seção "Fluxo de trabalho obrigatório" antes de escrever a primeira
@@ -27,7 +29,7 @@ Scripts operacionais:
 ```bash
 node scripts/criar-admin.mjs      # cria ou promove a conta de admin
 node scripts/gerar-avatares.mjs   # regenera os avatares de demonstração
-node scripts/gerar-cidades.mjs    # baixa a lista de municípios de MT (IBGE)
+node scripts/gerar-cidades.mjs    # baixa a lista de municípios do Brasil (IBGE)
 node scripts/gerar-regioes.mjs    # baixa a região de cada município (IBGE)
 ```
 
@@ -243,7 +245,7 @@ fechar o que a lista já reflete, em vez de confiar que o React vai
 perceber sozinho.
 
 **"Bairros atendidos" saiu junto.** Era lista curada por cidade, e não
-existe lista pronta de bairro para os 142 municípios de MT — a mesma razão
+existe lista pronta de bairro para os municípios do país — a mesma razão
 que já tinha derrubado o enum de bairro antes. O bairro que vale é o que a
 pessoa informou no cadastro, e ele já aparece na linha de localização.
 
@@ -1360,22 +1362,61 @@ para atender.
 O que contém abuso aqui é o teto por ação (#202), que não pede nada a
 ninguém.
 
-### Mato Grosso inteiro, começando por Sinop
+### O Brasil inteiro, e não mais só Mato Grosso (#301)
 
-Os 142 municípios do estado são aceitos no cadastro, na publicação de vaga
-e nos filtros. `CIDADE_INICIAL` é Sinop e significa só uma coisa: é o valor
-que já vem escolhido. Atender Sinop primeiro é estratégia de divulgação;
-*recusar* quem é de Sorriso era um formulário dizendo que o app não é dele.
+O app começou aceitando só Sinop, abriu para os 142 municípios de Mato
+Grosso, e desde 01/10/2026 aceita **os 5.571 municípios do país** — pedido
+do Paulinho: o app deixa de se apresentar como de um estado só. Recusar
+quem é de outro lugar era um formulário dizendo que o app não é dele, e
+foi esse o argumento que já tinha aberto MT inteiro.
 
-**A lista vem do IBGE, por script.** 142 nomes com acento e com "do/da/de"
-no meio, digitados à mão, dão um "Vila Bela da Santíssima Trindade" errado
-que ninguém revisa — e alguém de lá não acha a própria cidade. O arquivo
-gerado é versionado: em execução o app não fala com o IBGE, porque
-cadastro não pode depender de API de terceiro estar no ar.
+**Não existe mais cidade inicial.** `CIDADE_INICIAL` (Sinop), `ESTADO` e
+`ESTADO_NOME` saíram de `src/lib/constants.ts`. O cadastro vinha com Sinop
+escolhida, e quem não mexia no campo virava morador de Sinop sem saber —
+com o país inteiro aberto, esse palpite erra para quase todo mundo. A
+coluna também perdeu o `default 'Sinop'`: padrão de cidade é a cidade de
+quem não escolheu nenhuma.
+
+**A cidade é gravada com o estado: `"Sinop - MT"`.** 232 nomes de
+município se repetem entre estados — "Bom Jesus" existe em cinco —, e o
+nome sozinho deixou de identificar a cidade. O formato é o mesmo que a
+tela já mostrava (`rotuloDaCidade` montava "Sinop - MT"), então o valor
+gravado passou a ser o próprio rótulo, e o passo de "formatar a cidade"
+que alguém esqueceria numa tela nova deixou de existir. Os ajudantes
+(`cidadeComUf`, `ufDaCidade`, `nomeDaCidade`) moram em
+`src/lib/cidades/index.ts`. O dado antigo é convertido por
+`supabase/aplica-cidades-do-brasil.sql` — que precisa rodar **antes** do
+deploy, porque depois dele "Sinop" sem estado é recusado.
+
+**A lista vem do IBGE, por script, em três formas.** Mais de 5.500 nomes
+com acento e com "do/da/de" no meio, digitados à mão, dão um "Vila Bela da
+Santíssima Trindade" errado que ninguém revisa. `scripts/gerar-cidades.mjs`
+grava:
+
+- `src/lib/cidades/dados/<UF>.ts` — um arquivo por estado;
+- `src/lib/cidades/indice.ts` — a lista de estados e um `import()` por
+  estado, escrito um a um para qualquer bundler separar cada estado no
+  próprio pedaço;
+- `src/lib/cidades/todas.ts` — tudo junto, com `server-only`, para a
+  validação.
+
+O formulário escolhe **estado e depois cidade**, e o celular baixa só as
+cidades do estado escolhido: 5.571 nomes numa lista só seriam impossíveis
+de percorrer e caros de baixar em 3G. O `server-only` é a trava do outro
+lado: se um componente de cliente importar a lista inteira, o build quebra
+em vez de mandá-la ao celular. Em execução o app não fala com o IBGE,
+porque cadastro não pode depender de API de terceiro estar no ar.
+
+**O filtro de busca segue a mesma ideia.** `/vagas` e `/servicos` têm
+filtro de estado, e o de cidade só aparece com o estado escolhido —
+`filtrosDeLugar`, em `src/lib/busca.ts`. Sem isso a página levaria 5.571
+opções dentro do HTML a cada abertura. Trocar o estado solta a cidade
+(`limpa`, no `FilterBar`): "Sinop - MT" com SP escolhido é um filtro que
+nunca casa, e a tela diria "nenhuma vaga" sem dizer por quê.
 
 **Bairro deixou de ser enum.** Era `z.enum` dos 14 bairros de Sinop, usado
-no cadastro, no perfil e na vaga. Não existe lista de bairros de 142
-municípios pronta em lugar nenhum, e enum recusaria loteamento novo até em
+no cadastro, no perfil e na vaga. Não existe lista de bairros dos
+municípios do país pronta em lugar nenhum, e enum recusaria loteamento novo até em
 Sinop, onde a cidade cresce todo ano. A curadoria ficou na tela — lista
 onde existe, texto onde não existe —, e o servidor garante só o que evita
 lixo: tamanho mínimo e máximo.
@@ -1394,18 +1435,26 @@ correção de campo. Por ora é caso de suporte, como o CNPJ.
 
 ### Perto se mede por região do IBGE, não por quilômetro
 
-A busca cobre Mato Grosso inteiro e o estado tem 903 mil km². Ordenar só
-por data faz a primeira coisa que alguém de Sinop vê ser uma vaga em
-Cuiabá, a 500km — o oposto do que "hiperlocal" promete. Por isso a
-listagem ordena pelo mais perto de quem está olhando, numa escada de cinco
-degraus (`src/lib/proximidade.ts`): mesmo bairro, mesma cidade, mesma
-região imediata, mesma região intermediária, resto do estado.
+A busca cobre o Brasil inteiro. Ordenar só por data faz a primeira coisa
+que alguém de Sinop vê ser uma vaga em Porto Alegre — o oposto do que
+"perto de você" promete. Por isso a listagem ordena pelo mais perto de
+quem está olhando, numa escada de seis degraus (`src/lib/proximidade.ts`):
+mesmo bairro, mesma cidade, mesma região imediata, mesma região
+intermediária, **mesmo estado**, resto do país.
+
+**O degrau do estado entrou com a #301** e não precisa de mapa: o estado
+está no próprio valor gravado ("Sinop - MT"). É o que separa "longe, mas
+no mesmo estado" de "outro canto do país". As regiões vão pelo **id** do
+IBGE, não pelo nome, porque nome de região também se repete entre estados.
+O mapa (`src/lib/regioes.ts`, 5.571 entradas) é `server-only`: a busca
+ordena antes de a página sair, e mandá-lo ao celular seria centenas de kB
+para nada.
 
 **Por que região e não distância.** A região imediata do IBGE agrupa
 municípios pelo deslocamento real das pessoas para bens e serviços — é a
 pergunta certa aqui: até onde alguém daqui viaja para trabalhar. Linha reta
-seria pior e ainda exigiria outra fonte de dados, porque em MT quem decide
-o tempo de viagem é a estrada: 200km de asfalto e 200km de terra não são a
+seria pior e ainda exigiria outra fonte de dados, porque quem decide o
+tempo de viagem é a estrada: 200km de asfalto e 200km de terra não são a
 mesma distância. O mapa vem do mesmo IBGE que já gera a lista de cidades,
 por `scripts/gerar-regioes.mjs`, e é versionado — busca não pode depender
 de API de terceiro estar no ar.
@@ -1518,8 +1567,8 @@ ninguém. Qualquer outra falha não apaga nada: sumir com a inscrição de quem
 estava sem sinal é pior que deixar de avisar uma vez.
 
 **Bairro ficou fora**, decisão de 26/08/2026: não existe catálogo de bairro
-para os 142 municípios, só para Sinop. Notificar por bairro funcionaria bem
-numa cidade e mal nas outras 141.
+para os municípios do país, só para Sinop. Notificar por bairro funcionaria bem
+numa cidade e mal em todas as outras.
 
 **O envio sai por `after()`**, depois da resposta — quem publicou quer a
 vaga no ar, e o aviso é consequência. Mesma disciplina do registro de
@@ -2157,11 +2206,11 @@ para manter sem ninguém pedindo ainda.
   Lupa. As duas de rede social são a cor oficial clareada até passar no
   contraste (#133): a original reprovava em WCAG AA contra `panel-3`,
   do mesmo jeito que `--color-empresas` já tinha precisado de ajuste.
-- **Multi-cidade:** toda entidade tem `city`, e o app aceita os 142
-  municípios de Mato Grosso — lista gerada do IBGE por
-  `scripts/gerar-cidades.mjs`. `CIDADE_INICIAL` é Sinop, e é só isso: o
-  valor que já vem escolhido. Bairro tem lista curada onde alguém conferiu
-  (`BAIRROS_POR_CIDADE`) e é texto livre no resto.
+- **Multi-cidade:** toda entidade tem `city`, gravada com o estado
+  (`"Sinop - MT"`), e o app aceita os 5.571 municípios do Brasil — lista
+  gerada do IBGE por `scripts/gerar-cidades.mjs` (#301). Nenhuma cidade vem
+  escolhida por padrão. Bairro tem lista curada onde alguém conferiu
+  (`BAIRROS_POR_CIDADE`, hoje só Sinop) e é texto livre no resto.
 - **Dados sensíveis:** documento e selfie vão para o bucket privado
   `verificacao` e são apagados na decisão do admin. Erros enviados ao Sentry
   passam por `scrubSensitiveData`. Senha nunca é logada. São obrigações de

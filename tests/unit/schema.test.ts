@@ -28,8 +28,8 @@ async function criarUsuario(
   extras: { bairro?: string } = {},
 ) {
   const r = await db.query<{ id: string }>(
-    `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, bairro)
-     values ($1, $2, $3::papel_usuario, $4, $5, $6) returning id`,
+    `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, bairro, cidade)
+     values ($1, $2, $3::papel_usuario, $4, $5, $6, 'Sinop - MT') returning id`,
     [
       email,
       "$argon2id$v=19$m=19456,t=2,p=1$abc$def",
@@ -231,8 +231,8 @@ describe("regras que só existem no banco", () => {
   it("recusa telefone que não seja só dígitos", async () => {
     await expect(
       db.query(
-        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-         values ('mascara@teste.lupa', 'h', 'candidato_clt', 'X', '(66) 99911-0001')`,
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('mascara@teste.lupa', 'h', 'candidato_clt', 'X', '(66) 99911-0001', 'Sinop - MT')`,
       ),
     ).rejects.toThrow();
   });
@@ -240,8 +240,8 @@ describe("regras que só existem no banco", () => {
   it("recusa e-mail sem arroba", async () => {
     await expect(
       db.query(
-        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-         values ('semarroba', 'h', 'candidato_clt', 'X', '66999110001')`,
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('semarroba', 'h', 'candidato_clt', 'X', '66999110001', 'Sinop - MT')`,
       ),
     ).rejects.toThrow();
   });
@@ -256,8 +256,8 @@ describe("regras que só existem no banco", () => {
 
     await expect(
       db.query(
-        `insert into vagas (empresa_id, titulo, descricao, salario_min, salario_max)
-         values ($1, 'Cargo', 'Descrição', 5000, 2000)`,
+        `insert into vagas (empresa_id, titulo, descricao, salario_min, salario_max, cidade)
+         values ($1, 'Cargo', 'Descrição', 5000, 2000, 'Sinop - MT')`,
         [empresaId],
       ),
     ).rejects.toThrow();
@@ -271,8 +271,8 @@ describe("regras que só existem no banco", () => {
       [empresaId],
     );
     const vaga = await db.query<{ id: string }>(
-      `insert into vagas (empresa_id, titulo, descricao)
-       values ($1, 'Cargo', 'Descrição') returning id`,
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Cargo', 'Descrição', 'Sinop - MT') returning id`,
       [empresaId],
     );
     const candidatoId = await criarUsuario("candidato_clt", "cand@teste.lupa");
@@ -479,8 +479,8 @@ describe("views devolvem o formato que a aplicação espera", () => {
       expira_em: string;
       criado_em: string;
     }>(
-      `insert into vagas (empresa_id, titulo, descricao)
-       values ($1, 'Teste de prazo', 'Descrição de teste para o prazo de expiração.')
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Teste de prazo', 'Descrição de teste para o prazo de expiração.', 'Sinop - MT')
        returning id, expira_em, criado_em`,
       [empresaId],
     );
@@ -511,9 +511,9 @@ describe("views devolvem o formato que a aplicação espera", () => {
    */
   it("job_listings diz se quem contrata é pessoa física, sem expor documento", async () => {
     await db.query(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf)
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf, cidade)
        values ('autonomo@lupa.test', 'h', 'prestador_servico', 'Quem Contrata',
-               '66999990009', '11144477735')`,
+               '66999990009', '11144477735', 'Sinop - MT')`,
     );
     await db.query(
       `insert into perfis_empresa (usuario_id, razao_social, cnpj)
@@ -524,7 +524,7 @@ describe("views devolvem o formato que a aplicação espera", () => {
       `insert into vagas (empresa_id, titulo, descricao, categoria, cidade,
                           tipo_contrato)
        select id, 'Ajudante de lavoura', 'Diária na colheita.', 'Agronegócio',
-              'Sinop', 'CLT'
+              'Sinop - MT', 'CLT'
          from usuarios where email = 'autonomo@lupa.test'`,
     );
 
@@ -704,15 +704,15 @@ describe("grants de anon e authenticated", () => {
 
   it("o CPF é único onde existe, e livre onde não existe", async () => {
     await db.query(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf)
-       values ('cpf1@lupa.test', 'h', 'prestador_servico', 'Um', '66999990001', '52998224725')`,
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf, cidade)
+       values ('cpf1@lupa.test', 'h', 'prestador_servico', 'Um', '66999990001', '52998224725', 'Sinop - MT')`,
     );
 
     // Segundo prestador com o mesmo documento não entra.
     await expect(
       db.query(
-        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf)
-         values ('cpf2@lupa.test', 'h', 'prestador_servico', 'Dois', '66999990002', '52998224725')`,
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf, cidade)
+         values ('cpf2@lupa.test', 'h', 'prestador_servico', 'Dois', '66999990002', '52998224725', 'Sinop - MT')`,
       ),
     ).rejects.toThrow();
 
@@ -721,9 +721,9 @@ describe("grants de anon e authenticated", () => {
      * esmagadora maioria das contas nunca vai ter CPF — não é prestador.
      */
     await db.query(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('semcpf1@lupa.test', 'h', 'candidato_clt', 'Três', '66999990003'),
-              ('semcpf2@lupa.test', 'h', 'candidato_clt', 'Quatro', '66999990004')`,
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('semcpf1@lupa.test', 'h', 'candidato_clt', 'Três', '66999990003', 'Sinop - MT'),
+              ('semcpf2@lupa.test', 'h', 'candidato_clt', 'Quatro', '66999990004', 'Sinop - MT')`,
     );
   });
 
@@ -950,8 +950,8 @@ describe("contagem de visualizações", () => {
     await banco.exec(SCHEMA);
 
     const empresa = await banco.query<{ id: string }>(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('vis@teste.lupa', 'h', 'empresa', 'Empresa', '66000000001')
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('vis@teste.lupa', 'h', 'empresa', 'Empresa', '66000000001', 'Sinop - MT')
        returning id`,
     );
     await banco.query(
@@ -960,8 +960,8 @@ describe("contagem de visualizações", () => {
       [empresa.rows[0].id],
     );
     const vaga = await banco.query<{ id: string }>(
-      `insert into vagas (empresa_id, titulo, descricao)
-       values ($1, 'Cargo', 'Descrição') returning id`,
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Cargo', 'Descrição', 'Sinop - MT') returning id`,
       [empresa.rows[0].id],
     );
     vagaId = vaga.rows[0].id;
@@ -1053,8 +1053,8 @@ describe("habilidades da vaga", () => {
     await banco.exec(SCHEMA);
 
     const empresa = await banco.query<{ id: string }>(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('hab@teste.lupa', 'h', 'empresa', 'Empresa', '66000000001')
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('hab@teste.lupa', 'h', 'empresa', 'Empresa', '66000000001', 'Sinop - MT')
        returning id`,
     );
     empresaId = empresa.rows[0].id;
@@ -1072,7 +1072,7 @@ describe("habilidades da vaga", () => {
   it("nasce como lista vazia, não nula", async () => {
     const r = await banco.query<{ habilidades: string[] }>(
       `insert into vagas (empresa_id, titulo, descricao, cidade)
-       select usuario_id, 'Vaga sem habilidade', 'Descricao.', 'Sinop'
+       select usuario_id, 'Vaga sem habilidade', 'Descricao.', 'Sinop - MT'
          from perfis_empresa limit 1
        returning habilidades`,
     );
@@ -1083,7 +1083,7 @@ describe("habilidades da vaga", () => {
   it("guarda a lista como veio, sem mexer no texto", async () => {
     const r = await banco.query<{ habilidades: string[] }>(
       `insert into vagas (empresa_id, titulo, descricao, cidade, habilidades)
-       select usuario_id, 'Operador', 'Descricao.', 'Sinop',
+       select usuario_id, 'Operador', 'Descricao.', 'Sinop - MT',
               array['Colheitadeira', 'CNH D']
          from perfis_empresa limit 1
        returning habilidades`,
@@ -1126,8 +1126,8 @@ describe("candidatos disponíveis", () => {
       ["nao@teste.lupa", "Quem Nao Optou", false],
     ] as const) {
       const u = await banco.query<{ id: string }>(
-        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-         values ($1, 'h', 'candidato_clt', $2, '66000000001') returning id`,
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ($1, 'h', 'candidato_clt', $2, '66000000001', 'Sinop - MT') returning id`,
         [email, nome],
       );
       await banco.query(
@@ -1144,8 +1144,8 @@ describe("candidatos disponíveis", () => {
 
   it("nasce desligado — o padrão é o que protege", async () => {
     const u = await banco.query<{ id: string }>(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('padrao@teste.lupa', 'h', 'candidato_clt', 'Padrao', '66000000002')
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('padrao@teste.lupa', 'h', 'candidato_clt', 'Padrao', '66000000002', 'Sinop - MT')
        returning id`,
     );
     const r = await banco.query<{ visivel_para_empresas: boolean }>(
@@ -1689,8 +1689,8 @@ describe("corte de revogação de sessão", () => {
    */
   it("nasce nula, e a esmagadora maioria continua assim", async () => {
     const r = await banco.query<{ corte: string | null }>(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('corte@lupa.test', 'h', 'candidato_clt', 'Alguém', '66999110009')
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('corte@lupa.test', 'h', 'candidato_clt', 'Alguém', '66999110009', 'Sinop - MT')
        returning sessoes_validas_desde as corte`,
     );
     expect(r.rows[0].corte).toBeNull();
@@ -1722,11 +1722,11 @@ describe("corte de revogação de sessão", () => {
   it("a lista traz só os últimos sete dias", async () => {
     await banco.query(
       `insert into usuarios (email, senha_hash, papel, nome_completo, telefone,
-                             sessoes_validas_desde)
+                             sessoes_validas_desde, cidade)
        values ('recente@lupa.test', 'h', 'candidato_clt', 'Recente', '66999110010',
-               now() - interval '2 days'),
+               now() - interval '2 days', 'Sinop - MT'),
               ('antigo@lupa.test',  'h', 'candidato_clt', 'Antigo',  '66999110011',
-               now() - interval '30 days')`,
+               now() - interval '30 days', 'Sinop - MT')`,
     );
 
     const r = await banco.query<{ email: string }>(
@@ -1772,8 +1772,8 @@ describe("finalidade do token de uso único", () => {
     await banco.exec(SCHEMA);
 
     const r = await banco.query<{ id: string }>(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('token@lupa.test', 'h', 'candidato_clt', 'Alguém', '66999110013')
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('token@lupa.test', 'h', 'candidato_clt', 'Alguém', '66999110013', 'Sinop - MT')
        returning id`,
     );
     usuarioId = r.rows[0].id;

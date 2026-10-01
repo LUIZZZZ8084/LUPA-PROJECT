@@ -27,7 +27,7 @@ const DADOS = {
   titulo: "Auxiliar Administrativo",
   descricao: "Rotina de recepção, arquivo e atendimento telefônico.",
   categoria: "Administrativo",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
   tipoContrato: "CLT",
   modalidade: "presencial" as const,
   endereco: "Av. das Itaúbas, 1200",

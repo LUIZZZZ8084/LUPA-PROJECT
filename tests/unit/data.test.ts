@@ -84,8 +84,10 @@ describe("getJobs", () => {
   });
 
   it("respeita o filtro de cidade", async () => {
-    expect((await getJobs({ city: "Sorriso" })).itens).toEqual([]);
-    expect((await getJobs({ city: "Sinop" })).itens.length).toBeGreaterThan(0);
+    expect((await getJobs({ city: "Sorriso - MT" })).itens).toEqual([]);
+    expect(
+      (await getJobs({ city: "Sinop - MT" })).itens.length,
+    ).toBeGreaterThan(0);
   });
 
   it("combina filtros de forma restritiva", async () => {
@@ -477,11 +479,14 @@ describe("getHomeFeed", () => {
    * A busca já ordenava por perto; a home tinha ficado de fora.
    */
   it("os destaques também vêm do mais perto para o mais longe", async () => {
-    const daCapital = await getHomeFeed({ cidade: "Cuiabá", bairro: null });
-    const deSinop = await getHomeFeed({ cidade: "Sinop", bairro: null });
+    const daCapital = await getHomeFeed({
+      cidade: "Cuiabá - MT",
+      bairro: null,
+    });
+    const deSinop = await getHomeFeed({ cidade: "Sinop - MT", bairro: null });
 
     // O mock é de Sinop: visto de Sinop, a primeira é daqui.
-    expect(deSinop.jobs[0].city).toBe("Sinop");
+    expect(deSinop.jobs[0].city).toBe("Sinop - MT");
 
     /*
      * Visto de Cuiabá as mesmas vagas empatam no último degrau e a ordem
@@ -542,11 +547,11 @@ describe("busca ordenada pelo mais perto", () => {
 
   it("traz a cidade da pessoa antes da região, e a região antes do resto", async () => {
     await getJobs(); // semeia os dados de exemplo antes de criar os novos
-    const cuiaba = await publicarEm("Cuiabá", "Vaga de Cuiabá");
-    const claudia = await publicarEm("Cláudia", "Vaga de Cláudia");
-    const sorriso = await publicarEm("Sorriso", "Vaga de Sorriso");
+    const cuiaba = await publicarEm("Cuiabá - MT", "Vaga de Cuiabá");
+    const claudia = await publicarEm("Cláudia - MT", "Vaga de Cláudia");
+    const sorriso = await publicarEm("Sorriso - MT", "Vaga de Sorriso");
 
-    const { itens: jobs } = await getJobs({ perto: { cidade: "Sinop" } });
+    const { itens: jobs } = await getJobs({ perto: { cidade: "Sinop - MT" } });
     const posicao = (id: string) => jobs.findIndex((j) => j.id === id);
 
     // Alguma vaga de Sinop precisa vir antes de todas as outras.
@@ -557,7 +562,9 @@ describe("busca ordenada pelo mais perto", () => {
 
   it("ordenar não é filtrar: nada sai da lista por estar longe", async () => {
     const { itens: semPerto } = await getJobs();
-    const { itens: comPerto } = await getJobs({ perto: { cidade: "Cuiabá" } });
+    const { itens: comPerto } = await getJobs({
+      perto: { cidade: "Cuiabá - MT" },
+    });
 
     expect(comPerto).toHaveLength(semPerto.length);
     expect(new Set(comPerto.map((j) => j.id))).toEqual(
@@ -571,9 +578,9 @@ describe("busca ordenada pelo mais perto", () => {
   });
 
   it("dentro da mesma cidade, o desempate por data continua valendo", async () => {
-    const { itens: jobs } = await getJobs({ perto: { cidade: "Sinop" } });
+    const { itens: jobs } = await getJobs({ perto: { cidade: "Sinop - MT" } });
     const datas = jobs
-      .filter((j) => j.city === "Sinop")
+      .filter((j) => j.city === "Sinop - MT")
       .map((j) => +new Date(j.created_at));
 
     expect(datas).toEqual([...datas].sort((a, b) => b - a));
@@ -581,17 +588,17 @@ describe("busca ordenada pelo mais perto", () => {
 
   it("o filtro de cidade continua restringindo, com `perto` junto", async () => {
     const { itens: jobs } = await getJobs({
-      city: "Cláudia",
-      perto: { cidade: "Sinop" },
+      city: "Cláudia - MT",
+      perto: { cidade: "Sinop - MT" },
     });
     expect(jobs.length).toBeGreaterThan(0);
-    expect(jobs.every((j) => j.city === "Cláudia")).toBe(true);
+    expect(jobs.every((j) => j.city === "Cláudia - MT")).toBe(true);
   });
 
   it("prestador: o desempate por nota sobrevive à proximidade", async () => {
     // Todos os prestadores de exemplo são de Sinop, então empatam no grau.
     const { itens: providers } = await getProviders({
-      perto: { cidade: "Sinop" },
+      perto: { cidade: "Sinop - MT" },
     });
     const { itens: semPerto } = await getProviders();
 

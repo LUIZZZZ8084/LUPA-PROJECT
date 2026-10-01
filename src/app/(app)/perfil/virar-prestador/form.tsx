@@ -178,7 +178,7 @@ export function AtivarPrestadorForm({
               name="descricao"
               rows={5}
               required
-              placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo Sinop e região."
+              placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo minha cidade e a região."
             />
           </Field>
 

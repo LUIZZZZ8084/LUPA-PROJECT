@@ -179,7 +179,7 @@ describe("painel administrativo", () => {
         papel: "candidato_clt",
         nomeCompleto: "Novo",
         telefone: "66999110001",
-        cidade: "Sinop",
+        cidade: "Sinop - MT",
       });
 
       restaurar = usarRepositorioMetricas(
@@ -217,7 +217,7 @@ describe("painel administrativo", () => {
           papel: "candidato_clt",
           nomeCompleto: "Teste",
           telefone: "66999110001",
-          cidade: "Sinop",
+          cidade: "Sinop - MT",
           bairro,
         });
       }
@@ -264,7 +264,7 @@ describe("métricas no modo demonstração", () => {
       papel,
       nomeCompleto: "Teste",
       telefone: "66999110001",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       bairro,
     });
   }

@@ -47,7 +47,7 @@ describe("mensalidade de prestador", () => {
       papel: "candidato_clt",
       nomeCompleto: "Prestador de Teste",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     const sessao: Autenticado = {
       usuarioId: usuario.id,
@@ -135,7 +135,7 @@ describe("mensalidade de prestador", () => {
       papel: "prestador_servico",
       nomeCompleto: "Prestador Sem Mensalidade Anterior",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     await repositorioUsuarios().criarPerfilPrestador({
       usuarioId: usuario.id,
@@ -167,7 +167,7 @@ describe("mensalidade de prestador", () => {
       papel: "candidato_clt",
       nomeCompleto: "Só Candidato",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
 
     await expect(estenderMensalidade(usuario.id)).rejects.toMatchObject({

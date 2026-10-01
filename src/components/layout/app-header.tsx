@@ -10,7 +10,6 @@ import {
 } from "@/components/layout/menu-do-usuario";
 import { AlternarTema } from "@/components/theme-toggle";
 import { ButtonLink } from "@/components/ui/button";
-import { ESTADO_NOME, rotuloDaCidade } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 /**
@@ -92,7 +91,7 @@ export function AppHeader({
           */}
           <span className="hidden items-center gap-1.5 text-xs text-muted sm:inline-flex">
             <MapPin size={14} className="text-vagas" />
-            {usuario ? rotuloDaCidade(usuario.cidade) : ESTADO_NOME}
+            {usuario ? usuario.cidade : "Brasil"}
           </span>
           {/*
             Os avisos de vaga, a um toque (#288). Moravam no fim de "Editar

@@ -279,7 +279,7 @@ export function SignUpForm({ role }: { role: Role }) {
               type="tel"
               inputMode="tel"
               autoComplete="tel"
-              placeholder="(66) 99999-0000"
+              placeholder="(11) 99999-0000"
               required
             />
           </Field>
@@ -363,7 +363,7 @@ export function SignUpForm({ role }: { role: Role }) {
                 name="descricao"
                 rows={5}
                 required
-                placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo Sinop e região."
+                placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo minha cidade e a região."
               />
             </Field>
           </>

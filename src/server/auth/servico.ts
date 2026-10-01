@@ -1,4 +1,3 @@
-import { CIDADE_INICIAL } from "@/lib/constants";
 import { AppError, erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
@@ -108,7 +107,7 @@ export async function cadastrar(
     nomeCompleto: dados.nomeCompleto,
     cpf: dados.papel === "empresa" ? (dados.cpf ?? null) : dados.cpf,
     telefone: dados.telefone,
-    cidade: dados.cidade ?? CIDADE_INICIAL,
+    cidade: dados.cidade,
     bairro: dados.bairro ?? null,
   });
 

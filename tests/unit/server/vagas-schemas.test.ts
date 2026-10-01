@@ -12,7 +12,7 @@ const DADOS = {
   titulo: "Auxiliar Administrativo",
   descricao: "Rotina de recepção, arquivo e atendimento telefônico.",
   categoria: "Administrativo",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
   tipoContrato: "CLT",
   modalidade: "presencial" as const,
   endereco: "Av. das Itaúbas, 1200",
@@ -63,7 +63,7 @@ describe("schemaNovaVaga", () => {
   it("aceita bairro fora da lista curada", () => {
     const r = schemaNovaVaga.safeParse({
       ...DADOS,
-      cidade: "Sorriso",
+      cidade: "Sorriso - MT",
       bairro: "Jardim Itália",
     });
     expect(r.success).toBe(true);
@@ -74,15 +74,20 @@ describe("schemaNovaVaga", () => {
     expect(r.success).toBe(false);
   });
 
-  it("recusa cidade fora de Mato Grosso", () => {
-    for (const cidade of ["Curitiba", "sinop", "Sinop - MT", ""]) {
+  it("recusa o que não é município do Brasil, com o estado", () => {
+    for (const cidade of ["Curitiba", "sinop", "Sinop", "Sinop-MT", ""]) {
       const r = schemaNovaVaga.safeParse({ ...DADOS, cidade });
       expect(r.success, cidade || "(vazio)").toBe(false);
     }
   });
 
-  it("aceita qualquer município de MT, não só o inicial", () => {
-    for (const cidade of ["Cuiabá", "Sorriso", "Alta Floresta", "Vera"]) {
+  it("aceita qualquer município do Brasil, não só de MT", () => {
+    for (const cidade of [
+      "Cuiabá - MT",
+      "Sorriso - MT",
+      "São Paulo - SP",
+      "Bom Jesus - PI",
+    ]) {
       const r = schemaNovaVaga.safeParse({ ...DADOS, cidade });
       expect(r.success, cidade).toBe(true);
     }

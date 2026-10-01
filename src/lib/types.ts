@@ -223,6 +223,8 @@ export interface MyApplication extends Application {
 
 export interface JobFilters {
   city?: string;
+  /** Sigla do estado, quando não há cidade escolhida (#301). */
+  uf?: string;
   perto?: Origem;
   category?: string;
   contract_type?: string;
@@ -231,6 +233,8 @@ export interface JobFilters {
 
 export interface ProviderFilters {
   city?: string;
+  /** Sigla do estado, quando não há cidade escolhida (#301). */
+  uf?: string;
   perto?: Origem;
   category?: string;
   /** Nota mínima, ex.: 4 mostra só quem tem 4,0 ou mais. */

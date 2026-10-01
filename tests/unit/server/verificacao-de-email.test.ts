@@ -61,7 +61,7 @@ describe("verificação de e-mail", () => {
       papel: "candidato_clt",
       nomeCompleto: "Maria Souza",
       telefone: "66999110001",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       bairro: null,
     });
     usuarioId = usuario.id;

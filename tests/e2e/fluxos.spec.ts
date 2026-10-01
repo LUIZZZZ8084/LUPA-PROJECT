@@ -4,6 +4,7 @@ import {
   aguardarHidratacao,
   cnpjAlfanumericoDeTeste,
   cpfDeTeste,
+  escolherCidade,
 } from "./helpers";
 
 test.describe("busca de vagas", () => {
@@ -379,6 +380,7 @@ test.describe("cadastro que dá erro", () => {
     // Dígito verificador errado: o certo seria 12345678909.
     await page.getByLabel("CPF").fill("12345678900");
     await page.getByLabel("Área desejada").selectOption({ index: 1 });
+    await escolherCidade(page);
     await page.getByLabel("Senha").fill("abc123");
     await page.getByRole("button", { name: /criar conta/i }).click();
 
@@ -393,6 +395,10 @@ test.describe("cadastro que dá erro", () => {
     await expect(page.getByLabel("WhatsApp")).toHaveValue("66999999999");
     await expect(page.getByLabel("Área desejada")).not.toHaveValue("");
     await expect(page.getByLabel("Senha")).toHaveValue("abc123");
+    // A cidade escolhida em dois passos também sobrevive ao erro (#301).
+    await expect(page.getByLabel("Cidade", { exact: true })).toHaveValue(
+      "Sinop - MT",
+    );
     await expect(page.getByLabel("Nome completo")).not.toHaveAttribute(
       "aria-invalid",
     );
@@ -450,6 +456,7 @@ test.describe("cadastro de empresa com CNPJ alfanumérico", () => {
     await cnpj.fill(pontuado.toLowerCase());
     await page.getByLabel("E-mail").fill(`e2e-alfa-${Date.now()}@teste.lupa`);
     await page.getByLabel("WhatsApp").fill("66999999999");
+    await escolherCidade(page);
     await page.getByLabel("Senha").fill("abc123");
     await page.getByRole("button", { name: /criar conta/i }).click();
 
@@ -474,6 +481,7 @@ test.describe("cadastro de empresa com CNPJ alfanumérico", () => {
       .getByLabel("E-mail")
       .fill(`e2e-alfa-ruim-${Date.now()}@teste.lupa`);
     await page.getByLabel("WhatsApp").fill("66999999999");
+    await escolherCidade(page);
     await page.getByLabel("Senha").fill("abc123");
     await page.getByRole("button", { name: /criar conta/i }).click();
 

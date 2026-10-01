@@ -84,7 +84,7 @@ export default function ImagemDoLink() {
       </div>
 
       <div style={{ marginTop: 36, fontSize: 32, color: "#9aa7b4" }}>
-        Vagas e prestadores de serviço em Sinop e todo o Mato Grosso
+        Vagas e prestadores de serviço no Brasil inteiro
       </div>
     </div>,
     size,

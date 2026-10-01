@@ -3,6 +3,7 @@ import {
   ARQUIVO_SESSAO_EMPRESA,
   aguardarHidratacao,
   confirmarPublicacao,
+  escolherCidade,
 } from "./helpers";
 
 /**
@@ -25,7 +26,7 @@ import {
 test.describe("vaga publicada fora de Sinop", () => {
   test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
 
-  const CIDADE = "Sorriso";
+  const CIDADE = "Sorriso - MT";
 
   test("aparece na busca de vagas, e não só na home", async ({ page }) => {
     const cargo = `Conferente de Pátio E2E ${Date.now()}`;
@@ -35,7 +36,7 @@ test.describe("vaga publicada fora de Sinop", () => {
     await page.getByLabel("Categoria").selectOption("Logística e Transporte");
     await page.getByLabel("Tipo de contrato").selectOption("CLT");
     await page.getByLabel("Presencial").check();
-    await page.getByLabel("Cidade da vaga").selectOption(CIDADE);
+    await escolherCidade(page, CIDADE, "Cidade da vaga");
     await page.getByLabel("Endereço").fill("Rua de teste, 100");
     await page
       .getByLabel("Descrição da vaga")
@@ -85,7 +86,7 @@ test.describe("vaga publicada fora de Sinop", () => {
     await page.getByLabel("Categoria").selectOption("Logística e Transporte");
     await page.getByLabel("Tipo de contrato").selectOption("CLT");
     await page.getByLabel("Presencial").check();
-    await page.getByLabel("Cidade da vaga").selectOption(CIDADE);
+    await escolherCidade(page, CIDADE, "Cidade da vaga");
     await page.getByLabel("Endereço").fill("Rua de teste, 100");
     await page
       .getByLabel("Descrição da vaga")
@@ -99,16 +100,16 @@ test.describe("vaga publicada fora de Sinop", () => {
 
     const link = page.getByRole("link", { name: new RegExp(cargo) });
 
-    await page.goto("/vagas?cidade=Sinop");
+    await page.goto(`/vagas?cidade=${encodeURIComponent("Sinop - MT")}`);
     await expect(link).toHaveCount(0);
 
-    await page.goto(`/vagas?cidade=${CIDADE}`);
+    await page.goto(`/vagas?cidade=${encodeURIComponent(CIDADE)}`);
     await expect(link).toBeVisible();
 
-    // E o chip volta a "Todo o MT" ao limpar, mostrando a vaga de novo.
+    // E o chip volta a "Todo o Brasil" ao limpar, mostrando a vaga de novo.
     await page.goto("/vagas");
     await aguardarHidratacao(page);
-    await expect(page.getByLabel("Todo o MT")).toHaveValue("");
+    await expect(page.getByLabel("Todo o Brasil")).toHaveValue("");
     await expect(link).toBeVisible();
   });
 });

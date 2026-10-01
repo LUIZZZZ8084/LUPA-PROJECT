@@ -18,7 +18,7 @@ const MINIMO: DadosCurriculo = {
   nomeCompleto: "Ana Souza",
   email: "ana@teste.lupa",
   telefone: "66999990000",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
   bairro: null,
   areaDesejada: null,
   resumo: null,

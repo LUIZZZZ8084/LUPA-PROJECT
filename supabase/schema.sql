@@ -152,7 +152,12 @@ create table usuarios (
    */
   cpf                  text,
   telefone             text not null,
-  cidade               text not null default 'Sinop',
+  /*
+   * "Sinop - MT": a cidade vai com o estado, porque 232 nomes de município
+   * se repetem entre estados (#301). Sem padrão: um padrão aqui é a cidade
+   * de quem não escolheu nenhuma, e o app não tem mais cidade inicial.
+   */
+  cidade               text not null,
   bairro               text,
   avatar_url           text,
   email_verificado     boolean not null default false,
@@ -373,7 +378,7 @@ create table vagas (
   titulo        text not null,
   descricao     text not null,
   categoria     text,
-  cidade        text not null default 'Sinop',
+  cidade        text not null,
   bairro        text,
   /*
    * Rua, número, ponto de referência — texto livre, sem geocodificação.

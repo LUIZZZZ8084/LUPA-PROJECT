@@ -71,6 +71,27 @@ export async function aguardarHidratacao(page: Page, seletor = "select") {
 }
 
 /**
+ * Escolhe estado e cidade no campo de dois passos (#301).
+ *
+ * Espera a hidratação antes: o seletor de estado é controlado pelo React,
+ * e escolhido antes disso ele volta ao vazio quando o React assume — e a
+ * lista de cidades, que só chega depois do estado, nunca aparece. O
+ * `selectOption` da cidade já espera a opção existir, então a carga sob
+ * demanda das cidades não precisa de espera à parte.
+ */
+export async function escolherCidade(
+  page: Page,
+  cidade = "Sinop - MT",
+  rotulo = "Cidade",
+): Promise<void> {
+  await aguardarHidratacao(page, "form");
+  await page
+    .getByLabel("Estado", { exact: true })
+    .selectOption(cidade.slice(-2));
+  await page.getByLabel(rotulo, { exact: true }).selectOption(cidade);
+}
+
+/**
  * Cria uma conta e entra.
  *
  * O app é fechado: sem sessão, toda rota redireciona para `/entrar`. As
@@ -97,6 +118,7 @@ export async function entrarComoTeste(page: Page): Promise<string> {
   // literal fixo passa na primeira conta e é recusado na segunda.
   await page.getByLabel("CPF").fill(cpfDeTeste());
   await page.getByLabel("Área desejada").selectOption({ index: 1 });
+  await escolherCidade(page);
   await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
 
   await page.getByRole("button", { name: /criar conta/i }).click();
@@ -238,6 +260,7 @@ export async function entrarComoEmpresa(page: Page): Promise<string> {
   await page.getByLabel("CNPJ").fill(cnpjDeTeste());
   await page.getByLabel("E-mail").fill(email);
   await page.getByLabel("WhatsApp").fill("66999999999");
+  await escolherCidade(page);
   await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
 
   await page.getByRole("button", { name: /criar conta/i }).click();

@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { aguardarHidratacao, cnpjDeTeste, SENHA_DE_TESTE } from "./helpers";
+import {
+  aguardarHidratacao,
+  cnpjDeTeste,
+  escolherCidade,
+  SENHA_DE_TESTE,
+} from "./helpers";
 
 /**
  * A tela que aparece logo depois de criar uma conta de empresa (#299).
@@ -30,6 +35,7 @@ test.describe("plano depois do cadastro da empresa", () => {
     await page.getByLabel("CNPJ").fill(cnpjDeTeste());
     await page.getByLabel("E-mail").fill(`e2e-plano-${Date.now()}@teste.lupa`);
     await page.getByLabel("WhatsApp").fill("66999999999");
+    await escolherCidade(page);
     await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
     await page.getByRole("button", { name: /criar conta/i }).click();
 

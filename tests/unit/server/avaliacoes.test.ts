@@ -38,7 +38,7 @@ describe("avaliar prestador", () => {
       papel,
       nomeCompleto: "Quem Avalia",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     return { usuarioId: usuario.id, papel };
   }

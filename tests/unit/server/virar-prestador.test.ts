@@ -40,7 +40,7 @@ describe("virar prestador", () => {
       papel: "candidato_clt",
       nomeCompleto: "Pessoa de Teste",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       bairro: "Centro",
       avatarUrl,
     });

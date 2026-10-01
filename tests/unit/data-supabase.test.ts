@@ -143,7 +143,7 @@ const VAGA_DO_BANCO = {
   title: "Vaga vinda do Postgres",
   description: "descrição",
   category: "Agronegócio",
-  city: "Sinop",
+  city: "Sinop - MT",
   neighborhood: null,
   contract_type: "CLT",
   work_mode: "presencial" as const,
@@ -176,7 +176,7 @@ describe("camada de dados com Supabase ligado", () => {
     respostaAtual = { data: [], error: null };
 
     await getJobs({
-      city: "Sinop",
+      city: "Sinop - MT",
       category: "Agronegócio",
       contract_type: "CLT",
       q: "operador",
@@ -190,7 +190,7 @@ describe("camada de dados com Supabase ligado", () => {
       .filter((c) => c.metodo === "eq")
       .flatMap((c) => c.args);
 
-    expect(eqs).toContain("Sinop");
+    expect(eqs).toContain("Sinop - MT");
     expect(eqs).toContain("Agronegócio");
     expect(eqs).toContain("CLT");
     // Só vagas abertas chegam à busca pública.
@@ -202,7 +202,7 @@ describe("camada de dados com Supabase ligado", () => {
    * O teste acima confere que os valores chegaram; este confere em qual
    * coluna, e que nada é filtrado quando o filtro não veio.
    *
-   * A diferença importa: `eq("", "Sinop")` e `eq("city", undefined)` passam
+   * A diferença importa: `eq("", "Sinop - MT")` e `eq("city", undefined)` passam
    * na conferência por valor e devolvem a base inteira em produção. Foi
    * assim que o `or()` com termo cru vazou a base — filtro que parece
    * aplicado e não está.
@@ -211,7 +211,7 @@ describe("camada de dados com Supabase ligado", () => {
     respostaAtual = { data: [], error: null };
 
     await getJobs({
-      city: "Sinop",
+      city: "Sinop - MT",
       category: "Agronegócio",
       contract_type: "CLT",
     });
@@ -224,7 +224,7 @@ describe("camada de dados com Supabase ligado", () => {
 
     expect(pares).toEqual([
       ["status", "aberta"],
-      ["city", "Sinop"],
+      ["city", "Sinop - MT"],
       ["category", "Agronegócio"],
       ["contract_type", "CLT"],
     ]);
@@ -290,7 +290,7 @@ describe("camada de dados com Supabase ligado", () => {
   it("categoria de prestador filtra por slug, não pelo nome", async () => {
     respostaAtual = { data: [], error: null };
 
-    await getProviders({ category: "eletricista", city: "Sinop" });
+    await getProviders({ category: "eletricista", city: "Sinop - MT" });
 
     const pares = (
       ultimoBuilder.chamadas as { metodo: string; args: unknown[] }[]
@@ -300,7 +300,7 @@ describe("camada de dados com Supabase ligado", () => {
 
     expect(pares).toEqual([
       ["doc_verified", true],
-      ["city", "Sinop"],
+      ["city", "Sinop - MT"],
       ["category_slug", "eletricista"],
     ]);
   });

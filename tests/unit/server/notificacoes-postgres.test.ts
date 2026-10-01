@@ -75,13 +75,17 @@ describe("repositório de notificações no Postgres", () => {
 
   it("lê a preferência da pessoa", async () => {
     porTabela.preferencias_notificacao = {
-      data: { usuario_id: "u1", cidade: "Sinop", categoria: "Agronegócio" },
+      data: {
+        usuario_id: "u1",
+        cidade: "Sinop - MT",
+        categoria: "Agronegócio",
+      },
       error: null,
     };
 
     expect(await repo.preferencia("u1")).toEqual({
       usuarioId: "u1",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       categoria: "Agronegócio",
     });
   });
@@ -93,7 +97,7 @@ describe("repositório de notificações no Postgres", () => {
 
   it("categoria ausente vira null, e não string vazia", async () => {
     porTabela.preferencias_notificacao = {
-      data: { usuario_id: "u1", cidade: "Sinop", categoria: null },
+      data: { usuario_id: "u1", cidade: "Sinop - MT", categoria: null },
       error: null,
     };
     expect((await repo.preferencia("u1"))?.categoria).toBeNull();
@@ -103,7 +107,7 @@ describe("repositório de notificações no Postgres", () => {
   it("salvar preferência é upsert por usuario_id", async () => {
     await repo.salvarPreferencia({
       usuarioId: "u1",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       categoria: null,
     });
 
@@ -129,7 +133,7 @@ describe("repositório de notificações no Postgres", () => {
       error: null,
     };
 
-    await repo.inscricoesInteressadas("Sinop", "Agronegócio");
+    await repo.inscricoesInteressadas("Sinop - MT", "Agronegócio");
 
     expect(metodos("preferencias_notificacao")).not.toContain("or");
     expect(metodos("preferencias_notificacao")).toContain("is");
@@ -144,7 +148,7 @@ describe("repositório de notificações no Postgres", () => {
   it("vaga sem categoria não consulta a segunda condição", async () => {
     porTabela.preferencias_notificacao = { data: [], error: null };
 
-    await repo.inscricoesInteressadas("Sinop", null);
+    await repo.inscricoesInteressadas("Sinop - MT", null);
 
     const eqs = chamadas.filter(
       (c) => c.tabela === "preferencias_notificacao" && c.metodo === "eq",
@@ -157,9 +161,9 @@ describe("repositório de notificações no Postgres", () => {
   it("ninguém interessado não vai buscar inscrição", async () => {
     porTabela.preferencias_notificacao = { data: [], error: null };
 
-    expect(await repo.inscricoesInteressadas("Sinop", "Agronegócio")).toEqual(
-      [],
-    );
+    expect(
+      await repo.inscricoesInteressadas("Sinop - MT", "Agronegócio"),
+    ).toEqual([]);
     expect(metodos("inscricoes_push")).toEqual([]);
   });
 
@@ -171,7 +175,7 @@ describe("repositório de notificações no Postgres", () => {
     };
     porTabela.inscricoes_push = { data: [], error: null };
 
-    await repo.inscricoesInteressadas("Sinop", "Agronegócio");
+    await repo.inscricoesInteressadas("Sinop - MT", "Agronegócio");
 
     const dentro = chamadas.find(
       (c) => c.tabela === "inscricoes_push" && c.metodo === "in",
@@ -227,7 +231,7 @@ describe("repositório de notificações no Postgres", () => {
     await expect(
       repo.salvarPreferencia({
         usuarioId: "u1",
-        cidade: "Sinop",
+        cidade: "Sinop - MT",
         categoria: null,
       }),
     ).rejects.toMatchObject({ codigo: "indisponivel" });

@@ -147,7 +147,7 @@ describe("verificação automática", () => {
       papel: "empresa",
       nomeCompleto: "Quem Representa",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     usuarioId = usuario.id;
     await repo.criarPerfilEmpresa({
@@ -279,7 +279,7 @@ describe("verificação automática", () => {
       papel: "prestador_servico",
       nomeCompleto: "Quem Presta",
       telefone: "66999990001",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
 
     const r = await verificar(

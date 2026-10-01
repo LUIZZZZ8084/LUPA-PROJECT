@@ -121,15 +121,19 @@ describe("RepositorioMetricasPostgres", () => {
   it("locais vêm ordenados e limitados", async () => {
     respostas.set("metricas_por_local", {
       data: [
-        { cidade: "Sinop", bairro: "Centro", total: "12" },
-        { cidade: "Sinop", bairro: null, total: "3" },
+        { cidade: "Sinop - MT", bairro: "Centro", total: "12" },
+        { cidade: "Sinop - MT", bairro: null, total: "3" },
       ],
       error: null,
     });
 
     const locais = await repo.distribuicaoPorLocal(10);
 
-    expect(locais[0]).toEqual({ cidade: "Sinop", bairro: "Centro", total: 12 });
+    expect(locais[0]).toEqual({
+      cidade: "Sinop - MT",
+      bairro: "Centro",
+      total: 12,
+    });
     expect(locais[1].bairro).toBeNull();
 
     const limit = chamadas.find((c) => c.metodo === "limit");

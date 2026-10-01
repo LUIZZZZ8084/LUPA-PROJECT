@@ -30,7 +30,9 @@ function montar(
   direito: { mensalAtivo: boolean; creditos: number },
   area = AREA_EMPRESA,
 ) {
-  render(<NewJobForm cidadeDaEmpresa="Sinop" area={area} direito={direito} />);
+  render(
+    <NewJobForm cidadeDaEmpresa="Sinop - MT" area={area} direito={direito} />,
+  );
 }
 
 describe("aviso de saldo ao publicar", () => {

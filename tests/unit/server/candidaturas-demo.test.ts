@@ -34,7 +34,7 @@ const DADOS_VAGA = {
   titulo: "Auxiliar Administrativo",
   descricao: "Rotina de recepção, arquivo e atendimento telefônico.",
   categoria: "Administrativo",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
   tipoContrato: "CLT",
   modalidade: "presencial" as const,
   endereco: "Av. das Itaúbas, 1200",
@@ -137,7 +137,7 @@ describe("experiência do candidato chega até a empresa, em demonstração", ()
       papel: "candidato_clt",
       nomeCompleto: "Quem Procura Emprego",
       telefone: "66999110001",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     await repoUsuarios.salvarPerfilCandidato(usuario.id, {
       areaDesejada: null,

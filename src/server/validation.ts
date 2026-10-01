@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { ehCidadeAtendida, SENHA_MINIMA } from "@/lib/constants";
+import { ehCidadeValida } from "@/lib/cidades/servidor";
+import { SENHA_MINIMA } from "@/lib/constants";
 import { FORMATO_CNPJ, normalizarCnpj, onlyDigits } from "@/lib/format";
 import { type ErroCampo, erros } from "./errors";
 import { falha, ok, type Resultado } from "./result";
@@ -139,17 +140,19 @@ export const zCpf = z
   .refine(cpfValido, "CPF inválido.");
 
 /**
- * Cidade. Só município de Mato Grosso.
+ * Cidade: qualquer município do Brasil, no formato "Sinop - MT" (#301).
  *
  * A checagem é contra a lista do IBGE, e não um `z.string()` qualquer:
  * cidade digitada livre viraria "Sinop", "sinop" e "Sinop-MT" na mesma
  * base, e o filtro de cidade deixaria de agrupar — que é justamente o que
- * faz o app ser hiperlocal em vez de mais um mural de anúncios.
+ * faz a busca por perto funcionar em vez de virar mais um mural de
+ * anúncios. O estado faz parte do valor porque 232 nomes de município se
+ * repetem entre estados.
  */
 export const zCidade = z
-  .string()
+  .string({ error: "Escolha o estado e a cidade." })
   .trim()
-  .refine(ehCidadeAtendida, "Escolha uma cidade de Mato Grosso.");
+  .refine(ehCidadeValida, "Escolha o estado e a cidade.");
 
 /**
  * Bairro.

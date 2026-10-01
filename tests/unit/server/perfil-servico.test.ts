@@ -29,7 +29,7 @@ async function criar(papel: "candidato_clt" | "prestador_servico" | "empresa") {
     papel,
     nomeCompleto: "Pessoa de Teste",
     telefone: "66999110001",
-    cidade: "Sinop",
+    cidade: "Sinop - MT",
   });
   return u.id;
 }
