@@ -172,9 +172,14 @@ export interface PerfilCandidato {
    Edição de perfil
    ============================================================ */
 
-/** Campos que todo papel edita, guardados em `usuarios`. */
+/**
+ * Campos que todo papel edita, guardados em `usuarios`.
+ *
+ * O nome não está aqui (#315). Ele assina as avaliações, e quem podia
+ * trocá-lo a qualquer hora avaliava cada prestador com um nome diferente.
+ * Correção de nome é caso de suporte, como a cidade e o CNPJ.
+ */
 export interface EdicaoBasica {
-  nomeCompleto: string;
   telefone: string;
   bairro: string | null;
 }
@@ -207,9 +212,11 @@ export interface EdicaoPrestador {
  * trocar depois permitiria cadastrar com um CNPJ válido, passar pela
  * verificação, e então virar outra empresa. Correção de CNPJ é caso de
  * suporte, com gente olhando.
+ *
+ * O nome também fica (#315): é ele que assina vaga e avaliação. Só a
+ * conferência na Receita o troca, por `definirRazaoSocialDaReceita`.
  */
 export interface EdicaoEmpresa {
-  razaoSocial: string;
   setor: string | null;
   porte: string | null;
   site: string | null;
@@ -408,6 +415,17 @@ export interface RepositorioUsuarios {
     dados: EdicaoPrestador,
   ): Promise<void>;
   salvarPerfilEmpresa(usuarioId: string, dados: EdicaoEmpresa): Promise<void>;
+
+  /**
+   * A razão social oficial no lugar do nome digitado (#130), e a única
+   * troca de nome de empresa que existe (#315). As avaliações que a
+   * empresa já fez acompanham pela `renomearAvaliacoesDe`, que é de quem
+   * conhece a tabela de avaliações.
+   */
+  definirRazaoSocialDaReceita(
+    usuarioId: string,
+    razaoSocial: string,
+  ): Promise<void>;
 
   /* ---------- Arquivos ---------- */
 

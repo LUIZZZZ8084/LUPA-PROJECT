@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { ARQUIVO_SESSAO_EMPRESA } from "./helpers";
 
 /**
  * Avaliar um prestador, no navegador.
@@ -123,5 +124,35 @@ test.describe("avaliar prestador", () => {
     ).toBeVisible({ timeout: 15_000 });
 
     expect(await contagem()).toBe(antes + 1);
+  });
+});
+
+/**
+ * Quem assina a avaliação da empresa é a empresa (#315).
+ *
+ * A conta de empresa tem o nome do responsável e o da empresa. O
+ * comentário mostrava o do responsável — uma pessoa que não pediu para
+ * aparecer, no lugar de quem de fato contratou o serviço.
+ */
+test.describe("empresa avalia prestador", () => {
+  test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
+
+  test("o comentário leva o nome da empresa", async ({ page }) => {
+    await page.goto("/servicos/prv-ana-paula");
+
+    const comentario = `Serviço contratado pela empresa ${Date.now()}.`;
+    await page.locator('label:has(input[name="nota"][value="5"])').click();
+    await page.getByLabel("Como foi o serviço").fill(comentario);
+    await page.getByRole("button", { name: /enviar avaliação/i }).click();
+    await expect(
+      page.getByRole("heading", { name: "Você já avaliou" }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    const avaliacao = page
+      .getByRole("listitem")
+      .filter({ hasText: comentario })
+      .last();
+    await expect(avaliacao).toContainText("Transportadora de Teste");
+    await expect(avaliacao).not.toContainText("Responsável de Teste");
   });
 });

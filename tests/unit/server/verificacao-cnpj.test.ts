@@ -127,16 +127,21 @@ describe("consulta à Receita", () => {
 describe("verificação automática", () => {
   let verificar: typeof import("@/server/verificacao/servico").verificarCnpjAutomatico;
   let repo: import("@/server/repositories").RepositorioMemoria;
+  let avaliarPrestador: typeof import("@/server/avaliacoes/servico").avaliarPrestador;
+  let avaliacoesEmMemoria: typeof import("@/server/avaliacoes/servico").avaliacoesEmMemoria;
   let restaurar: () => void;
   let usuarioId: string;
 
   beforeEach(async () => {
     vi.resetModules();
-    const [modulo, repositorios] = await Promise.all([
+    const [modulo, repositorios, avaliacoes] = await Promise.all([
       import("@/server/verificacao/servico"),
       import("@/server/repositories"),
+      import("@/server/avaliacoes/servico"),
     ]);
     verificar = modulo.verificarCnpjAutomatico;
+    avaliarPrestador = avaliacoes.avaliarPrestador;
+    avaliacoesEmMemoria = avaliacoes.avaliacoesEmMemoria;
 
     repo = new repositorios.RepositorioMemoria();
     restaurar = repositorios.usarRepositorio(repo);
@@ -222,15 +227,34 @@ describe("verificação automática", () => {
   });
 
   /**
+   * A vaga e o comentário falam com o mesmo nome (#315). A troca da Receita
+   * é a única que existe, e sem levar as avaliações junto a empresa
+   * assinaria a vaga com um nome e o comentário com outro.
+   */
+  it("o nome da Receita chega às avaliações que a empresa já fez", async () => {
+    const prestadorId = "prestador-avaliado";
+    await avaliarPrestador(sessao(), { prestadorId, nota: 5 });
+    expect(avaliacoesEmMemoria(prestadorId)[0]?.nome).toBe(
+      "Agro Norte Comércio de Insumos Ltda.",
+    );
+
+    await verificar(
+      sessao(),
+      respostaDaReceita({ ...ATIVA, razao_social: "AGRO NORTE LTDA" }),
+    );
+
+    expect(avaliacoesEmMemoria(prestadorId)[0]?.nome).toBe("AGRO NORTE LTDA");
+  });
+
+  /**
    * O resto do perfil sobrevive à gravação.
    *
-   * `salvarPerfilEmpresa` recebe o objeto inteiro, então esquecer um campo
-   * aqui apagaria em silêncio o que a empresa preencheu — a mesma
-   * armadilha que `salvarPerfilPrestador` já teve com os campos de CNPJ.
+   * A gravação passava o objeto inteiro por `salvarPerfilEmpresa`, e
+   * esquecer um campo apagaria em silêncio o que a empresa preencheu. Hoje
+   * ela grava só o nome (#315); o teste segura a volta do objeto inteiro.
    */
   it("preencher o nome não apaga setor, site nem descrição", async () => {
     await repo.salvarPerfilEmpresa(usuarioId, {
-      razaoSocial: "Agro Norte Comércio de Insumos Ltda.",
       setor: "Agronegócio",
       porte: "Média",
       site: "https://agronorte.com.br",

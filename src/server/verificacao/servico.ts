@@ -2,6 +2,7 @@ import "server-only";
 
 import { normalizarCnpj } from "@/lib/format";
 import { type Autenticado, exigirCapacidade } from "../auth/rbac";
+import { renomearAvaliacoesDe } from "../avaliacoes/servico";
 import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
@@ -145,7 +146,9 @@ export async function verificarCnpjAutomatico(
   if (!avaliacao.ok) return avaliacao;
 
   /*
-   * O nome oficial substitui o digitado, e é ele que aparece na vaga.
+   * O nome oficial substitui o digitado, e é ele que aparece na vaga e nas
+   * avaliações que a empresa já fez (#315) — é a única troca de nome de
+   * empresa que existe, e não é a pessoa quem escolhe.
    *
    * Gravado antes de marcar como verificada de propósito: verificada é o
    * estado que a tela mostra e a busca lê, então ele só passa a valer
@@ -153,15 +156,11 @@ export async function verificarCnpjAutomatico(
    * deixaria uma empresa verificada exibindo o nome que ela mesma digitou,
    * sem ninguém saber que a Receita dizia outro.
    */
-  await repositorioUsuarios().salvarPerfilEmpresa(autenticado.usuarioId, {
-    razaoSocial: avaliacao.razaoSocial,
-    setor: empresa.setor,
-    porte: empresa.porte,
-    site: empresa.site,
-    instagram: empresa.instagram,
-    facebook: empresa.facebook,
-    descricao: empresa.descricao,
-  });
+  await repositorioUsuarios().definirRazaoSocialDaReceita(
+    autenticado.usuarioId,
+    avaliacao.razaoSocial,
+  );
+  await renomearAvaliacoesDe(autenticado.usuarioId, avaliacao.razaoSocial);
 
   await repositorioUsuarios().definirDocVerificado(autenticado.usuarioId, true);
 

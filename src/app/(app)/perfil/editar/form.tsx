@@ -99,16 +99,27 @@ function Conta({ perfil }: { perfil: PerfilCompleto }) {
     <form action={acao} {...envio}>
       <Secao
         titulo="Sua conta"
-        descricao="Nome e telefone aparecem para quem entra em contato com você."
+        descricao={
+          u.papel === "empresa"
+            ? "Os dados de quem responde pela empresa. Nas vagas e avaliações, quem aparece é a empresa."
+            : "Nome e telefone aparecem para quem entra em contato com você."
+        }
         estado={estado}
         pendente={pendente}
       >
+        {/*
+          O nome aparece, mas não se edita (#315). Ele assina as avaliações,
+          e quem podia trocá-lo a qualquer hora comentava em cada prestador
+          com um nome diferente. Sem `name`: o campo desabilitado não é
+          enviado, e o servidor também não o aceitaria.
+        */}
         <Field
-          label="Nome completo"
-          required
-          error={estado.campos?.nomeCompleto}
+          label={
+            u.papel === "empresa" ? "Nome do responsável" : "Nome completo"
+          }
+          hint="Não pode ser alterado. Para corrigir, fale com o suporte."
         >
-          <Input name="nomeCompleto" defaultValue={u.nomeCompleto} required />
+          <Input value={u.nomeCompleto} disabled readOnly />
         </Field>
 
         <Field
@@ -588,12 +599,16 @@ function Empresa({ perfil }: { perfil: PerfilCompleto }) {
         estado={estado}
         pendente={pendente}
       >
-        <Field label="Nome" required error={estado.campos?.razaoSocial}>
-          <Input
-            name="razaoSocial"
-            defaultValue={e?.razaoSocial ?? ""}
-            required
-          />
+        {/*
+         * O nome também não se edita (#315): é ele que assina as vagas e as
+         * avaliações da empresa. Só a conferência do CNPJ o troca, pela
+         * razão social da Receita.
+         */}
+        <Field
+          label="Nome da empresa"
+          hint="Aparece em tudo o que a empresa faz na Lupa. Não pode ser alterado."
+        >
+          <Input value={e?.razaoSocial ?? ""} disabled readOnly />
         </Field>
 
         {/*

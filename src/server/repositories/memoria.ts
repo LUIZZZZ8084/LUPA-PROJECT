@@ -322,6 +322,15 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.empresas.set(usuarioId, { ...atual, ...dados });
   }
 
+  async definirRazaoSocialDaReceita(
+    usuarioId: string,
+    razaoSocial: string,
+  ): Promise<void> {
+    const atual = this.empresas.get(usuarioId);
+    if (!atual) return;
+    this.empresas.set(usuarioId, { ...atual, razaoSocial });
+  }
+
   /* ---------- Arquivos ---------- */
 
   async definirAvatar(usuarioId: string, url: string | null): Promise<void> {
