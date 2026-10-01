@@ -1,6 +1,17 @@
+import type { Metadata } from "next";
 import { LupaMark } from "@/components/brand/logo";
 import { PageShell } from "@/components/layout/page-shell";
 import { ButtonLink } from "@/components/ui/button";
+
+/**
+ * Sem isto a aba de uma página que não existe dizia o título da home
+ * ("Lupa — Trabalho e profissionais perto de você"), porque herdava o
+ * padrão do layout. Quem cai aqui precisa ver, até na aba, que errou o
+ * caminho.
+ */
+export const metadata: Metadata = {
+  title: "Página não encontrada",
+};
 
 export default function NotFound() {
   return (

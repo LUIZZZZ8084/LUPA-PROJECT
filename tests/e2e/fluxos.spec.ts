@@ -162,6 +162,8 @@ test.describe("navegação", () => {
   }) => {
     await page.goto("/rota-que-nao-existe");
     await expect(page.getByText(/Não encontramos essa página/)).toBeVisible();
+    // A aba também diz que é um erro (#303): antes herdava o título da home.
+    await expect(page).toHaveTitle(/Página não encontrada/);
   });
 });
 
@@ -298,6 +300,7 @@ test.describe("área administrativa", () => {
   test("o título não revela a existência do painel", async ({ page }) => {
     await page.goto("/admin/painel");
     await expect(page).not.toHaveTitle(/Painel/);
+    await expect(page).toHaveTitle(/Página não encontrada/);
     await expect(page.getByText(/Não encontramos essa página/)).toBeVisible();
   });
 

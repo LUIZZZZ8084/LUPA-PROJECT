@@ -29,6 +29,7 @@ node scripts/criar-admin.mjs      # cria ou promove a conta de admin
 node scripts/gerar-avatares.mjs   # regenera os avatares de demonstração
 node scripts/gerar-cidades.mjs    # baixa a lista de municípios de MT (IBGE)
 node scripts/gerar-regioes.mjs    # baixa a região de cada município (IBGE)
+node scripts/gerar-favicon.mjs    # regenera o ícone da aba a partir da logo
 ```
 
 ```bash
@@ -2123,6 +2124,12 @@ para manter sem ninguém pedindo ainda.
   LGPD, com teste que trava.
 - **Imagens de perfil:** só avatares gerados (DiceBear, CC0). Nunca foto de
   pessoa real sem direito de uso. Ver `scripts/gerar-avatares.mjs`.
+- **Ícone da aba:** `src/app/favicon.ico` é **gerado** por
+  `scripts/gerar-favicon.mjs`, do mesmo desenho de `icon.tsx` (#303). Ficou
+  o triângulo de fábrica do Next do primeiro commit até 01/10/2026: a logo
+  existia nos outros dois ícones, o navegador escolhe qual usa, e quem
+  escolhia o `.ico` mostrava o triângulo. As cores moram no script e em
+  `icon.tsx`, e um teste cobra que sejam as mesmas.
 
 ---
 
