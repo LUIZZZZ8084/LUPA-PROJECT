@@ -101,16 +101,14 @@ export async function avaliarPrestador(
     );
   }
 
-  const usuario = await repositorioUsuarios().porId(autenticado.usuarioId);
-  if (!usuario) throw erros.naoEncontrado("Usuário");
-
+  const nome = await nomeDeQuemAvalia(autenticado);
   const comentario = dados.comentario?.trim() || null;
 
   if (!isSupabaseConfigured) {
     emMemoria.push({
       prestadorId: dados.prestadorId,
       avaliadorId: autenticado.usuarioId,
-      nome: usuario.nomeCompleto,
+      nome,
       nota: dados.nota,
       comentario,
       criadoEm: new Date().toISOString(),
@@ -124,11 +122,12 @@ export async function avaliarPrestador(
       avaliador_id: autenticado.usuarioId,
       /*
        * O nome é gravado junto, e não só o id: a tela lista avaliações sem
-       * consultar `usuarios`, que é fechada para a chave anônima. Guardar
-       * o nome do momento também é o comportamento certo — a avaliação é
-       * um registro do que aconteceu naquele dia.
+       * consultar `usuarios`, que é fechada para a chave anônima. Desde a
+       * #315 o nome não se edita no perfil, então a cópia não envelhece —
+       * a única troca que existe, a da Receita, passa por
+       * `renomearAvaliacoesDe`.
        */
-      nome_avaliador: usuario.nomeCompleto,
+      nome_avaliador: nome,
       nota: dados.nota,
       comentario,
     });
@@ -153,4 +152,57 @@ export async function avaliarPrestador(
     papel: autenticado.papel,
     nota: dados.nota,
   });
+}
+
+/**
+ * Quem assina a avaliação (#315).
+ *
+ * A conta de empresa tem dois nomes: o do responsável, que é registro da
+ * conta, e o da empresa, que é quem age na plataforma. O comentário é da
+ * empresa — mostrar o responsável expunha uma pessoa que não pediu para
+ * aparecer, e deixava a empresa sem nome no que ela mesma escreveu.
+ *
+ * Sem perfil de empresa, fica o nome da conta: é melhor um nome que a
+ * pessoa informou do que um comentário sem assinatura.
+ */
+async function nomeDeQuemAvalia(autenticado: Autenticado): Promise<string> {
+  const repo = repositorioUsuarios();
+
+  if (autenticado.papel === "empresa") {
+    const empresa = await repo.perfilEmpresa(autenticado.usuarioId);
+    if (empresa?.razaoSocial) return empresa.razaoSocial;
+  }
+
+  const usuario = await repo.porId(autenticado.usuarioId);
+  if (!usuario) throw erros.naoEncontrado("Usuário");
+  return usuario.nomeCompleto;
+}
+
+/**
+ * Troca o nome nas avaliações que alguém já fez.
+ *
+ * Só a conferência do CNPJ na Receita chama isto: é a única troca de nome
+ * que sobrou (#315), e sem ela a vaga diria o nome oficial enquanto o
+ * comentário da mesma empresa diria o que ela tinha digitado.
+ */
+export async function renomearAvaliacoesDe(
+  avaliadorId: string,
+  nome: string,
+): Promise<void> {
+  if (!isSupabaseConfigured) {
+    for (const a of emMemoria) {
+      if (a.avaliadorId === avaliadorId) a.nome = nome;
+    }
+    return;
+  }
+
+  const supabase = clienteDeServico();
+  if (!supabase) throw erros.indisponivel("cliente de banco");
+
+  const { error } = await supabase
+    .from("avaliacoes")
+    .update({ nome_avaliador: nome })
+    .eq("avaliador_id", avaliadorId);
+
+  if (error) throw erros.indisponivel(`avaliações: ${error.message}`);
 }

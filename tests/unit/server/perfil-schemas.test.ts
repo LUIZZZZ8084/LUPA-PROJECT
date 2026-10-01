@@ -20,7 +20,6 @@ import {
 describe("dados da conta", () => {
   it("aceita o mínimo", () => {
     const r = schemaBasico.safeParse({
-      nomeCompleto: "Ana Paula Ribeiro",
       telefone: "66999110005",
       bairro: "",
     });
@@ -30,7 +29,6 @@ describe("dados da conta", () => {
 
   it("recusa telefone que não é celular", () => {
     const r = schemaBasico.safeParse({
-      nomeCompleto: "Ana",
       telefone: "6635110001",
       bairro: "",
     });
@@ -44,7 +42,6 @@ describe("dados da conta", () => {
    */
   it("aceita bairro que não está em nenhuma lista curada", () => {
     const r = schemaBasico.safeParse({
-      nomeCompleto: "Ana Paula",
       telefone: "66999110005",
       bairro: "Residencial Nova Fronteira",
     });
@@ -53,11 +50,23 @@ describe("dados da conta", () => {
 
   it("recusa bairro de uma letra — isso é engano de digitação", () => {
     const r = schemaBasico.safeParse({
-      nomeCompleto: "Ana Paula",
       telefone: "66999110005",
       bairro: "X",
     });
     expect(r.success).toBe(false);
+  });
+
+  /**
+   * O nome não se edita (#315): ele assina as avaliações. Um
+   * `nomeCompleto` forjado no formulário é descartado, não gravado.
+   */
+  it("descarta o nome enviado no formulário", () => {
+    const r = schemaBasico.safeParse({
+      nomeCompleto: "Nome Trocado",
+      telefone: "66999110005",
+      bairro: "",
+    });
+    expect(r.success && Object.keys(r.data)).not.toContain("nomeCompleto");
   });
 });
 
@@ -333,7 +342,6 @@ describe("anúncio do prestador", () => {
 
 describe("empresa", () => {
   const base = {
-    razaoSocial: "Agro Norte Ltda.",
     setor: "",
     porte: "",
     site: "",
@@ -342,7 +350,7 @@ describe("empresa", () => {
     descricao: "",
   };
 
-  it("aceita só a razão social", () => {
+  it("aceita tudo em branco", () => {
     const r = schemaEmpresa.safeParse(base);
     expect(r.success).toBe(true);
     expect(r.success && r.data.site).toBeNull();
@@ -382,6 +390,14 @@ describe("empresa", () => {
    */
   it("não tem campo de CNPJ", () => {
     expect(Object.keys(schemaEmpresa.shape)).not.toContain("cnpj");
+  });
+
+  /**
+   * Nem de nome (#315): ele assina as vagas e as avaliações da empresa, e
+   * só a conferência na Receita o troca.
+   */
+  it("não tem campo de nome", () => {
+    expect(Object.keys(schemaEmpresa.shape)).not.toContain("razaoSocial");
   });
 
   it("recusa porte fora da lista", () => {

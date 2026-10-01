@@ -555,7 +555,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     const { error } = await supabase
       .from("usuarios")
       .update({
-        nome_completo: dados.nomeCompleto,
         telefone: dados.telefone,
         bairro: dados.bairro,
       })
@@ -629,7 +628,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     const { error } = await supabase
       .from("perfis_empresa")
       .update({
-        razao_social: dados.razaoSocial,
         setor: dados.setor,
         porte: dados.porte,
         site: dados.site,
@@ -640,6 +638,19 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       .eq("usuario_id", usuarioId);
 
     if (error) throw erros.indisponivel(`perfil de empresa: ${error.message}`);
+  }
+
+  async definirRazaoSocialDaReceita(
+    usuarioId: string,
+    razaoSocial: string,
+  ): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("perfis_empresa")
+      .update({ razao_social: razaoSocial })
+      .eq("usuario_id", usuarioId);
+
+    if (error) throw erros.indisponivel(`razão social: ${error.message}`);
   }
 
   /* ---------- Arquivos ---------- */

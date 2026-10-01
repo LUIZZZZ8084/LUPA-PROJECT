@@ -210,8 +210,7 @@ describe("vagas do painel da empresa", () => {
     it("a segunda vaga não recria o perfil", async () => {
       await publicarVaga(prestador, DADOS);
       await repoUsuarios.salvarPerfilEmpresa(prestador.usuarioId, {
-        razaoSocial: "João da Silva — Elétrica",
-        setor: null,
+        setor: "Elétrica",
         porte: null,
         site: null,
         instagram: null,
@@ -223,7 +222,7 @@ describe("vagas do painel da empresa", () => {
 
       expect(
         await repoUsuarios.perfilEmpresa(prestador.usuarioId),
-      ).toMatchObject({ razaoSocial: "João da Silva — Elétrica" });
+      ).toMatchObject({ setor: "Elétrica" });
     });
   });
 

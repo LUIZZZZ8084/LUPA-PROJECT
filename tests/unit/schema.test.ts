@@ -1930,3 +1930,110 @@ describe("aplica-remove-dados-de-exemplo.sql", () => {
     expect(r.rows[0].total).toBe(1);
   });
 });
+
+/**
+ * A avaliação de empresa passa a levar o nome da empresa (#315).
+ *
+ * O script corrige o que já foi gravado com o nome do responsável. O que
+ * ele não pode tocar importa tanto quanto: a avaliação de pessoa física, a
+ * de empresa ainda sem perfil e a do seed, que não tem dono.
+ */
+describe("aplica-avaliacao-assinada-pela-empresa.sql", () => {
+  let banco: PGlite;
+  const SCRIPT = readFileSync(
+    join(process.cwd(), "supabase/aplica-avaliacao-assinada-pela-empresa.sql"),
+    "utf8",
+  );
+
+  async function conta(papel: string, email: string, nome: string) {
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ($1, 'h', $2::papel_usuario, $3, '66999110001', 'Sinop - MT')
+       returning id`,
+      [email, papel, nome],
+    );
+    return r.rows[0].id;
+  }
+
+  async function avaliar(
+    prestador: string,
+    avaliador: string | null,
+    nome: string,
+  ) {
+    await banco.query(
+      `insert into avaliacoes (prestador_id, avaliador_id, nome_avaliador, nota)
+       values ($1, $2, $3, 5)`,
+      [prestador, avaliador, nome],
+    );
+  }
+
+  async function nomes() {
+    const r = await banco.query<{ nome_avaliador: string }>(
+      "select nome_avaliador from avaliacoes order by nome_avaliador",
+    );
+    return r.rows.map((l) => l.nome_avaliador);
+  }
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+
+    const prestador = await conta(
+      "prestador_servico",
+      "p@teste.lupa",
+      "Prestador",
+    );
+    const empresa = await conta(
+      "empresa",
+      "e@teste.lupa",
+      "Responsável da Empresa",
+    );
+    const semPerfil = await conta(
+      "empresa",
+      "s@teste.lupa",
+      "Empresa Sem Perfil",
+    );
+    const pessoa = await conta(
+      "candidato_clt",
+      "c@teste.lupa",
+      "Pessoa Candidata",
+    );
+    await banco.query(
+      `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+       values ($1, 'Mercado Bom Preço', '11222333000181')`,
+      [empresa],
+    );
+
+    await avaliar(prestador, empresa, "Responsável da Empresa");
+    await avaliar(prestador, semPerfil, "Empresa Sem Perfil");
+    await avaliar(prestador, pessoa, "Pessoa Candidata");
+    await avaliar(prestador, null, "Avaliação do Seed");
+
+    await banco.exec(SCRIPT);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  it("a avaliação da empresa passa a levar o nome da empresa", async () => {
+    expect(await nomes()).toContain("Mercado Bom Preço");
+    expect(await nomes()).not.toContain("Responsável da Empresa");
+  });
+
+  it("pessoa, empresa sem perfil e seed ficam como estavam", async () => {
+    expect(await nomes()).toEqual(
+      expect.arrayContaining([
+        "Empresa Sem Perfil",
+        "Pessoa Candidata",
+        "Avaliação do Seed",
+      ]),
+    );
+  });
+
+  it("rodar de novo não muda nada", async () => {
+    const antes = await nomes();
+    await banco.exec(SCRIPT);
+    expect(await nomes()).toEqual(antes);
+  });
+});

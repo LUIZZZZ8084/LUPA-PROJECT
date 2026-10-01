@@ -14,14 +14,20 @@ import { ARQUIVO_SESSAO_EMPRESA } from "./helpers";
  * currículo.
  */
 test.describe("edição de perfil", () => {
-  test("salva a conta e o cabeçalho passa a mostrar o nome novo", async ({
-    page,
-  }) => {
+  /**
+   * O nome aparece e não se edita (#315): ele assina as avaliações, e quem
+   * podia trocá-lo a qualquer hora comentava em cada prestador com um nome
+   * diferente. O resto da conta continua salvando.
+   */
+  test("o nome aparece travado, e a conta salva o resto", async ({ page }) => {
     await page.goto("/perfil/editar");
 
-    const nome = `Pessoa ${Date.now().toString().slice(-5)}`;
-    await page.getByLabel("Nome completo").fill(nome);
+    const nome = page.getByLabel("Nome completo");
+    await expect(nome).toBeDisabled();
+    const antes = await nome.inputValue();
+    expect(antes).not.toBe("");
 
+    await page.getByLabel("WhatsApp").fill("66999990001");
     await page
       .locator("form")
       .filter({ hasText: "Sua conta" })
@@ -30,10 +36,8 @@ test.describe("edição de perfil", () => {
 
     await expect(page.getByText("Salvo")).toBeVisible();
 
-    // O cabeçalho mostra o nome de quem entrou: se o revalidate não
-    // acontecer, ele fica com o nome velho até a próxima navegação dura.
     await page.goto("/perfil");
-    await expect(page.getByRole("heading", { name: nome })).toBeVisible();
+    await expect(page.getByRole("heading", { name: antes })).toBeVisible();
   });
 
   test("salva o currículo e ele aparece no perfil", async ({ page }) => {

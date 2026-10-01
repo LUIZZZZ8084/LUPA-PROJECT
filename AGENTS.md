@@ -194,8 +194,13 @@ envios simultâneos passariam os dois por ela.
 solto: servia para popular o seed, não para receber gente autenticada —
 sem dono, a mesma pessoa avalia dez vezes e ninguém consegue mostrar a ela
 a própria avaliação depois. O nome continua sendo gravado junto, porque a
-tela lista sem consultar `usuarios`, que é fechada para `anon` — e porque
-a avaliação é o registro do que aconteceu naquele dia.
+tela lista sem consultar `usuarios`, que é fechada para `anon`.
+
+**Quem assina é quem age, e o nome não muda depois (#315).** A avaliação
+de uma empresa grava o nome da empresa, não o do responsável — a seção
+"O nome é definido no cadastro", mais abaixo. A cópia gravada não
+envelhece porque o nome deixou de ser editável; a única troca que sobrou,
+a da Receita, leva junto as avaliações já feitas (`renomearAvaliacoesDe`).
 
 **A confirmação é renderizada pelo servidor.** A action revalida a rota,
 e a revalidação desmonta o formulário levando junto o "enviado" que ele
@@ -965,6 +970,9 @@ separa vaga real de anúncio falso. Poder trocar depois permitiria
 cadastrar com um CNPJ válido, passar pela verificação e então virar outra
 empresa. Correção é caso de suporte, com gente olhando.
 
+**O nome também não (#315)** — nem o da pessoa, nem o da empresa. A
+seção logo abaixo explica.
+
 **Um formulário por assunto, cada um com o próprio botão.** Um formulário
 só obrigaria a reenviar o currículo inteiro para corrigir o telefone, e um
 erro em qualquer campo bloquearia todos. Em conexão ruim isso é a
@@ -995,6 +1003,48 @@ ranking nenhum, só dão o link para quem já decidiu olhar.
 nenhum** — nem na tela pública, nem na prévia do próprio perfil. Campo
 que se edita e cujo resultado ninguém vê é campo que a pessoa preenche
 uma vez e conclui que não funciona.
+
+### O nome é definido no cadastro, e a empresa assina com o dela (#315)
+
+Pedido do Paulinho em 01/10/2026. Dois defeitos que se somavam:
+
+- **A avaliação da empresa mostrava o responsável.** A conta de empresa
+  tem dois nomes — o de quem a abriu e o da empresa —, e a avaliação
+  gravava o primeiro. Quem contratou o serviço foi a empresa; o
+  responsável é uma pessoa que não pediu para aparecer.
+- **Todo nome se editava a qualquer hora.** Como a avaliação grava o nome
+  do momento, dava para trocar de nome entre um comentário e outro e
+  avaliar cada prestador com uma identidade diferente. A trava de "uma
+  avaliação por pessoa" continuava valendo, mas ninguém de fora conseguia
+  ligar os comentários a quem os escreveu.
+
+**O nome da empresa — fantasia ou razão social, como ela preferir — é o
+que assina tudo o que ela faz**: vaga e avaliação. O do responsável fica
+como registro da conta, e a tela de edição diz que nas vagas e avaliações
+quem aparece é a empresa.
+
+**Nenhum nome se edita no perfil**, de nenhum papel. Decisão do Paulinho,
+escolhendo entre travar só a empresa e travar todos: o mesmo abuso cabe
+no "Nome completo" de candidato e prestador. O campo aparece desabilitado
+e sem `name`, e os schemas nem conhecem a chave — um `nomeCompleto` ou
+`razaoSocial` forjado no formulário é descartado pelo Zod. Correção é
+caso de suporte, como a cidade e o CNPJ, e o cadastro avisa antes de a
+pessoa digitar.
+
+**A Receita continua trocando o nome da empresa (#130)**, também por
+decisão do Paulinho. É a única troca que sobrou, e não é a pessoa quem
+escolhe: ao conferir o CNPJ, a razão social oficial entra no lugar do que
+foi digitado. Ela grava por `definirRazaoSocialDaReceita`, que só mexe no
+nome, e leva junto as avaliações já feitas pela empresa — sem isso, a vaga
+diria o nome oficial e o comentário da mesma empresa, o digitado.
+
+**Isto resolve a #304 por outro caminho.** A Issue pedia que o nome no
+comentário acompanhasse a troca de nome da conta, e a proposta foi um
+trigger no banco (#308, fechado). Com o nome travado, não há troca para
+acompanhar — exceto a da Receita, que a aplicação já trata no mesmo passo.
+
+As avaliações que empresas fizeram antes disto passam a levar o nome da
+empresa por `supabase/aplica-avaliacao-assinada-pela-empresa.sql`.
 
 ### O endereço da vaga é aditivo ao bairro, não substituto
 

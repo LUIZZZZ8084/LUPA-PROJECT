@@ -465,15 +465,14 @@ describe("gravação de perfil", () => {
 
   it("conta: escreve nas colunas em português", async () => {
     await repo.atualizarBasicos(ID, {
-      nomeCompleto: "Ana Paula Ribeiro",
       telefone: "66999110005",
       bairro: "Centro",
     });
 
     const update = chamadas.find((c) => c.metodo === "update");
     expect(update?.tabela).toBe("usuarios");
+    // Sem `nome_completo`: o nome não se edita no perfil (#315).
     expect(update?.args[0]).toEqual({
-      nome_completo: "Ana Paula Ribeiro",
       telefone: "66999110005",
       bairro: "Centro",
     });
@@ -537,9 +536,8 @@ describe("gravação de perfil", () => {
    * criar aqui exigiria inventar um. Empresa sem CNPJ é o que a plataforma
    * não pode ter.
    */
-  it("empresa: atualiza sem criar e sem tocar no CNPJ", async () => {
+  it("empresa: atualiza sem criar e sem tocar no CNPJ nem no nome", async () => {
     await repo.salvarPerfilEmpresa(ID, {
-      razaoSocial: "Agro Norte S.A.",
       setor: "Agronegócio",
       porte: "Média",
       site: null,
@@ -553,6 +551,25 @@ describe("gravação de perfil", () => {
     const update = chamadas.find((c) => c.metodo === "update");
     expect(update?.tabela).toBe("perfis_empresa");
     expect(Object.keys(update?.args[0] as object)).not.toContain("cnpj");
+    expect(Object.keys(update?.args[0] as object)).not.toContain(
+      "razao_social",
+    );
+  });
+
+  /** A única troca de nome de empresa que existe: a da Receita (#315). */
+  it("empresa: a razão social da Receita grava só o nome", async () => {
+    await repo.definirRazaoSocialDaReceita(ID, "AGRO NORTE LTDA");
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("perfis_empresa");
+    expect(update?.args[0]).toEqual({ razao_social: "AGRO NORTE LTDA" });
+  });
+
+  it("empresa: falha ao gravar a razão social não passa em silêncio", async () => {
+    resposta = { data: null, error: { message: "conexão recusada" } };
+    await expect(
+      repo.definirRazaoSocialDaReceita(ID, "AGRO NORTE LTDA"),
+    ).rejects.toMatchObject({ codigo: "indisponivel" });
   });
 
   it("prestador: grava a validade da mensalidade", async () => {
@@ -577,7 +594,6 @@ describe("gravação de perfil", () => {
     resposta = { data: null, error: { message: "conexão recusada" } };
     await expect(
       repo.atualizarBasicos(ID, {
-        nomeCompleto: "X",
         telefone: "66999110005",
         bairro: null,
       }),

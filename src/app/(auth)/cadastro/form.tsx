@@ -142,9 +142,19 @@ export function SignUpForm({ role }: { role: Role }) {
       <input type="hidden" name="papel" value={role} />
 
       <Panel className="space-y-5">
+        {/*
+          O aviso de que o nome não muda vem aqui, antes de digitar (#315):
+          descobrir depois, no perfil, é descobrir tarde demais para
+          escolher com cuidado.
+        */}
         <Field
           label={role === "empresa" ? "Nome do responsável" : "Nome completo"}
           required
+          hint={
+            role === "empresa"
+              ? "Fica só no registro da conta. Quem aparece é a empresa."
+              : "Aparece no seu perfil e nas suas avaliações. Não dá para trocar depois."
+          }
           error={state.campos?.nomeCompleto}
         >
           <Input name="nomeCompleto" autoComplete="name" required />
@@ -193,6 +203,11 @@ export function SignUpForm({ role }: { role: Role }) {
                     : "Seu nome ou o da propriedade"
                 }
                 required
+                hint={
+                  tipoDocumento === "cnpj"
+                    ? "Nome fantasia ou razão social. Assina as vagas e avaliações, e não dá para trocar depois."
+                    : "Assina as vagas e avaliações, e não dá para trocar depois."
+                }
                 error={state.campos?.razaoSocial}
               >
                 <Input name="razaoSocial" required />

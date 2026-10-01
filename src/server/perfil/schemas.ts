@@ -4,7 +4,7 @@ import {
   MAX_BAIRROS_ATENDIDOS,
   SERVICE_CATEGORIES,
 } from "@/lib/constants";
-import { zCelular, zNome, zNomeDeBairro, zTexto } from "../validation";
+import { zCelular, zNomeDeBairro, zTexto } from "../validation";
 
 /**
  * O que se pode editar depois que a conta existe.
@@ -50,9 +50,14 @@ const zLinkOpcional = (oQue: string) =>
     z.union([z.url(`Endereço de ${oQue} inválido.`), z.null()]),
   );
 
-/** Comum a todos os papéis: mora em `usuarios`. */
+/**
+ * Comum a todos os papéis: mora em `usuarios`.
+ *
+ * Sem o nome (#315): ele é definido no cadastro e não se edita aqui. O Zod
+ * descarta chave que não conhece, então um `nomeCompleto` forjado no
+ * formulário não chega ao repositório.
+ */
 export const schemaBasico = z.object({
-  nomeCompleto: zNome,
   telefone: zCelular,
   bairro: zBairro,
 });
@@ -220,13 +225,12 @@ export const schemaPrestador = z.object({
   facebook: zLinkOpcional("Facebook"),
 });
 
-/** O CNPJ não está aqui: é âncora de identidade, não campo de perfil. */
+/**
+ * O CNPJ não está aqui: é âncora de identidade, não campo de perfil. O
+ * nome da empresa também não (#315): ele assina tudo o que ela faz, e só a
+ * conferência na Receita o troca.
+ */
 export const schemaEmpresa = z.object({
-  razaoSocial: z
-    .string()
-    .trim()
-    .min(2, "Informe o nome da empresa.")
-    .max(150, "Nome longo demais."),
   setor: zOpcional(80, "O setor"),
   porte: z.preprocess(
     vazioViraNulo,
