@@ -111,6 +111,35 @@ describe("consulta à Receita", () => {
     expect(r.empresa.cnpj).toBe(esperado);
   });
 
+  /**
+   * A BrasilAPI recusa com 403 o `User-Agent` padrão do Node (#318), e a
+   * conferência falhava para todo mundo. O duble de `fetch` daqui não liga
+   * para cabeçalho, e foi assim que o defeito passou: este teste olha o
+   * cabeçalho que sai.
+   */
+  it("se apresenta como Lupa, não como o Node", async () => {
+    let cabecalhos = new Headers();
+    const espiao = (async (_url: string, init?: RequestInit) => {
+      cabecalhos = new Headers(init?.headers);
+      return new Response(JSON.stringify(ATIVA), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    await consultarCnpj("11222333000181", espiao);
+
+    expect(cabecalhos.get("user-agent")).toMatch(/^Lupa\//);
+  });
+
+  /** Recusado e fora do ar são o mesmo para a tela, não para o log. */
+  it("403 é indisponível, e o status fica no log", async () => {
+    const saida = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const r = await consultarCnpj("11222333000181", respostaDaReceita({}, 403));
+
+    expect(r.tipo).toBe("indisponivel");
+    expect(saida.mock.calls.flat().join(" ")).toContain('"status":403');
+    saida.mockRestore();
+  });
+
   it("alfanumérico com tamanho errado também nem sai daqui", async () => {
     await expect(
       consultarCnpj("12ABC34501DE3", naoDeviaConsultar),

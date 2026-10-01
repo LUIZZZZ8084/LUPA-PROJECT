@@ -457,6 +457,14 @@ municípios ser versionada em vez de buscada no IBGE em execução. É ação de
 quem já tem conta, e uma falha aqui não tira o CNPJ do perfil nem derruba
 o que já verifica a conta.
 
+**Sem chave, mas com nome (#318).** A BrasilAPI recusa com 403 o
+`User-Agent` padrão do `fetch` do Node, e a conferência falhou para todo
+mundo, dizendo "Receita fora do ar", sem nada ficar vermelho: o teste
+injeta um `fetch` falso, que não liga para cabeçalho. Hoje a consulta se
+apresenta como `Lupa/1.0`, e resposta inesperada deixa o status no log.
+*Duble de API de terceiro prova o que o código faz com a resposta, não se
+o terceiro aceita o pedido — isso só se confere batendo nele de verdade.*
+
 **O prestador tem CPF, não CNPJ**, e não há consulta pública gratuita de
 CPF — é a [#120](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/120),
 presa a provedor pago. O que verifica o prestador é o CPF em si, válido e
