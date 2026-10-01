@@ -139,7 +139,7 @@ export async function aguardarAnimacoes(page: Page): Promise<void> {
  * ajudante de teste que importa código do servidor deixa de exercitar o
  * contrato e passa a concordar com ele.
  */
-function cnpjDeTeste(): string {
+export function cnpjDeTeste(): string {
   const base = String(Math.floor(Math.random() * 1e12)).padStart(12, "0");
 
   const digito = (numero: string) => {

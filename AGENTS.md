@@ -1993,10 +1993,30 @@ mudasse numa e não na outra — a mesma lição do preço, que já vinha de
 
 **O trial ganhou card com benefícios, não só um link "pular".** Pedido
 explícito: mostrar os dois lados, não esconder a alternativa grátis atrás
-de um texto pequeno. O que muda é o peso visual — o plano pago tem borda
-e fundo destacados, badge "Recomendado", e vem primeiro; o trial fica
-discreto, mas continua sendo uma opção completa, com a mesma lista de
-benefícios que os planos pagos.
+de um texto pequeno.
+
+**Na empresa, o grátis passou a vir primeiro (#299).** A #184 nasceu com
+o pago em cima, destacado, e o grátis por último — e quem acabava de criar
+a conta lia quatro preços seguidos como "o app já está me cobrando para
+usar". O "Conta criada" era pequeno perto da lista, e a saída grátis só
+aparecia depois de rolar: no celular, o que fica abaixo da dobra é o que a
+pessoa não vê. Hoje a confirmação diz com todas as letras que **nada foi
+cobrado**, o grátis vem logo abaixo e em destaque, e as quatro compras
+viram linhas compactas, marcadas como opcionais. A tela inteira cabe num
+celular comum sem rolar, e há teste e2e medindo isso.
+
+**O prestador continua com o pago primeiro, de propósito.** Para ele,
+"continuar sem assinar" não é um plano grátis: sem mensalidade ele não
+aparece na busca (ver "Sem carência", acima). Pôr essa opção em destaque
+seria oferecer como equivalente um caminho em que ninguém o encontra. Na
+empresa, o grátis é uso de verdade — perfil no ar e busca de candidatos —
+e a compra só faz sentido quando existe a primeira vaga.
+
+**O título "Leva menos de dois minutos" some depois de a conta existir.**
+Ele era renderizado pela página, acima do formulário, e continuava ali em
+cima do "Conta criada" — ocupando o topo da tela e dizendo algo que já não
+era verdade. Mora agora dentro de `SignUpForm`, que só o mostra antes do
+envio.
 
 ---
 
