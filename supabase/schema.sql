@@ -158,6 +158,15 @@ create table usuarios (
    * de quem não escolheu nenhuma, e o app não tem mais cidade inicial.
    */
   cidade               text not null,
+  /*
+   * LEGADO (#321, decisao do Luiz em 01/10/2026): a aplicacao nao le nem
+   * grava mais esta coluna. O bairro de uma pessoa nao filtra nem ordena
+   * nada, e o cadastro e o perfil pedem so a cidade. Fica no banco porque
+   * apagar dado de producao e decisao do Luiz, e a coluna e inofensiva:
+   * `usuarios` nao tem grant para `anon`. Sai numa migracao futura, junto
+   * com as views que ainda a expoem (`provider_listings`,
+   * `company_applications`, `candidatos_disponiveis`, `metricas_por_local`).
+   */
   bairro               text,
   avatar_url           text,
   email_verificado     boolean not null default false,
@@ -300,6 +309,7 @@ create table perfis_prestador (
   descricao         text,
   preco_inicial     numeric(10,2),
   anos_experiencia  int,
+  /* LEGADO (#321): a aplicacao nao le nem grava mais — ver `usuarios.bairro`. */
   bairros_atendidos text[] not null default '{}',
   fotos_urls        text[] not null default '{}',
   instagram         text,

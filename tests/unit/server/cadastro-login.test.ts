@@ -37,7 +37,6 @@ const prestador = {
   categoriaId: 1,
   descricao: "Instalações elétricas residenciais e comerciais em Sinop.",
   precoInicial: 150,
-  bairrosAtendidos: ["Centro", "Menezes"],
 };
 
 const empresa = {

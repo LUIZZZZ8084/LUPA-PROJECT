@@ -39,7 +39,6 @@ export async function gerarCurriculoDoCandidato(
     email: usuario.email,
     telefone: usuario.telefone,
     cidade: usuario.cidade,
-    bairro: usuario.bairro,
     areaDesejada: perfil.areaDesejada,
     resumo: perfil.resumo,
     formacao: perfil.formacao,

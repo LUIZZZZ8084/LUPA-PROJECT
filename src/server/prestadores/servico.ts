@@ -121,13 +121,6 @@ export async function virarPrestador(
     descricao: dados.descricao,
     precoInicial: dados.precoInicial ?? null,
     anosExperiencia: null,
-    /*
-     * Nasce atendendo o próprio bairro, quando ele existe. Perguntar a
-     * área de atendimento na ativação seria mais um campo entre a pessoa e
-     * o primeiro contato; ela ajusta depois em `/perfil/editar`, que já
-     * tem o campo.
-     */
-    bairrosAtendidos: usuario.bairro ? [usuario.bairro] : [],
     instagram: null,
     facebook: null,
     // MEI é declarado depois, em Editar perfil.

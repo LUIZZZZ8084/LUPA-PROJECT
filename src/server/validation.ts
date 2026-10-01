@@ -155,13 +155,11 @@ export const zCidade = z
   .refine(ehCidadeValida, "Escolha o estado e a cidade.");
 
 /**
- * Bairro.
+ * Bairro da vaga — o único bairro que sobrou na Lupa (#321).
  *
- * Onde a cidade tem lista curada (Sinop), a interface oferece a lista; o
- * servidor não exige que o valor esteja nela. Exigir travaria o cadastro
- * de quem mora num bairro novo, e bairro novo aparece antes de qualquer
- * lista ser atualizada — em cidade que cresce como as do agro, aparece
- * todo ano.
+ * Texto livre e informativo: quem publica escreve o que quiser, e o
+ * servidor não exige lista nenhuma (não existe lista de bairro para o
+ * país, e bairro novo aparece antes de qualquer lista ser atualizada).
  *
  * O que o servidor garante é o que importa para o dado não apodrecer:
  * tamanho com limite e nada de string vazia disfarçada de bairro.

@@ -66,6 +66,8 @@ const LINHA = {
   nome_completo: "João Silva",
   telefone: "66999110001",
   cidade: "Sinop - MT",
+  // A coluna continua no banco (#321), com o que as contas antigas
+  // informaram — e o mapeamento a ignora, como o teste abaixo confere.
   bairro: "Centro",
   avatar_url: "https://exemplo/avatar.svg",
   email_verificado: true,
@@ -99,7 +101,6 @@ describe("RepositorioPostgres", () => {
       cpf: null,
       telefone: "66999110001",
       cidade: "Sinop - MT",
-      bairro: "Centro",
       avatarUrl: "https://exemplo/avatar.svg",
       emailVerificado: true,
       telefoneVerificado: true,
@@ -140,7 +141,6 @@ describe("RepositorioPostgres", () => {
       nomeCompleto: "João Silva",
       telefone: "66999110001",
       cidade: "Sinop - MT",
-      bairro: "Centro",
     });
 
     const insert = chamadas.find((c) => c.metodo === "insert");
@@ -201,7 +201,6 @@ describe("RepositorioPostgres", () => {
       descricao: null,
       precoInicial: null,
       anosExperiencia: null,
-      bairrosAtendidos: [],
       instagram: null,
       facebook: null,
       cnpj: null,
@@ -335,7 +334,7 @@ describe("perfis para a edição", () => {
     );
   });
 
-  it("prestador: números vêm como número, listas nunca vêm nulas", async () => {
+  it("prestador: números vêm como número", async () => {
     resposta = {
       data: {
         usuario_id: ID,
@@ -343,7 +342,6 @@ describe("perfis para a edição", () => {
         descricao: "Instalações elétricas.",
         preco_inicial: "150",
         anos_experiencia: "7",
-        bairros_atendidos: null,
       },
       error: null,
     };
@@ -352,7 +350,6 @@ describe("perfis para a edição", () => {
     expect(p?.categoriaId).toBe(1);
     expect(p?.precoInicial).toBe(150);
     expect(p?.anosExperiencia).toBe(7);
-    expect(p?.bairrosAtendidos).toEqual([]);
   });
 
   it("prestador: traz a validade da mensalidade", async () => {
@@ -363,7 +360,6 @@ describe("perfis para a edição", () => {
         descricao: null,
         preco_inicial: null,
         anos_experiencia: null,
-        bairros_atendidos: [],
         mensalidade_valida_ate: "2026-10-01T00:00:00.000Z",
       },
       error: null,
@@ -382,7 +378,6 @@ describe("perfis para a edição", () => {
         descricao: null,
         preco_inicial: 0,
         anos_experiencia: 0,
-        bairros_atendidos: [],
       },
       error: null,
     };
@@ -464,18 +459,12 @@ describe("gravação de perfil", () => {
   });
 
   it("conta: escreve nas colunas em português", async () => {
-    await repo.atualizarBasicos(ID, {
-      telefone: "66999110005",
-      bairro: "Centro",
-    });
+    await repo.atualizarBasicos(ID, { telefone: "66999110005" });
 
     const update = chamadas.find((c) => c.metodo === "update");
     expect(update?.tabela).toBe("usuarios");
     // Sem `nome_completo`: o nome não se edita no perfil (#315).
-    expect(update?.args[0]).toEqual({
-      telefone: "66999110005",
-      bairro: "Centro",
-    });
+    expect(update?.args[0]).toEqual({ telefone: "66999110005" });
   });
 
   /**
@@ -516,7 +505,6 @@ describe("gravação de perfil", () => {
       descricao: "Instalações elétricas.",
       precoInicial: 150,
       anosExperiencia: 7,
-      bairrosAtendidos: ["Centro"],
       instagram: null,
       facebook: null,
     });
@@ -527,8 +515,10 @@ describe("gravação de perfil", () => {
       categoria_id: 1,
       preco_inicial: 150,
       anos_experiencia: 7,
-      bairros_atendidos: ["Centro"],
     });
+    expect(Object.keys(upsert?.args[0] as object)).not.toContain(
+      "bairros_atendidos",
+    );
   });
 
   /**
@@ -593,10 +583,7 @@ describe("gravação de perfil", () => {
   it("falha ao gravar não passa em silêncio", async () => {
     resposta = { data: null, error: { message: "conexão recusada" } };
     await expect(
-      repo.atualizarBasicos(ID, {
-        telefone: "66999110005",
-        bairro: null,
-      }),
+      repo.atualizarBasicos(ID, { telefone: "66999110005" }),
     ).rejects.toMatchObject({ codigo: "indisponivel" });
   });
 });

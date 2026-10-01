@@ -59,7 +59,7 @@ src/
     data.ts               Camada de dados (Supabase → fallback demo)
     mock-data.ts          Dados de demonstração de Sinop
     types.ts              Tipos espelhando o schema
-    constants.ts          Cidade-piloto, bairros, categorias
+    constants.ts          Cidade-piloto, categorias
 supabase/
   schema.sql              Schema, RLS, triggers, views, buckets
   seed.sql                Dados de desenvolvimento (local)
@@ -86,8 +86,8 @@ docs/
   sem lugar escolhido, mostra o país inteiro: quem quiser só o seu estado ou
   a sua cidade filtra, e o filtro fica na URL.
 - **O mais perto de você aparece primeiro.** A ordem da busca é uma escada
-  de seis degraus — mesmo bairro, mesma cidade, mesma região imediata,
-  mesma região intermediária, mesmo estado, resto do país. "Perto" vem da
+  de cinco degraus — mesma cidade, mesma região imediata, mesma região
+  intermediária, mesmo estado, resto do país. "Perto" vem da
   divisão regional do IBGE, que agrupa municípios pelo deslocamento real
   das pessoas, e não de distância em linha reta: quem decide o tempo de
   viagem é a estrada. Ordenar não é filtrar — nada some da lista por estar

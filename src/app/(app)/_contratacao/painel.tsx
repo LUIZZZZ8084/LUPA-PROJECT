@@ -495,7 +495,7 @@ export async function PainelDeContratacao({
                 className="flex flex-col gap-2 p-4 transition-colors hover:bg-panel-2 sm:flex-row sm:items-center sm:gap-3"
               >
                 {/*
-                  A linha inteira abre a ficha: nome, bairro e vaga não
+                  A linha inteira abre a ficha: nome e vaga não
                   bastam para decidir chamar alguém, e antes disto não
                   havia para onde clicar.
                 */}
@@ -514,9 +514,6 @@ export async function PainelDeContratacao({
                     </p>
                     <p className="truncate text-[11px] text-muted">
                       {app.job_title}
-                      {app.candidate.neighborhood
-                        ? ` · ${app.candidate.neighborhood}`
-                        : ""}
                       {` · ${timeAgo(app.created_at)}`}
                     </p>
                   </div>

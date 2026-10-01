@@ -129,7 +129,7 @@ export default async function CandidatosPage({
                   </p>
                   <p className="truncate text-[11px] text-muted">
                     {c.desired_area ?? "Área não informada"}
-                    {` · ${[c.neighborhood, c.city].filter(Boolean).join(", ")}`}
+                    {` · ${c.city}`}
                   </p>
 
                   {/*

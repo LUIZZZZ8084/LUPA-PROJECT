@@ -53,8 +53,7 @@ export default async function ServicosPage({
   const minRating = single("avaliacao");
   const lugar = lugarDaBusca(params);
 
-  // Ordena, não filtra — o profissional mais perto aparece primeiro. Para
-  // prestador, "perto" conta os bairros que ele atende, não onde ele mora.
+  // Ordena, não filtra — o profissional mais perto aparece primeiro.
   const perto = await origemDoUsuario();
   const sessao = await sessaoAtual();
   const podeVirarPrestador = Boolean(
@@ -165,11 +164,7 @@ export default async function ServicosPage({
       ) : (
         <div className="stagger grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {providers.map((provider) => (
-            <ProviderCard
-              key={provider.profile_id}
-              provider={provider}
-              perto={perto}
-            />
+            <ProviderCard key={provider.profile_id} provider={provider} />
           ))}
         </div>
       )}

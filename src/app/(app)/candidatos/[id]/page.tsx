@@ -86,7 +86,7 @@ export default async function CandidatoPage({
             <h1 className="text-xl leading-tight font-bold">{c.full_name}</h1>
             <p className="mt-1 flex items-center gap-1.5 text-xs text-muted">
               <MapPin size={13} />
-              {[c.neighborhood, c.city].filter(Boolean).join(", ")}
+              {c.city}
             </p>
             <div className="mt-2.5">
               {visivelParaEmpresas ? (

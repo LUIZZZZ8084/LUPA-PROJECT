@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { VerifiedMark } from "@/components/verified-badge";
 import { WORK_MODE_LABELS } from "@/lib/constants";
 import { formatSalaryRange, timeAgo } from "@/lib/format";
-import { GRAU, grauDeProximidade, type Origem } from "@/lib/proximidade";
 import type { JobListing } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -19,24 +18,11 @@ function isNew(createdAt: string) {
 
 export function JobCard({
   job,
-  perto,
   className,
 }: {
   job: JobListing;
-  /**
-   * De onde quem está olhando está. Só serve para o selo "Perto de você" —
-   * a ordem em si já vem pronta da consulta, ver `src/lib/data.ts`.
-   */
-  perto?: Origem;
   className?: string;
 }) {
-  const noSeuBairro =
-    Boolean(perto?.cidade) &&
-    grauDeProximidade(perto, {
-      cidade: job.city,
-      bairro: job.neighborhood,
-    }) === GRAU.MESMO_BAIRRO;
-
   return (
     <Link
       href={`/vagas/${job.id}`}
@@ -57,10 +43,7 @@ export function JobCard({
           <h3 className="min-w-0 truncate text-[15px] leading-snug font-semibold text-ink group-hover:text-vagas">
             {job.title}
           </h3>
-          <span className="flex shrink-0 items-center gap-1.5">
-            {noSeuBairro && <Badge tone="vagas">Perto de você</Badge>}
-            {isNew(job.created_at) && <Badge tone="vagas">Novo</Badge>}
-          </span>
+          {isNew(job.created_at) && <Badge tone="vagas">Novo</Badge>}
         </div>
 
         {/* O truncate precisa ficar no texto, não no contêiner flex: em flex

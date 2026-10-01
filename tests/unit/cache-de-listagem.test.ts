@@ -44,8 +44,8 @@ describe("cache das listagens", () => {
    * `perto` é o caso concreto e o mais tentador: ele chega junto dos
    * filtros, em `JobFilters`, e parece mais um deles. Não é — ele é quem
    * está olhando. Se ele entrasse na chave, o cache continuaria correto,
-   * só que inútil (uma entrada por bairro); se a **ordenação** entrasse no
-   * trecho cacheado, aí sim a lista de um bairro seria servida a outro.
+   * só que inútil (uma entrada por cidade); se a **ordenação** entrasse no
+   * trecho cacheado, aí sim a lista de uma cidade seria servida a outra.
    */
   it("a chave do cache não carrega sessão nem quem está olhando", () => {
     const fonte = readFileSync(join(SRC, "lib", "data.ts"), "utf8");

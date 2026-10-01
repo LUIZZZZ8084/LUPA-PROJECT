@@ -239,13 +239,14 @@ describe("getProviders", () => {
     expect(lista.every((p) => p.avg_rating >= 4.8)).toBe(true);
   });
 
-  it("busca por bairro atendido, não só por nome", async () => {
+  /*
+   * Sem bairro (#321): o texto da busca olha nome, categoria e descrição.
+   * "Menezes" era bairro atendido por alguém do mock; hoje nenhum prestador
+   * tem esse dado, e a busca não pode achar por ele.
+   */
+  it("o texto da busca não procura mais em bairro", async () => {
     const { itens: lista } = await getProviders({ q: "Menezes" });
-    expect(
-      lista.every((p) =>
-        p.service_area.some((b) => b.toLowerCase().includes("menezes")),
-      ),
-    ).toBe(true);
+    expect(lista).toHaveLength(0);
   });
 });
 
@@ -479,11 +480,8 @@ describe("getHomeFeed", () => {
    * A busca já ordenava por perto; a home tinha ficado de fora.
    */
   it("os destaques também vêm do mais perto para o mais longe", async () => {
-    const daCapital = await getHomeFeed({
-      cidade: "Cuiabá - MT",
-      bairro: null,
-    });
-    const deSinop = await getHomeFeed({ cidade: "Sinop - MT", bairro: null });
+    const daCapital = await getHomeFeed({ cidade: "Cuiabá - MT" });
+    const deSinop = await getHomeFeed({ cidade: "Sinop - MT" });
 
     // O mock é de Sinop: visto de Sinop, a primeira é daqui.
     expect(deSinop.jobs[0].city).toBe("Sinop - MT");

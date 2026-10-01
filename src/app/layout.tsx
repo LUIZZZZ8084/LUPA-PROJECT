@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   },
   /*
    * É o texto que o Google mostra embaixo do título e o WhatsApp mostra na
-   * prévia do link. Dizia "filtrado por bairro", e esse filtro não existe:
-   * o bairro só ordena por proximidade (#285).
+   * prévia do link. Dizia "filtrado por bairro", e esse filtro não existe
+   * (#285) — e desde a #321 nem o bairro de pessoa existe mais.
    */
   description:
     "Vagas de emprego, prestadores de serviço e empresas contratando no " +

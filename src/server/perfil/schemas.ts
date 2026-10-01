@@ -1,10 +1,6 @@
 import { z } from "zod";
-import {
-  JOB_CATEGORIES,
-  MAX_BAIRROS_ATENDIDOS,
-  SERVICE_CATEGORIES,
-} from "@/lib/constants";
-import { zCelular, zNomeDeBairro, zTexto } from "../validation";
+import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
+import { zCelular, zTexto } from "../validation";
 
 /**
  * O que se pode editar depois que a conta existe.
@@ -25,18 +21,6 @@ const zOpcional = (max: number, oQue: string) =>
     vazioViraNulo,
     z.string().trim().max(max, `${oQue} longo demais.`).nullable(),
   );
-
-/*
- * Bairro é texto, não enum.
- *
- * Era um `z.enum` dos 14 bairros de Sinop. Com o app aberto a Mato Grosso
- * inteiro, enum recusaria o cadastro de quem mora em qualquer outra cidade
- * — e continuaria recusando um bairro novo de Sinop, que em cidade do agro
- * aparece todo ano. A curadoria existe na tela, que oferece a lista onde
- * ela existe; o servidor garante o que importa para o dado não apodrecer:
- * tamanho e nada de string vazia disfarçada de bairro.
- */
-const zBairro = z.preprocess(vazioViraNulo, zNomeDeBairro.nullable());
 
 /**
  * Link de rede social, opcional. Mesma forma do site: em branco vira
@@ -59,7 +43,6 @@ const zLinkOpcional = (oQue: string) =>
  */
 export const schemaBasico = z.object({
   telefone: zCelular,
-  bairro: zBairro,
 });
 
 /**
@@ -208,18 +191,6 @@ export const schemaPrestador = z.object({
       .min(0)
       .max(70, "Confira os anos de experiência.")
       .nullable(),
-  ),
-  bairrosAtendidos: z.preprocess(
-    (v) =>
-      (Array.isArray(v) ? v : v ? [v] : [])
-        .map((b) => String(b).trim())
-        .filter(Boolean),
-    z
-      .array(zNomeDeBairro)
-      .max(
-        MAX_BAIRROS_ATENDIDOS,
-        `Escolha até ${MAX_BAIRROS_ATENDIDOS} bairros.`,
-      ),
   ),
   instagram: zLinkOpcional("Instagram"),
   facebook: zLinkOpcional("Facebook"),

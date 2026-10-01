@@ -132,9 +132,7 @@ function Pessoa({
         <p className="truncate text-sm font-semibold">{pessoa.nome}</p>
         <p className="mt-0.5 text-[11px] text-muted">
           {pessoa.casadas.length} de {pessoa.deQuantas} habilidades
-          {pessoa.cidade
-            ? ` · ${[pessoa.bairro, pessoa.cidade].filter(Boolean).join(", ")}`
-            : ""}
+          {pessoa.cidade ? ` · ${pessoa.cidade}` : ""}
         </p>
 
         {/*

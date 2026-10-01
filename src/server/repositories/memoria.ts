@@ -82,7 +82,6 @@ export class RepositorioMemoria implements RepositorioUsuarios {
       cpf,
       telefone: dados.telefone,
       cidade: dados.cidade,
-      bairro: dados.bairro ?? null,
       avatarUrl: dados.avatarUrl ?? null,
       emailVerificado: false,
       telefoneVerificado: false,

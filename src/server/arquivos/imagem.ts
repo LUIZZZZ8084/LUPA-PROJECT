@@ -65,7 +65,7 @@ export async function reduzirImagem(
    *
    * O `sharp` é binário nativo. Este módulo entra no grafo das actions de
    * perfil, e um import no topo que falhasse ao carregar derrubaria a
-   * edição de perfil inteira — telefone, bairro, tudo —, não só o envio
+   * edição de perfil inteira — telefone, redes, tudo —, não só o envio
    * de foto. Carregado aqui, o pior caso é o envio falhar com mensagem e
    * aparecer no Sentry.
    */

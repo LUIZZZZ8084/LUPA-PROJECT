@@ -86,27 +86,20 @@ describe("carregar o perfil para editar", () => {
 });
 
 describe("salvar os dados da conta", () => {
-  it("grava telefone e bairro", async () => {
+  it("grava o telefone", async () => {
     const id = await criar("candidato_clt");
 
-    await salvarBasicos(id, {
-      telefone: "66999110005",
-      bairro: "Centro",
-    });
+    await salvarBasicos(id, { telefone: "66999110005" });
 
     const u = await repo.porId(id);
     expect(u?.telefone).toBe("66999110005");
-    expect(u?.bairro).toBe("Centro");
   });
 
   it("não mexe no e-mail nem no papel", async () => {
     const id = await criar("candidato_clt");
     const antes = await repo.porId(id);
 
-    await salvarBasicos(id, {
-      telefone: "66999110005",
-      bairro: null,
-    });
+    await salvarBasicos(id, { telefone: "66999110005" });
 
     const depois = await repo.porId(id);
     expect(depois?.email).toBe(antes?.email);
@@ -126,7 +119,6 @@ describe("salvar os dados da conta", () => {
     const forjado = schemaBasico.parse({
       nomeCompleto: "Nome Trocado",
       telefone: "66999110005",
-      bairro: "",
     });
     await salvarBasicos(id, forjado);
 
@@ -172,7 +164,6 @@ describe("salvar o perfil do papel", () => {
       descricao: "Instalações elétricas residenciais.",
       precoInicial: 150,
       anosExperiencia: 7,
-      bairrosAtendidos: ["Centro"],
       instagram: null,
       facebook: null,
     });
@@ -192,7 +183,6 @@ describe("salvar o perfil do papel", () => {
       descricao: "Tentando virar prestador sem cadastro.",
       precoInicial: null,
       anosExperiencia: null,
-      bairrosAtendidos: [],
     } as never);
 
     expect(await repo.perfilPrestador(id)).toBeNull();

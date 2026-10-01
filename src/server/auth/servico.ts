@@ -108,7 +108,6 @@ export async function cadastrar(
     cpf: dados.papel === "empresa" ? (dados.cpf ?? null) : dados.cpf,
     telefone: dados.telefone,
     cidade: dados.cidade,
-    bairro: dados.bairro ?? null,
   });
 
   // O perfil específico do papel é criado junto: um usuário sem perfil
@@ -135,7 +134,6 @@ export async function cadastrar(
       descricao: dados.descricao,
       precoInicial: dados.precoInicial ?? null,
       anosExperiencia: dados.anosExperiencia ?? null,
-      bairrosAtendidos: dados.bairrosAtendidos ?? [],
       instagram: null,
       facebook: null,
       // MEI é declarado depois, em Editar perfil — o cadastro já pede CPF.

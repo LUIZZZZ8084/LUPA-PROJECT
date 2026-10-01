@@ -10,11 +10,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { useActionState, useRef, useState, useTransition } from "react";
-import {
-  CampoBairro,
-  CampoCidade,
-  useCidade,
-} from "@/components/cidade-e-bairro";
+import { CampoCidade, useCidade } from "@/components/campo-cidade";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -329,11 +325,18 @@ export function NewJobForm({
               error={state.campos?.cidade}
               label="Cidade da vaga"
             />
-            <CampoBairro
-              key={cidade}
-              cidade={cidade}
+            {/*
+              Texto livre e opcional, só informativo (#321): aparece no
+              anúncio para quem decide se vai até lá, e não entra em filtro
+              nem em ordem de nada.
+            */}
+            <Field
+              label="Bairro"
               error={state.campos?.bairro}
-            />
+              hint="Opcional. Aparece só no anúncio da vaga."
+            >
+              <Input name="bairro" maxLength={60} placeholder="Centro" />
+            </Field>
           </div>
 
           <Field

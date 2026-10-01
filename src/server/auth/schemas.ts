@@ -1,18 +1,12 @@
 import { z } from "zod";
+import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
 import {
-  JOB_CATEGORIES,
-  MAX_BAIRROS_ATENDIDOS,
-  SERVICE_CATEGORIES,
-} from "@/lib/constants";
-import {
-  zBairro,
   zCelular,
   zCidade,
   zCnpj,
   zCpf,
   zEmail,
   zNome,
-  zNomeDeBairro,
   zSenha,
   zTexto,
 } from "../validation";
@@ -37,7 +31,6 @@ const base = {
    * esse palpite erra para quase todo mundo.
    */
   cidade: zCidade,
-  bairro: zBairro,
 };
 
 /**
@@ -96,13 +89,6 @@ export const schemaPrestador = z.object({
     .int()
     .min(0)
     .max(70, "Confira os anos de experiência.")
-    .optional(),
-  bairrosAtendidos: z
-    .union([z.string(), z.array(z.string())])
-    .transform((v) =>
-      (Array.isArray(v) ? v : [v]).map((b) => b.trim()).filter(Boolean),
-    )
-    .pipe(z.array(zNomeDeBairro).max(MAX_BAIRROS_ATENDIDOS))
     .optional(),
 });
 

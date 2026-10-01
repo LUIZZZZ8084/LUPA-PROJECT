@@ -208,15 +208,15 @@ mostrava: quem avaliava via o formulário sumir, sem confirmação nenhuma.
 Mesma armadilha do 404 depois de virar prestador — estado de cliente não
 sobrevive à revalidação da própria rota.
 
-### O perfil em duas abas, e o bairro que sobrou
+### O perfil em duas abas
 
 Desenho do Luiz em 03/09/2026: "Sobre mim" e "Serviços", com as fotos do
 trabalho em grade de três por linha; o toque expande com a legenda.
 
 **A razão de ser aba, e não mais uma seção rolando para baixo:** no
 celular, o que decide a contratação são as fotos, e elas ficavam embaixo
-de descrição, bairros e redes sociais — longe de quem abriu o perfil
-justamente para ver trabalho.
+de descrição e redes sociais — longe de quem abriu o perfil justamente
+para ver trabalho.
 
 **O dono edita dentro da própria aba.** O atalho "Meus trabalhos" no
 perfil levava a uma tela separada só para isso — uma tela a mais entre a
@@ -249,10 +249,10 @@ some antes da hora, um estado que sobrevive além da hora. A saída foi
 fechar o que a lista já reflete, em vez de confiar que o React vai
 perceber sozinho.
 
-**"Bairros atendidos" saiu junto.** Era lista curada por cidade, e não
-existe lista pronta de bairro para os municípios do país — a mesma razão
-que já tinha derrubado o enum de bairro antes. O bairro que vale é o que a
-pessoa informou no cadastro, e ele já aparece na linha de localização.
+**"Bairros atendidos" saiu junto, e o bairro de pessoa também.** A
+primeira rodada (#119) tirou a lista de bairros atendidos; a segunda
+(#321, 01/10/2026) tirou o resto — ver "Bairro de pessoa não existe", na
+seção sobre Mato Grosso inteiro. A localização do perfil é a cidade.
 
 A grade e a expansão são travadas em teste de componente, não no e2e: no
 modo demonstração a vitrine é estática, e o prestador criado durante o
@@ -1046,17 +1046,17 @@ acompanhar — exceto a da Receita, que a aplicação já trata no mesmo passo.
 As avaliações que empresas fizeram antes disto passam a levar o nome da
 empresa por `supabase/aplica-avaliacao-assinada-pela-empresa.sql`.
 
-### O endereço da vaga é aditivo ao bairro, não substituto
+### O endereço da vaga, e o bairro que ficou nela
 
 A vaga informa endereço — rua, número, ponto de referência, texto livre.
 Quem depende de ônibus ou de andar precisa saber onde é **antes** de se
 candidatar, não depois, no contato com a empresa.
 
-**Ele não entra no ranking de proximidade**, que continua olhando só
-bairro e cidade. Comparar endereço livre não é confiável o bastante para
-decidir ordem: "Rua X, 123" e "Rua X 123" são a mesma rua e strings
-diferentes. Bairro é curado onde existe lista, e é isso que o torna
-comparável.
+**Ele não entra no ranking de proximidade**, que olha só cidade, região
+e estado. Comparar endereço livre não é confiável o bastante para decidir
+ordem: "Rua X, 123" e "Rua X 123" são a mesma rua e strings diferentes. O
+bairro da vaga, que mora ao lado do endereço, tem o mesmo estatuto — texto
+livre e opcional, informativo, nunca filtro nem ordem (#321).
 
 A coluna é opcional no banco, para não quebrar vaga publicada antes do
 campo existir; a tela de publicação é que exige preenchido em vaga nova.
@@ -1497,15 +1497,35 @@ opções dentro do HTML a cada abertura. Trocar o estado solta a cidade
 (`limpa`, no `FilterBar`): "Sinop - MT" com SP escolhido é um filtro que
 nunca casa, e a tela diria "nenhuma vaga" sem dizer por quê.
 
-**Bairro deixou de ser enum.** Era `z.enum` dos 14 bairros de Sinop, usado
-no cadastro, no perfil e na vaga. Não existe lista de bairros dos
-municípios do país pronta em lugar nenhum, e enum recusaria loteamento novo até em
-Sinop, onde a cidade cresce todo ano. A curadoria ficou na tela — lista
-onde existe, texto onde não existe —, e o servidor garante só o que evita
-lixo: tamanho mínimo e máximo.
+**Bairro de pessoa não existe (#321).** Decisão do Luiz em 01/10/2026: o cadastro e o perfil pedem só a cidade. O
+bairro tinha sido tirado em pedaços — o enum dos 14 bairros de Sinop caiu
+com a abertura para o estado, a lista de "bairros atendidos" na #119 — e
+sobreviveu em outro canto: o campo no cadastro e na edição, o degrau
+"mesmo bairro" da escada de proximidade, o selo "Perto de você" nos
+cards. Não existe lista de bairros do país, então o campo só funcionava
+bem em Sinop; e nenhuma tela filtra por ele (#285). Pedir um dado que não
+decide nada é custo de formulário sem retorno.
 
-O preço, aceito: sem enum, "Jd. Botânico" e "Jardim Botânico" podem
-coexistir onde não há lista. Vale menos que travar o cadastro.
+**O que sobrou é o bairro da vaga:** texto livre, opcional, escrito por
+quem publica e mostrado no card e no detalhe, para quem decide se vai até
+lá. Não entra em filtro nem em ordem — o mesmo estatuto do endereço.
+
+**O banco não mudou, de propósito.** `usuarios.bairro` e
+`perfis_prestador.bairros_atendidos` continuam lá, comentadas como legado
+no schema, e a aplicação não lê nem grava. Apagar dado de produção é
+decisão do Luiz, e a coluna é inofensiva — `usuarios` é fechada para
+`anon`. O preço aceito: `provider_listings`, lida pela chave anônima,
+ainda devolve o bairro das contas antigas, que a Lupa não mostra mais. A
+limpeza (`update ... set bairro = null`) fica para quando ele decidir. A
+view `metricas_por_local` segue agrupando por cidade e bairro, e o painel
+soma por cidade (`somarPorCidade`).
+
+**A trava é um teste que lê o código-fonte** —
+`tests/unit/sem-bairro-de-pessoa.test.ts`: só os arquivos que falam da
+vaga podem mencionar bairro, e os nomes que o carregavam
+(`bairrosAtendidos`, `MESMO_BAIRRO`, `BAIRROS_POR_CIDADE`…) não existem em
+lugar nenhum. *Remover um campo em etapas deixa sempre um resto que o
+próximo pedido encontra; o teste cobra o resto, não só a etapa.*
 
 **A cidade da vaga é da vaga, não da empresa.** Transportadora de Sinop
 contrata motorista em Sorriso; herdar a cidade da empresa esconderia a
@@ -1521,9 +1541,10 @@ correção de campo. Por ora é caso de suporte, como o CNPJ.
 A busca cobre o Brasil inteiro. Ordenar só por data faz a primeira coisa
 que alguém de Sinop vê ser uma vaga em Porto Alegre — o oposto do que
 "perto de você" promete. Por isso a listagem ordena pelo mais perto de
-quem está olhando, numa escada de seis degraus (`src/lib/proximidade.ts`):
-mesmo bairro, mesma cidade, mesma região imediata, mesma região
-intermediária, **mesmo estado**, resto do país.
+quem está olhando, numa escada de cinco degraus (`src/lib/proximidade.ts`):
+mesma cidade, mesma região imediata, mesma região intermediária,
+**mesmo estado**, resto do país. Já houve um sexto, "mesmo bairro", e
+saiu na #321 com o bairro de pessoa.
 
 **O degrau do estado entrou com a #301** e não precisa de mapa: o estado
 está no próprio valor gravado ("Sinop - MT"). É o que separa "longe, mas
@@ -1551,9 +1572,9 @@ vaga de quem tinha acabado de publicar.
 motivo. Ordenação que muda o resultado sem aparecer em lugar nenhum é a
 mesma armadilha, só que mais difícil de perceber.
 
-**Para prestador, perto é onde ele atende**, não onde mora: o eletricista
-do Jacarandá que atende o Centro está perto de quem é do Centro. O endereço
-dele responderia a pergunta errada.
+**Para prestador, perto é a cidade dele**, como para a vaga. Havia uma
+regra mais fina — "onde ele atende, não onde mora", pelos bairros
+atendidos —, e saiu junto com o bairro (#321).
 
 ### 404 em vez de 403 quando faz sentido
 
@@ -1650,8 +1671,9 @@ ninguém. Qualquer outra falha não apaga nada: sumir com a inscrição de quem
 estava sem sinal é pior que deixar de avisar uma vez.
 
 **Bairro ficou fora**, decisão de 26/08/2026: não existe catálogo de bairro
-para os municípios do país, só para Sinop. Notificar por bairro funcionaria bem
-numa cidade e mal em todas as outras.
+para os municípios do país. Notificar por bairro funcionaria bem numa cidade
+e mal em todas as outras — e desde a #321 a Lupa nem guarda o bairro de uma
+pessoa.
 
 **O envio sai por `after()`**, depois da resposta — quem publicou quer a
 vaga no ar, e o aviso é consequência. Mesma disciplina do registro de
@@ -2292,8 +2314,8 @@ para manter sem ninguém pedindo ainda.
 - **Multi-cidade:** toda entidade tem `city`, gravada com o estado
   (`"Sinop - MT"`), e o app aceita os 5.571 municípios do Brasil — lista
   gerada do IBGE por `scripts/gerar-cidades.mjs` (#301). Nenhuma cidade vem
-  escolhida por padrão. Bairro tem lista curada onde alguém conferiu
-  (`BAIRROS_POR_CIDADE`, hoje só Sinop) e é texto livre no resto.
+  escolhida por padrão. Bairro de pessoa não existe (#321); só a vaga
+  tem bairro, texto livre e opcional.
 - **Dados sensíveis:** documento e selfie vão para o bucket privado
   `verificacao` e são apagados na decisão do admin. Erros enviados ao Sentry
   passam por `scrubSensitiveData`. Senha nunca é logada. São obrigações de

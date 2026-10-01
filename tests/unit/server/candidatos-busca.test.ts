@@ -62,7 +62,6 @@ function pessoa(id: string, over: Record<string, unknown> = {}) {
     full_name: `Pessoa ${id}`,
     avatar_url: null,
     city: "Sinop - MT",
-    neighborhood: null,
     email: `${id}@teste.lupa`,
     phone: "66900000001",
     desired_area: "Agronegócio",
@@ -77,7 +76,7 @@ const nomes = (l: { full_name: string }[]) => l.map((x) => x.full_name);
 beforeEach(() => {
   disponiveis = [];
   for (const k of Object.keys(candidaturas)) delete candidaturas[k];
-  usuario = { id: "empresa-1", cidade: "Sinop - MT", bairro: null };
+  usuario = { id: "empresa-1", cidade: "Sinop - MT" };
 });
 
 describe("quem pode perguntar", () => {
@@ -361,7 +360,6 @@ describe("perfil de um candidato", () => {
         nomeCompleto: "Quem Procura",
         avatarUrl: null,
         cidade: "Sinop - MT",
-        bairro: "Centro",
         email: "quem@teste.lupa",
         telefone: "66999990000",
       };

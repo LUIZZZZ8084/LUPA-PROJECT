@@ -12,6 +12,7 @@ import type {
   RepositorioMetricas,
   Totais,
 } from "./tipos";
+import { somarPorCidade } from "./tipos";
 
 /**
  * Métricas em Postgres.
@@ -97,15 +98,17 @@ export class RepositorioMetricasPostgres implements RepositorioMetricas {
       .from("metricas_por_local")
       .select("*")
       .order("total", { ascending: false })
-      .limit(limite);
+      .limit(TETO_ADMIN);
 
     if (error) throw erros.indisponivel(`métricas locais: ${error.message}`);
 
-    return (data ?? []).map((l) => ({
-      cidade: String(l.cidade),
-      bairro: (l.bairro as string | null) ?? null,
-      total: Number(l.total ?? 0),
-    }));
+    return somarPorCidade(
+      (data ?? []).map((l) => ({
+        cidade: String(l.cidade),
+        total: Number(l.total ?? 0),
+      })),
+      limite,
+    );
   }
 
   async caixa(): Promise<Caixa> {

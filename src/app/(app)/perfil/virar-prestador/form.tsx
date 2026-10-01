@@ -86,11 +86,9 @@ function FaltaFoto() {
 
 export function AtivarPrestadorForm({
   precisaDeFoto,
-  bairro,
   temCpf,
 }: {
   precisaDeFoto: boolean;
-  bairro: string | null;
   /** Quem já informou CPF no cadastro não digita de novo aqui. */
   temCpf: boolean;
 }) {
@@ -181,13 +179,6 @@ export function AtivarPrestadorForm({
               placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo minha cidade e a região."
             />
           </Field>
-
-          {bairro && (
-            <p className="text-faint text-xs leading-relaxed">
-              Seu perfil nasce atendendo o {bairro}. Você acrescenta outros
-              bairros depois, em Editar perfil.
-            </p>
-          )}
 
           {state.erro && (
             <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-danger text-sm">

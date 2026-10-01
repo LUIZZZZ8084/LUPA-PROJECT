@@ -35,7 +35,7 @@ export interface TrabalhoNaAba {
  *
  * Desenho do Luiz. A razão de ser aba, e não uma seção a mais rolando para
  * baixo: no celular, o que decide a contratação são as fotos, e elas
- * ficavam embaixo de descrição, bairros e redes sociais — longe demais de
+ * ficavam embaixo de descrição e redes sociais — longe demais de
  * quem abriu o perfil para ver trabalho.
  *
  * Três por linha, como uma grade de fotos que todo mundo já sabe usar. O

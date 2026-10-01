@@ -24,5 +24,5 @@ export async function origemDoUsuario(): Promise<Origem | undefined> {
   const usuario = await usuarioDaSessao(sessao.usuarioId);
   if (!usuario?.cidade) return undefined;
 
-  return { cidade: usuario.cidade, bairro: usuario.bairro };
+  return { cidade: usuario.cidade };
 }

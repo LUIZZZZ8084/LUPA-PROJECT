@@ -20,7 +20,6 @@ import { cidadeComUf, nomeDaCidade, UFS, ufDaCidade } from "@/lib/cidades";
 import { CARREGADORES } from "@/lib/cidades/indice";
 import { cidadesDaUf, ehCidadeValida } from "@/lib/cidades/servidor";
 import { CIDADES_POR_UF } from "@/lib/cidades/todas";
-import { bairrosDe } from "@/lib/constants";
 import { getJobs, getProviders } from "@/lib/data";
 
 const todas = Object.values(CIDADES_POR_UF).flat();
@@ -157,30 +156,6 @@ describe("quem é aceito no cadastro", () => {
     for (const c of ["Sinop", "Bom Jesus", "Sinop - SP", "Curitiba - MT"]) {
       expect(ehCidadeValida(c), c).toBe(false);
     }
-  });
-});
-
-describe("bairro: lista onde existe, texto onde não existe", () => {
-  it("Sinop tem lista curada", () => {
-    expect(bairrosDe("Sinop - MT").length).toBeGreaterThan(10);
-    expect(bairrosDe("Sinop - MT")).toContain("Centro");
-  });
-
-  /*
-   * Não é falta: é a decisão. Manter bairro de mais de 5.500 municípios
-   * não existe pronto em lugar nenhum e envelheceria sozinho. Onde não há
-   * curadoria, a tela pede texto — e o servidor aceita.
-   */
-  it("as outras cidades ficam sem lista, e isso é o combinado", () => {
-    for (const c of ["Cuiabá - MT", "São Paulo - SP", "Sinop"]) {
-      expect(bairrosDe(c), c).toEqual([]);
-    }
-  });
-
-  it("cidade nula ou vazia não quebra", () => {
-    expect(bairrosDe(null)).toEqual([]);
-    expect(bairrosDe(undefined)).toEqual([]);
-    expect(bairrosDe("")).toEqual([]);
   });
 });
 

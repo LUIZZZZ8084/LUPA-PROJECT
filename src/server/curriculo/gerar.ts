@@ -34,7 +34,6 @@ export interface DadosCurriculo {
   email: string;
   telefone: string;
   cidade: string;
-  bairro: string | null;
   areaDesejada: string | null;
   resumo: string | null;
   formacao: string | null;
@@ -82,10 +81,6 @@ function secao(titulo: string, conteudo: ReactNode) {
 }
 
 function curriculo(dados: DadosCurriculo) {
-  const localizacao = dados.bairro
-    ? `${dados.bairro}, ${dados.cidade}`
-    : dados.cidade;
-
   const secoes = [
     dados.resumo &&
       secao("Resumo", h(Text, { style: estilos.paragrafo }, dados.resumo)),
@@ -125,7 +120,7 @@ function curriculo(dados: DadosCurriculo) {
       h(
         Text,
         { style: estilos.contato },
-        [formatPhone(dados.telefone), dados.email, localizacao].join("  ·  "),
+        [formatPhone(dados.telefone), dados.email, dados.cidade].join("  ·  "),
       ),
       ...secoes,
     ),

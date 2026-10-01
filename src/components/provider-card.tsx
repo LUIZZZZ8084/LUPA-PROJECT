@@ -1,27 +1,19 @@
 import { Lock, MapPin } from "lucide-react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { RatingInline } from "@/components/ui/stars";
 import { VerifiedMark } from "@/components/verified-badge";
 import { WhatsAppIconButton } from "@/components/whatsapp-button";
 import { formatStartingPrice } from "@/lib/format";
-import { GRAU, grauDeProximidade, type Origem } from "@/lib/proximidade";
 import type { ProviderListing } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function ProviderCard({
   provider,
-  perto,
   className,
   autenticado = true,
 }: {
   provider: ProviderListing;
-  /**
-   * De onde quem está olhando está. Só serve para o selo "Perto de você" —
-   * a ordem em si já vem pronta da consulta, ver `src/lib/data.ts`.
-   */
-  perto?: Origem;
   className?: string;
   /**
    * Falso só na home pública (#241), o único lugar onde este card renderiza
@@ -32,14 +24,6 @@ export function ProviderCard({
    */
   autenticado?: boolean;
 }) {
-  const noSeuBairro =
-    Boolean(perto?.cidade) &&
-    grauDeProximidade(perto, {
-      cidade: provider.city,
-      bairro: provider.neighborhood,
-      atende: provider.service_area,
-    }) === GRAU.MESMO_BAIRRO;
-
   return (
     <div
       className={cn(
@@ -63,10 +47,7 @@ export function ProviderCard({
           </h3>
         </Link>
 
-        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-servicos">
-          {provider.category.name}
-          {noSeuBairro && <Badge tone="servicos">Perto de você</Badge>}
-        </p>
+        <p className="mt-0.5 text-xs text-servicos">{provider.category.name}</p>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <RatingInline
@@ -80,7 +61,6 @@ export function ProviderCard({
 
         <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-faint">
           <MapPin size={12} />
-          {provider.neighborhood ? `${provider.neighborhood}, ` : ""}
           {provider.city}
           {provider.years_experience
             ? ` · ${provider.years_experience} anos de experiência`

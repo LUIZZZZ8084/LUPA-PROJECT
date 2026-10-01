@@ -14,6 +14,11 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 01/10/2026:
 
+- Cadastro e perfil pedem só a cidade: o bairro de pessoa saiu de tudo —
+  formulários, ordem da busca, selo "Perto de você", currículo e painel do
+  admin. Só a vaga mantém o bairro, texto livre e opcional, só
+  informativo. O banco não mudou —
+  [#321](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/321)
 - O app atende o Brasil inteiro: os 5.571 municípios do IBGE, estado e
   cidade em dois passos, filtro de estado na busca e o degrau "mesmo
   estado" na ordem por proximidade. Nenhuma cidade vem escolhida por
@@ -121,8 +126,8 @@ Base:
 - Envio de foto de perfil, currículo em PDF e logo de empresa, com
   caminho derivado da sessão
 - Busca de vagas e de prestadores, com filtro por cidade e categoria (e
-  tipo de contrato, nas vagas). Bairro não filtra: ele entra na ordem por
-  proximidade, e a promessa de filtro saiu das telas na #285
+  tipo de contrato, nas vagas). Bairro não filtra nem ordena: o de pessoa
+  saiu na #321, e a promessa de filtro saiu das telas na #285
 - Candidatura a vaga, e acompanhamento em "Minhas candidaturas"
 - Aviso de vaga nova por cidade e categoria, via Web Push (#48)
 - Publicações no perfil do prestador, com limite de 10 ativas
@@ -204,7 +209,7 @@ Prestador:
 
 Perfil e vaga, o que cada um informa:
 
-- Endereço na vaga, aditivo ao bairro e fora do ranking —
+- Endereço na vaga, fora do ranking de proximidade —
   [#86](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/86),
   PR [#87](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/87)
 - Instagram e Facebook para empresa e prestador; o `site`, que existia e

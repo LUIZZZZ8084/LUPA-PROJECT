@@ -45,7 +45,6 @@ const ANUNCIO: DadosPrestador = {
   descricao: "Instalações elétricas residenciais.",
   precoInicial: 150,
   anosExperiencia: 7,
-  bairrosAtendidos: ["Centro", "Menezes"],
   instagram: null,
   facebook: null,
   cnpj: null,

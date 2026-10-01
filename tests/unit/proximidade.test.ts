@@ -9,27 +9,35 @@
  * nunca saber por quê. Bug silencioso precisa de teste explícito.
  */
 import { describe, expect, it } from "vitest";
-import {
-  GRAU,
-  grauDeProximidade,
-  type Local,
-  porProximidade,
-} from "@/lib/proximidade";
+import { GRAU, grauDeProximidade, porProximidade } from "@/lib/proximidade";
 import { REGIOES } from "@/lib/regioes";
 
-const deSinop = { cidade: "Sinop - MT", bairro: "Centro" };
+const deSinop = { cidade: "Sinop - MT" };
 
 describe("os degraus, de perto para longe", () => {
-  it("mesmo bairro da mesma cidade é o mais perto", () => {
-    expect(
-      grauDeProximidade(deSinop, { cidade: "Sinop - MT", bairro: "Centro" }),
-    ).toBe(GRAU.MESMO_BAIRRO);
+  it("a mesma cidade é o mais perto", () => {
+    expect(grauDeProximidade(deSinop, { cidade: "Sinop - MT" })).toBe(
+      GRAU.MESMA_CIDADE,
+    );
   });
 
-  it("mesma cidade, outro bairro", () => {
-    expect(
-      grauDeProximidade(deSinop, { cidade: "Sinop - MT", bairro: "Jacarandá" }),
-    ).toBe(GRAU.MESMA_CIDADE);
+  /*
+   * Sem degrau de bairro (#321). A escada já começou em "mesmo bairro", e
+   * a única coisa que ele fazia era pôr uma vaga do Centro à frente de uma
+   * vaga do Jacarandá para quem mora no Centro — o que não existe lista
+   * para sustentar fora de Sinop, e que ninguém pediu em lugar nenhum.
+   * Se alguém reintroduzir, este teste é o que reprova: o bairro, mesmo
+   * que a tela o mande por engano, não pode mexer na ordem.
+   */
+  it("o bairro não aproxima nem afasta ninguém", () => {
+    const origem = { cidade: "Sinop - MT", bairro: "Centro" };
+    const doCentro = { cidade: "Sinop - MT", bairro: "Centro" };
+    const doJacaranda = { cidade: "Sinop - MT", bairro: "Jacarandá" };
+
+    expect(grauDeProximidade(origem, doCentro)).toBe(
+      grauDeProximidade(origem, doJacaranda),
+    );
+    expect(grauDeProximidade(origem, doCentro)).toBe(GRAU.MESMA_CIDADE);
   });
 
   /*
@@ -88,15 +96,14 @@ describe("os degraus, de perto para longe", () => {
    */
   it("os degraus estão em ordem crescente de distância", () => {
     const escada = [
-      grauDeProximidade(deSinop, { cidade: "Sinop - MT", bairro: "Centro" }),
-      grauDeProximidade(deSinop, { cidade: "Sinop - MT", bairro: "Menezes" }),
+      grauDeProximidade(deSinop, { cidade: "Sinop - MT" }),
       grauDeProximidade(deSinop, { cidade: "Cláudia - MT" }),
       grauDeProximidade(deSinop, { cidade: "Sorriso - MT" }),
       grauDeProximidade(deSinop, { cidade: "Cuiabá - MT" }),
       grauDeProximidade(deSinop, { cidade: "São Paulo - SP" }),
     ];
     expect(escada).toEqual([...escada].sort((a, b) => a - b));
-    expect(new Set(escada).size).toBe(6);
+    expect(new Set(escada).size).toBe(5);
   });
 });
 
@@ -129,33 +136,6 @@ describe("bordas que não podem quebrar a busca", () => {
     ).toBe(GRAU.MESMO_ESTADO);
   });
 
-  it("sem bairro dos dois lados, para na cidade e não confunde com bairro", () => {
-    expect(
-      grauDeProximidade({ cidade: "Sinop - MT" }, { cidade: "Sinop - MT" }),
-    ).toBe(GRAU.MESMA_CIDADE);
-    expect(
-      grauDeProximidade(
-        { cidade: "Sinop - MT", bairro: null },
-        { cidade: "Sinop - MT", bairro: null },
-      ),
-    ).toBe(GRAU.MESMA_CIDADE);
-  });
-
-  /*
-   * Bairro é texto livre fora de Sinop, e mesmo em Sinop chega do banco
-   * como veio. "Jardim Botânico" e "jardim botanico" são o mesmo lugar; se
-   * não fossem, o degrau mais perto simplesmente nunca aconteceria para
-   * quem digitou sem acento — que é metade do público.
-   */
-  it("bairro casa sem depender de acento ou maiúscula", () => {
-    expect(
-      grauDeProximidade(
-        { cidade: "Sinop - MT", bairro: "Jardim Botânico" },
-        { cidade: "Sinop - MT", bairro: "jardim botanico" },
-      ),
-    ).toBe(GRAU.MESMO_BAIRRO);
-  });
-
   it("cidade casa sem depender de acento", () => {
     expect(
       grauDeProximidade({ cidade: "Cuiabá - MT" }, { cidade: "cuiaba - mt" }),
@@ -173,36 +153,6 @@ describe("bordas que não podem quebrar a busca", () => {
         { cidade: "Bom Jesus - RS" },
       ),
     ).toBe(GRAU.RESTO_DO_PAIS);
-  });
-});
-
-describe("prestador: perto é onde ele atende", () => {
-  /*
-   * O eletricista mora no Jacarandá e atende o Centro. Para quem é do
-   * Centro ele está perto — usar o endereço dele responderia a pergunta
-   * errada, que é "quem vem até mim", não "quem mora ao meu lado".
-   */
-  it("atender o bairro da pessoa vale como mesmo bairro", () => {
-    const local: Local = {
-      cidade: "Sinop - MT",
-      bairro: "Jacarandá",
-      atende: ["Centro", "Jardim Itália"],
-    };
-    expect(grauDeProximidade(deSinop, local)).toBe(GRAU.MESMO_BAIRRO);
-  });
-
-  it("atender outro bairro não aproxima mais que a cidade", () => {
-    const local: Local = {
-      cidade: "Sinop - MT",
-      bairro: "Jacarandá",
-      atende: ["Menezes"],
-    };
-    expect(grauDeProximidade(deSinop, local)).toBe(GRAU.MESMA_CIDADE);
-  });
-
-  it("bairro atendido em outra cidade não aproxima nada", () => {
-    const local: Local = { cidade: "Cuiabá - MT", atende: ["Centro"] };
-    expect(grauDeProximidade(deSinop, local)).toBe(GRAU.MESMO_ESTADO);
   });
 });
 

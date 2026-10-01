@@ -42,7 +42,6 @@ function paraUsuario(linha: Record<string, unknown>): Usuario {
     cpf: (linha.cpf as string | null) ?? null,
     telefone: String(linha.telefone),
     cidade: String(linha.cidade),
-    bairro: (linha.bairro as string | null) ?? null,
     avatarUrl: (linha.avatar_url as string | null) ?? null,
     emailVerificado: Boolean(linha.email_verificado),
     telefoneVerificado: Boolean(linha.telefone_verificado),
@@ -104,7 +103,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         cpf: dados.cpf ?? null,
         telefone: dados.telefone,
         cidade: dados.cidade,
-        bairro: dados.bairro ?? null,
         avatar_url: dados.avatarUrl ?? null,
       })
       .select("*")
@@ -298,7 +296,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       descricao: perfil.descricao,
       preco_inicial: perfil.precoInicial,
       anos_experiencia: perfil.anosExperiencia,
-      bairros_atendidos: perfil.bairrosAtendidos,
       instagram: perfil.instagram,
       facebook: perfil.facebook,
       cnpj: perfil.cnpj,
@@ -507,7 +504,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         data.preco_inicial === null ? null : Number(data.preco_inicial),
       anosExperiencia:
         data.anos_experiencia === null ? null : Number(data.anos_experiencia),
-      bairrosAtendidos: (data.bairros_atendidos as string[] | null) ?? [],
       instagram: (data.instagram as string | null) ?? null,
       facebook: (data.facebook as string | null) ?? null,
       cnpj: (data.cnpj as string | null) ?? null,
@@ -556,7 +552,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       .from("usuarios")
       .update({
         telefone: dados.telefone,
-        bairro: dados.bairro,
       })
       .eq("id", usuarioId);
 
@@ -604,7 +599,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         descricao: dados.descricao,
         preco_inicial: dados.precoInicial,
         anos_experiencia: dados.anosExperiencia,
-        bairros_atendidos: dados.bairrosAtendidos,
         instagram: dados.instagram,
         facebook: dados.facebook,
       },
