@@ -1009,6 +1009,31 @@ comparável.
 A coluna é opcional no banco, para não quebrar vaga publicada antes do
 campo existir; a tela de publicação é que exige preenchido em vaga nova.
 
+### Modalidade da vaga: obrigatória na tela, opcional no banco (#300)
+
+Presencial, home office ou híbrido. Com o app aberto ao Brasil inteiro,
+isso deixou de ser detalhe: uma vaga home office em outra cidade interessa
+a quem está longe, e uma presencial não — sem o campo, as duas pareciam
+iguais no card.
+
+**É enum no banco (`modalidade_vaga`), não texto livre**, porque o valor
+gravado é o que a tela traduz (`WORK_MODE_LABELS`): "Home office",
+"home-office" e "remoto" seriam três valores para a mesma coisa. A coluna
+é opcional pelo mesmo motivo do endereço — vaga publicada antes dela
+continua válida e só não ganha selo —, e a tela de publicação exige.
+
+**Ela não mexe na ordenação por proximidade.** A localização da vaga
+continua sendo a da vaga; quem procura trabalho remoto vê o selo no card.
+Tratar home office como "perto de todo mundo" encheria a busca local de
+qualquer cidade com vagas remotas do país inteiro — decisão de produto
+que, se vier, vem com filtro próprio, e não escondida na ordem.
+
+**A coluna vai por último em `job_listings`.** `create or replace view` só
+aceita coluna nova no fim, e é assim que `aplica-modalidade-vaga.sql`
+chega a um banco vivo sem derrubar a view. **Rode a migração antes do
+deploy**: o `insert` de vaga passa a mandar `modalidade`, e sem a coluna
+publicar vaga falha.
+
 ### Estágio da candidatura: o nome depende de quem lê
 
 Os cinco estágios (`enviada`, `visualizada`, `entrevista`, `aprovada`,

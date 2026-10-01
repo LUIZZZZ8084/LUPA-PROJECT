@@ -46,6 +46,15 @@ export const camposVaga = {
    */
   cidade: zCidade,
   tipoContrato: z.string().trim().min(1, "Escolha o tipo de contrato."),
+  /*
+   * Obrigatória em vaga nova (#300). Quem procura emprego decide pelo card
+   * se dá para ir até lá todo dia — e, com o app aberto ao Brasil inteiro,
+   * uma vaga home office em outra cidade passa a ser para ele também.
+   */
+  modalidade: z.enum(
+    ["presencial", "home_office", "hibrido"],
+    "Escolha se é presencial, home office ou híbrido.",
+  ),
   bairro: zBairro,
   /*
    * Aditivo ao bairro, não substituto: informa onde é de verdade — rua,

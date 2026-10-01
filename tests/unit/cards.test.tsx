@@ -42,6 +42,20 @@ describe("JobCard", () => {
     render(<JobCard job={{ ...job, salary_min: null, salary_max: null }} />);
     expect(screen.getByText("A combinar")).toBeInTheDocument();
   });
+
+  /** A modalidade vira selo no card (#300). */
+  it("mostra a modalidade como selo", () => {
+    render(<JobCard job={{ ...job, work_mode: "home_office" }} />);
+    expect(screen.getByText("Home office")).toBeInTheDocument();
+  });
+
+  /** Vaga publicada antes do campo existir não ganha selo inventado. */
+  it("vaga sem modalidade não mostra selo nenhum", () => {
+    render(<JobCard job={{ ...job, work_mode: null }} />);
+    for (const rotulo of ["Presencial", "Home office", "Híbrido"]) {
+      expect(screen.queryByText(rotulo)).not.toBeInTheDocument();
+    }
+  });
 });
 
 describe("ProviderCard", () => {

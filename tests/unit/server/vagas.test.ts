@@ -49,6 +49,7 @@ const DADOS = {
   categoria: "Agronegócio",
   cidade: "Sinop",
   tipoContrato: "CLT",
+  modalidade: "presencial" as const,
   endereco: "Av. das Itaúbas, 1200",
 };
 

@@ -3,7 +3,14 @@
 import { AlertTriangle, Banknote, MapPin, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
+import { WORK_MODE_LABELS } from "@/lib/constants";
 import { formatSalaryRange } from "@/lib/format";
+import type { WorkMode } from "@/lib/types";
+
+/** O valor vem cru do formulário; só vira selo se for um dos três. */
+function ehModalidade(valor: string): valor is WorkMode {
+  return Object.hasOwn(WORK_MODE_LABELS, valor);
+}
 
 /**
  * O que a empresa preencheu, mostrado como o candidato vai ver.
@@ -21,6 +28,7 @@ export interface DadosDaVaga {
   titulo: string;
   categoria: string;
   tipoContrato: string;
+  modalidade: string;
   cidade: string;
   bairro: string;
   endereco: string;
@@ -36,6 +44,7 @@ export function lerDoFormulario(formData: FormData): DadosDaVaga {
     titulo: ler("titulo"),
     categoria: ler("categoria"),
     tipoContrato: ler("tipoContrato"),
+    modalidade: ler("modalidade"),
     cidade: ler("cidade"),
     bairro: ler("bairro"),
     endereco: ler("endereco"),
@@ -113,6 +122,9 @@ export function RevisaoDaVaga({ dados }: { dados: DadosDaVaga }) {
         <div className="mt-2 flex flex-wrap gap-1.5">
           {dados.categoria && <Badge tone="vagas">{dados.categoria}</Badge>}
           {dados.tipoContrato && <Badge>{dados.tipoContrato}</Badge>}
+          {ehModalidade(dados.modalidade) && (
+            <Badge>{WORK_MODE_LABELS[dados.modalidade]}</Badge>
+          )}
         </div>
 
         <dl className="mt-4 space-y-2.5 text-sm">

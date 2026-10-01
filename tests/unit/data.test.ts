@@ -536,6 +536,7 @@ describe("busca ordenada pelo mais perto", () => {
       categoria: "Logística e Transporte",
       cidade,
       tipoContrato: "CLT",
+      modalidade: "presencial" as const,
       endereco: "Av. das Itaúbas, 1200",
     });
 

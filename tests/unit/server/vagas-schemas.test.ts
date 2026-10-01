@@ -14,6 +14,7 @@ const DADOS = {
   categoria: "Administrativo",
   cidade: "Sinop",
   tipoContrato: "CLT",
+  modalidade: "presencial" as const,
   endereco: "Av. das Itaúbas, 1200",
 };
 
@@ -21,6 +22,30 @@ describe("schemaNovaVaga", () => {
   it("aceita o mínimo", () => {
     const r = schemaNovaVaga.safeParse(DADOS);
     expect(r.success).toBe(true);
+  });
+
+  /*
+   * A modalidade é obrigatória em vaga nova (#300): é o selo que diz a
+   * quem está em outra cidade se a vaga é para ele.
+   */
+  it("exige a modalidade", () => {
+    const { modalidade: _, ...semModalidade } = DADOS;
+    const r = schemaNovaVaga.safeParse(semModalidade);
+    expect(r.success).toBe(false);
+    expect(
+      !r.success && r.error.issues.some((i) => i.path[0] === "modalidade"),
+    ).toBe(true);
+  });
+
+  it("aceita as três modalidades, e nada além delas", () => {
+    for (const modalidade of ["presencial", "home_office", "hibrido"]) {
+      expect(schemaNovaVaga.safeParse({ ...DADOS, modalidade }).success).toBe(
+        true,
+      );
+    }
+    expect(
+      schemaNovaVaga.safeParse({ ...DADOS, modalidade: "remoto" }).success,
+    ).toBe(false);
   });
 
   it("bairro em branco vira 'não informado', não erro", () => {

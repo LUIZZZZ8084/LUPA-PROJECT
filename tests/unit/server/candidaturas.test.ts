@@ -46,6 +46,7 @@ const DADOS_VAGA = {
   categoria: "Administrativo",
   cidade: "Sinop",
   tipoContrato: "CLT",
+  modalidade: "presencial" as const,
   endereco: "Av. das Itaúbas, 1200",
 };
 

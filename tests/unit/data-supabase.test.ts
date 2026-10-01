@@ -146,6 +146,7 @@ const VAGA_DO_BANCO = {
   city: "Sinop",
   neighborhood: null,
   contract_type: "CLT",
+  work_mode: "presencial" as const,
   salary_min: 2000,
   salary_max: 3000,
   status: "aberta",

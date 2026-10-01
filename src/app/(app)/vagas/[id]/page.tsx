@@ -16,6 +16,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { VerifiedMark } from "@/components/verified-badge";
+import { WORK_MODE_LABELS } from "@/lib/constants";
 import { getJobById, getRelatedJobs } from "@/lib/data";
 import {
   formatSalaryRange,
@@ -172,6 +173,9 @@ export default async function JobDetailPage({
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
           {job.category && <Badge tone="vagas">{job.category}</Badge>}
+          {job.work_mode && (
+            <Badge tone="outline">{WORK_MODE_LABELS[job.work_mode]}</Badge>
+          )}
           <Badge tone="outline">
             <Users size={11} />
             {pluralize(job.applicant_count, "candidato", "candidatos")}

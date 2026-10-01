@@ -34,6 +34,9 @@ export type ContractType =
   | "Freelance"
   | "Jovem Aprendiz";
 
+/** Onde o trabalho acontece (#300). Espelha o enum `modalidade_vaga`. */
+export type WorkMode = "presencial" | "home_office" | "hibrido";
+
 export type CompanyPlan = "trial" | "mensal";
 
 export interface Profile {
@@ -113,6 +116,8 @@ export interface Job {
    * e cidade. `null` em vaga publicada antes deste campo existir. */
   address: string | null;
   contract_type: ContractType | null;
+  /** `null` em vaga publicada antes de o campo existir — sem selo. */
+  work_mode: WorkMode | null;
   salary_min: number | null;
   salary_max: number | null;
   /** O que a vaga pede. Vazio quando a empresa não declarou — aí o

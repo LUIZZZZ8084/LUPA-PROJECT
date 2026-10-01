@@ -1,5 +1,5 @@
 import { CIDADES_MT } from "./cidades-mt";
-import type { ContractType, ServiceCategory } from "./types";
+import type { ContractType, ServiceCategory, WorkMode } from "./types";
 
 /**
  * Onde o app começa, e até onde ele vai.
@@ -166,6 +166,15 @@ export const CONTRACT_TYPES: ContractType[] = [
   "Freelance",
   "Jovem Aprendiz",
 ];
+
+/** O valor gravado é o do enum; o rótulo é o que a tela mostra (#300). */
+export const WORK_MODE_LABELS: Record<WorkMode, string> = {
+  presencial: "Presencial",
+  home_office: "Home office",
+  hibrido: "Híbrido",
+};
+
+export const WORK_MODES = Object.keys(WORK_MODE_LABELS) as WorkMode[];
 
 export const ROLE_LABELS = {
   candidato_clt: "Candidato",

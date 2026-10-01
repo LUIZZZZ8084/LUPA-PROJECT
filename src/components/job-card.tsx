@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { VerifiedMark } from "@/components/verified-badge";
+import { WORK_MODE_LABELS } from "@/lib/constants";
 import { formatSalaryRange, timeAgo } from "@/lib/format";
 import { GRAU, grauDeProximidade, type Origem } from "@/lib/proximidade";
 import type { JobListing } from "@/lib/types";
@@ -94,6 +95,14 @@ export function JobCard({
             {job.city}
           </span>
           {job.contract_type && <span>{job.contract_type}</span>}
+          {/*
+            Selo, e não mais um texto solto na linha (#300): "Home office"
+            muda quem pode se candidatar, e é a primeira coisa que alguém de
+            outra cidade procura no card.
+          */}
+          {job.work_mode && (
+            <Badge tone="outline">{WORK_MODE_LABELS[job.work_mode]}</Badge>
+          )}
           <span>{timeAgo(job.created_at)}</span>
         </div>
       </div>

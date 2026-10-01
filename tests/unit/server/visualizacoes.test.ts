@@ -52,6 +52,7 @@ const DADOS_VAGA = {
   categoria: "Logística",
   cidade: "Sinop",
   tipoContrato: "CLT",
+  modalidade: "presencial" as const,
   endereco: "Av. das Itaúbas, 1200",
 };
 
@@ -190,6 +191,7 @@ describe("visualizações de vaga", () => {
       bairro: null,
       endereco: null,
       tipoContrato: null,
+      modalidade: null,
       salarioMin: null,
       salarioMax: null,
       habilidades: [],
