@@ -396,9 +396,9 @@ test.describe("cadastro que dá erro", () => {
     await expect(page.getByLabel("Área desejada")).not.toHaveValue("");
     await expect(page.getByLabel("Senha")).toHaveValue("abc123");
     // A cidade escolhida em dois passos também sobrevive ao erro (#301).
-    await expect(page.getByLabel("Cidade", { exact: true })).toHaveValue(
-      "Sinop - MT",
-    );
+    await expect(
+      page.getByRole("combobox", { name: "Cidade", exact: true }),
+    ).toHaveValue("Sinop - MT");
     await expect(page.getByLabel("Nome completo")).not.toHaveAttribute(
       "aria-invalid",
     );

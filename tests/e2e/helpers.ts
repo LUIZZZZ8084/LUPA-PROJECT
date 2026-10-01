@@ -85,10 +85,14 @@ export async function escolherCidade(
   rotulo = "Cidade",
 ): Promise<void> {
   await aguardarHidratacao(page, "form");
+  // Por papel e nome, não por `getByLabel` exato: o texto do rótulo inclui o
+  // asterisco de obrigatório, e o nome acessível não.
   await page
-    .getByLabel("Estado", { exact: true })
+    .getByRole("combobox", { name: "Estado", exact: true })
     .selectOption(cidade.slice(-2));
-  await page.getByLabel(rotulo, { exact: true }).selectOption(cidade);
+  await page
+    .getByRole("combobox", { name: rotulo, exact: true })
+    .selectOption(cidade);
 }
 
 /**
