@@ -74,7 +74,7 @@ export function SocialLink({ rede, url }: { rede: Rede; url: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex items-center gap-1.5 rounded-full border border-line bg-panel-2 px-3 py-1.5 font-medium text-sm transition-colors hover:border-current ${cor}`}
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-panel-2 px-3 py-1.5 font-medium text-sm transition-colors hover:border-current ${cor}`}
     >
       {icone}
       {rotulo}

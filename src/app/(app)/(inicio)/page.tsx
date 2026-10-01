@@ -393,7 +393,7 @@ function FeedSection({
         <h2 className="text-base font-bold">{title}</h2>
         <Link
           href={href}
-          className={`inline-flex items-center gap-1 text-xs font-medium ${accent} hover:underline`}
+          className={`-my-2 inline-flex min-h-11 items-center gap-1 pl-3 text-xs font-medium ${accent} hover:underline`}
         >
           Ver todas
           <ArrowRight size={13} />

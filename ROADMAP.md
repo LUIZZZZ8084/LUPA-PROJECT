@@ -8,12 +8,17 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 27/09/2026.**
+**Última atualização: 01/10/2026.**
 
 ## Concluído
 
 Preparação para o lançamento, de 15 a 25/09/2026:
 
+- Celular sem zoom no iPhone e com alvos de toque de 44 px: campos de
+  formulário com 16 px abaixo de `md`, e "Ver todas", "Entrar",
+  "Esqueci minha senha", "Criar conta gratuita" e os links do rodapé com
+  altura mínima de 44 px —
+  [#314](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/314)
 - Avisos de vaga a um toque: sininho no cabeçalho, para quem pode se
   candidatar, em vez de escondidos no fim de "Editar perfil" —
   [#288](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/288)

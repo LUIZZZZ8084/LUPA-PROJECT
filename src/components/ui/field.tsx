@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  * `aria-invalid` no campo quando recebe `error`.
  */
 const control =
-  "w-full rounded-xl border border-line bg-panel-2 px-3.5 text-sm text-ink " +
+  "w-full rounded-xl border border-line bg-panel-2 px-3.5 text-base text-ink md:text-sm " +
   "placeholder:text-faint transition-colors duration-[var(--duration-fast)] " +
   "hover:border-panel-3 focus:border-vagas focus:outline-none " +
   "aria-[invalid=true]:border-danger aria-[invalid=true]:focus:border-danger " +
