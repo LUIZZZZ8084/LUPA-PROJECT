@@ -114,6 +114,9 @@ export default async function VagasPage({
    * de você" descreveria uma ordenação que já não decide quase nada.
    */
   const ordenadoPorProximidade = Boolean(perto && !filters.city);
+  const temFiltro = Boolean(
+    filters.uf || filters.category || filters.contract_type || filters.q,
+  );
 
   return (
     <PageShell>
@@ -169,16 +172,28 @@ export default async function VagasPage({
       </p>
 
       {jobs.length === 0 ? (
-        <EmptyState
-          icon={<SearchX size={22} />}
-          title="Nenhuma vaga com esses filtros"
-          description="Tente remover um filtro, buscar por outro cargo, ou abrir para toda a região."
-          action={
-            <ButtonLink href="/vagas" variant="outline" size="sm">
-              Limpar busca
-            </ButtonLink>
-          }
-        />
+        /*
+         * Sem filtro nenhum, "remova um filtro" não ajuda: não há vaga
+         * nenhuma, e a frase precisa dizer isso (#302).
+         */
+        temFiltro ? (
+          <EmptyState
+            icon={<SearchX size={22} />}
+            title="Nenhuma vaga com esses filtros"
+            description="Tente remover um filtro, buscar por outro cargo, ou abrir para todo o Brasil."
+            action={
+              <ButtonLink href="/vagas" variant="outline" size="sm">
+                Limpar busca
+              </ButtonLink>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={<SearchX size={22} />}
+            title="Ainda não há vagas abertas"
+            description="As vagas aparecem aqui assim que alguém publica. Quem contrata publica pelo painel da empresa."
+          />
+        )
       ) : (
         <div className="stagger grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {jobs.map((job) => (

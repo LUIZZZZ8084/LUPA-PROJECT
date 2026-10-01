@@ -1842,3 +1842,91 @@ describe("finalidade do token de uso único", () => {
     ]);
   });
 });
+
+/**
+ * A limpeza dos dados de exemplo da produção (#302), executada de verdade.
+ *
+ * O script apaga por id, e o que precisa ser provado é o que o id não
+ * alcança: a conta real fica, e o que pendia das contas de exemplo vai
+ * junto pelas chaves estrangeiras — sem sobrar vaga órfã na busca.
+ */
+describe("aplica-remove-dados-de-exemplo.sql", () => {
+  let banco: PGlite;
+  const LIMPEZA = readFileSync(
+    join(process.cwd(), "supabase/aplica-remove-dados-de-exemplo.sql"),
+    "utf8",
+  );
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+    await banco.exec(
+      readFileSync(join(process.cwd(), "supabase/seed.sql"), "utf8"),
+    );
+
+    // Uma pessoa de verdade, que se candidatou a uma vaga de exemplo.
+    const real = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('real@teste.lupa', 'h', 'candidato_clt', 'Pessoa Real', '66999110001', 'Cuiabá - MT')
+       returning id`,
+    );
+    await banco.query(
+      `insert into candidaturas (vaga_id, candidato_id)
+       values ('44444444-4444-4444-8444-000000000002', $1)`,
+      [real.rows[0].id],
+    );
+
+    await banco.exec(LIMPEZA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  it("não sobra conta nem vaga de exemplo", async () => {
+    const contas = await banco.query<{ total: number }>(
+      `select count(*)::int as total from usuarios
+        where id::text like '11111111-%' or id::text like '22222222-%'
+           or id::text like '33333333-%'`,
+    );
+    const vagas = await banco.query<{ total: number }>(
+      "select count(*)::int as total from vagas",
+    );
+    expect(contas.rows[0].total).toBe(0);
+    expect(vagas.rows[0].total).toBe(0);
+  });
+
+  it("a conta real continua, e só perde a candidatura à vaga que sumiu", async () => {
+    const real = await banco.query<{ total: number }>(
+      "select count(*)::int as total from usuarios where email = 'real@teste.lupa'",
+    );
+    const candidaturas = await banco.query<{ total: number }>(
+      "select count(*)::int as total from candidaturas",
+    );
+    expect(real.rows[0].total).toBe(1);
+    expect(candidaturas.rows[0].total).toBe(0);
+  });
+
+  it("nada fica pendurado nas contas que saíram", async () => {
+    for (const tabela of [
+      "perfis_prestador",
+      "perfis_empresa",
+      "avaliacoes",
+      "publicacoes",
+      "pedidos_verificacao",
+    ]) {
+      const r = await banco.query<{ total: number }>(
+        `select count(*)::int as total from ${tabela}`,
+      );
+      expect(r.rows[0].total, tabela).toBe(0);
+    }
+  });
+
+  it("rodar de novo não quebra nem apaga mais nada", async () => {
+    await banco.exec(LIMPEZA);
+    const r = await banco.query<{ total: number }>(
+      "select count(*)::int as total from usuarios",
+    );
+    expect(r.rows[0].total).toBe(1);
+  });
+});

@@ -80,6 +80,9 @@ export default async function ServicosPage({
 
   // A ordem é dita na tela; ver o comentário longo em `/vagas`.
   const ordenadoPorProximidade = Boolean(perto && !lugar.cidade);
+  const temFiltro = Boolean(
+    lugar.uf || single("categoria") || minRating || single("q"),
+  );
 
   return (
     <PageShell>
@@ -137,16 +140,28 @@ export default async function ServicosPage({
       </p>
 
       {providers.length === 0 ? (
-        <EmptyState
-          icon={<SearchX size={22} />}
-          title="Nenhum profissional com esses filtros"
-          description="Tente outra categoria, outra cidade, ou baixe a exigência de nota."
-          action={
-            <ButtonLink href="/servicos" variant="outline" size="sm">
-              Limpar busca
-            </ButtonLink>
-          }
-        />
+        /*
+         * Sem filtro nenhum, "tente outro filtro" não ajuda: a vitrine está
+         * vazia, não a busca (#302). A frase precisa dizer qual dos dois.
+         */
+        temFiltro ? (
+          <EmptyState
+            icon={<SearchX size={22} />}
+            title="Nenhum profissional com esses filtros"
+            description="Tente outra categoria, outra cidade, ou baixe a exigência de nota."
+            action={
+              <ButtonLink href="/servicos" variant="outline" size="sm">
+                Limpar busca
+              </ButtonLink>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={<SearchX size={22} />}
+            title="Ainda não há profissionais na vitrine"
+            description="Quem oferece serviço aparece aqui assim que ativa o perfil de prestador."
+          />
+        )
       ) : (
         <div className="stagger grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {providers.map((provider) => (

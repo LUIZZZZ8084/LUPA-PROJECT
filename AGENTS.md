@@ -1130,6 +1130,39 @@ responderia com um redirecionamento para `/entrar` que nenhum crawler segue
 para descobrir a política — a mesma armadilha do item esquecido no matcher,
 registrada mais abaixo neste arquivo.
 
+### A vitrine de produção mostra só quem existe (#302)
+
+As contas de exemplo do `seed.sql` — 9 prestadores, 3 empresas e as vagas
+de Sinop — estavam no banco de produção e apareciam para visitante real
+como ofertas de verdade. Com a home pública desde a #241, eram a primeira
+coisa que alguém via.
+
+**Isto reverte a #245.** Em 22/09/2026 a decisão foi o contrário: manter
+esse conteúdo no ar com vitrine até 2099 (`aplica-demo-vitalicia.sql`),
+porque era o que se usava para demonstrar a Lupa a clientes em Sinop. Em
+01/10/2026 o pedido do Paulinho foi tirar: anúncio que não existe, numa
+plataforma de emprego, é exatamente o que o produto promete não ter.
+
+**Demonstrar continua possível, só que no lugar certo.** O modo
+demonstração — o app sem Supabase, lendo `src/lib/mock-data.ts` — não
+muda nada e não toca banco. O que muda é o banco de produção, por
+`supabase/aplica-remove-dados-de-exemplo.sql`, que precisa ser rodado à
+mão no SQL Editor.
+
+**O script apaga por id, nunca por "o que está visível".** O seed usa ids
+fixos, e só eles saem; o resto vai junto pelas chaves estrangeiras com
+`on delete cascade`. Conta de gente de verdade — inclusive as que o
+`aplica-demo-vitalicia.sql` pôs na vitrine para sempre — não é tocada: o
+que fazer com elas é decisão de quem é dono delas, não de um script
+versionado. Há teste em `schema.test.ts` rodando seed, conta real e
+limpeza num Postgres de verdade.
+
+**E a tela passou a dizer quando está vazia.** Sem os exemplos, a home e
+as buscas podem ficar sem nada nos primeiros dias. Seção só com o título
+parece tela quebrada; "Nenhuma vaga com esses filtros" sem filtro nenhum
+manda a pessoa mexer no que não existe. As duas situações agora têm frase
+própria.
+
 ### Segurança: o que já vale, e o que se decidiu não fazer
 
 Auditoria completa dos vinte pontos está na Issue #55, com o estado de

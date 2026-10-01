@@ -180,6 +180,15 @@ export default async function HomePage() {
             title="Vagas em destaque"
             href="/vagas"
             accent="text-vagas"
+            vazio={
+              jobs.length === 0 && (
+                <Vazio
+                  texto="Nenhuma vaga aberta no momento."
+                  acao="Contrata? Publique a primeira"
+                  href="/empresa"
+                />
+              )
+            }
           >
             {jobs.map((job) => (
               <JobCard key={job.id} job={job} />
@@ -190,6 +199,15 @@ export default async function HomePage() {
             title="Profissionais bem avaliados"
             href="/servicos"
             accent="text-servicos"
+            vazio={
+              providers.length === 0 && (
+                <Vazio
+                  texto="Nenhum profissional na vitrine ainda."
+                  acao="Oferece um serviço? Apareça aqui"
+                  href={terceiroCard.href}
+                />
+              )
+            }
           >
             {providers.map((provider) => (
               <ProviderCard
@@ -380,11 +398,18 @@ function FeedSection({
   title,
   href,
   accent,
+  vazio,
   children,
 }: {
   title: string;
   href: string;
   accent: string;
+  /**
+   * O que aparece quando não há nada para listar (#302). Sem os dados de
+   * exemplo, a vitrine de produção começa quase vazia — e uma seção só com
+   * o título parece tela quebrada, não começo.
+   */
+  vazio?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -399,8 +424,31 @@ function FeedSection({
           <ArrowRight size={13} />
         </Link>
       </div>
-      <div className="stagger space-y-2.5">{children}</div>
+      {vazio || <div className="stagger space-y-2.5">{children}</div>}
     </section>
+  );
+}
+
+function Vazio({
+  texto,
+  acao,
+  href,
+}: {
+  texto: string;
+  acao: string;
+  href: string;
+}) {
+  return (
+    <div className="rounded-[var(--radius-card)] border border-line border-dashed bg-panel p-5 text-center">
+      <p className="text-muted text-sm">{texto}</p>
+      <Link
+        href={href}
+        className="mt-2 inline-flex items-center gap-1 font-medium text-ink text-sm hover:underline"
+      >
+        {acao}
+        <ArrowRight size={14} />
+      </Link>
+    </div>
   );
 }
 
