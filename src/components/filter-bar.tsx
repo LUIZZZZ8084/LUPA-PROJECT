@@ -11,8 +11,14 @@ export interface FilterDef {
   /** Texto quando nada está selecionado, ex.: "Categoria". */
   placeholder: string;
   options: { value: string; label: string }[];
-  /** Fixa o valor e desabilita — usado na cidade enquanto só Sinop está ativa. */
+  /** Fixa o valor e desabilita o filtro. */
   locked?: boolean;
+  /**
+   * Parâmetros que deixam de valer quando este muda. Trocar o estado
+   * precisa soltar a cidade (#301): "Sinop - MT" com estado SP na URL é um
+   * filtro que nunca casa, e a busca volta vazia sem explicar por quê.
+   */
+  limpa?: string[];
 }
 
 /** Valores atuais dos filtros, lidos no servidor e repassados como props. */
@@ -71,8 +77,9 @@ export function FilterBar({
     return params;
   }
 
-  function setParam(key: string, value: string) {
+  function setParam(key: string, value: string, limpar: string[] = []) {
     const next = currentParams();
+    for (const chave of limpar) next.delete(chave);
     if (value) next.set(key, value);
     else next.delete(key);
     navigate(next);
@@ -186,7 +193,7 @@ export function FilterBar({
             key={filter.key}
             filter={filter}
             value={values[filter.key] ?? ""}
-            onChange={(v) => setParam(filter.key, v)}
+            onChange={(v) => setParam(filter.key, v, filter.limpa)}
             accent={accent}
           />
         ))}

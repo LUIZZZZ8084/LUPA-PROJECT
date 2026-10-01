@@ -393,7 +393,7 @@ function Anuncio({ perfil }: { perfil: PerfilCompleto }) {
     <form action={acao} {...envio}>
       <Secao
         titulo="Seu anúncio"
-        descricao="É como você aparece para quem procura profissional em Sinop."
+        descricao="É como você aparece para quem procura profissional na sua região."
         estado={estado}
         pendente={pendente}
       >

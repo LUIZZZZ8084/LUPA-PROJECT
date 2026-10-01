@@ -1,64 +1,91 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
   CampoBairro,
   CampoBairrosAtendidos,
   CampoCidade,
 } from "@/components/cidade-e-bairro";
-import { CIDADES, MAX_BAIRROS_ATENDIDOS } from "@/lib/constants";
+import { MAX_BAIRROS_ATENDIDOS } from "@/lib/constants";
 
 /**
  * A regra que decide entre lista e texto livre.
  *
- * Ela existe porque não há lista de bairros dos 142 municípios de Mato
- * Grosso, e exigir uma travaria o cadastro de quem mora fora de Sinop. É
- * uma decisão de produto com duas metades, e as duas precisam continuar
- * funcionando: quem está numa cidade com curadoria escolhe da lista, quem
- * não está digita.
+ * Ela existe porque não há lista de bairros dos municípios do país, e
+ * exigir uma travaria o cadastro de quem mora fora de Sinop. É uma decisão
+ * de produto com duas metades, e as duas precisam continuar funcionando:
+ * quem está numa cidade com curadoria escolhe da lista, quem não está
+ * digita.
  */
 
+const cidade = () => screen.getByLabelText(/cidade/i) as HTMLSelectElement;
+const estado = () => screen.getByLabelText(/estado/i) as HTMLSelectElement;
+
+/**
+ * Estado e cidade, em dois passos (#301): são 5.571 municípios, e o
+ * celular baixa só as cidades do estado escolhido.
+ */
 describe("campo de cidade", () => {
-  /*
-   * Timeout maior só aqui.
-   *
-   * O `select` tem 142 opções de verdade — é o estado inteiro —, e
-   * `getByRole("option", …)` monta a árvore de acessibilidade das 142 para
-   * achar uma. Sozinho o teste roda em menos de um segundo; junto com a
-   * suíte, em dois trabalhadores, passava dos cinco e o vermelho aparecia
-   * em quem não tinha culpa.
-   *
-   * Não é defeito escondido: o mesmo caso está no e2e, num navegador de
-   * verdade, onde a consulta é nativa.
-   */
-  it("oferece o estado inteiro, com o estado no rótulo", () => {
-    render(<CampoCidade value="Sinop" onChange={() => {}} />);
+  it("nenhum estado vem escolhido, e a cidade pede o estado primeiro", () => {
+    render(<CampoCidade value="" onChange={() => {}} />);
 
-    const select = screen.getByLabelText(/cidade/i) as HTMLSelectElement;
-    expect(select.options).toHaveLength(CIDADES.length);
-    expect(select.value).toBe("Sinop");
+    expect(estado().value).toBe("");
+    expect([...cidade().options].map((o) => o.text)).toEqual([
+      "Escolha o estado",
+    ]);
+  });
 
-    // Pelo DOM, e não por `getByRole`: a consulta por papel percorre as 142
-    // opções montando a árvore de acessibilidade de cada uma.
-    const textos = [...select.options].map((o) => o.text);
-    expect(textos).toContain("Cuiabá - MT");
-    expect(textos).toContain("Sinop - MT");
-  }, 15_000);
+  it("com cidade salva, já abre no estado e na cidade dela", () => {
+    render(<CampoCidade value="Sinop - MT" onChange={() => {}} />);
 
-  it("avisa quem escolheu, para o bairro poder reagir", () => {
+    expect(estado().value).toBe("MT");
+    expect(cidade().value).toBe("Sinop - MT");
+  });
+
+  it("escolhido o estado, chegam as cidades dele — com o nome, sem a sigla", async () => {
+    render(<CampoCidade value="" onChange={() => {}} />);
+
+    fireEvent.change(estado(), { target: { value: "MT" } });
+
+    // 142 de MT, mais a instrução no topo.
+    await waitFor(() => expect(cidade().options).toHaveLength(143));
+    const textos = [...cidade().options].map((o) => o.text);
+    expect(textos).toContain("Sinop");
+    expect(textos).toContain("Cuiabá");
+    expect([...cidade().options].map((o) => o.value)).toContain("Sinop - MT");
+  });
+
+  it("avisa quem escolheu, já no formato gravado, para o bairro reagir", async () => {
     const escolhas: string[] = [];
-    render(<CampoCidade value="Sinop" onChange={(c) => escolhas.push(c)} />);
+    render(
+      <CampoCidade value="Sinop - MT" onChange={(c) => escolhas.push(c)} />,
+    );
 
-    fireEvent.change(screen.getByLabelText(/cidade/i), {
-      target: { value: "Sorriso" },
-    });
+    await waitFor(() => expect(cidade().options.length).toBeGreaterThan(100));
+    fireEvent.change(cidade(), { target: { value: "Sorriso - MT" } });
 
-    expect(escolhas).toEqual(["Sorriso"]);
+    expect(escolhas).toEqual(["Sorriso - MT"]);
+  });
+
+  /*
+   * Cidade de um estado com outro estado escolhido não existe: trocar o
+   * estado tem de soltar a cidade, senão o formulário mandaria "Sinop -
+   * MT" com SP na tela.
+   */
+  it("trocar o estado solta a cidade", () => {
+    const escolhas: string[] = [];
+    render(
+      <CampoCidade value="Sinop - MT" onChange={(c) => escolhas.push(c)} />,
+    );
+
+    fireEvent.change(estado(), { target: { value: "SP" } });
+
+    expect(escolhas).toEqual([""]);
   });
 });
 
 describe("campo de bairro", () => {
   it("em cidade com curadoria, é uma lista", () => {
-    render(<CampoBairro cidade="Sinop" />);
+    render(<CampoBairro cidade="Sinop - MT" />);
 
     const select = screen.getByLabelText(/bairro/i) as HTMLSelectElement;
     expect(select.tagName).toBe("SELECT");
@@ -68,7 +95,7 @@ describe("campo de bairro", () => {
   });
 
   it("em cidade sem curadoria, é texto — e diz por quê", () => {
-    render(<CampoBairro cidade="Cuiabá" />);
+    render(<CampoBairro cidade="Cuiabá - MT" />);
 
     const campo = screen.getByLabelText(/bairro/i) as HTMLInputElement;
     expect(campo.tagName).toBe("INPUT");
@@ -80,7 +107,7 @@ describe("campo de bairro", () => {
    * senão editar o telefone apagaria o bairro de quem mora em Sorriso.
    */
   it("texto livre começa com o que já estava salvo", () => {
-    render(<CampoBairro cidade="Sorriso" defaultValue="Jardim Itália" />);
+    render(<CampoBairro cidade="Sorriso - MT" defaultValue="Jardim Itália" />);
 
     const campo = screen.getByLabelText(/bairro/i) as HTMLInputElement;
     expect(campo.value).toBe("Jardim Itália");
@@ -89,7 +116,7 @@ describe("campo de bairro", () => {
   it("bairro salvo fora da lista não força uma opção errada", () => {
     // Cidade com lista, valor que não está nela: melhor vazio do que
     // gravar por engano o primeiro bairro do `select`.
-    render(<CampoBairro cidade="Sinop" defaultValue="Bairro Novo" />);
+    render(<CampoBairro cidade="Sinop - MT" defaultValue="Bairro Novo" />);
 
     const select = screen.getByLabelText(/bairro/i) as HTMLSelectElement;
     expect(select.value).toBe("");
@@ -98,7 +125,9 @@ describe("campo de bairro", () => {
 
 describe("bairros atendidos, do prestador", () => {
   it("com lista, são caixas de seleção", () => {
-    render(<CampoBairrosAtendidos cidade="Sinop" selecionados={["Centro"]} />);
+    render(
+      <CampoBairrosAtendidos cidade="Sinop - MT" selecionados={["Centro"]} />,
+    );
 
     const marcadas = screen
       .getAllByRole("checkbox")
@@ -109,7 +138,7 @@ describe("bairros atendidos, do prestador", () => {
   });
 
   it("sem lista, é texto separado por vírgula", () => {
-    render(<CampoBairrosAtendidos cidade="Cuiabá" selecionados={[]} />);
+    render(<CampoBairrosAtendidos cidade="Cuiabá - MT" selecionados={[]} />);
 
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
     expect(screen.getByLabelText(/bairros atendidos/i).tagName).toBe("INPUT");
@@ -122,7 +151,7 @@ describe("bairros atendidos, do prestador", () => {
    */
   it("o texto vira um campo por bairro, como as caixas fariam", () => {
     const { container } = render(
-      <CampoBairrosAtendidos cidade="Cuiabá" selecionados={[]} />,
+      <CampoBairrosAtendidos cidade="Cuiabá - MT" selecionados={[]} />,
     );
 
     fireEvent.change(screen.getByLabelText(/bairros atendidos/i), {
@@ -141,7 +170,7 @@ describe("bairros atendidos, do prestador", () => {
 
   it("corta no limite em vez de mandar lista sem fim", () => {
     const { container } = render(
-      <CampoBairrosAtendidos cidade="Cuiabá" selecionados={[]} />,
+      <CampoBairrosAtendidos cidade="Cuiabá - MT" selecionados={[]} />,
     );
 
     const muitos = Array.from(
@@ -161,7 +190,7 @@ describe("bairros atendidos, do prestador", () => {
   it("começa preenchido com o que o prestador já atendia", () => {
     render(
       <CampoBairrosAtendidos
-        cidade="Cuiabá"
+        cidade="Cuiabá - MT"
         selecionados={["Centro", "Coxipó"]}
       />,
     );

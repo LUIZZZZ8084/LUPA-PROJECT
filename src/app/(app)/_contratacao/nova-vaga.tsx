@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
-import { CIDADE_INICIAL } from "@/lib/constants";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
@@ -48,7 +47,7 @@ export async function PublicarVaga({ area }: { area: AreaDeContratacao }) {
         description="Quanto mais claro o anúncio, menos currículo fora do perfil você recebe."
       />
       <NewJobForm
-        cidadeDaEmpresa={usuario?.cidade ?? CIDADE_INICIAL}
+        cidadeDaEmpresa={usuario?.cidade ?? ""}
         area={area}
         direito={direito}
       />

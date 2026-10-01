@@ -58,10 +58,11 @@ const LINHA = {
   titulo: "Operador de Máquinas",
   descricao: "Operação de colheitadeira.",
   categoria: "Agronegócio",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
   bairro: null,
   endereco: null,
   tipo_contrato: "CLT",
+  modalidade: "presencial" as const,
   salario_min: null,
   salario_max: null,
   habilidades: ["Colheitadeira"],
@@ -93,6 +94,7 @@ describe("RepositorioVagasPostgres", () => {
       bairro: null,
       endereco: null,
       tipoContrato: LINHA.tipo_contrato,
+      modalidade: LINHA.modalidade,
       salarioMin: null,
       salarioMax: null,
       habilidades: ["Colheitadeira"],
@@ -119,6 +121,7 @@ describe("RepositorioVagasPostgres", () => {
       categoria: LINHA.categoria,
       cidade: LINHA.cidade,
       tipoContrato: LINHA.tipo_contrato,
+      modalidade: LINHA.modalidade,
       endereco: "Av. das Itaúbas, 1200",
     });
 
@@ -126,6 +129,7 @@ describe("RepositorioVagasPostgres", () => {
     expect(insercao?.args[0]).toMatchObject({
       empresa_id: LINHA.empresa_id,
       tipo_contrato: LINHA.tipo_contrato,
+      modalidade: LINHA.modalidade,
     });
   });
 
@@ -142,6 +146,7 @@ describe("RepositorioVagasPostgres", () => {
         categoria: LINHA.categoria,
         cidade: LINHA.cidade,
         tipoContrato: LINHA.tipo_contrato,
+        modalidade: LINHA.modalidade,
         endereco: "Av. das Itaúbas, 1200",
       }),
     ).rejects.toMatchObject({ codigo: "conflito" });
@@ -329,11 +334,12 @@ describe("nenhum campo de edição se perde no caminho", () => {
     titulo: "Título novo",
     descricao: "Descrição nova, com tamanho suficiente para o schema.",
     categoria: "Logística e Transporte",
-    cidade: "Sorriso",
+    cidade: "Sorriso - MT",
     bairro: "Centro",
     endereco: "Rua das Palmeiras, 45",
     habilidades: ["Empilhadeira"],
     tipoContrato: "CLT",
+    modalidade: "presencial" as const,
     salarioMin: 2000,
     salarioMax: 3000,
   };

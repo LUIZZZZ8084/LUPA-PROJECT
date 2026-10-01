@@ -47,8 +47,9 @@ const DADOS = {
   titulo: "Operador de Máquinas",
   descricao: "Operação de colheitadeira e manutenção básica de rotina.",
   categoria: "Agronegócio",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
   tipoContrato: "CLT",
+  modalidade: "presencial" as const,
   endereco: "Av. das Itaúbas, 1200",
 };
 
@@ -172,7 +173,7 @@ describe("vagas do painel da empresa", () => {
         papel: "prestador_servico",
         nomeCompleto: "João da Silva",
         telefone: "66999110001",
-        cidade: "Sinop",
+        cidade: "Sinop - MT",
       });
       prestador = { usuarioId: usuario.id, papel: "prestador_servico" };
       // Publicar custa crédito desde a #172, e o id só existe aqui.

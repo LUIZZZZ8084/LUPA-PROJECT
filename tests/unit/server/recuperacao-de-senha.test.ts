@@ -102,7 +102,7 @@ describe("recuperação de senha", () => {
       papel: "candidato_clt",
       nomeCompleto: "Maria da Silva",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     usuarioId = usuario.id;
   });

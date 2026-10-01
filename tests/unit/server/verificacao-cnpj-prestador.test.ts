@@ -45,7 +45,7 @@ describe("CNPJ de MEI do prestador", () => {
       papel: "prestador_servico",
       nomeCompleto: nome,
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     await repo.criarPerfilPrestador({
       usuarioId: usuario.id,
@@ -251,7 +251,7 @@ describe("CNPJ de MEI do prestador", () => {
       papel: "empresa",
       nomeCompleto: "Dona da Empresa",
       telefone: "66999990001",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     await repo.criarPerfilEmpresa({
       usuarioId: empresa.id,
@@ -316,7 +316,7 @@ describe("CNPJ de MEI do prestador", () => {
       papel: "candidato_clt",
       nomeCompleto: "Quem Procura",
       telefone: "66999990002",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
 
     await expect(

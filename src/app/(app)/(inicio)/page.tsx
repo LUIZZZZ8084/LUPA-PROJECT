@@ -18,7 +18,6 @@ import { Reveal } from "@/components/motion/reveal";
 import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
-import { CIDADE_INICIAL, ESTADO_NOME, rotuloDaCidade } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
 import { formatPrecoBRL } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
@@ -96,11 +95,11 @@ export default async function HomePage() {
     name: "Lupa",
     url: "https://lupapp.com.br",
     description:
-      "Plataforma de vagas de emprego e prestação de serviços em Mato " +
-      "Grosso, começando por Sinop-MT.",
+      "Plataforma de vagas de emprego e prestação de serviços, com o que " +
+      "está mais perto de quem procura primeiro.",
     areaServed: {
-      "@type": "State",
-      name: "Mato Grosso",
+      "@type": "Country",
+      name: "Brasil",
     },
   };
 
@@ -123,18 +122,19 @@ export default async function HomePage() {
            * mesmo valor aqui é a diferença entre um selo de abrangência e
            * uma promessa que o ícone já fazia sem cumprir.
            *
-           * Sem sessão o home nem renderiza (app fechado por login), e
-           * `cidade` tem padrão no cadastro — mas se algum dia vier vazia,
-           * cai de volta no selo antigo em vez de mostrar um pino sem
-           * legenda.
+           * Sem sessão (a home é pública desde a #241), ou com uma conta
+           * sem cidade, o selo diz o alcance do app — o Brasil inteiro desde
+           * a #301 — em vez de mostrar um pino sem legenda. A cidade já é
+           * gravada com o estado ("Sinop - MT"), então não há rótulo a
+           * montar.
            */}
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
             <MapPin size={12} className="text-vagas" />
             {origem?.cidade
               ? origem.bairro
-                ? `${origem.bairro}, ${rotuloDaCidade(origem.cidade)}`
-                : rotuloDaCidade(origem.cidade)
-              : `${ESTADO_NOME} · começando por ${CIDADE_INICIAL}`}
+                ? `${origem.bairro}, ${origem.cidade}`
+                : origem.cidade
+              : "Vagas e serviços em todo o Brasil"}
           </span>
 
           <h1 className="mt-5 text-[2rem] leading-[1.1] font-bold tracking-tight sm:text-5xl">
@@ -180,6 +180,15 @@ export default async function HomePage() {
             title="Vagas em destaque"
             href="/vagas"
             accent="text-vagas"
+            vazio={
+              jobs.length === 0 && (
+                <Vazio
+                  texto="Nenhuma vaga aberta no momento."
+                  acao="Contrata? Publique a primeira"
+                  href="/empresa"
+                />
+              )
+            }
           >
             {jobs.map((job) => (
               <JobCard key={job.id} job={job} />
@@ -190,6 +199,15 @@ export default async function HomePage() {
             title="Profissionais bem avaliados"
             href="/servicos"
             accent="text-servicos"
+            vazio={
+              providers.length === 0 && (
+                <Vazio
+                  texto="Nenhum profissional na vitrine ainda."
+                  acao="Oferece um serviço? Apareça aqui"
+                  href={terceiroCard.href}
+                />
+              )
+            }
           >
             {providers.map((provider) => (
               <ProviderCard
@@ -380,11 +398,18 @@ function FeedSection({
   title,
   href,
   accent,
+  vazio,
   children,
 }: {
   title: string;
   href: string;
   accent: string;
+  /**
+   * O que aparece quando não há nada para listar (#302). Sem os dados de
+   * exemplo, a vitrine de produção começa quase vazia — e uma seção só com
+   * o título parece tela quebrada, não começo.
+   */
+  vazio?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -399,8 +424,31 @@ function FeedSection({
           <ArrowRight size={13} />
         </Link>
       </div>
-      <div className="stagger space-y-2.5">{children}</div>
+      {vazio || <div className="stagger space-y-2.5">{children}</div>}
     </section>
+  );
+}
+
+function Vazio({
+  texto,
+  acao,
+  href,
+}: {
+  texto: string;
+  acao: string;
+  href: string;
+}) {
+  return (
+    <div className="rounded-[var(--radius-card)] border border-line border-dashed bg-panel p-5 text-center">
+      <p className="text-muted text-sm">{texto}</p>
+      <Link
+        href={href}
+        className="mt-2 inline-flex items-center gap-1 font-medium text-ink text-sm hover:underline"
+      >
+        {acao}
+        <ArrowRight size={14} />
+      </Link>
+    </div>
   );
 }
 

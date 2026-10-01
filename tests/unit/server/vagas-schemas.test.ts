@@ -12,8 +12,9 @@ const DADOS = {
   titulo: "Auxiliar Administrativo",
   descricao: "Rotina de recepção, arquivo e atendimento telefônico.",
   categoria: "Administrativo",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
   tipoContrato: "CLT",
+  modalidade: "presencial" as const,
   endereco: "Av. das Itaúbas, 1200",
 };
 
@@ -21,6 +22,30 @@ describe("schemaNovaVaga", () => {
   it("aceita o mínimo", () => {
     const r = schemaNovaVaga.safeParse(DADOS);
     expect(r.success).toBe(true);
+  });
+
+  /*
+   * A modalidade é obrigatória em vaga nova (#300): é o selo que diz a
+   * quem está em outra cidade se a vaga é para ele.
+   */
+  it("exige a modalidade", () => {
+    const { modalidade: _, ...semModalidade } = DADOS;
+    const r = schemaNovaVaga.safeParse(semModalidade);
+    expect(r.success).toBe(false);
+    expect(
+      !r.success && r.error.issues.some((i) => i.path[0] === "modalidade"),
+    ).toBe(true);
+  });
+
+  it("aceita as três modalidades, e nada além delas", () => {
+    for (const modalidade of ["presencial", "home_office", "hibrido"]) {
+      expect(schemaNovaVaga.safeParse({ ...DADOS, modalidade }).success).toBe(
+        true,
+      );
+    }
+    expect(
+      schemaNovaVaga.safeParse({ ...DADOS, modalidade: "remoto" }).success,
+    ).toBe(false);
   });
 
   it("bairro em branco vira 'não informado', não erro", () => {
@@ -38,7 +63,7 @@ describe("schemaNovaVaga", () => {
   it("aceita bairro fora da lista curada", () => {
     const r = schemaNovaVaga.safeParse({
       ...DADOS,
-      cidade: "Sorriso",
+      cidade: "Sorriso - MT",
       bairro: "Jardim Itália",
     });
     expect(r.success).toBe(true);
@@ -49,15 +74,20 @@ describe("schemaNovaVaga", () => {
     expect(r.success).toBe(false);
   });
 
-  it("recusa cidade fora de Mato Grosso", () => {
-    for (const cidade of ["Curitiba", "sinop", "Sinop - MT", ""]) {
+  it("recusa o que não é município do Brasil, com o estado", () => {
+    for (const cidade of ["Curitiba", "sinop", "Sinop", "Sinop-MT", ""]) {
       const r = schemaNovaVaga.safeParse({ ...DADOS, cidade });
       expect(r.success, cidade || "(vazio)").toBe(false);
     }
   });
 
-  it("aceita qualquer município de MT, não só o inicial", () => {
-    for (const cidade of ["Cuiabá", "Sorriso", "Alta Floresta", "Vera"]) {
+  it("aceita qualquer município do Brasil, não só de MT", () => {
+    for (const cidade of [
+      "Cuiabá - MT",
+      "Sorriso - MT",
+      "São Paulo - SP",
+      "Bom Jesus - PI",
+    ]) {
       const r = schemaNovaVaga.safeParse({ ...DADOS, cidade });
       expect(r.success, cidade).toBe(true);
     }

@@ -2,19 +2,21 @@
 
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { cadastrarComEstado, type EstadoFormulario } from "@/app/conta/actions";
 import {
   CampoBairro,
   CampoCidade,
   useCidade,
 } from "@/components/cidade-e-bairro";
+import { BackLink, PageTitle } from "@/components/layout/page-shell";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import {
   JOB_CATEGORIES,
+  ROLE_LABELS,
   SENHA_MINIMA,
   SERVICE_CATEGORIES,
 } from "@/lib/constants";
@@ -43,6 +45,15 @@ export function SignUpForm({ role }: { role: Role }) {
   const [tipoDocumento, setTipoDocumento] = useState<"cnpj" | "cpf">("cnpj");
   const envio = useEnvioQueNaoApaga(action, state);
 
+  /*
+   * O botão de criar conta fica no fim de um formulário longo, e a tela que
+   * o substitui é curta: sem isto, quem estava rolado lá embaixo caía no
+   * meio da confirmação, com o "Conta criada" fora da tela (#299).
+   */
+  useEffect(() => {
+    if (state.ok) window.scrollTo({ top: 0 });
+  }, [state.ok]);
+
   if (state.ok) {
     /*
      * Último passo do cadastro, para prestador e empresa (#184): escolher
@@ -51,23 +62,25 @@ export function SignUpForm({ role }: { role: Role }) {
      * lacuna que a #182 fechou parcialmente para quem já tinha conta).
      * Candidato não tem plano nenhum para escolher e segue direto.
      */
-    if (role === "prestador_servico" || role === "empresa") {
+    /*
+     * A empresa tem a própria confirmação dentro da seleção de plano
+     * (#299): ali o "conta criada" precisa dizer que nada foi cobrado, e
+     * ficar colado à opção grátis, não separado dela por um painel inteiro.
+     */
+    if (role === "empresa") return <SelecaoDePlanoEmpresa />;
+
+    if (role === "prestador_servico") {
       return (
         <div className="space-y-5">
           <Panel className="text-center">
             <CheckCircle2 size={40} className="mx-auto text-vagas" />
             <h2 className="mt-4 text-lg font-bold">Conta criada</h2>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
-              {role === "prestador_servico"
-                ? "Falta um passo: escolha se quer aparecer na busca de quem procura profissional agora, ou continuar só com o perfil por enquanto."
-                : "Falta um passo: escolha como publicar sua primeira vaga, ou continue só com o perfil por enquanto."}
+              Falta um passo: escolha se quer aparecer na busca de quem procura
+              profissional agora, ou continuar só com o perfil por enquanto.
             </p>
           </Panel>
-          {role === "prestador_servico" ? (
-            <SelecaoDePlanoPrestador />
-          ) : (
-            <SelecaoDePlanoEmpresa />
-          )}
+          <SelecaoDePlanoPrestador />
         </div>
       );
     }
@@ -114,6 +127,11 @@ export function SignUpForm({ role }: { role: Role }) {
 
   return (
     <form action={action} {...envio}>
+      <BackLink href="/cadastro" label="Escolher outro tipo de conta" />
+      <PageTitle
+        title={`Cadastro de ${ROLE_LABELS[role].toLowerCase()}`}
+        description="Leva menos de dois minutos. Você completa o resto do perfil depois."
+      />
       {/*
         O nome é `papel`, não `role`: o schema é uma união discriminada em
         `papel`, e um campo com outro nome faz o Zod recusar sem descobrir
@@ -261,7 +279,7 @@ export function SignUpForm({ role }: { role: Role }) {
               type="tel"
               inputMode="tel"
               autoComplete="tel"
-              placeholder="(66) 99999-0000"
+              placeholder="(11) 99999-0000"
               required
             />
           </Field>
@@ -345,7 +363,7 @@ export function SignUpForm({ role }: { role: Role }) {
                 name="descricao"
                 rows={5}
                 required
-                placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo Sinop e região."
+                placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo minha cidade e a região."
               />
             </Field>
           </>

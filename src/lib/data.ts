@@ -217,6 +217,7 @@ function vagaDoMock(job: JobListing): Vaga {
     bairro: job.neighborhood,
     endereco: job.address,
     tipoContrato: job.contract_type,
+    modalidade: job.work_mode,
     salarioMin: job.salary_min,
     salarioMax: job.salary_max,
     habilidades: job.skills,
@@ -238,6 +239,7 @@ function jobListingDaVaga(vaga: Vaga): JobListing {
     neighborhood: vaga.bairro,
     address: vaga.endereco,
     contract_type: vaga.tipoContrato as JobListing["contract_type"],
+    work_mode: vaga.modalidade,
     salary_min: vaga.salarioMin,
     salary_max: vaga.salarioMax,
     skills: vaga.habilidades,
@@ -292,6 +294,7 @@ export async function getJobs(
       const chave = [
         "vagas",
         filters.city ?? "",
+        filters.uf ?? "",
         filters.category ?? "",
         filters.contract_type ?? "",
         filters.q ?? "",
@@ -311,6 +314,10 @@ export async function getJobs(
             .limit(TETO_BUSCA + 1);
 
           if (filters.city) query = query.eq("city", filters.city);
+          // A cidade é gravada com o estado ("Sinop - MT"), então filtrar
+          // por estado é olhar o fim do valor (#301). `uf` chega validado
+          // contra a lista de siglas — nunca texto livre da URL.
+          else if (filters.uf) query = query.like("city", `% - ${filters.uf}`);
           if (filters.category) query = query.eq("category", filters.category);
           if (filters.contract_type)
             query = query.eq("contract_type", filters.contract_type);
@@ -365,6 +372,7 @@ export async function getJobs(
       if (job.status !== "aberta") return false;
       if (vagaExpirada(job.expires_at)) return false;
       if (filters.city && job.city !== filters.city) return false;
+      if (filters.uf && !job.city.endsWith(` - ${filters.uf}`)) return false;
       if (filters.category && job.category !== filters.category) return false;
       if (filters.contract_type && job.contract_type !== filters.contract_type)
         return false;
@@ -486,6 +494,7 @@ export async function getProviders(
       const chave = [
         "prestadores",
         filters.city ?? "",
+        filters.uf ?? "",
         filters.category ?? "",
         String(filters.min_rating ?? ""),
         filters.q ?? "",
@@ -506,6 +515,10 @@ export async function getProviders(
             .limit(TETO_BUSCA + 1);
 
           if (filters.city) query = query.eq("city", filters.city);
+          // A cidade é gravada com o estado ("Sinop - MT"), então filtrar
+          // por estado é olhar o fim do valor (#301). `uf` chega validado
+          // contra a lista de siglas — nunca texto livre da URL.
+          else if (filters.uf) query = query.like("city", `% - ${filters.uf}`);
           if (filters.category)
             query = query.eq("category_slug", filters.category);
           if (filters.min_rating)
@@ -560,6 +573,7 @@ export async function getProviders(
     )
       return false;
     if (filters.city && p.city !== filters.city) return false;
+    if (filters.uf && !p.city.endsWith(` - ${filters.uf}`)) return false;
     if (filters.category && p.category.slug !== filters.category) return false;
     if (filters.min_rating && p.avg_rating < filters.min_rating) return false;
     if (

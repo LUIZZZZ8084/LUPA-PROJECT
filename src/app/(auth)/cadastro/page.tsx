@@ -1,8 +1,7 @@
 import { ArrowRight, Briefcase, Building2, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
-import { ROLE_LABELS } from "@/lib/constants";
+import { PageShell, PageTitle } from "@/components/layout/page-shell";
 import type { Role } from "@/lib/types";
 import { SignUpForm } from "./form";
 
@@ -73,13 +72,14 @@ export default async function CadastroPage({
   const selected = Array.isArray(tipo) ? tipo[0] : tipo;
 
   if (isRole(selected)) {
+    /*
+     * O título e o "voltar" moram dentro do formulário: depois de criada a
+     * conta, "Leva menos de dois minutos" e "Escolher outro tipo de conta"
+     * deixam de ser verdade — e ocupavam o topo da tela que precisa caber
+     * inteira no celular (#299).
+     */
     return (
       <PageShell width="narrow">
-        <BackLink href="/cadastro" label="Escolher outro tipo de conta" />
-        <PageTitle
-          title={`Cadastro de ${ROLE_LABELS[selected].toLowerCase()}`}
-          description="Leva menos de dois minutos. Você completa o resto do perfil depois."
-        />
         <SignUpForm role={selected} />
       </PageShell>
     );

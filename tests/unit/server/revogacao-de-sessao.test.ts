@@ -132,7 +132,7 @@ describe("a lista de cortes é curta por construção", () => {
       papel: "candidato_clt",
       nomeCompleto: "Alguém",
       telefone: "66999110012",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       bairro: null,
     });
 

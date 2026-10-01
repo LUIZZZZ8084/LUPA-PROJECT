@@ -54,7 +54,7 @@ const CANDIDATURA = {
     full_name: "Everton Rodrigues",
     avatar_url: null,
     neighborhood: "Centro",
-    city: "Sinop",
+    city: "Sinop - MT",
     email: "everton@teste.lupa",
     phone: "6600000001",
     desired_area: "Logística",

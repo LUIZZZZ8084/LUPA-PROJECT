@@ -1,22 +1,14 @@
-import { CIDADES_MT } from "./cidades-mt";
-import type { ContractType, ServiceCategory } from "./types";
+import type { ContractType, ServiceCategory, WorkMode } from "./types";
 
-/**
- * Onde o app começa, e até onde ele vai.
+/*
+ * Não existe mais cidade inicial nem estado do app (#301).
  *
- * `CIDADE_INICIAL` é Sinop: é lá que estão os dados, o contato e o esforço
- * de divulgação. Mas atender só Sinop é diferente de *aceitar* só Sinop —
- * quem é de Sorriso e esbarra num formulário que não tem a cidade dele
- * conclui que o app não serve para ele, e não volta.
- *
- * O estado inteiro está aberto desde o cadastro. A lista dos municípios é
- * gerada do IBGE por `scripts/gerar-cidades.mjs`.
+ * O app começou em Sinop e passou a aceitar Mato Grosso inteiro; hoje aceita
+ * qualquer município do Brasil, e nenhum vem escolhido por padrão — uma
+ * cidade pré-selecionada é um palpite que a pessoa de outro lugar precisa
+ * desfazer, e quem não percebe acaba cadastrado na cidade errada. A lista e
+ * o formato da cidade ("Sinop - MT") moram em `src/lib/cidades/`.
  */
-export const CIDADE_INICIAL = "Sinop";
-export const ESTADO = "MT";
-export const ESTADO_NOME = "Mato Grosso";
-
-export const CIDADES = CIDADES_MT;
 
 /**
  * O menor tamanho de senha que o app aceita (#290).
@@ -33,15 +25,6 @@ export const CIDADES = CIDADES_MT;
  */
 export const SENHA_MINIMA = 6;
 
-export function ehCidadeAtendida(valor: string): boolean {
-  return (CIDADES as readonly string[]).includes(valor);
-}
-
-/** "Sinop - MT", para onde a cidade aparece sozinha na tela. */
-export function rotuloDaCidade(cidade: string): string {
-  return `${cidade} - ${ESTADO}`;
-}
-
 /**
  * Bairros conhecidos, por cidade.
  *
@@ -51,11 +34,12 @@ export function rotuloDaCidade(cidade: string): string {
  * A lista existe porque é ela que mantém o filtro de bairro utilizável:
  * digitado à mão, "Jd. Botânico", "Jardim Botanico" e "JARDIM BOTÂNICO"
  * viram três bairros diferentes e o filtro deixa de agrupar. O preço de
- * exigir lista para todo mundo seria manter os bairros de 142 municípios,
- * o que não existe pronto em lugar nenhum e envelheceria sozinho.
+ * exigir lista para todo mundo seria manter os bairros de mais de 5.500
+ * municípios, o que não existe pronto em lugar nenhum e envelheceria
+ * sozinho. A chave é a cidade no formato gravado ("Sinop - MT").
  */
 export const BAIRROS_POR_CIDADE: Record<string, readonly string[]> = {
-  Sinop: [
+  "Sinop - MT": [
     "Centro",
     "Jardim Botânico",
     "Jardim Paraíso",
@@ -166,6 +150,15 @@ export const CONTRACT_TYPES: ContractType[] = [
   "Freelance",
   "Jovem Aprendiz",
 ];
+
+/** O valor gravado é o do enum; o rótulo é o que a tela mostra (#300). */
+export const WORK_MODE_LABELS: Record<WorkMode, string> = {
+  presencial: "Presencial",
+  home_office: "Home office",
+  hibrido: "Híbrido",
+};
+
+export const WORK_MODES = Object.keys(WORK_MODE_LABELS) as WorkMode[];
 
 export const ROLE_LABELS = {
   candidato_clt: "Candidato",

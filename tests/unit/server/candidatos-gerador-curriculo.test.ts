@@ -30,7 +30,7 @@ describe("interruptor do gerador de currículo", () => {
       papel: "candidato_clt",
       nomeCompleto: "Candidato de Teste",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     await repo.criarPerfilCandidato({
       usuarioId: usuario.id,
@@ -72,7 +72,7 @@ describe("interruptor do gerador de currículo", () => {
       papel: "empresa",
       nomeCompleto: "Empresa de Teste",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
 
     await expect(liberarGeradorCurriculo(usuario.id)).rejects.toMatchObject({
@@ -87,7 +87,7 @@ describe("interruptor do gerador de currículo", () => {
       papel: "empresa",
       nomeCompleto: "Outra Empresa",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
 
     await expect(revogarGeradorCurriculo(usuario.id)).rejects.toMatchObject({

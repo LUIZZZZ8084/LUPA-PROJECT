@@ -189,7 +189,7 @@ async function principal() {
         papel: "admin",
         nome_completo: nome,
         telefone,
-        cidade: "Sinop",
+        cidade: "Sinop - MT",
         email_verificado: true,
       })
       .select("id")

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  CIDADE_INICIAL,
   JOB_CATEGORIES,
   MAX_BAIRROS_ATENDIDOS,
   SERVICE_CATEGORIES,
@@ -32,7 +31,12 @@ const base = {
   email: zEmail,
   senha: zSenha,
   telefone: zCelular,
-  cidade: zCidade.default(CIDADE_INICIAL),
+  /*
+   * Obrigatória e sem padrão (#301). O padrão era Sinop: quem não mexia no
+   * campo virava morador de Sinop sem saber, e com o país inteiro aberto
+   * esse palpite erra para quase todo mundo.
+   */
+  cidade: zCidade,
   bairro: zBairro,
 };
 

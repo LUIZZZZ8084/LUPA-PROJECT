@@ -44,6 +44,11 @@ create type status_verificacao as enum (
 
 create type status_vaga as enum ('aberta', 'fechada');
 
+-- Onde o trabalho acontece (#300). Com o app aberto ao Brasil inteiro, uma
+-- vaga home office em outra cidade interessa a quem está longe, e uma
+-- presencial não — sem isto, as duas pareciam iguais na busca.
+create type modalidade_vaga as enum ('presencial', 'home_office', 'hibrido');
+
 create type status_candidatura as enum (
   'enviada',
   'visualizada',
@@ -147,7 +152,12 @@ create table usuarios (
    */
   cpf                  text,
   telefone             text not null,
-  cidade               text not null default 'Sinop',
+  /*
+   * "Sinop - MT": a cidade vai com o estado, porque 232 nomes de município
+   * se repetem entre estados (#301). Sem padrão: um padrão aqui é a cidade
+   * de quem não escolheu nenhuma, e o app não tem mais cidade inicial.
+   */
+  cidade               text not null,
   bairro               text,
   avatar_url           text,
   email_verificado     boolean not null default false,
@@ -368,7 +378,7 @@ create table vagas (
   titulo        text not null,
   descricao     text not null,
   categoria     text,
-  cidade        text not null default 'Sinop',
+  cidade        text not null,
   bairro        text,
   /*
    * Rua, número, ponto de referência — texto livre, sem geocodificação.
@@ -383,6 +393,12 @@ create table vagas (
    */
   endereco      text,
   tipo_contrato text,
+  /*
+   * Presencial, home office ou híbrido (#300). Opcional na coluna, pelo
+   * mesmo motivo do endereço: vaga publicada antes deste campo existir
+   * continua válida e só não mostra o selo. A tela de publicação exige.
+   */
+  modalidade    modalidade_vaga,
   salario_min   numeric(10,2),
   salario_max   numeric(10,2),
 
@@ -1204,7 +1220,10 @@ select
     'facebook',     e.facebook
   ) as company,
   (select count(*) from candidaturas c where c.vaga_id = v.id) as applicant_count,
-  v.expira_em                 as expires_at
+  v.expira_em                 as expires_at,
+  -- Por último: `create or replace view` só aceita coluna nova no fim, e é
+  -- assim que `aplica-modalidade-vaga.sql` chega a um banco vivo (#300).
+  v.modalidade                as work_mode
 from vagas v
 join perfis_empresa e on e.usuario_id = v.empresa_id
 join usuarios u on u.id = e.usuario_id;

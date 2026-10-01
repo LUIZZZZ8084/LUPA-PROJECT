@@ -65,7 +65,7 @@ const LINHA = {
   papel: "prestador_servico",
   nome_completo: "João Silva",
   telefone: "66999110001",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
   bairro: "Centro",
   avatar_url: "https://exemplo/avatar.svg",
   email_verificado: true,
@@ -98,7 +98,7 @@ describe("RepositorioPostgres", () => {
       // Nulo para quem não é prestador — que é a esmagadora maioria.
       cpf: null,
       telefone: "66999110001",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       bairro: "Centro",
       avatarUrl: "https://exemplo/avatar.svg",
       emailVerificado: true,
@@ -139,7 +139,7 @@ describe("RepositorioPostgres", () => {
       papel: "prestador_servico",
       nomeCompleto: "João Silva",
       telefone: "66999110001",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       bairro: "Centro",
     });
 
@@ -149,7 +149,7 @@ describe("RepositorioPostgres", () => {
       email: "joao@teste.lupa",
       senha_hash: "hash",
       nome_completo: "João Silva",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
   });
 
@@ -171,7 +171,7 @@ describe("RepositorioPostgres", () => {
         papel: "empresa",
         nomeCompleto: "João",
         telefone: "66999110001",
-        cidade: "Sinop",
+        cidade: "Sinop - MT",
       }),
     ).rejects.toThrow("email já cadastrado");
   });

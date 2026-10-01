@@ -79,6 +79,9 @@ e repetível, ao lado do `schema.sql`:
 | [`supabase/aplica-assinatura-recorrente.sql`](../supabase/aplica-assinatura-recorrente.sql) | Uma vez, em banco criado antes da Issue #170 — **depois** de `aplica-pagamentos.sql`, de quem herda `tipo_pagamento` |
 | [`supabase/aplica-cobranca-de-vaga.sql`](../supabase/aplica-cobranca-de-vaga.sql) | Uma vez, em banco criado antes da Issue #172 — **depois** de `aplica-assinatura-recorrente.sql` |
 | [`supabase/aplica-recuperacao-de-senha.sql`](../supabase/aplica-recuperacao-de-senha.sql) | Uma vez, em banco criado antes da Issue #174 |
+| [`supabase/aplica-modalidade-vaga.sql`](../supabase/aplica-modalidade-vaga.sql) | Uma vez, em banco criado antes da Issue #300 — **antes** do deploy |
+| [`supabase/aplica-remove-dados-de-exemplo.sql`](../supabase/aplica-remove-dados-de-exemplo.sql) | Uma vez, em banco de produção que recebeu o `seed.sql` (#302) — ver a seção 4 |
+| [`supabase/aplica-cidades-do-brasil.sql`](../supabase/aplica-cidades-do-brasil.sql) | Uma vez, em banco criado antes da Issue #301 — **antes** do deploy: depois dele, "Sinop" sem estado é recusado |
 
 Banco novo não precisa de nenhum deles: o `schema.sql` já traz tudo.
 
@@ -106,13 +109,26 @@ de curta duração quando precisa mostrar o arquivo.
 Sem esta seção, o app funciona: o envio de arquivos aparece desativado, com
 o motivo na tela, e o resto do perfil continua editável.
 
-## 4. Popular com dados de Sinop (opcional)
+## 4. Popular com dados de Sinop (opcional, só em banco local)
 
 **SQL Editor** → cole [`supabase/seed.sql`](../supabase/seed.sql) → **Run**.
 
 Cria prestadores, empresas, vagas e avaliações de exemplo, com os mesmos
-avatares da demonstração. Útil para a plataforma não abrir vazia enquanto
-não houver cadastro de verdade.
+avatares da demonstração. Serve para desenvolver contra um Postgres de
+verdade com alguma coisa na tela.
+
+**Não rode em produção.** Em produção essas contas aparecem para visitante
+real como se fossem ofertas de verdade (#302). Para demonstrar o produto
+sem banco, use o modo demonstração (`npm run dev:demo`, ou qualquer
+ambiente sem Supabase), que lê `src/lib/mock-data.ts` e não toca banco
+nenhum.
+
+**Se o seed já rodou em produção**, tire-o com
+[`supabase/aplica-remove-dados-de-exemplo.sql`](../supabase/aplica-remove-dados-de-exemplo.sql):
+ele apaga só os ids fixos do seed — conta criada por gente de verdade não é
+tocada — e termina com uma conferência que tem de voltar zero. Depois dele,
+[`aplica-demo-vitalicia.sql`](../supabase/aplica-demo-vitalicia.sql) não
+tem mais o que manter no ar e não deve ser rodado de novo.
 
 **As contas do seed não têm senha.** Elas aparecem na busca e nos perfis,
 mas nenhuma senha entra em nenhuma delas — o hash é uma string fixa que não

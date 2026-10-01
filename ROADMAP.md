@@ -8,9 +8,26 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 27/09/2026.**
+**Última atualização: 01/10/2026.**
 
 ## Concluído
+
+Em 01/10/2026:
+
+- O app atende o Brasil inteiro: os 5.571 municípios do IBGE, estado e
+  cidade em dois passos, filtro de estado na busca e o degrau "mesmo
+  estado" na ordem por proximidade. Nenhuma cidade vem escolhida por
+  padrão — [#301](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/301)
+- Modalidade da vaga — presencial, home office ou híbrido — no cadastro da
+  vaga e como selo no card e no detalhe —
+  [#300](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/300)
+- Tela de plano depois do cadastro da empresa: o grátis vem primeiro, a
+  confirmação diz que nada foi cobrado, e tudo cabe no celular sem rolar —
+  [#299](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/299)
+- Script para tirar os dados de exemplo da vitrine de produção, e frase
+  própria para home e busca vazias. Reverte a #245; o script roda à mão,
+  ver "Depende de decisão" —
+  [#302](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/302)
 
 Preparação para o lançamento, de 15 a 25/09/2026:
 
@@ -374,6 +391,7 @@ Antes do lançamento, fora disso:
 | Backup do banco (plano pago do Supabase) | Luiz | Nada pago por enquanto, decisão de 23/09. O gratuito não tem backup automático |
 | Proxy e WAF do Cloudflare | Luiz | O domínio está no Cloudflare em DNS only desde a #287: a regra gratuita do WAF bloqueava envio de foto. Religar só com abuso medido, e com a exceção da regra feita antes |
 | Busca vetorial | Luiz | Só com o dado do #66 na mão |
+| Rodar `aplica-remove-dados-de-exemplo.sql` em produção (#302) | Luiz e Paulinho | Reverte a #245, que manteve os exemplos no ar para demonstrar a clientes. O script está pronto e testado; falta os dois concordarem e alguém rodar no SQL Editor |
 
 ## Depende de uma ação manual
 
