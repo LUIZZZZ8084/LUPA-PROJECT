@@ -454,7 +454,13 @@ create table avaliacoes (
    * a reputação de quem foi avaliado.
    */
   avaliador_id   uuid references usuarios(id) on delete set null,
-  -- Mantido para as linhas antigas e para exibir sem outra consulta.
+  /*
+   * Exibido sem outra consulta, porque `usuarios` é fechada para a chave
+   * anônima, que é quem lista. É uma cópia, e **acompanha o nome da conta**:
+   * o trigger `usuarios_renomeiam_avaliacoes`, logo abaixo, a atualiza
+   * quando `usuarios.nome_completo` muda (#304). Congelada no dia da
+   * avaliação, ela deixava o comentário com um nome que a pessoa já não usa.
+   */
   nome_avaliador text not null,
   nota           int not null check (nota between 1 and 5),
   comentario     text,
@@ -514,6 +520,37 @@ $$;
 create trigger avaliacoes_atualizam_nota
   after insert or update or delete on avaliacoes
   for each row execute function atualizar_nota_prestador();
+
+/*
+ * O nome na avaliação acompanha o nome da conta (#304).
+ *
+ * Fica no banco, e não na aplicação, pela razão das outras travas deste
+ * arquivo: uma regra que mora num caminho só é esquecida pelo próximo. Hoje
+ * o nome muda por `salvarBasicos`; amanhã pode mudar por um painel de
+ * suporte, um script ou uma correção direta — o trigger cobre todos.
+ *
+ * Só dispara quando o nome de fato muda, e só toca avaliação com dono: as
+ * do seed têm `avaliador_id` nulo e seguem como estão.
+ */
+create or replace function atualizar_nome_nas_avaliacoes()
+returns trigger language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  update avaliacoes
+  set nome_avaliador = new.nome_completo
+  where avaliador_id = new.id
+    and nome_avaliador is distinct from new.nome_completo;
+
+  return null;
+end;
+$$;
+
+create trigger usuarios_renomeiam_avaliacoes
+  after update of nome_completo on usuarios
+  for each row
+  when (old.nome_completo is distinct from new.nome_completo)
+  execute function atualizar_nome_nas_avaliacoes();
 
 -- ============================================================================
 -- 8. Publicações de perfil

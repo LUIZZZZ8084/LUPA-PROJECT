@@ -1,6 +1,9 @@
 import "server-only";
 
-import { avaliacoesEmMemoria } from "@/server/avaliacoes/servico";
+import {
+  avaliacoesEmMemoria,
+  avaliacoesEmMemoriaComNomeAtual,
+} from "@/server/avaliacoes/servico";
 import {
   RepositorioCandidaturasMemoria,
   repositorioCandidaturas,
@@ -634,14 +637,16 @@ export async function getReviews(providerId: string): Promise<Review[]> {
    * Na demonstração, o que foi escrito nesta sessão vem junto com o seed —
    * senão avaliar pareceria funcionar e sumiria na navegação seguinte.
    */
-  const daSessao = avaliacoesEmMemoria(providerId).map((a, i) => ({
-    id: `memoria-${i}`,
-    provider_id: a.prestadorId,
-    reviewer_name: a.nome,
-    rating: a.nota,
-    comment: a.comentario,
-    created_at: a.criadoEm,
-  }));
+  const daSessao = (await avaliacoesEmMemoriaComNomeAtual(providerId)).map(
+    (a, i) => ({
+      id: `memoria-${i}`,
+      provider_id: a.prestadorId,
+      reviewer_name: a.nome,
+      rating: a.nota,
+      comment: a.comentario,
+      created_at: a.criadoEm,
+    }),
+  );
 
   return [
     ...daSessao,

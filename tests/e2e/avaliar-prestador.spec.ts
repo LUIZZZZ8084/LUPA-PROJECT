@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { entrarComoTeste } from "./helpers";
 
 /**
  * Avaliar um prestador, no navegador.
@@ -123,5 +124,60 @@ test.describe("avaliar prestador", () => {
     ).toBeVisible({ timeout: 15_000 });
 
     expect(await contagem()).toBe(antes + 1);
+  });
+});
+
+/**
+ * O comentário acompanha o nome da conta (#304).
+ *
+ * O Luiz comentou num perfil com uma conta de empresa, trocou o nome da
+ * conta, e o comentário continuou com o nome antigo: a avaliação guardava
+ * uma cópia do nome no dia em que foi escrita.
+ *
+ * Conta própria, e não a sessão compartilhada: trocar o nome da conta
+ * compartilhada mexeria no que os outros arquivos leem enquanto rodam em
+ * paralelo. Origem própria no `x-forwarded-for` pela mesma razão dos outros
+ * cadastros desta suíte — o limite é por origem e não tem multiplicador.
+ */
+test.describe("nome de quem avaliou", () => {
+  test.use({
+    storageState: { cookies: [], origins: [] },
+    extraHTTPHeaders: { "x-forwarded-for": "203.0.113.93" },
+  });
+
+  test("o comentário passa a mostrar o nome novo da conta", async ({
+    page,
+  }) => {
+    await entrarComoTeste(page);
+
+    await page.goto("/servicos/prv-luciana-costa");
+    await page.locator('label:has(input[name="nota"][value="5"])').click();
+    await page
+      .getByLabel("Como foi o serviço")
+      .fill("Serviço bem feito e no prazo combinado.");
+    await page.getByRole("button", { name: /enviar avaliação/i }).click();
+    await expect(
+      page.getByRole("heading", { name: "Você já avaliou" }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    const comentario = page
+      .locator("li")
+      .filter({ hasText: "Serviço bem feito e no prazo combinado." });
+    await expect(comentario).toContainText("Pessoa de Teste");
+
+    // Troca o nome da conta.
+    const nomeNovo = `Nome Trocado ${Date.now().toString().slice(-5)}`;
+    await page.goto("/perfil/editar");
+    await page.getByLabel("Nome completo").fill(nomeNovo);
+    await page
+      .locator("form")
+      .filter({ hasText: "Sua conta" })
+      .getByRole("button", { name: "Salvar" })
+      .click();
+    await expect(page.getByText("Salvo")).toBeVisible();
+
+    await page.goto("/servicos/prv-luciana-costa");
+    await expect(comentario).toContainText(nomeNovo);
+    await expect(comentario).not.toContainText("Pessoa de Teste");
   });
 });

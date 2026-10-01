@@ -192,8 +192,21 @@ envios simultâneos passariam os dois por ela.
 solto: servia para popular o seed, não para receber gente autenticada —
 sem dono, a mesma pessoa avalia dez vezes e ninguém consegue mostrar a ela
 a própria avaliação depois. O nome continua sendo gravado junto, porque a
-tela lista sem consultar `usuarios`, que é fechada para `anon` — e porque
-a avaliação é o registro do que aconteceu naquele dia.
+tela lista sem consultar `usuarios`, que é fechada para `anon`.
+
+**E o nome acompanha a conta (#304).** Este parágrafo defendia a cópia
+congelada — "a avaliação é o registro do que aconteceu naquele dia" — e foi
+essa defesa que deixou o comentário com um nome que ninguém mais usava: o
+Luiz comentou com uma conta de empresa, trocou o nome da conta, e o
+comentário seguiu com o nome antigo, sem como corrigir. Decisão dele em
+01/10/2026. Hoje um trigger, `usuarios_renomeiam_avaliacoes`, atualiza
+`nome_avaliador` de toda avaliação com dono quando `nome_completo` muda. Mora
+no banco pela razão das outras travas: uma regra que vive num caminho só é
+esquecida pelo próximo, e o nome pode mudar por um painel de suporte ou um
+script, não só pela tela. As avaliações do seed, sem `avaliador_id`, não são
+tocadas. Na demonstração, que não tem banco, a avaliação em memória é lida
+com o nome atual da conta — resolvido na leitura, e não reescrito na troca,
+para não haver um segundo caminho de renomear.
 
 **A confirmação é renderizada pelo servidor.** A action revalida a rota,
 e a revalidação desmonta o formulário levando junto o "enviado" que ele

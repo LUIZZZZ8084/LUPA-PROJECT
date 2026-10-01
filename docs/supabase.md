@@ -79,6 +79,7 @@ e repetível, ao lado do `schema.sql`:
 | [`supabase/aplica-assinatura-recorrente.sql`](../supabase/aplica-assinatura-recorrente.sql) | Uma vez, em banco criado antes da Issue #170 — **depois** de `aplica-pagamentos.sql`, de quem herda `tipo_pagamento` |
 | [`supabase/aplica-cobranca-de-vaga.sql`](../supabase/aplica-cobranca-de-vaga.sql) | Uma vez, em banco criado antes da Issue #172 — **depois** de `aplica-assinatura-recorrente.sql` |
 | [`supabase/aplica-recuperacao-de-senha.sql`](../supabase/aplica-recuperacao-de-senha.sql) | Uma vez, em banco criado antes da Issue #174 |
+| [`supabase/aplica-nome-do-avaliador.sql`](../supabase/aplica-nome-do-avaliador.sql) | Uma vez, em banco criado antes da Issue #304 — o nome na avaliação passa a acompanhar o nome da conta, e as avaliações já gravadas com o nome velho são corrigidas |
 
 Banco novo não precisa de nenhum deles: o `schema.sql` já traz tudo.
 

@@ -50,6 +50,28 @@ export function avaliacoesEmMemoria(prestadorId: string) {
   return emMemoria.filter((a) => a.prestadorId === prestadorId);
 }
 
+/**
+ * As mesmas avaliações, com o nome que a conta tem **agora** (#304).
+ *
+ * Com banco, quem mantém o nome em dia é um trigger. A demonstração não tem
+ * banco, e guardar o nome no dia da avaliação reproduziria o defeito que o
+ * trigger corrige: o comentário ficaria com o nome antigo depois de a pessoa
+ * trocá-lo. Resolver na leitura, e não reescrever na troca, é o que evita um
+ * segundo caminho de renomear para alguém esquecer.
+ *
+ * O nome gravado fica como reserva para quem já não tem conta, o mesmo papel
+ * que `nome_avaliador` cumpre no banco quando `avaliador_id` vira nulo.
+ */
+export async function avaliacoesEmMemoriaComNomeAtual(prestadorId: string) {
+  const repo = repositorioUsuarios();
+  return Promise.all(
+    avaliacoesEmMemoria(prestadorId).map(async (a) => {
+      const conta = await repo.porId(a.avaliadorId);
+      return { ...a, nome: conta?.nomeCompleto ?? a.nome };
+    }),
+  );
+}
+
 export async function jaAvaliou(
   sessao: Autenticado | null,
   prestadorId: string,

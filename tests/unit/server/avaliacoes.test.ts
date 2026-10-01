@@ -21,6 +21,7 @@ describe("avaliar prestador", () => {
   let restaurar: () => void;
   let avaliarPrestador: typeof import("@/server/avaliacoes/servico").avaliarPrestador;
   let jaAvaliou: typeof import("@/server/avaliacoes/servico").jaAvaliou;
+  let comNomeAtual: typeof import("@/server/avaliacoes/servico").avaliacoesEmMemoriaComNomeAtual;
   /*
    * `ehAppError` também precisa vir do ciclo novo.
    *
@@ -63,6 +64,7 @@ describe("avaliar prestador", () => {
     ]);
     avaliarPrestador = modulo.avaliarPrestador;
     jaAvaliou = modulo.jaAvaliou;
+    comNomeAtual = modulo.avaliacoesEmMemoriaComNomeAtual;
     ehAppError = errosDoCiclo.ehAppError;
 
     repo = new repositorios.RepositorioMemoria();
@@ -86,6 +88,49 @@ describe("avaliar prestador", () => {
     });
 
     expect(await jaAvaliou(quem, PRESTADOR)).toBe(true);
+  });
+
+  /*
+   * O nome na avaliação acompanha o da conta (#304). Com banco quem faz isso
+   * é um trigger; na demonstração, o nome é lido da conta na hora de exibir,
+   * e não copiado no dia da avaliação.
+   */
+  describe("nome de quem avaliou", () => {
+    it("acompanha o nome atual da conta", async () => {
+      const quem = await criarConta("empresa");
+      await avaliarPrestador(quem, { prestadorId: PRESTADOR, nota: 5 });
+      expect((await comNomeAtual(PRESTADOR))[0].nome).toBe("Quem Avalia");
+
+      await repo.atualizarBasicos(quem.usuarioId, {
+        nomeCompleto: "Nome Novo da Conta",
+        telefone: "66999990000",
+        bairro: null,
+      });
+
+      expect((await comNomeAtual(PRESTADOR))[0].nome).toBe(
+        "Nome Novo da Conta",
+      );
+    });
+
+    /** O mesmo papel de `nome_avaliador` no banco quando a conta some. */
+    it("sem conta, fica o nome gravado na avaliação", async () => {
+      const quem = await criarConta("empresa");
+      await avaliarPrestador(quem, { prestadorId: PRESTADOR, nota: 5 });
+
+      // A conta deixa de existir no repositório.
+      (repo as unknown as { usuarios: Map<string, unknown> }).usuarios.delete(
+        quem.usuarioId,
+      );
+
+      expect((await comNomeAtual(PRESTADOR))[0].nome).toBe("Quem Avalia");
+    });
+
+    it("só as avaliações do prestador pedido", async () => {
+      const quem = await criarConta("empresa");
+      await avaliarPrestador(quem, { prestadorId: PRESTADOR, nota: 5 });
+
+      expect(await comNomeAtual("outro-prestador")).toEqual([]);
+    });
   });
 
   /** Entrar já é pré-requisito para usar o app: não há portão a mais. */
