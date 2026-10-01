@@ -49,6 +49,7 @@ drop table if exists assinaturas cascade;
 drop table if exists carteiras_vaga cascade;
 drop table if exists tokens_recuperacao cascade;
 drop table if exists tentativas_de_acesso cascade;
+drop table if exists mensagens_suporte cascade;
 drop table if exists buscas_sem_resultado cascade;
 drop table if exists visualizacoes_vaga cascade;
 drop table if exists pedidos_verificacao cascade;
@@ -78,6 +79,7 @@ drop function if exists creditar_vaga(uuid, integer) cascade;
 drop function if exists tocar_atualizado_em() cascade;
 
 -- Os tipos enum por último: as colunas que os usavam já se foram.
+drop type if exists assunto_suporte cascade;
 drop type if exists finalidade_token cascade;
 drop type if exists status_assinatura cascade;
 drop type if exists status_pagamento cascade;
