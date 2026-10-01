@@ -300,6 +300,17 @@ test.describe("área administrativa", () => {
     await page.goto("/admin/painel");
     await expect(page).not.toHaveTitle(/Painel/);
     await expect(page.getByText(/Não encontramos essa página/)).toBeVisible();
+    // O mesmo título de qualquer página que não existe (#303).
+    await expect(page).toHaveTitle("Página não encontrada · Lupa");
+  });
+
+  /**
+   * A aba de um link quebrado dizia o slogan da home (#303), e quem tinha
+   * várias abas abertas não achava qual era a que deu errado.
+   */
+  test("página inexistente diz isso na aba", async ({ page }) => {
+    await page.goto("/rota-que-nao-existe");
+    await expect(page).toHaveTitle("Página não encontrada · Lupa");
   });
 
   test("a rota de API devolve JSON, não HTML", async ({ request }) => {
@@ -343,6 +354,18 @@ test.describe("telas de autenticação", () => {
     await expect(
       page.getByRole("link", { name: "Vagas", exact: true }),
     ).toHaveCount(0);
+  });
+
+  /** Quem abre o link de cadastro vê na aba que conta vai criar (#303). */
+  test("a aba do cadastro diz que conta está sendo criada", async ({
+    page,
+  }) => {
+    await page.goto("/cadastro?tipo=empresa");
+    await expect(page).toHaveTitle("Criar conta de empresa · Lupa");
+    await page.goto("/cadastro?tipo=prestador_servico");
+    await expect(page).toHaveTitle(
+      "Criar conta de prestador de serviço · Lupa",
+    );
   });
 });
 

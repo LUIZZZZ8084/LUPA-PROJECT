@@ -48,6 +48,12 @@ export function ErroDaTela({
 
   return (
     <div className="mx-auto w-full max-w-md px-4 pt-16 pb-24 text-center">
+      {/*
+        Fronteira de erro é componente de cliente e não exporta `metadata`;
+        o React 19 sobe o `<title>` para o `<head>` sozinho. Sem ele a aba
+        continuava com o título da tela que quebrou (#303).
+      */}
+      <title>Esta tela não abriu · Lupa</title>
       <LupaMark size={48} className="mx-auto opacity-60" />
       <h1 className="mt-5 text-2xl font-bold tracking-tight">
         Esta tela não abriu
