@@ -1,7 +1,15 @@
 import { ImageResponse } from "next/og";
+import { simbolo } from "@/components/brand/marca";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
+
+// As mesmas cores de `icon.tsx`; ver o comentário de lá.
+const FUNDO_DE = "#8cc63f";
+const FUNDO_ATE = "#2f5a0b";
+const ARO = "#ffffff";
+const DISCO = "#1f3f08";
+const PESSOA = "#ffffff";
 
 /** iOS não aplica máscara: o fundo precisa vir desenhado no próprio ícone. */
 export default function AppleIcon() {
@@ -13,27 +21,11 @@ export default function AppleIcon() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#0b0f14",
+        background: `linear-gradient(135deg, ${FUNDO_DE}, ${FUNDO_ATE})`,
       }}
     >
-      <svg width="124" height="124" viewBox="0 0 48 48" fill="none">
-        <circle cx="21" cy="21" r="14" stroke="#a8d94a" strokeWidth="4" />
-        <line
-          x1="31"
-          y1="31"
-          x2="43"
-          y2="43"
-          stroke="#a8d94a"
-          strokeWidth="4"
-          strokeLinecap="round"
-        />
-        <path
-          d="M15 21 L19 25 L28 15"
-          stroke="#f2f5f8"
-          strokeWidth="2.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+      <svg width="116" height="116" viewBox="0 0 64 64" fill="none">
+        {simbolo({ aro: ARO, disco: DISCO, pessoa: PESSOA })}
       </svg>
     </div>,
     size,

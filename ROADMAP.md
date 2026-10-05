@@ -14,6 +14,12 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/10/2026:
 
+- Logo nova: lupa de aro grosso em degradê de verde com uma pessoa no
+  centro, e o nome "Lupa" desenhado em vetor (Outfit Bold, sem carregar a
+  fonte). Troca o *check* da logo antiga, que prometia "verificado". Vale
+  para o cabeçalho, o login, o 404 e a tela de erro, nos dois temas; para o
+  ícone do app e do iPhone, a imagem do link no WhatsApp e o favicon —
+  [#343](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/343)
 - Busca no hero da home, no lugar dos cards de ação: alternador Vagas |
   Serviços, campo de busca, estado e atalhos de categoria, que levam à lista
   já filtrada. As listas ganharam o mesmo alternador no topo, que leva o

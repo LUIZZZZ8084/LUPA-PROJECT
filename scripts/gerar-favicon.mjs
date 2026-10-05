@@ -10,10 +10,12 @@
  * navegador: o Chrome prefere o `.ico`, declarado com `sizes="any"`, e a
  * aba mostrava o triângulo (#303).
  *
- * O desenho é o mesmo do `icon.tsx`, e as cores também: `ImageResponse`
- * não lê o `@theme`, então elas moram em três lugares, e há teste
- * (`tests/unit/favicon.test.ts`) que cobra que este arquivo e o
- * `icon.tsx` não se separem.
+ * O desenho é o mesmo do `icon.tsx` (a logo de `src/components/brand`), e
+ * as cores também: `ImageResponse` não lê o `@theme`, então elas moram em
+ * três lugares, e há teste (`tests/unit/favicon.test.ts`) que cobra que
+ * este arquivo, o `icon.tsx` e o `apple-icon.tsx` não se separem. A
+ * geometria está repetida aqui porque este script roda em Node puro e não
+ * importa TSX.
  *
  * O `.ico` leva um PNG por tamanho (16, 32 e 48 px), formato que todo
  * navegador atual lê. Sem dependência nova: o `sharp` já é do projeto.
@@ -23,18 +25,28 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
-export const FUNDO = "#0b0f14";
-export const LENTE = "#a8d94a";
-export const VISTO = "#f2f5f8";
+export const FUNDO_DE = "#8cc63f";
+export const FUNDO_ATE = "#2f5a0b";
+export const ARO = "#ffffff";
+export const DISCO = "#1f3f08";
+export const PESSOA = "#ffffff";
 
 const TAMANHOS = [16, 32, 48];
 
-const SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
-  <rect width="48" height="48" rx="10" fill="${FUNDO}"/>
-  <g transform="translate(4.8 4.8) scale(0.8)">
-    <circle cx="21" cy="21" r="14" stroke="${LENTE}" stroke-width="4"/>
-    <line x1="31" y1="31" x2="43" y2="43" stroke="${LENTE}" stroke-width="4" stroke-linecap="round"/>
-    <path d="M15 21 L19 25 L28 15" stroke="${VISTO}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+const SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="fundo" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64">
+      <stop offset="0" stop-color="${FUNDO_DE}"/>
+      <stop offset="1" stop-color="${FUNDO_ATE}"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#fundo)"/>
+  <g transform="translate(4.9 4.1) scale(0.86)">
+    <circle cx="36" cy="28" r="18" stroke="${ARO}" stroke-width="8"/>
+    <line x1="22.56" y1="41.44" x2="9.5" y2="54.5" stroke="${ARO}" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="36" cy="28" r="11.5" fill="${DISCO}"/>
+    <circle cx="36" cy="23.6" r="3.9" fill="${PESSOA}"/>
+    <path d="M28.6 35.5c0-3.8 3.2-6.2 7.4-6.2s7.4 2.4 7.4 6.2Z" fill="${PESSOA}"/>
   </g>
 </svg>`;
 
@@ -67,7 +79,7 @@ function montarIco(pngs) {
 const pngs = [];
 for (const tamanho of TAMANHOS) {
   const dados = await sharp(Buffer.from(SVG), {
-    density: 72 * (tamanho / 48) * 4,
+    density: 72 * (tamanho / 64) * 4,
   })
     .resize(tamanho, tamanho)
     .png()
