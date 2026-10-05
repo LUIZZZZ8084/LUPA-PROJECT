@@ -34,6 +34,12 @@ export default async function PublicacoesPage() {
   return (
     <PageShell width="narrow">
       <BackLink href="/perfil" label="Voltar ao perfil" />
+      {/*
+        Esta tela é a única que traz de volta um trabalho tirado do perfil,
+        e a aba "Serviços" do próprio perfil leva até aqui (#333). A
+        publicação nova também mora lá; aqui ela continua para quem chega
+        para guardar ou devolver trabalhos.
+      */}
       <PageTitle
         title="Meus trabalhos"
         accent="text-servicos"

@@ -27,7 +27,7 @@ import type {
  * responde "quem é você no sistema", não "quem é você para quem contrata".
  * Um prestador precisa ver o próprio anúncio como ele aparece na busca; um
  * candidato precisa ver o que uma empresa veria; uma empresa precisa ver o
- * cartão que a candidata lê antes de se candidatar.
+ * cartão que quem procura emprego lê antes de se candidatar.
  *
  * Cada papel tem um bloco diferente porque cada um tem uma identidade
  * profissional diferente. Um formulário único com campos ocultos por papel
@@ -329,7 +329,7 @@ export function PerfilPrestador({
   );
 }
 
-/** Empresa: o cartão que a candidata lê antes de se candidatar. */
+/** Empresa: o cartão que quem procura emprego lê antes de se candidatar. */
 export function PerfilEmpresa({
   empresa,
   docVerificado,

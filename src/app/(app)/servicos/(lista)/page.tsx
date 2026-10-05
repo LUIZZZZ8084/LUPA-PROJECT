@@ -88,7 +88,7 @@ export default async function ServicosPage({
       <PageTitle
         title="Serviços"
         accent="text-servicos"
-        description="Profissionais da sua região, com avaliação e verificação de documento."
+        description="Profissionais da sua região, com avaliação e CPF conferido."
       />
 
       <FilterBar
