@@ -753,6 +753,42 @@ export async function confirmarParcelaDaAssinatura(
  * por isso o status em si vem sempre de uma nova chamada à API, nunca do
  * corpo do POST.
  */
+/**
+ * O valor pago bate com o da cobrança? Se não, o Sentry fica sabendo
+ * (#331) — e a aprovação segue.
+ *
+ * Hoje não há como divergir: o valor sai da preferência que o próprio
+ * servidor cria, e ninguém altera uma preferência sem o nosso token. É
+ * defesa em profundidade, para o dia em que algo mudar — um cupom, uma
+ * promoção, um preço trocado no código e esquecido numa cobrança aberta.
+ *
+ * **Avisa e não barra, de propósito.** Barrar seria segurar o crédito de
+ * alguém que pagou de verdade por uma diferença de centavos, ou por um
+ * campo que o Mercado Pago passasse a preencher de outro jeito — e
+ * cobrança paga sem efeito é o defeito mais caro deste caminho, o mesmo
+ * da primeira venda (#196). Com o aviso, quem opera decide caso a caso, e
+ * o estorno está a um botão.
+ */
+function conferirValorPago(
+  pagamento: { id: string; valorCentavos: number },
+  remoto: PagamentoNoMercadoPago,
+) {
+  if (remoto.valorCentavos == null) return;
+  const moeda = remoto.moeda ?? "BRL";
+  if (remoto.valorCentavos === pagamento.valorCentavos && moeda === "BRL") {
+    return;
+  }
+
+  log.erro(erros.interno("valor pago diferente do valor da cobrança"), {
+    acao: "pagamentos.confirmar",
+    pagamentoId: pagamento.id,
+    mpPaymentId: remoto.id,
+    cobradoCentavos: pagamento.valorCentavos,
+    pagoCentavos: remoto.valorCentavos,
+    moeda,
+  });
+}
+
 export async function confirmarPagamento(
   mpPaymentId: string,
   buscar?: typeof fetch,
@@ -817,6 +853,7 @@ export async function confirmarPagamento(
   }
 
   if (infoRemota.status === "approved") {
+    conferirValorPago(pagamento, infoRemota);
     const aprovado = await repo.aprovar(pagamento.id, infoRemota.id);
     // `null`: outra notificação já tinha aprovado ou rejeitado antes —
     // o efeito já foi aplicado (ou nunca deveria ser), e reaplicar

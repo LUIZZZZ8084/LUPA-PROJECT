@@ -267,7 +267,23 @@ describe("consultarPagamento", () => {
       id: "123",
       status: "approved",
       referenciaExterna: "pag-1",
+      valorCentavos: null,
+      moeda: null,
     });
+  });
+
+  it("lê o valor pago, em centavos, e a moeda (#331)", async () => {
+    const resultado = await consultarPagamento(
+      "mp-1",
+      respostaJson({
+        id: 123,
+        status: "approved",
+        external_reference: "pag-1",
+        transaction_amount: 19.9,
+        currency_id: "BRL",
+      }),
+    );
+    expect(resultado).toMatchObject({ valorCentavos: 1990, moeda: "BRL" });
   });
 
   it("devolve null quando o Mercado Pago não encontra o pagamento", async () => {

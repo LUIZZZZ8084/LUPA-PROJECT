@@ -139,6 +139,15 @@ export interface PagamentoNoMercadoPago {
   /** "approved" | "pending" | "rejected" | "cancelled" | "refunded" | ... */
   status: string;
   referenciaExterna: string | null;
+  /**
+   * O que foi pago, em centavos, e em que moeda (#331).
+   *
+   * Só a leitura por id traz: a busca por referência da varredura volta
+   * sem, e o valor é conferido quando a varredura chama
+   * `confirmarPagamento`, que relê por id.
+   */
+  valorCentavos?: number | null;
+  moeda?: string | null;
 }
 
 /**
@@ -166,6 +175,8 @@ export async function consultarPagamento(
       id?: unknown;
       status?: unknown;
       external_reference?: unknown;
+      transaction_amount?: unknown;
+      currency_id?: unknown;
     };
 
     if (
@@ -182,6 +193,11 @@ export async function consultarPagamento(
         typeof corpo.external_reference === "string"
           ? corpo.external_reference
           : null,
+      valorCentavos:
+        typeof corpo.transaction_amount === "number"
+          ? Math.round(corpo.transaction_amount * 100)
+          : null,
+      moeda: typeof corpo.currency_id === "string" ? corpo.currency_id : null,
     };
   } catch {
     return null;
