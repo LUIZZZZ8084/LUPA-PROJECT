@@ -57,9 +57,12 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
    * o formulário se redesenhava idêntico: para quem estava do outro lado,
    * "a caixa de login recarregou". A pessoa estava logada e não sabia.
    *
-   * A navegação é aqui, e não um `redirect()` na action, porque
-   * `criarAcao` captura toda exceção — inclusive o NEXT_REDIRECT, que é
-   * como o `redirect()` do Next funciona. Lá ele viraria mensagem de erro.
+   * A navegação é aqui, junto do destino que a tela já validou
+   * (`destinoSeguro`). Este comentário dizia que um `redirect()` na action
+   * seria engolido por `criarAcao`, e não seria: ela repassa `redirect()`
+   * e `notFound()` desde 21/08 (`ehControleDeFluxoDoNext`, em
+   * `src/server/action.ts`). A frase foi repetida no AGENTS.md e decidiu
+   * um desenho lá; corrigida nos dois na #334.
    */
   useEffect(() => {
     if (!state.ok) return;

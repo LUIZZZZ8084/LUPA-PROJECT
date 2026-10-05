@@ -2456,11 +2456,18 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   revalidação re-renderiza *aquela mesma rota*, cujo portão agora recusa
   quem acabou de passar por ele: quem ativava com sucesso terminava
   olhando para "Não encontramos essa página". A navegação no cliente
-  (`router.replace`) perdia a corrida contra a revalidação, e não dava
-  para redirecionar de dentro da action porque `criarAcao` captura toda
-  exceção — inclusive o `NEXT_REDIRECT`. A saída foi a própria página
-  redirecionar quem já é prestador, que é determinístico e roda no
-  servidor. **Ação que muda o papel e revalida precisa responder o que a
+  (`router.replace`) perdia a corrida contra a revalidação. A saída foi a
+  própria página redirecionar quem já é prestador, que é determinístico e
+  roda no servidor.
+
+  **Este parágrafo dizia também que não dava para redirecionar de dentro
+  da action, porque `criarAcao` engoliria o `NEXT_REDIRECT`. Era falso**
+  (#334): `criarAcao` repassa `redirect()` e `notFound()` desde 21/08
+  (`e36fdf4`, `ehControleDeFluxoDoNext` em `src/server/action.ts`) — um
+  dia antes de a frase ser escrita pela primeira vez, num comentário do
+  login. A saída escolhida continua certa pelo motivo de cima; o motivo de
+  baixo nunca existiu. *Premissa sobre o próprio código se confere no
+  código, não no comentário que a repete.* **Ação que muda o papel e revalida precisa responder o que a
   rota de origem faz depois** — e a resposta não pode ser 404 na cara de
   quem acabou de acertar.
 
