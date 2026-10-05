@@ -33,6 +33,9 @@ Em 01/10/2026:
   própria para home e busca vazias. Reverte a #245; o script roda à mão,
   ver "Depende de decisão" —
   [#302](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/302)
+- "Conferir CNPJ" voltou a funcionar: a BrasilAPI recusava o pedido do
+  servidor por causa do `User-Agent` padrão do Node —
+  [#318](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/318)
 - A empresa assina vaga e avaliação com o nome dela, não o do responsável,
   e nenhum nome se edita depois do cadastro — só a conferência do CNPJ
   troca o da empresa, pelo da Receita. Resolve também a
