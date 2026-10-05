@@ -8,9 +8,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 01/10/2026.**
+**Última atualização: 05/10/2026.**
 
 ## Concluído
+
+Em 05/10/2026:
+
+- E-mail que não sai chega ao Sentry, com o fluxo e o status, e o limite
+  do plano grátis do Resend (429) diz que é cota. Sem o endereço de
+  ninguém no registro —
+  [#326](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/326)
 
 Em 01/10/2026:
 

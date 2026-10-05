@@ -147,6 +147,7 @@ export async function pedirRecuperacao(
     {
       para: usuario.email,
       assunto: "Redefinir sua senha na Lupa",
+      tipo: "recuperacao",
       corpo: [
         `Olá, ${usuario.nomeCompleto.split(" ")[0]}.`,
         "",
