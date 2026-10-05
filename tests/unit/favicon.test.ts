@@ -73,7 +73,7 @@ describe("ícone da aba", () => {
         join(process.cwd(), "src/app", arquivo),
         "utf8",
       );
-      for (const nome of ["FUNDO", "LENTE", "VISTO"]) {
+      for (const nome of ["FUNDO_DE", "FUNDO_ATE", "ARO", "DISCO", "PESSOA"]) {
         const cor = corDoScript(nome);
         expect(cor, nome).toBeDefined();
         expect(fonte, `${nome} ${cor}`).toContain(`"${cor}"`);

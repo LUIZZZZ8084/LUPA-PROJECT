@@ -263,6 +263,24 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
+/*
+ * O degradê do aro da logo (#343), nos dois temas.
+ *
+ * Não são tokens de interface: são as duas pontas de um degradê que só a
+ * logo usa, e por isso moram fora do `@theme`, que gera utilitários. No
+ * claro vão do verde-folha ao verde da marca (\`--color-vagas\`); no
+ * escuro, de um lima claro a um verde médio, para não afundar no fundo.
+ */
+:root {
+  --logo-a: #8cc63f;
+  --logo-b: #3f6810;
+}
+
+:root[data-theme="dark"] {
+  --logo-a: #c8ee6a;
+  --logo-b: #7fb02a;
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-ink);
