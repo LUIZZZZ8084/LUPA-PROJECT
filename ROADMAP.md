@@ -436,6 +436,14 @@ Antes do lançamento, fora disso:
 
 Trabalho que não é código: alguém precisa fazer com a mão, em produção.
 
+- [ ] Rodar `supabase/aplica-limites-dos-buckets.sql` no SQL Editor —
+      [#332](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/332)
+
+      Põe no próprio Storage o limite de tamanho e de tipo que a aplicação
+      já confere, como segunda camada. Depois de rodar, trocar a foto de um
+      perfil e enviar um currículo para ver o envio funcionando, e fechar a
+      Issue.
+
 - [ ] Ligar o 2FA na conta da Vercel —
       [#229](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/229)
 
