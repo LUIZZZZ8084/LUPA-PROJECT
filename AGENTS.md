@@ -846,9 +846,37 @@ servidor precisa vir da mesma constante.*
 ### Sessão em JWT, não em banco
 
 Serverless não tem processo de longa duração, e cada consulta a mais é
-latência para quem está em 3G. A validade é de 7 dias com renovação
-silenciosa faltando 2, e o payload carrega **só id e papel** — cookie é
-legível por quem tem o aparelho.
+latência para quem está em 3G. O payload carrega **só id e papel** —
+cookie é legível por quem tem o aparelho.
+
+**Sete dias sem abrir o app, ou trinta desde o login (#323).** Cada token
+vale 7 dias, e o `proxy.ts` o renova em silêncio quando ele passa de um
+dia — então os 7 dias funcionam como janela de inatividade. Mas nenhuma
+sessão passa de 30 dias desde o login, renovada ou não, e aí a pessoa
+entra de novo.
+
+**Esta frase dizia "renovação silenciosa faltando 2", e era falsa.**
+`renovarSeNecessario` existia desde 20/08 e nada a chamava: todo mundo era
+deslogado aos 7 dias, usando o app todo dia ou não. O teste que havia
+testava a função, não o lugar que deveria chamá-la. E o limiar de dois
+dias também não servia: quem abrisse o app a cada quatro dias chegava no
+quarto com três faltando, não renovava, e no oitavo estava fora. Achado na
+auditoria de 29/09. *Função que existe e ninguém chama é a versão de
+código do estado sem produtor: o teste dela passa, porque ninguém
+escreveu o teste de quem devia chamá-la.*
+
+**A renovação preserva o `iat` do login**, e é isso que a torna segura no
+proxy, que não tem banco para conferir a revogação. A revogação compara o
+`iat` com o corte de quem trocou a senha; um token renovado com `iat` de
+agora nasceria depois do corte e escaparia dele — o ladrão do cookie
+renovaria a própria sessão para sempre. Com o `iat` do login, o token
+revogado continua revogado depois de renovado.
+
+**Só em GET.** Entrar, sair, virar prestador e trocar a senha gravam o
+cookie em server action, que é POST. Renovar na mesma resposta poria dois
+`Set-Cookie` com o mesmo nome, e o que valesse por último decidiria —
+podendo desfazer a troca de papel, ou deslogar quem acabou de trocar a
+senha. Navegação é GET, e renovar só nela não perde nada.
 
 **O preço de não revogar deixou de ser total (#225).** Era: token válido
 por até uma semana, sem volta, mesmo depois de a pessoa trocar a senha
@@ -858,14 +886,18 @@ corte por pessoa, e `sessaoAtual()` descarta token emitido antes dele.
 **E isto não é "sessão no banco", que é a alternativa que se recusou.**
 Sessão no banco significa perguntar, a cada requisição, se aquela sessão
 vale — uma consulta por navegação, para todo mundo, o tempo todo. Aqui a
-pergunta é outra: o app lê a lista de **quem cortou nos últimos 7 dias** e
+pergunta é outra: o app lê a lista de **quem cortou nos últimos 30 dias** e
 a guarda em cache por 60 segundos. No caminho comum não há consulta
 nenhuma.
 
-A lista é curta por construção e **não cresce com o tempo**: token com
-mais de 7 dias já expirou sozinho, então quem trocou a senha no mês
-passado sai dela. Ela cresce com o número de trocas de senha desta semana
-— num app de 26 contas, é quase sempre vazia. *Quando revogar exige
+A lista é curta por construção e **não cresce com o tempo**: nenhuma
+sessão vive mais de 30 dias desde o login, então quem trocou a senha há
+mais tempo que isso sai dela. Ela cresce com o número de trocas de senha
+do último mês — num app de 30 contas, é quase sempre vazia. **O alcance
+da lista e a vida máxima da sessão são o mesmo número**: `revogacao.ts` o
+lê de `CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS`. Eram 7 e 7 até a #323; com
+a renovação, uma lista que olhasse só 7 dias deixaria o corte sumir antes
+de o token renovado morrer. *Quando revogar exige
 estado, procure o estado que responde a todos de uma vez, não o que
 responde a um por requisição.*
 

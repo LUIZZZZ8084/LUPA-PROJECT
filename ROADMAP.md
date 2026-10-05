@@ -14,6 +14,11 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/10/2026:
 
+- Quem usa o app não é mais deslogado a cada sete dias: a sessão renova
+  sozinha na navegação, sai depois de sete dias sem uso e, em qualquer
+  caso, trinta dias depois do login. A renovação guarda a hora do login,
+  e trocar a senha continua derrubando as outras sessões —
+  [#323](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/323)
 - E-mail que não sai chega ao Sentry, com o fluxo e o status, e o limite
   do plano grátis do Resend (429) diz que é cota. Sem o endereço de
   ninguém no registro —

@@ -25,11 +25,36 @@ import { ehPapel, type Papel } from "./rbac";
 
 export const NOME_COOKIE = "lupa_sessao";
 
-/** Sete dias: renovar toda semana incomoda pouco e limita o estrago. */
+/**
+ * Sete dias sem abrir o app, e a pessoa entra de novo.
+ *
+ * É a validade de **cada** token, e funciona como janela de inatividade:
+ * quem usa o app renova o token sozinho (`renovarSeNecessario`, chamada
+ * pelo `proxy.ts`), e quem some por uma semana precisa fazer login.
+ */
 const VALIDADE_SEGUNDOS = 7 * 24 * 60 * 60;
 
-/** Abaixo disso, o token é reemitido em silêncio na próxima navegação. */
-const RENOVAR_QUANDO_FALTAR = 2 * 24 * 60 * 60;
+/**
+ * Renova quando o token tem mais de um dia (#323).
+ *
+ * Era "quando faltarem dois dias", e a renovação nem era chamada. Com dois
+ * dias, quem abrisse o app a cada quatro seria deslogado mesmo assim: no
+ * quarto dia faltavam três, não renovava, e no oitavo o token já tinha
+ * vencido. Um dia de idade mantém a janela de inatividade em sete dias de
+ * verdade, e reescreve o cookie no máximo uma vez por dia.
+ */
+const RENOVAR_QUANDO_FALTAR = VALIDADE_SEGUNDOS - 24 * 60 * 60;
+
+/**
+ * Trinta dias desde o login, e a pessoa entra de novo mesmo usando todo dia.
+ *
+ * Sem um teto, quem roubasse o cookie e continuasse navegando renovaria a
+ * sessão para sempre — e a revogação pela troca de senha (#225) depende de
+ * a lista de cortes alcançar o token mais velho que pode estar vivo.
+ * `revogacao.ts` lê esta constante para saber quantos dias de cortes olhar;
+ * os dois números andam juntos, não lado a lado.
+ */
+const DURACAO_MAXIMA_SEGUNDOS = 30 * 24 * 60 * 60;
 
 export interface Sessao {
   usuarioId: string;
@@ -37,12 +62,14 @@ export interface Sessao {
   /** Epoch em segundos. */
   expiraEm: number;
   /**
-   * Quando o token foi emitido, em epoch de segundos (#225).
+   * Quando a pessoa entrou, em epoch de segundos (#225).
    *
-   * O `iat` sempre esteve no token; o que faltava era lê-lo. É ele que
-   * responde se esta sessão nasceu antes do corte de revogação da pessoa
-   * — e é o que permite derrubar sessão antiga sem guardar sessão nenhuma
-   * no banco.
+   * Vem do `iat`, e a renovação **preserva** o `iat` do login (#323): o
+   * token novo diz "esta sessão começou lá atrás", não "agora". É o que
+   * responde se a sessão nasceu antes do corte de revogação da pessoa — e
+   * o que permite derrubar sessão antiga sem guardar sessão nenhuma no
+   * banco. Renovar com `iat` novo faria um token revogado pela troca de
+   * senha nascer de novo depois do corte, e escapar dele.
    */
   emitidoEm: number;
 }
@@ -98,17 +125,29 @@ export function limparCacheDoSegredo(): void {
   segredoCache = null;
 }
 
+/**
+ * Assina um token novo.
+ *
+ * Sem `emitidoEm`, é um login: a sessão começa agora. Com ele, é uma
+ * renovação, e o token novo carrega o começo da sessão antiga — e nunca
+ * vai além do teto contado dali (`DURACAO_MAXIMA_SEGUNDOS`).
+ */
 export async function assinarSessao(
   usuarioId: string,
   papel: Papel,
+  emitidoEm?: number,
 ): Promise<{ token: string; expiraEm: number }> {
   const agora = Math.floor(Date.now() / 1000);
-  const expiraEm = agora + VALIDADE_SEGUNDOS;
+  const inicio = emitidoEm ?? agora;
+  const expiraEm = Math.min(
+    agora + VALIDADE_SEGUNDOS,
+    inicio + DURACAO_MAXIMA_SEGUNDOS,
+  );
 
   const token = await new SignJWT({ papel })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(usuarioId)
-    .setIssuedAt(agora)
+    .setIssuedAt(inicio)
     .setExpirationTime(expiraEm)
     .setIssuer("lupa")
     .setAudience("lupa-app")
@@ -164,24 +203,38 @@ function opcoesDoCookie(maxAge: number) {
 }
 
 /**
- * Reemite o token quando está perto de vencer.
+ * Reemite o token de quem está usando o app (#323).
  *
- * Quem usa toda semana nunca é deslogado; quem some por sete dias precisa
- * entrar de novo. Devolve o token novo, ou null se ainda não é hora.
+ * Existia desde 20/08 e nada a chamava: todo mundo era deslogado sete dias
+ * depois de entrar, usando o app todo dia ou não. Hoje o `proxy.ts` a
+ * chama a cada navegação.
+ *
+ * Devolve o token novo, ou `null` quando não há o que fazer: o token ainda
+ * é de hoje, ou a sessão já encostou no teto de trinta dias e renovar não
+ * lhe daria nem um segundo a mais.
+ *
+ * O `iat` e o papel são os da sessão antiga. O papel porque quem o troca
+ * (virar prestador) já reemite a sessão na mesma action; o `iat` porque é
+ * ele que a revogação compara — ver `Sessao.emitidoEm`.
  */
 export async function renovarSeNecessario(
   sessao: Sessao,
-): Promise<string | null> {
-  const faltando = sessao.expiraEm - Math.floor(Date.now() / 1000);
-  if (faltando > RENOVAR_QUANDO_FALTAR) return null;
+): Promise<{ token: string; expiraEm: number } | null> {
+  const agora = Math.floor(Date.now() / 1000);
+  if (sessao.expiraEm - agora > RENOVAR_QUANDO_FALTAR) return null;
 
-  const { token } = await assinarSessao(sessao.usuarioId, sessao.papel);
-  return token;
+  const teto = sessao.emitidoEm + DURACAO_MAXIMA_SEGUNDOS;
+  if (Math.min(agora + VALIDADE_SEGUNDOS, teto) <= sessao.expiraEm) {
+    return null;
+  }
+
+  return assinarSessao(sessao.usuarioId, sessao.papel, sessao.emitidoEm);
 }
 
 export const CONFIG_SESSAO = {
   NOME_COOKIE,
   VALIDADE_SEGUNDOS,
   RENOVAR_QUANDO_FALTAR,
+  DURACAO_MAXIMA_SEGUNDOS,
   opcoesDoCookie,
 };
