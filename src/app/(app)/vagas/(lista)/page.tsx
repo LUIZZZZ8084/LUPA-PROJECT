@@ -1,6 +1,7 @@
 import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import { after } from "next/server";
+import { AlternarBusca } from "@/components/alternar-busca";
 import { FilterBar } from "@/components/filter-bar";
 import { JobCard } from "@/components/job-card";
 import {
@@ -124,6 +125,13 @@ export default async function VagasPage({
         title="Vagas"
         accent="text-vagas"
         description="Vagas de emprego no Brasil inteiro, direto de quem está contratando."
+      />
+
+      <AlternarBusca
+        atual="vagas"
+        q={single("q")}
+        uf={lugar.uf}
+        cidade={lugar.cidade}
       />
 
       <FilterBar

@@ -1,6 +1,7 @@
 import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import { after } from "next/server";
+import { AlternarBusca } from "@/components/alternar-busca";
 import { FilterBar } from "@/components/filter-bar";
 import {
   EmptyState,
@@ -89,6 +90,13 @@ export default async function ServicosPage({
         title="Serviços"
         accent="text-servicos"
         description="Profissionais da sua região, com avaliação e CPF conferido."
+      />
+
+      <AlternarBusca
+        atual="servicos"
+        q={single("q")}
+        uf={lugar.uf}
+        cidade={lugar.cidade}
       />
 
       <FilterBar
