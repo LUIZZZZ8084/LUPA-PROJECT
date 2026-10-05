@@ -5,10 +5,31 @@ import { PageShell, PageTitle } from "@/components/layout/page-shell";
 import type { Role } from "@/lib/types";
 import { SignUpForm } from "./form";
 
-export const metadata: Metadata = {
-  title: "Criar conta",
-  description: "Crie sua conta na Lupa como candidato, prestador ou empresa.",
+/*
+ * O título diz que conta está sendo criada (#303). As três telas de
+ * cadastro eram "Criar conta" na aba, e quem abre o link de cadastro de
+ * empresa recebido por WhatsApp precisa ver que está no lugar certo antes
+ * de ler a tela.
+ */
+const TITULO_POR_PAPEL: Record<Role, string> = {
+  candidato_clt: "Criar conta para procurar emprego",
+  prestador_servico: "Criar conta de prestador de serviço",
+  empresa: "Criar conta de empresa",
 };
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ tipo?: string | string[] }>;
+}): Promise<Metadata> {
+  const { tipo } = await searchParams;
+  const selecionado = Array.isArray(tipo) ? tipo[0] : tipo;
+
+  return {
+    title: isRole(selecionado) ? TITULO_POR_PAPEL[selecionado] : "Criar conta",
+    description: "Crie sua conta na Lupa como candidato, prestador ou empresa.",
+  };
+}
 
 const ROLES = [
   {

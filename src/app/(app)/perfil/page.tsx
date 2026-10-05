@@ -40,7 +40,7 @@ import { ConfirmarEmail } from "./confirmar-email";
 import { VerificarCnpj } from "./verificar-cnpj";
 
 export const metadata: Metadata = {
-  title: "Perfil",
+  title: "Meu perfil",
 };
 
 /**

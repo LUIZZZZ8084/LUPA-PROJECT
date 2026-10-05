@@ -9,7 +9,7 @@ import { exigeFotoDePerfil } from "@/server/prestadores/servico";
 import { AtivarPrestadorForm } from "./form";
 
 export const metadata: Metadata = {
-  title: "Oferecer serviço",
+  title: "Oferecer meus serviços",
 };
 
 export default async function VirarPrestadorPage() {

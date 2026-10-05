@@ -1,6 +1,17 @@
+import type { Metadata } from "next";
 import { LupaMark } from "@/components/brand/logo";
 import { PageShell } from "@/components/layout/page-shell";
 import { ButtonLink } from "@/components/ui/button";
+
+/*
+ * Sem isto a aba herdava o título da home, e um link quebrado aparecia como
+ * "Lupa — Trabalho e profissionais perto de você" (#303). Vale também para
+ * o 404 das áreas protegidas, como `/admin`: o título é o mesmo de qualquer
+ * página inexistente, e não confirma que a área existe.
+ */
+export const metadata: Metadata = {
+  title: "Página não encontrada",
+};
 
 export default function NotFound() {
   return (

@@ -17,7 +17,7 @@ import { pode } from "@/server/auth/rbac";
 import { VerificationActions } from "./actions-ui";
 
 export const metadata: Metadata = {
-  title: "Verificações",
+  title: "Fila de verificação",
   description: "Fila de aprovação manual de documentos.",
   robots: { index: false, follow: false },
 };

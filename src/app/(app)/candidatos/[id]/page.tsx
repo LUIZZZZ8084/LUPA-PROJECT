@@ -29,7 +29,7 @@ import {
 import { areaDoPapel } from "../../_contratacao/area";
 
 export const metadata: Metadata = {
-  title: "Candidato",
+  title: "Perfil do candidato",
   description: "Quem pediu para ser encontrado por empresas.",
 };
 

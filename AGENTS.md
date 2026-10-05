@@ -31,6 +31,7 @@ node scripts/criar-admin.mjs      # cria ou promove a conta de admin
 node scripts/gerar-avatares.mjs   # regenera os avatares de demonstração
 node scripts/gerar-cidades.mjs    # baixa a lista de municípios do Brasil (IBGE)
 node scripts/gerar-regioes.mjs    # baixa a região de cada município (IBGE)
+node scripts/gerar-favicon.mjs    # regenera o ícone da aba a partir da logo
 ```
 
 ```bash
@@ -2461,6 +2462,15 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   instalável para quem ainda não tem conta, que é justamente quem acabou
   de receber o link. Nenhuma tela quebrou. Arquivo gerado por rota vai no
   matcher, não em `ABERTAS`, que é lista de rota de navegação.
+- **Ter a logo declarada não é a aba mostrar a logo.** `icon.tsx` e
+  `apple-icon.tsx` desenhavam a lupa desde o começo, e o `favicon.ico` de
+  fábrica do Next continuava em `src/app`. O HTML declarava os dois, e o
+  Chrome escolhia o `.ico`: a aba mostrou o triângulo do Next desde o
+  primeiro commit, sem nada quebrar (#303). Hoje o `.ico` sai de
+  `scripts/gerar-favicon.mjs`, com o mesmo desenho, e
+  `tests/unit/favicon.test.ts` decodifica o arquivo e procura o verde da
+  marca. **Arquivo de fábrica de framework é o que ninguém lembra de
+  trocar, porque nunca foi escrito por ninguém.**
 - **Valor padrão de filtro na tela vira filtro invisível.** `/vagas` lia
   `single("cidade") ?? "Sinop"` — sobra do tempo em que Sinop era a única
   cidade. Aberto o estado inteiro, toda vaga publicada fora de Sinop sumia

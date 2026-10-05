@@ -9,7 +9,7 @@ import { BuscasSemResultado } from "./buscas-sem-resultado";
 import { PainelCliente } from "./painel-cliente";
 
 export const metadata: Metadata = {
-  title: "Painel",
+  title: "Painel do administrador",
   // Área administrativa não entra em índice de busca.
   robots: { index: false, follow: false },
 };

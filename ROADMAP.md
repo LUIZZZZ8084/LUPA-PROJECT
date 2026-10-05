@@ -41,6 +41,9 @@ Em 01/10/2026:
   troca o da empresa, pelo da Receita. Resolve também a
   [#304](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/304) —
   [#315](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/315)
+- A aba do navegador mostra a logo da Lupa, e não mais o triângulo do
+  Next. Página inexistente, erro e cada tipo de cadastro ganharam título
+  próprio — [#303](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/303)
 
 Preparação para o lançamento, de 15 a 25/09/2026:
 
