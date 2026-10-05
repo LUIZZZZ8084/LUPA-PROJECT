@@ -244,10 +244,11 @@ export async function entrar(dados: DadosLogin): Promise<UsuarioPublico> {
   await registrarSucesso(chave);
 
   // Hash antigo é regravado com os parâmetros atuais, sem pedir troca de
-  // senha. Falha aqui não impede a entrada.
+  // senha e sem derrubar os outros aparelhos (#330): a senha é a mesma.
+  // Falha aqui não impede a entrada.
   if (precisaRehash(usuario.senhaHash)) {
     try {
-      await repo.atualizarSenhaHash(usuario.id, await gerarHash(dados.senha));
+      await repo.regravarHash(usuario.id, await gerarHash(dados.senha));
     } catch {
       log.warn("não foi possível regravar o hash", {
         acao: "auth.entrar",

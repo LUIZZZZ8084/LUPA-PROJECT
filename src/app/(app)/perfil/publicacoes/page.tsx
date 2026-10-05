@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { temArmazenamento } from "@/server/arquivos/servico";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { listarPublicacoes, resumo } from "@/server/publicacoes/servico";
 import { FeedDoPrestador } from "./feed";
@@ -21,10 +21,10 @@ export const metadata: Metadata = {
  * anúncio e caía na vitrine de todo mundo.
  */
 export default async function PublicacoesPage() {
-  const sessao = await sessaoAtual();
+  const sessao = await sessaoOuEntrar("/perfil/publicacoes");
 
   // Quem não publica não tem feed. 404, como no resto da casa.
-  if (!sessao || !pode(sessao.papel, "publicacao:criar")) notFound();
+  if (!pode(sessao.papel, "publicacao:criar")) notFound();
 
   const [publicacoes, contagem] = await Promise.all([
     listarPublicacoes(sessao.usuarioId),

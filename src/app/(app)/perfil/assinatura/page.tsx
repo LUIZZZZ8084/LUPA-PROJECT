@@ -5,7 +5,7 @@ import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL, passouDoPrazo } from "@/lib/format";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { DIAS_TESTE_GRATIS, PRECO_CENTAVOS } from "@/server/pagamentos/planos";
 import { estadoDaAssinatura } from "@/server/pagamentos/servico";
@@ -18,8 +18,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AssinaturaPage() {
-  const sessao = await sessaoAtual();
-  if (!sessao || !pode(sessao.papel, "prestador:gerenciar_assinatura")) {
+  const sessao = await sessaoOuEntrar("/perfil/assinatura");
+  if (!pode(sessao.papel, "prestador:gerenciar_assinatura")) {
     notFound();
   }
 

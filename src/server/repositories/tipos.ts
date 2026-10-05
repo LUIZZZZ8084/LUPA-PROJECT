@@ -238,6 +238,21 @@ export interface RepositorioUsuarios {
   atualizarSenhaHash(id: string, senhaHash: string): Promise<void>;
 
   /**
+   * Regrava o hash **da mesma senha** com os parâmetros atuais do Argon2.
+   *
+   * Existe só para `entrar()`, quando `precisaRehash` diz que o hash foi
+   * gerado com parâmetros antigos (#330). Não corta sessão nenhuma, e é
+   * esse o ponto: a senha não mudou, ninguém está sendo expulso. Com
+   * `atualizarSenhaHash` ali, o dia em que os parâmetros subissem cada
+   * login derrubaria os outros aparelhos da pessoa.
+   *
+   * **Nunca para troca de senha.** Troca de senha corta as sessões, e é
+   * `atualizarSenhaHash` que faz as duas coisas juntas — o aviso acima, da
+   * #142, continua valendo para ela.
+   */
+  regravarHash(id: string, senhaHash: string): Promise<void>;
+
+  /**
    * Quem cortou as próprias sessões nos últimos `dias`, como epoch de
    * segundos por usuário.
    *

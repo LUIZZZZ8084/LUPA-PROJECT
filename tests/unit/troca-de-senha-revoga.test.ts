@@ -52,6 +52,20 @@ function blocosDeUpdate(fonte: string): string[] {
   );
 }
 
+/**
+ * A única exceção: regravar o hash **da mesma senha** (#330).
+ *
+ * Quando os parâmetros do Argon2 sobem, `entrar()` regrava o hash de quem
+ * acabou de digitar a senha certa. Ninguém trocou de senha, e cortar as
+ * sessões ali desconectaria os outros aparelhos da pessoa a cada login. A
+ * exceção é estreita de propósito: um arquivo, um marcador, e um teste
+ * abaixo garantindo que só `entrar()` a chama.
+ */
+const EXCECAO = {
+  arquivo: "src/server/repositories/postgres.ts",
+  marcador: "mesma-senha (#330)",
+};
+
 describe("troca de senha e revogação andam juntas", () => {
   it("nenhum update reescreve senha_hash sem gravar o corte", () => {
     const faltando: string[] = [];
@@ -61,6 +75,12 @@ describe("troca de senha e revogação andam juntas", () => {
         for (const bloco of blocosDeUpdate(readFileSync(arquivo, "utf8"))) {
           if (!bloco.includes("senha_hash")) continue;
           if (bloco.includes("sessoes_validas_desde")) continue;
+          if (
+            curto(arquivo) === EXCECAO.arquivo &&
+            bloco.includes(EXCECAO.marcador)
+          ) {
+            continue;
+          }
           faltando.push(curto(arquivo));
         }
       }
@@ -75,6 +95,25 @@ describe("troca de senha e revogação andam juntas", () => {
         "— e duas instruções deixam uma janela em que a senha já mudou e " +
         "a sessão antiga ainda vale.",
     ).toEqual([]);
+  });
+
+  /**
+   * A exceção não pode virar porta: só a regravação no login a usa. Uma
+   * troca de senha que chamasse `regravarHash` passaria pelo teste de
+   * cima e deixaria o invasor dentro.
+   */
+  it("só o login regrava o hash sem cortar sessão", () => {
+    const chamadores = RAIZES.flatMap(arquivos)
+      .filter((a) => readFileSync(a, "utf8").includes(".regravarHash("))
+      .map(curto);
+
+    expect(chamadores).toEqual(["src/server/auth/servico.ts"]);
+
+    const servico = readFileSync(
+      join(process.cwd(), "src/server/auth/servico.ts"),
+      "utf8",
+    );
+    expect(servico.split(".regravarHash(").length - 1).toBe(1);
   });
 
   /**

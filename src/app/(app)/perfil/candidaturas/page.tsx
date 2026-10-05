@@ -1,6 +1,5 @@
 import { Briefcase } from "lucide-react";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import {
   BackLink,
   EmptyState,
@@ -15,18 +14,14 @@ import {
 } from "@/lib/constants";
 import { getMyApplications } from "@/lib/data";
 import { timeAgo } from "@/lib/format";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 
 export const metadata: Metadata = {
   title: "Minhas candidaturas",
 };
 
 export default async function MinhasCandidaturasPage() {
-  const sessao = await sessaoAtual();
-
-  // O muro de login já barra quem não tem sessão; a página não depende
-  // disso, para que "sem sessão" continue certo se aquele muro mudar.
-  if (!sessao) notFound();
+  const sessao = await sessaoOuEntrar("/perfil/candidaturas");
 
   const candidaturas = await getMyApplications(sessao.usuarioId);
 

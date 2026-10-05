@@ -8,7 +8,7 @@ import {
   UserSearch,
 } from "lucide-react";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import {
   EmptyState,
   PageShell,
@@ -33,7 +33,7 @@ import {
   vagaExpirada,
   whatsappLink,
 } from "@/lib/format";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import {
   type MatchDaCandidatura,
@@ -92,7 +92,7 @@ export async function PainelDeContratacao({
 }: {
   area: AreaDeContratacao;
 }) {
-  const sessao = await sessaoAtual();
+  const sessao = await sessaoOuEntrar(area.base);
 
   /*
    * O painel é "minha empresa", e quem não tem empresa não tem painel.
@@ -109,7 +109,6 @@ export async function PainelDeContratacao({
    * propósito: ele enxerga tudo pelo `/admin/painel`, e uma empresa
    * própria é justamente o que ele não tem.
    */
-  if (!sessao) notFound();
 
   /*
    * Cada porta atende o próprio papel (#189).

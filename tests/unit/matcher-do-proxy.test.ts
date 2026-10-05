@@ -35,6 +35,25 @@ describe("matcher do proxy", () => {
     expect(casa(caminho)).toBe(false);
   });
 
+  /*
+   * O ponto antes da extensão é literal (#330). Sem o escape, todo
+   * caminho terminado em "png", "gif" ou "svg" — com ou sem ponto — ficava
+   * fora do muro.
+   */
+  it.each(["/vagas/acerto-gif", "/perfil/png", "/servicos/pintor-svg"])(
+    "%s passa pelo proxy, mesmo terminando como extensão",
+    (caminho) => {
+      expect(casa(caminho)).toBe(true);
+    },
+  );
+
+  it.each(["/logo.png", "/fundo.webp", "/fonte.woff2"])(
+    "%s, arquivo estático, fica fora",
+    (caminho) => {
+      expect(casa(caminho)).toBe(false);
+    },
+  );
+
   it.each(["/", "/vagas", "/perfil", "/admin", "/entrar"])(
     "%s passa pelo proxy",
     (caminho) => {
