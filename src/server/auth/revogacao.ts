@@ -2,7 +2,7 @@ import "server-only";
 
 import { unstable_cache, updateTag } from "next/cache";
 import { repositorioUsuarios } from "../repositories";
-import type { Sessao } from "./session";
+import { CONFIG_SESSAO, type Sessao } from "./session";
 
 /**
  * Revogação de sessão sem sessão no banco (#225).
@@ -27,10 +27,11 @@ import type { Sessao } from "./session";
  * sessões nos últimos 7 dias** e a guarda em cache por 60 segundos. No
  * caminho comum não há consulta nenhuma.
  *
- * A lista é curta por construção e **não cresce com o tempo**: token com
- * mais de 7 dias já expirou sozinho, então quem trocou a senha no mês
- * passado sai dela. Ela cresce com o número de trocas de senha desta
- * semana — num app de 26 contas, é quase sempre vazia.
+ * A lista é curta por construção e **não cresce com o tempo**: nenhum
+ * token vive mais de 30 dias desde o login, renovado ou não (#323), então
+ * quem trocou a senha há mais tempo que isso sai dela. Ela cresce com o
+ * número de trocas de senha do último mês — num app de 30 contas, é quase
+ * sempre vazia.
  *
  * ## O preço novo, aceito
  *
@@ -46,14 +47,18 @@ import type { Sessao } from "./session";
  */
 
 /**
- * Sete dias: o alcance da lista é a validade máxima de um token.
+ * O alcance da lista é a vida máxima de uma sessão.
  *
- * Não é número solto — é o mesmo `VALIDADE_SEGUNDOS` da sessão, dito em
- * dias. Corte mais velho que isso não pode invalidar nada, porque não
- * existe token vivo daquela época. É o que mantém a lista curta para
- * sempre, e não só hoje.
+ * Era 7 — a validade de um token —, e precisou mudar junto com a
+ * renovação (#323): um token renovado vive até 30 dias desde o login, com
+ * o `iat` do login. Com a lista em 7 dias, o corte de quem trocou a senha
+ * sumiria dela no oitavo dia, e um token roubado que continuasse sendo
+ * renovado voltaria a valer. Por isso o número vem da própria sessão, e
+ * não é escrito aqui: os dois só podem mudar juntos.
  */
-const DIAS_DE_ALCANCE = 7;
+const DIAS_DE_ALCANCE = Math.ceil(
+  CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS / (24 * 60 * 60),
+);
 
 /** Um minuto: o quanto uma sessão revogada ainda pode andar. */
 const JANELA_DE_CACHE = 60;

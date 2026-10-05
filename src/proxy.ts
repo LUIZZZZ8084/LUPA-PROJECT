@@ -1,7 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { novoNonce, politicaDeSeguranca } from "@/lib/csp";
 import { type Capacidade, pode } from "@/server/auth/rbac";
-import { CONFIG_SESSAO, lerSessao } from "@/server/auth/session";
+import {
+  CONFIG_SESSAO,
+  lerSessao,
+  renovarSeNecessario,
+  type Sessao,
+} from "@/server/auth/session";
 
 /**
  * Guarda de borda.
@@ -217,14 +222,12 @@ function paraOLogin(request: NextRequest) {
  * passa, e a reescrita de 404. Esquecer a segunda deixaria a tela de "não
  * encontrado" sem hidratar, e ninguém olha o console numa página de erro.
  */
-async function decidir(
+function decidir(
   request: NextRequest,
   cabecalhos: Headers,
-): Promise<NextResponse> {
+  sessao: Sessao | null,
+): NextResponse {
   const { pathname } = request.nextUrl;
-
-  const token = request.cookies.get(CONFIG_SESSAO.NOME_COOKIE)?.value;
-  const sessao = token ? await lerSessao(token) : null;
 
   const area = areaDe(pathname);
 
@@ -292,9 +295,47 @@ export async function proxy(request: NextRequest) {
   cabecalhos.set("x-nonce", nonce);
   cabecalhos.set("content-security-policy", politica);
 
-  const resposta = await decidir(request, cabecalhos);
+  const token = request.cookies.get(CONFIG_SESSAO.NOME_COOKIE)?.value;
+  const sessao = token ? await lerSessao(token) : null;
+
+  const resposta = decidir(request, cabecalhos, sessao);
   resposta.headers.set("Content-Security-Policy", politica);
+
+  if (sessao && request.method === "GET") {
+    await renovar(resposta, sessao);
+  }
   return resposta;
+}
+
+/**
+ * Renova a sessão de quem está usando o app (#323).
+ *
+ * Aqui, e não em `sessaoAtual()`, porque cookie só se grava no proxy, num
+ * route handler ou numa server action — nunca no Server Component, que é
+ * onde `sessaoAtual()` roda. O proxy não confere a revogação (não tem
+ * banco), e não precisa: a renovação preserva o `iat` do login, então um
+ * token revogado continua revogado depois de renovado, e o teto de trinta
+ * dias está dentro do alcance da lista de cortes.
+ *
+ * **Só em GET.** Toda ação que grava a sessão — entrar, sair, virar
+ * prestador, trocar a senha — é server action, e server action é POST. Se
+ * o proxy também gravasse o cookie nessa resposta, seriam dois
+ * `Set-Cookie` com o mesmo nome, e o que valesse por último decidiria: o
+ * token renovado, com o papel antigo, podia desfazer a troca de papel, e
+ * o token renovado de antes do corte podia deslogar quem acabou de trocar
+ * a senha. Navegação é GET; renovar só nela não perde nada.
+ */
+async function renovar(resposta: NextResponse, sessao: Sessao) {
+  const renovada = await renovarSeNecessario(sessao);
+  if (!renovada) return;
+
+  resposta.cookies.set(
+    CONFIG_SESSAO.NOME_COOKIE,
+    renovada.token,
+    CONFIG_SESSAO.opcoesDoCookie(
+      renovada.expiraEm - Math.floor(Date.now() / 1000),
+    ),
+  );
 }
 
 export const config = {
