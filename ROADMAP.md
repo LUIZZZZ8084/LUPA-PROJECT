@@ -19,6 +19,10 @@ Em 05/10/2026:
   caso, trinta dias depois do login. A renovação guarda a hora do login,
   e trocar a senha continua derrubando as outras sessões —
   [#323](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/323)
+- E-mail que não sai chega ao Sentry, com o fluxo e o status, e o limite
+  do plano grátis do Resend (429) diz que é cota. Sem o endereço de
+  ninguém no registro —
+  [#326](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/326)
 
 Em 01/10/2026:
 

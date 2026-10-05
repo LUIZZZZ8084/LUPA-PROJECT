@@ -735,6 +735,17 @@ deixaria a pessoa esperando um e-mail que nunca sai, e concluindo que a
 conta sumiu. `RESEND_API_KEY` e `EMAIL_REMETENTE` são o que liga —
 nenhuma das duas leva prefixo `NEXT_PUBLIC_`.
 
+**E com provedor, a falha chega ao Sentry (#326).** Até 05/10/2026 quem
+chamava `enviarEmail` registrava a falha como `warn`, e `warn` não sai da
+Vercel. O plano grátis do Resend manda no máximo 100 e-mails por dia: num
+dia de lançamento, confirmação e recuperação podiam parar de sair sem
+ninguém saber, até alguém não conseguir entrar. Hoje a própria
+`enviarEmail` registra por `log.erro` com `indisponivel` — o caminho que
+vai ao Sentry —, com o fluxo e o status, e o 429 diz que é cota. **Sem o
+endereço e sem o corpo da resposta do Resend**, que pode ecoar o
+destinatário: a regra do log de recuperação vale em dobro no momento em
+que mais se lê log.
+
 **O e-mail é texto puro, sem HTML.** O público daqui abre e-mail no
 celular, e template com imagem e botão colorido é o formato que os
 provedores mais pontuam como promoção — justamente o e-mail que precisa

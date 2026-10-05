@@ -22,6 +22,7 @@ const EMAIL = {
   para: "maria@teste.lupa",
   assunto: "Redefinir sua senha na Lupa",
   corpo: "Abra o link para criar uma senha nova.",
+  tipo: "recuperacao" as const,
 };
 
 function respostaJson(corpo: unknown, status = 200) {
@@ -135,5 +136,78 @@ describe("enviarEmail", () => {
 
     const escrito = log.mock.calls.flat().map(String).join(" ");
     expect(escrito).not.toContain("maria@teste.lupa");
+  });
+});
+
+/**
+ * Falha de envio chega a quem opera (#326).
+ *
+ * Antes, só quem chamava registrava, e como `warn` — que não vai ao
+ * Sentry. O envio podia parar por dias. O que se cobra aqui é a linha que
+ * o logger manda ao Sentry: nível `error`, código `indisponivel`.
+ */
+describe("enviarEmail, quando falha", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  async function falhar(buscar: typeof fetch) {
+    vi.stubEnv("RESEND_API_KEY", "chave-de-teste");
+    vi.stubEnv("EMAIL_REMETENTE", "Lupa <nao-responda@lupapp.com.br>");
+    const { enviarEmail } = await carregar();
+    const saida = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await enviarEmail(EMAIL, buscar);
+
+    return saida.mock.calls
+      .flat()
+      .map(String)
+      .map((linha) => JSON.parse(linha) as Record<string, unknown>);
+  }
+
+  it("recusa do provedor vira erro, com o status e o fluxo", async () => {
+    const [linha] = await falhar(respostaJson({ message: "boom" }, 500));
+
+    expect(linha).toMatchObject({
+      nivel: "error",
+      codigo: "indisponivel",
+      acao: "email.enviar",
+      tipo: "recuperacao",
+      status: 500,
+    });
+  });
+
+  it("cota estourada (429) diz que é cota", async () => {
+    const [linha] = await falhar(respostaJson({ message: "rate" }, 429));
+
+    expect(linha.nivel).toBe("error");
+    expect(String(linha.mensagem)).toMatch(/limite de envio/);
+  });
+
+  it("rede fora do ar também vira erro", async () => {
+    const [linha] = await falhar(foraDoAr);
+
+    expect(linha).toMatchObject({
+      nivel: "error",
+      codigo: "indisponivel",
+      status: null,
+    });
+  });
+
+  /**
+   * O Resend pode ecoar o destinatário na mensagem de erro, e o corpo da
+   * resposta não vai para o log por isso. A falha é o momento em que mais
+   * se lê log — e é nele que o endereço não pode estar.
+   */
+  it("nem o endereço nem o corpo da resposta vão para o log", async () => {
+    const linhas = await falhar(
+      respostaJson({ message: "invalid to: maria@teste.lupa" }, 422),
+    );
+
+    const escrito = JSON.stringify(linhas);
+    expect(linhas.length).toBeGreaterThan(0);
+    expect(escrito).not.toContain("maria@teste.lupa");
+    expect(escrito).not.toContain("invalid to");
   });
 });
