@@ -122,6 +122,7 @@ export async function enviarVerificacaoDeEmail(
     {
       para: usuario.email,
       assunto: "Confirme seu e-mail na Lupa",
+      tipo: "verificacao_email",
       corpo: [
         `Olá, ${usuario.nomeCompleto.split(" ")[0]}.`,
         "",
