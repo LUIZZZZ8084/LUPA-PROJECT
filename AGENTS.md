@@ -1004,6 +1004,21 @@ HTML como parâmetro do otimizador. Decodificar também é o que prova que o
 arquivo é imagem — `conferirArquivo` só confere o tipo declarado. O
 currículo em PDF passa como veio.
 
+**E foto grande é reduzida no celular, antes de sair (#325).** A redução
+acima só acontecia depois de a foto chegar, e a foto de celular — de 3 a 8
+MB — nem chegava: o limite de 2 MB a recusava antes. A pessoa precisava
+diminuir a foto por conta própria. Hoje todo `<input type="file">` passa
+por `ajustarAoLimite`: foto acima do limite vira WebP de 1600 px no próprio
+aparelho (o que ainda poupa o dado móvel), e o que não dá para reduzir é
+recusado ao lado do campo com a mesma mensagem do servidor. O servidor
+continua conferindo e reduzindo tudo, porque nada que vem do navegador é
+garantia — o formato e a retirada do GPS são dele. Há teste que varre
+`src` e reprova campo de arquivo sem a conferência.
+
+O texto do limite embaixo de cada campo vem de `REGRAS[especie].aviso`, e o
+`accept` de `tiposAceitos`. O currículo dizia "até 5 MB" escrito à mão na
+tela — a mesma divergência da senha (#290) esperando acontecer.
+
 Como tudo virou `.webp`, a foto de perfil antiga em `.jpg` ficaria órfã no
 caminho fixo. `removerVersoesAnteriores` a apaga — **depois** de o banco
 apontar para a nova, pela mesma ordem de sempre.
@@ -2472,6 +2487,16 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   `6mb` no `next.config.ts`, cobrindo a maior regra com folga para o
   envelope do multipart. **Limite anunciado pela aplicação precisa caber
   no limite do framework.**
+
+  **E no da plataforma, que vem antes (#324).** O conserto acima subiu o
+  limite do Next para 6 MB, e o currículo continuou prometendo 5 — só que a
+  Vercel corta o corpo de uma função em 4,5 MB, antes de o Next existir. O
+  PDF entre 4,5 e 5 MB era recusado com erro genérico em inglês. Hoje o
+  currículo vai até 4 MB, há teste que reprova qualquer regra acima de
+  4,5 MB, e o navegador confere o tamanho antes de mandar
+  (`src/components/ui/arquivo-que-cabe.ts`). *O limite que vale é o menor
+  da corrente — aplicação, framework e plataforma —, e o da plataforma não
+  aparece em nenhum arquivo do projeto.*
 - **Página que lê a sessão e nunca consulta a matriz.** `/empresa` e
   `/empresa/vagas/nova` chamavam `sessaoAtual()` — uma para saber de quem
   era o painel, a outra só para preencher a cidade — e nenhuma das duas

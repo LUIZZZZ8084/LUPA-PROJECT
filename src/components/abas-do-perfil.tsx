@@ -3,10 +3,12 @@
 import { ImagePlus, Loader2, Pencil, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { useActionState, useEffect, useState, useTransition } from "react";
+import { ajustarAoLimite } from "@/components/ui/arquivo-que-cabe";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { cn } from "@/lib/utils";
+import { REGRAS } from "@/server/arquivos/regras";
 
 /**
  * O que o dono pode fazer com a própria publicação, de dentro da foto.
@@ -434,7 +436,8 @@ function FormularioDeEdicao({
           id="e-foto"
           name="foto"
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept={REGRAS.publicacao.tiposAceitos.join(",")}
+          onChange={ajustarAoLimite("publicacao")}
           className="mt-1.5 w-full text-muted text-sm"
         />
       </div>
@@ -562,7 +565,8 @@ export function GerenciarTrabalhos({
                 id="t-foto"
                 name="imagem"
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={REGRAS.publicacao.tiposAceitos.join(",")}
+                onChange={ajustarAoLimite("publicacao")}
                 className="mt-1.5 w-full text-muted text-sm"
               />
             </div>

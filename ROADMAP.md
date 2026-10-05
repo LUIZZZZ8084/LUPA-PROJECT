@@ -23,6 +23,12 @@ Em 05/10/2026:
   do plano grátis do Resend (429) diz que é cota. Sem o endereço de
   ninguém no registro —
   [#326](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/326)
+- Foto do celular entra: acima de 2 MB, ela é reduzida no próprio
+  aparelho antes de enviar, em vez de recusada —
+  [#325](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/325)
+- Currículo em PDF até 4 MB, o que cabe na Vercel, e o tamanho é
+  conferido antes de enviar, com mensagem em português —
+  [#324](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/324)
 
 Em 01/10/2026:
 

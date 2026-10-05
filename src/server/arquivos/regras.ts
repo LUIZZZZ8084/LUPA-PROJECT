@@ -21,6 +21,15 @@ export interface Regra {
   /** Como explicar o limite para quem está enviando. */
   descricao: string;
   /**
+   * O que a tela diz embaixo do campo.
+   *
+   * Mora aqui, e não escrito em cada tela, pela lição da senha (#290): a
+   * dica dizia 8 caracteres enquanto o servidor cobrava 10. O currículo
+   * dizia "até 5 MB" em `perfil/editar/form.tsx` — texto solto, que esta
+   * mudança teria deixado para trás.
+   */
+  aviso: string;
+  /**
    * Se cada envio ganha caminho próprio em vez de substituir o anterior.
    *
    * Foto de perfil, logo e currículo são um por pessoa: o caminho fixo faz
@@ -34,10 +43,16 @@ export interface Regra {
 /**
  * Limites pensados para quem envia de celular em dado móvel contado.
  *
- * Dois megabytes numa foto de perfil já é generoso: a maior exibição é um
- * avatar de 96 pixels. Cinco no currículo cabe um PDF de várias páginas com
- * folga. Limites maiores não melhoram nada visível e viram custo de banda
- * para quem menos pode pagar.
+ * Dois megabytes numa foto já é generoso: a maior exibição é a do feed, a
+ * 1600 pixels. E a foto que passa disso **não é recusada**: o navegador a
+ * reduz antes de enviar (`src/components/ui/arquivo-que-cabe.ts`, #325). O
+ * limite continua aqui como guarda do servidor, para quem envia sem
+ * JavaScript ou de um aparelho que não consegue reduzir.
+ *
+ * **Nenhum limite pode passar de 4,5 MB**, que é o corpo máximo que a
+ * Vercel aceita numa função (#324). Acima disso a plataforma recusa antes
+ * de a action existir, e a pessoa lê um erro genérico em inglês no lugar
+ * da nossa mensagem. Há teste que cobra isso.
  */
 const IMAGEM = {
   tiposAceitos: ["image/jpeg", "image/png", "image/webp"],
@@ -48,6 +63,7 @@ const IMAGEM = {
   },
   limiteBytes: 2 * 1024 * 1024,
   descricao: "JPG, PNG ou WEBP, até 2 MB",
+  aviso: "JPG, PNG ou WEBP. Foto grande é reduzida antes de enviar.",
 } as const;
 
 export const REGRAS: Readonly<Record<Especie, Regra>> = {
@@ -77,8 +93,14 @@ export const REGRAS: Readonly<Record<Especie, Regra>> = {
     publico: false,
     tiposAceitos: ["application/pdf"],
     extensoes: { "application/pdf": "pdf" },
-    limiteBytes: 5 * 1024 * 1024,
-    descricao: "PDF, até 5 MB",
+    /*
+     * Quatro, e não cinco (#324): cinco prometia o que a Vercel não
+     * entrega, porque ela corta o corpo em 4,5 MB. A folga é o envelope do
+     * multipart. Um currículo de várias páginas cabe com sobra.
+     */
+    limiteBytes: 4 * 1024 * 1024,
+    descricao: "PDF, até 4 MB",
+    aviso: "PDF, até 4 MB.",
   },
 };
 
@@ -87,8 +109,10 @@ export interface Recusa {
   mensagem: string;
 }
 
+/** "4,8 MB", com vírgula: a mensagem é para gente, não para planilha. */
 function emMegabytes(bytes: number): string {
-  return `${(bytes / 1024 / 1024).toFixed(bytes % (1024 * 1024) === 0 ? 0 : 1)} MB`;
+  const casas = bytes % (1024 * 1024) === 0 ? 0 : 1;
+  return `${(bytes / 1024 / 1024).toFixed(casas).replace(".", ",")} MB`;
 }
 
 /**
