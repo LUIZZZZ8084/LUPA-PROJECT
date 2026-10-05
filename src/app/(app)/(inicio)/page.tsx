@@ -1,23 +1,24 @@
 import {
   ArrowRight,
   BadgeCheck,
-  Briefcase,
   Building2,
   MapPin,
   MessageCircle,
   ShieldCheck,
   Star,
   Users,
-  Wrench,
 } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
+import { BuscaDoHero } from "@/components/busca-do-hero";
 import { JobCard } from "@/components/job-card";
 import { PageShell } from "@/components/layout/page-shell";
 import { Reveal } from "@/components/motion/reveal";
 import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
+import { UFS } from "@/lib/cidades";
+import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
 import { formatPrecoBRL } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
@@ -83,6 +84,27 @@ export default async function HomePage() {
   const terceiroCard = cardDeServico(sessao?.papel, Boolean(sessao));
 
   /*
+   * Os atalhos do hero são categorias, não termos soltos: cada um chega à
+   * lista já no filtro de categoria que ela tem, e o valor da URL é o que o
+   * filtro espera (nome na vaga, slug no serviço).
+   */
+  const atalhos = {
+    vagas: JOB_CATEGORIES.slice(0, 4).map((c) => ({
+      rotulo: c,
+      href: `/vagas?categoria=${encodeURIComponent(c)}`,
+    })),
+    servicos: ["diarista", "eletricista", "pintor", "encanador"].flatMap(
+      (slug) => {
+        const c = SERVICE_CATEGORIES.find((s) => s.slug === slug);
+        return c
+          ? [{ rotulo: c.name, href: `/servicos?categoria=${c.slug}` }]
+          : [];
+      },
+    ),
+  };
+  const mais = (aoMenos: boolean) => (aoMenos ? "mais de " : "");
+
+  /*
    * O JSON-LD é assinado com o mesmo nonce da CSP (#223) — sem ele, a
    * política de script-src recusaria este `<script>` do mesmo jeito que
    * recusaria um script de verdade. `type="application/ld+json"` não roda
@@ -134,9 +156,9 @@ export default async function HomePage() {
           </span>
 
           <h1 className="mt-5 text-[2rem] leading-[1.1] font-bold tracking-tight sm:text-5xl">
-            Trabalho e oportunidades
+            O que você está procurando
             <br />
-            <span className="text-vagas">perto de você.</span>
+            <span className="text-vagas">aqui perto?</span>
           </h1>
 
           <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted sm:text-base">
@@ -144,21 +166,19 @@ export default async function HomePage() {
             direto pelo WhatsApp.
           </p>
 
-          <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <ActionCard
-              href="/vagas"
-              icon={<Briefcase size={20} />}
-              title="Procurar emprego"
-              subtitle={`${totals.jobsAoMenos ? "mais de " : ""}${totals.jobs} vagas abertas`}
-              tone="vagas"
-            />
-            <ActionCard
-              href="/servicos"
-              icon={<Wrench size={20} />}
-              title="Procurar profissional"
-              subtitle={`${totals.providersAoMenos ? "mais de " : ""}${totals.providers} perto de você`}
-              tone="servicos"
-            />
+          <BuscaDoHero
+            ufs={UFS.map((u) => ({ sigla: u.sigla, nome: u.nome }))}
+            atalhos={atalhos}
+            visitante={!sessao}
+          />
+
+          <p className="mt-6 text-xs text-muted">
+            {mais(totals.jobsAoMenos)}
+            {totals.jobs} vagas abertas · {mais(totals.providersAoMenos)}
+            {totals.providers} profissionais
+          </p>
+
+          <div className="mt-3 max-w-sm">
             <ActionCard
               href={terceiroCard.href}
               icon={<Users size={20} />}

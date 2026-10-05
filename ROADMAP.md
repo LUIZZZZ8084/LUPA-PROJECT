@@ -14,6 +14,12 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/10/2026:
 
+- Busca no hero da home, no lugar dos cards de ação: alternador Vagas |
+  Serviços, campo de busca, estado e atalhos de categoria, que levam à lista
+  já filtrada. As listas ganharam o mesmo alternador no topo, que leva o
+  termo e o lugar de uma para a outra. Sem conta, o hero avisa que a busca
+  termina no login (o muro de `/vagas` e `/servicos` continua) —
+  [#341](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/341)
 - Os quatro buckets do Storage têm limite de tamanho e de tipo no próprio
   Supabase — imagem até 2 MB, currículo e verificação até 4 MB —, como
   segunda camada atrás da conferência da aplicação. Aplicado em produção
