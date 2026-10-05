@@ -2064,6 +2064,23 @@ toda notificação — falha fechada, não aberta: melhor não confirmar
 pagamento nenhum sozinho do que confirmar um que ninguém pode provar que
 veio do Mercado Pago.
 
+**A assinatura não tem prazo, de propósito (#331).** A auditoria de 29/09
+sugeriu recusar `ts` com mais de dez minutos, contra o reenvio de uma
+notificação capturada. Não se fez: o Mercado Pago **reenvia sozinho**, por
+horas, a notificação que falhou, e não está documentado se a retentativa
+assina de novo. Um prazo podia recusar a retentativa legítima — e foi um
+401 nosso que perdeu a primeira venda (#196). O reenvio malicioso, do
+outro lado, não ganha nada: a rota relê o pagamento no Mercado Pago, e a
+aprovação é condicional na própria instrução do banco.
+
+**E o valor pago é conferido, mas não barra (#331).** `confirmarPagamento`
+compara o `transaction_amount` relido com o valor da cobrança, e a
+divergência vai ao Sentry com os dois números. A aprovação segue: hoje o
+valor sai da preferência que o próprio servidor cria, e barrar seria
+segurar o crédito de quem pagou por uma diferença que talvez nem seja
+fraude — o defeito mais caro deste caminho. Quem opera decide, e o estorno
+está a um botão.
+
 **A aprovação é condicional na própria instrução do banco — `update ...
 where status = 'pendente'`** —, não "lê o status, decide, grava" em dois
 passos. O Mercado Pago reenvia webhook; duas notificações chegando quase

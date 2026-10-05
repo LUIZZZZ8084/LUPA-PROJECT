@@ -346,6 +346,53 @@ describe("confirmarPagamento", () => {
     expect(estenderMensalidadeMock).toHaveBeenCalledTimes(1);
   });
 
+  /*
+   * Valor diferente do cobrado avisa o Sentry e **não** barra (#331):
+   * segurar o crédito de quem pagou de verdade é o defeito mais caro
+   * deste caminho.
+   */
+  it("valor pago diferente avisa, e o efeito é aplicado mesmo assim", async () => {
+    const pagamento = await cobrancaPendente();
+    const saida = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await ctx.servico.confirmarPagamento(
+      "mp-1",
+      respostaJson({
+        id: "mp-1",
+        status: "approved",
+        external_reference: pagamento.id,
+        transaction_amount: 1.99,
+        currency_id: "BRL",
+      }),
+    );
+
+    expect(estenderMensalidadeMock).toHaveBeenCalledTimes(1);
+    const linhas = saida.mock.calls.flat().map(String).join("\n");
+    expect(linhas).toContain('"nivel":"error"');
+    expect(linhas).toContain('"cobradoCentavos":1990');
+    expect(linhas).toContain('"pagoCentavos":199');
+    saida.mockRestore();
+  });
+
+  it("valor certo não avisa nada", async () => {
+    const pagamento = await cobrancaPendente();
+    const saida = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await ctx.servico.confirmarPagamento(
+      "mp-1",
+      respostaJson({
+        id: "mp-1",
+        status: "approved",
+        external_reference: pagamento.id,
+        transaction_amount: 19.9,
+        currency_id: "BRL",
+      }),
+    );
+
+    expect(saida.mock.calls.flat().join("")).not.toContain("valor pago");
+    saida.mockRestore();
+  });
+
   it("pagamento rejeitado não aplica efeito nenhum", async () => {
     const pagamento = await cobrancaPendente();
     const buscar = respostaJson({
