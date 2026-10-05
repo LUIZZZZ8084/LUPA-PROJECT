@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { linkDoCurriculo } from "@/server/arquivos/perfil";
 import { temArmazenamento } from "@/server/arquivos/servico";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { perfilParaEditar } from "@/server/perfil/servico";
 import { FormularioDePerfil } from "./form";
 
@@ -12,14 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function EditarPerfilPage() {
-  const sessao = await sessaoAtual();
-
-  /*
-   * O muro de login já barra quem não tem sessão, mas a página não depende
-   * disso: guarda que existe num lugar só é guarda que some quando aquele
-   * lugar muda.
-   */
-  if (!sessao) notFound();
+  const sessao = await sessaoOuEntrar("/perfil/editar");
 
   const perfil = await perfilParaEditar(sessao.usuarioId, sessao.papel);
 

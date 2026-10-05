@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { temArmazenamento } from "@/server/arquivos/servico";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
 import { exigeFotoDePerfil } from "@/server/prestadores/servico";
@@ -13,9 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function VirarPrestadorPage() {
-  const sessao = await sessaoAtual();
-
-  if (!sessao) notFound();
+  const sessao = await sessaoOuEntrar("/perfil/virar-prestador");
 
   /*
    * Quem já é prestador vai para a assinatura, não para o perfil — e isso

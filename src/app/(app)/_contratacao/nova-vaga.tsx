@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
 import { direitoDePublicar } from "@/server/carteiras/servico";
@@ -13,7 +13,7 @@ export async function PublicarVaga({ area }: { area: AreaDeContratacao }) {
    * em Sinop e contrata em Sorriso precisa poder trocar. O que não pode é
    * fazer a empresa escolher a própria cidade toda vez que publica.
    */
-  const sessao = await sessaoAtual();
+  const sessao = await sessaoOuEntrar(`${area.base}/vagas/nova`);
 
   /*
    * Mesmo portão do painel, pela mesma razão: a página lia a sessão só
@@ -25,7 +25,7 @@ export async function PublicarVaga({ area }: { area: AreaDeContratacao }) {
    * `vaga:publicar` e não a capacidade do painel: o admin enxerga, e de
    * propósito não publica no lugar de ninguém.
    */
-  if (!sessao || !pode(sessao.papel, "vaga:publicar")) notFound();
+  if (!pode(sessao.papel, "vaga:publicar")) notFound();
 
   const [usuario, direito] = await Promise.all([
     usuarioDaSessao(sessao.usuarioId),

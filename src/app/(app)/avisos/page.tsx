@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AvisosDeVaga } from "@/components/avisos-de-vaga";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { usuarioDaSessao } from "@/server/auth/servico";
 import { pushConfigurado } from "@/server/notificacoes/push";
 import { preferenciaAtual } from "@/server/notificacoes/servico";
@@ -26,9 +26,7 @@ export const metadata: Metadata = {
  * candidatar. Uma conta que chegue aqui por link não cai num 404.
  */
 export default async function AvisosPage() {
-  const sessao = await sessaoAtual();
-  // O muro de login já barra quem não tem sessão; a página não depende disso.
-  if (!sessao) notFound();
+  const sessao = await sessaoOuEntrar("/avisos");
 
   const [usuario, preferencia] = await Promise.all([
     usuarioDaSessao(sessao.usuarioId),

@@ -462,6 +462,30 @@ describe("cadastro e login", () => {
       expect(usuario).not.toHaveProperty("senhaHash");
     });
 
+    /*
+     * Regravar o hash é a mesma senha com parâmetros novos (#330). Pela
+     * troca de senha, cada login derrubaria os outros aparelhos da pessoa
+     * no dia em que os parâmetros do Argon2 subissem.
+     */
+    it("hash antigo é regravado sem derrubar os outros aparelhos", async () => {
+      const { hash } = await import("@node-rs/argon2");
+      const usuario = await repo.porEmail(candidato.email);
+      const fraco = await hash(SENHA, {
+        algorithm: 2,
+        memoryCost: 4096,
+        timeCost: 1,
+        parallelism: 1,
+      });
+      await repo.regravarHash(usuario?.id ?? "", fraco);
+
+      await entrar(validarOkLogin({ email: candidato.email, senha: SENHA }));
+
+      const depois = await repo.porEmail(candidato.email);
+      expect(depois?.senhaHash).not.toBe(fraco);
+      expect(depois?.senhaHash).toContain("m=19456");
+      expect((await repo.cortesDeSessao(30)).size).toBe(0);
+    });
+
     it("registra o acesso", async () => {
       const antes = await repo.porEmail(candidato.email);
       expect(antes?.ultimoAcessoEm).toBeNull();

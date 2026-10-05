@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL } from "@/lib/format";
 import { OPCOES_DE_VAGA } from "@/lib/planos-empresa";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { direitoDePublicar } from "@/server/carteiras/servico";
 import {
@@ -22,8 +22,8 @@ function precoPorVaga(tipo: TipoPagamento): string {
 }
 
 export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
-  const sessao = await sessaoAtual();
-  if (!sessao || !pode(sessao.papel, "vaga:publicar")) notFound();
+  const sessao = await sessaoOuEntrar(`${area.base}/creditos`);
+  if (!pode(sessao.papel, "vaga:publicar")) notFound();
 
   const direito = await direitoDePublicar(sessao.usuarioId);
   const mensal = formatPrecoBRL(PRECO_CENTAVOS.empresa_mensal / 100);

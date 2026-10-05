@@ -823,7 +823,10 @@ confirmação. *Aviso que exagera ensina a ignorar aviso.*
 19 MiB, `t=2`, `p=1`. Dimensionados para caber na memória de uma função
 serverless — parâmetro que derruba a função em produção não protege
 ninguém. `precisaRehash()` permite subir o custo depois sem pedir troca de
-senha a ninguém.
+senha a ninguém — e sem derrubar os outros aparelhos de quem entra: a
+regravação vai por `regravarHash`, que não corta sessão, e não por
+`atualizarSenhaHash`, que corta (#330). A senha é a mesma; ninguém está
+sendo expulso.
 
 ### Senha de 6 caracteres, e o número num lugar só (#290)
 
@@ -914,6 +917,14 @@ runtime de borda, sem banco e sem o cache de dados do Next. E não faz
 falta: toda rota que decide alguma coisa sobre uma pessoa lê a sessão por
 ali — as duas que não leem, o cron e o webhook, se autenticam por segredo
 e por assinatura.
+
+**E por isso a tela sem sessão manda ao login, não ao 404 (#330).** O
+muro deixa passar o token assinado mesmo depois de revogado, e as telas de
+produto que contavam com ele chamavam `notFound()` quando `sessaoAtual()`
+voltava `null`: quem trocou a senha num aparelho abria o outro e lia "Não
+encontramos essa página". Hoje elas usam `sessaoOuEntrar(destino)`, e um
+teste varre `src/app/(app)` reprovando `if (!sessao) … notFound()`. A área
+administrativa fica de fora: lá o 404 vale para todo mundo.
 
 **A comparação é estritamente `<`, e isso não é detalhe.** Corte e `iat`
 são epoch de **segundos**, e a troca de senha grava um e emite o outro

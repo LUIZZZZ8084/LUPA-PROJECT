@@ -152,6 +152,20 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       throw erros.indisponivel(`atualização de senha: ${error.message}`);
   }
 
+  async regravarHash(id: string, senhaHash: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({
+        // mesma-senha (#330): só parâmetros novos do Argon2, sem corte de
+        // sessão. A exceção está escrita em `troca-de-senha-revoga.test.ts`.
+        senha_hash: senhaHash,
+      })
+      .eq("id", id);
+
+    if (error) throw erros.indisponivel(`regravação de hash: ${error.message}`);
+  }
+
   async cortesDeSessao(dias: number): Promise<Map<string, number>> {
     const supabase = await cliente();
     const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);

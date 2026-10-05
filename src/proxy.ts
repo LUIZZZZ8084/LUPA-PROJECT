@@ -402,7 +402,13 @@ export const config = {
      * home pública, entrar e cadastro. Achado conferindo se o Sentry tinha
      * ligado, antes de ele ligar. O túnel não é porta aberta: só repassa ao
      * Sentry, que confere se o destino é o projeto do DSN.
+     *
+     * O ponto antes da extensão é literal (`\\.`) desde a #330. Sem o
+     * escape ele casava qualquer caractere, e todo caminho **terminado** em
+     * "png", "gif", "svg"… ficava fora do muro — `/vagas/acerto-gif`,
+     * `/perfil/png`. Hoje nenhuma rota tem texto livre no fim, e por isso
+     * não vazava nada; a primeira que tivesse herdaria o buraco.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|api/webhooks|api/cron|monitoring|icon|apple-icon|opengraph-image|avatares|.*.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|api/webhooks|api/cron|monitoring|icon|apple-icon|opengraph-image|avatares|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };

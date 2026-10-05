@@ -107,6 +107,11 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.cortes.set(id, Date.now());
   }
 
+  async regravarHash(id: string, senhaHash: string): Promise<void> {
+    const usuario = this.usuarios.get(id);
+    if (usuario) this.usuarios.set(id, { ...usuario, senhaHash });
+  }
+
   async cortesDeSessao(dias: number): Promise<Map<string, number>> {
     const desde = Date.now() - dias * 24 * 60 * 60 * 1000;
     const recentes = new Map<string, number>();
