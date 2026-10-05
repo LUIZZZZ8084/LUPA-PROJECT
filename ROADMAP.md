@@ -14,6 +14,12 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/10/2026:
 
+- Os quatro buckets do Storage têm limite de tamanho e de tipo no próprio
+  Supabase — imagem até 2 MB, currículo e verificação até 4 MB —, como
+  segunda camada atrás da conferência da aplicação. Aplicado em produção
+  em 05/10/2026, e os arquivos que já existiam cabem nos limites.
+  Currículo agora também precisa ser PDF de verdade —
+  [#332](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/332)
 - Os achados baixos da auditoria de 29/09: sessão revogada vai ao login
   em vez de "página não encontrada", regravar o hash no login não derruba
   os outros aparelhos, ponto literal no muro de login, valor pago
@@ -452,14 +458,6 @@ Antes do lançamento, fora disso:
 ## Depende de uma ação manual
 
 Trabalho que não é código: alguém precisa fazer com a mão, em produção.
-
-- [ ] Rodar `supabase/aplica-limites-dos-buckets.sql` no SQL Editor —
-      [#332](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/332)
-
-      Põe no próprio Storage o limite de tamanho e de tipo que a aplicação
-      já confere, como segunda camada. Depois de rodar, trocar a foto de um
-      perfil e enviar um currículo para ver o envio funcionando, e fechar a
-      Issue.
 
 - [ ] Ligar o 2FA na conta da Vercel —
       [#229](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/229)
