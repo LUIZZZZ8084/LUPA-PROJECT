@@ -3,10 +3,12 @@
 import { ImagePlus, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useActionState } from "react";
+import { ajustarAoLimite } from "@/components/ui/arquivo-que-cabe";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
+import { REGRAS } from "@/server/arquivos/regras";
 import type { Publicacao } from "@/server/publicacoes/tipos";
 import {
   arquivarComEstado,
@@ -70,14 +72,15 @@ function FormularioNovo({
           error={state.campos?.foto ?? state.campos?.arquivo}
           hint={
             temArmazenamento
-              ? "JPG, PNG ou WEBP, até 2 MB."
+              ? REGRAS.publicacao.aviso
               : "O envio de imagem precisa do Supabase configurado. Sem ele, o trabalho é publicado só com o texto."
           }
         >
           <Input
             name="foto"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={REGRAS.publicacao.tiposAceitos.join(",")}
+            onChange={ajustarAoLimite("publicacao")}
             required={temArmazenamento}
             disabled={!temArmazenamento}
           />

@@ -8,9 +8,18 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 01/10/2026.**
+**Última atualização: 05/10/2026.**
 
 ## Concluído
+
+Em 05/10/2026:
+
+- Foto do celular entra: acima de 2 MB, ela é reduzida no próprio
+  aparelho antes de enviar, em vez de recusada —
+  [#325](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/325)
+- Currículo em PDF até 4 MB, o que cabe na Vercel, e o tamanho é
+  conferido antes de enviar, com mensagem em português —
+  [#324](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/324)
 
 Em 01/10/2026:
 

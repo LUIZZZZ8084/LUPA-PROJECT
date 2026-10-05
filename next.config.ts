@@ -40,10 +40,13 @@ const nextConfig: NextConfig = {
      * Sem isto, o Next recusa o corpo de qualquer Server Action acima de
      * 1 MB — o padrão do framework — antes mesmo de chegar em
      * `conferirArquivo` (`src/server/arquivos/regras.ts`), que promete até
-     * 2 MB de imagem e 5 MB de currículo. A rejeição do framework não passa
+     * 2 MB de imagem e 4 MB de currículo. A rejeição do framework não passa
      * pelo `try/catch` de `criarAcao`: a tela quebra em vez de mostrar
      * mensagem amigável. O valor cobre a maior regra com folga para o
      * envelope do multipart.
+     *
+     * Este número não é o teto de verdade: a Vercel corta o corpo em
+     * 4,5 MB antes (#324), e é por isso que nenhuma regra passa disso.
      */
     serverActions: { bodySizeLimit: "6mb" },
   },

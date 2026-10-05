@@ -3,10 +3,12 @@
 import { Check, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useRef, useTransition } from "react";
+import { ajustarAoLimite } from "@/components/ui/arquivo-que-cabe";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
+import { type Especie, REGRAS } from "@/server/arquivos/regras";
 import type { EstadoEdicao } from "./actions";
 
 const inicial: EstadoEdicao = {};
@@ -26,8 +28,7 @@ type PonteDeEnvio = (
 export function CampoDeArquivo({
   titulo,
   descricao,
-  formatos,
-  accept,
+  especie,
   enviar,
   remover,
   disponivel,
@@ -35,9 +36,12 @@ export function CampoDeArquivo({
 }: {
   titulo: string;
   descricao: string;
-  /** O limite dito em palavras, porque o `accept` não é visível. */
-  formatos: string;
-  accept: string;
+  /**
+   * Que arquivo é este. Dele saem o `accept`, o texto do limite e a
+   * conferência antes do envio — todos de `REGRAS`, o mesmo lugar que o
+   * servidor lê.
+   */
+  especie: Especie;
   enviar: PonteDeEnvio;
   remover: () => Promise<unknown>;
   /**
@@ -54,6 +58,7 @@ export function CampoDeArquivo({
   const [removendo, iniciarRemocao] = useTransition();
   const router = useRouter();
   const entrada = useRef<HTMLInputElement>(null);
+  const regra = REGRAS[especie];
 
   return (
     <Panel className="mb-5 space-y-4">
@@ -70,12 +75,13 @@ export function CampoDeArquivo({
             ref={entrada}
             type="file"
             name="arquivo"
-            accept={accept}
+            accept={regra.tiposAceitos.join(",")}
             required
             aria-label={titulo}
+            onChange={ajustarAoLimite(especie)}
             className="block w-full text-muted text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-panel-2 file:px-3 file:py-2 file:font-medium file:text-ink file:text-sm hover:file:bg-line"
           />
-          <p className="text-faint text-xs">{formatos}</p>
+          <p className="text-faint text-xs">{regra.aviso}</p>
 
           {estado.erro && (
             <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-danger text-sm">

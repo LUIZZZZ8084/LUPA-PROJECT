@@ -704,8 +704,7 @@ export function FormularioDePerfil({
         <CampoDeArquivo
           titulo="Foto de perfil"
           descricao="Aparece na busca e ao lado do seu nome. Perfil com foto passa mais confiança para quem vai contratar."
-          formatos="JPG, PNG ou WEBP, até 2 MB"
-          accept="image/jpeg,image/png,image/webp"
+          especie="avatar"
           enviar={enviarFotoComEstado}
           remover={() => removerFoto({})}
           disponivel={temArmazenamento}
@@ -722,8 +721,7 @@ export function FormularioDePerfil({
           <CampoDeArquivo
             titulo="Currículo em PDF"
             descricao="Vai junto com a candidatura. Só a empresa da vaga vê — não aparece em busca pública."
-            formatos="PDF, até 5 MB"
-            accept="application/pdf"
+            especie="curriculo"
             enviar={enviarCurriculoComEstado}
             remover={() => removerCurriculo({})}
             disponivel={temArmazenamento}
@@ -746,8 +744,7 @@ export function FormularioDePerfil({
           <CampoDeArquivo
             titulo="Logo da empresa"
             descricao="Aparece em cada vaga que você publica. É o que faz a vaga parecer de empresa de verdade."
-            formatos="JPG, PNG ou WEBP, até 2 MB"
-            accept="image/jpeg,image/png,image/webp"
+            especie="logo"
             enviar={enviarLogoComEstado}
             remover={() => removerLogo({})}
             disponivel={temArmazenamento}
