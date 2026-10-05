@@ -2,6 +2,7 @@
 
 import { ImagePlus, Loader2, Pencil, Trash2, X } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { ajustarAoLimite } from "@/components/ui/arquivo-que-cabe";
 import { Button } from "@/components/ui/button";
@@ -524,6 +525,19 @@ export function GerenciarTrabalhos({
             <ImagePlus size={16} />
             Adicionar trabalho
           </Button>
+          {/*
+            O caminho de volta (#333). "Remover" diz "nada é apagado", e é
+            verdade: o trabalho é arquivado. Mas a única tela que o traz de
+            volta é `/perfil/publicacoes`, e desde que o atalho "Meus
+            trabalhos" saiu do perfil nenhum link levava até lá — a
+            promessa ficava sem porta.
+          */}
+          <Link
+            href="/perfil/publicacoes"
+            className="w-full text-muted text-xs underline underline-offset-2 hover:text-ink"
+          >
+            Trabalhos que você tirou do perfil ficam guardados aqui
+          </Link>
         </div>
       ) : (
         <form action={acao} {...envio}>

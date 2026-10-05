@@ -225,7 +225,7 @@ export function FeedDoPrestador({
 
   return (
     <>
-      <p className="mb-5 font-mono text-faint text-xs">
+      <p className="mb-5 text-faint text-xs">
         {ativas} de {limite} no feed
       </p>
 

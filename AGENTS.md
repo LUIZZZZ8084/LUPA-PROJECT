@@ -224,6 +224,15 @@ perfil levava a uma tela separada só para isso — uma tela a mais entre a
 pessoa e a foto do trabalho dela, estando ela já olhando para o lugar onde
 a foto vai aparecer. O atalho saiu; sobrou "Como você aparece na busca".
 
+**A tela separada continua, e a aba leva a ela (#333).** Ela é a única que
+traz de volta um trabalho tirado do perfil — e o "Remover" do cartão
+promete exatamente isso ("nada é apagado"). Com o atalho fora, a promessa
+ficou sem porta por um mês: a auditoria de 29/09 achou a tela órfã e
+sugeriu removê-la, e removê-la teria tornado a promessa falsa. Hoje a aba
+"Serviços" do próprio perfil tem o link "Trabalhos que você tirou do
+perfil ficam guardados aqui". *Antes de apagar uma tela sem link, procure
+o que só ela faz.*
+
 **Editar e remover moram dentro da própria foto, não numa lista abaixo da
 grade.** A primeira versão desenhava as duas coisas: a grade de miniaturas
 e, embaixo, uma lista de títulos com uma lixeira — o mesmo item duas
@@ -296,8 +305,11 @@ O backend de publicações existia inteiro — serviço, repositório, actions,
 tabela e trigger de limite — e **nenhuma tela o consumia**. O atalho do
 perfil apontava para `/servicos`, a busca pública, prometendo "edite
 categoria, preço e publicações": a pessoa clicava para mexer no próprio
-anúncio e caía na vitrine de todo mundo. Hoje o atalho leva a
-`/perfil/publicacoes`, que é a tela que aquela descrição sempre prometeu.
+anúncio e caía na vitrine de todo mundo. O atalho passou a levar a
+`/perfil/publicacoes`, que é a tela que aquela descrição sempre prometeu
+— e depois saiu do perfil, quando a publicação foi para a aba
+"Serviços" (ver "O perfil em duas abas"). A tela ficou como o lugar dos
+trabalhos guardados, com link a partir da aba.
 
 Cada item é uma foto do trabalho com um texto. **Dez ativos**, o limite
 que já morava no banco — mantido por decisão do Luiz em 03/09/2026,

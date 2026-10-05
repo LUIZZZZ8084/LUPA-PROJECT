@@ -8,6 +8,7 @@ import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
+import { formatPhone } from "@/lib/format";
 import type { Experience } from "@/lib/types";
 import type { PerfilCompleto } from "@/server/perfil/servico";
 import {
@@ -127,10 +128,18 @@ function Conta({ perfil }: { perfil: PerfilCompleto }) {
           hint="É por onde as pessoas vão falar com você."
           error={estado.campos?.telefone}
         >
+          {/*
+            Com a máscara, como no cadastro (#333): "66999999999" cru não
+            parece um telefone, e a pessoa fica sem saber se o número salvo
+            está certo. O servidor tira a pontuação de qualquer jeito.
+          */}
           <Input
             name="telefone"
             type="tel"
-            defaultValue={u.telefone}
+            inputMode="tel"
+            autoComplete="tel"
+            defaultValue={formatPhone(u.telefone)}
+            placeholder="(11) 99999-0000"
             required
           />
         </Field>
@@ -580,7 +589,7 @@ function Empresa({ perfil }: { perfil: PerfilCompleto }) {
     <form action={acao} {...envio}>
       <Secao
         titulo="Sua empresa"
-        descricao="É o que a candidata lê antes de decidir se confia na vaga."
+        descricao="É o que quem procura emprego lê antes de decidir se confia na vaga."
         estado={estado}
         pendente={pendente}
       >
