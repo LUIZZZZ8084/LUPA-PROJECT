@@ -14,6 +14,17 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/10/2026:
 
+- Os achados baixos da auditoria de 29/09: sessão revogada vai ao login
+  em vez de "página não encontrada", regravar o hash no login não derruba
+  os outros aparelhos, ponto literal no muro de login, valor pago
+  diferente avisa o Sentry, currículo precisa ser PDF de verdade,
+  trabalho tirado do perfil tem caminho de volta, textos, documentação
+  que contradizia o código e dependências de desenvolvimento —
+  [#330](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/330),
+  [#331](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/331),
+  [#333](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/333),
+  [#334](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/334)
+
 - Quem usa o app não é mais deslogado a cada sete dias: a sessão renova
   sozinha na navegação, sai depois de sete dias sem uso e, em qualquer
   caso, trinta dias depois do login. A renovação guarda a hora do login,
@@ -421,6 +432,12 @@ Antes do lançamento, fora disso:
       item mais sério da lista: o cadastro já diz "ao criar a conta você
       concorda com os termos de uso", e a página ainda não existe.
 
+      **O SQL do #236 já está em produção**, antes do merge: a tabela
+      `mensagens_suporte` existe lá e não existe no `schema.sql` da `main`
+      (achado B10 da auditoria, #334). Está fechada — RLS ligada, sem
+      acesso para a chave anônima —, e o `aplica-suporte.sql` do PR usa
+      `if not exists`, então rodá-lo de novo no merge não quebra nada.
+
 ## Depende de decisão, não de código
 
 | O que | Quem decide | Por que está parado |
@@ -428,7 +445,7 @@ Antes do lançamento, fora disso:
 | Verificação por SMS e CPF (#120) | Luiz | Depende de provedor pago |
 | Plano Pro da Vercel | Luiz | O Hobby não permite uso comercial, e a Lupa cobra. O Luiz já concluiu que é o passo certo; falta assinar. O Pro também destrava o 2FA da #229, porque permite convidar o Paulinho como membro |
 | Backup do banco (plano pago do Supabase) | Luiz | Nada pago por enquanto, decisão de 23/09. O gratuito não tem backup automático |
-| Proxy e WAF do Cloudflare | Luiz | O domínio está no Cloudflare em DNS only desde a #287: a regra gratuita do WAF bloqueava envio de foto. Religar só com abuso medido, e com a exceção da regra feita antes |
+| Proxy e WAF do Cloudflare | Luiz | O domínio está no Cloudflare em DNS only desde a #287: a regra gratuita do WAF bloqueava envio de foto. Religar só com abuso medido, e com a exceção da regra feita antes. **E conferir antes a origem que chega ao app** (#334): o limite de cadastro e de "esqueci minha senha" lê o primeiro item do `x-forwarded-for`, e com o proxy ligado ele pode passar a ser um IP do Cloudflare, o mesmo para muita gente — todo mundo dividiria o mesmo limite de 5 tentativas. Se for o caso, ler o `CF-Connecting-IP` |
 | Busca vetorial | Luiz | Só com o dado do #66 na mão |
 | Rodar `aplica-remove-dados-de-exemplo.sql` em produção (#302) | Luiz e Paulinho | Reverte a #245, que manteve os exemplos no ar para demonstrar a clientes. O script está pronto e testado; falta os dois concordarem e alguém rodar no SQL Editor |
 
