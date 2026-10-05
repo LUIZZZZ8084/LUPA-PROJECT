@@ -1023,6 +1023,20 @@ Como tudo virou `.webp`, a foto de perfil antiga em `.jpg` ficaria órfã no
 caminho fixo. `removerVersoesAnteriores` a apaga — **depois** de o banco
 apontar para a nova, pela mesma ordem de sempre.
 
+**O currículo precisa ser PDF de verdade (#332).** `conferirArquivo` olha o
+tipo que o navegador declara, e qualquer um declara o que quiser: a foto
+era provada ao ser decodificada, e o PDF passava como veio. Hoje o servidor
+recusa o que não começa com `%PDF-`. Não abre o documento — só recusa o
+que nem finge ser.
+
+**E o bucket também tem limite (#332).** Até 05/10/2026 os quatro aceitavam
+qualquer arquivo de qualquer tamanho, e só a aplicação conferia. Hoje
+`file_size_limit` e `allowed_mime_types` estão no `storage.sql`, com os
+números de `REGRAS`, e há teste comparando os três lugares. É a segunda
+camada, como o `revoke` em cima da RLS: o caminho de envio novo que
+esquecer a conferência é recusado pelo próprio Storage. Em produção, quem
+aplica é `supabase/aplica-limites-dos-buckets.sql`, rodado à mão.
+
 **Sem Supabase não há Storage.** A tela diz isso em vez de aceitar o envio
 e perder o arquivo — aceitar em silêncio faria a pessoa achar que salvou.
 

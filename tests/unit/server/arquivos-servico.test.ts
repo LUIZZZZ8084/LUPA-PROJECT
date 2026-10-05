@@ -61,6 +61,13 @@ function arquivo(tipo: string, bytes: number) {
   return new File([new Uint8Array(bytes)], "qualquer", { type: tipo });
 }
 
+/** Um PDF de verdade, até onde o servidor confere: começa com `%PDF-` (#332). */
+function pdf(bytes = 100) {
+  const corpo = new Uint8Array(Math.max(bytes, 8));
+  corpo.set(new TextEncoder().encode("%PDF-1.7"));
+  return new File([corpo], "curriculo.pdf", { type: "application/pdf" });
+}
+
 /**
  * Uma foto de verdade (#283): desde que o envio decodifica a imagem para
  * reduzi-la, bytes zerados com `type: image/jpeg` são recusados — como
@@ -117,17 +124,17 @@ describe("envio", () => {
 
   /** O currículo é PDF que a pessoa montou: passa como veio. */
   it("currículo não é reencodado", async () => {
-    const pdf = arquivo("application/pdf", 100);
-    await enviarArquivo(ID, "curriculo", pdf);
+    const enviado = pdf();
+    await enviarArquivo(ID, "curriculo", enviado);
 
-    expect(storage.uploads[0].corpo).toBe(pdf);
+    expect(storage.uploads[0].corpo).toBe(enviado);
     expect(storage.uploads[0].opcoes).toMatchObject({
       contentType: "application/pdf",
     });
   });
 
   it("currículo vai para o bucket privado", async () => {
-    await enviarArquivo(ID, "curriculo", arquivo("application/pdf", 100));
+    await enviarArquivo(ID, "curriculo", pdf());
     expect(storage.uploads[0].balde).toBe("curriculos");
   });
 
@@ -147,13 +154,29 @@ describe("envio", () => {
     expect(a.referencia).toMatch(/\?v=\d+/);
   });
 
+  /**
+   * O navegador declara o tipo, e qualquer um declara o que quiser (#332).
+   * Uma foto renomeada para `.pdf`, ou um executável, chegava ao bucket
+   * como currículo.
+   */
+  it("currículo que só diz ser PDF é recusado, e nada vai ao bucket", async () => {
+    const falso = new File(
+      [new TextEncoder().encode("MZ\x90\x00 não sou pdf")],
+      "cv.pdf",
+      {
+        type: "application/pdf",
+      },
+    );
+
+    await expect(enviarArquivo(ID, "curriculo", falso)).rejects.toSatisfy(
+      (e) => ehAppError(e) && e.codigo === "validacao",
+    );
+    expect(storage.uploads).toHaveLength(0);
+  });
+
   /** Privado não tem URL fixa: guarda-se o caminho, o link nasce depois. */
   it("currículo devolve caminho, não URL", async () => {
-    const r = await enviarArquivo(
-      ID,
-      "curriculo",
-      arquivo("application/pdf", 1),
-    );
+    const r = await enviarArquivo(ID, "curriculo", pdf());
     expect(r.referencia).toBe(`curriculo/${ID}.pdf`);
     expect(r.referencia).not.toContain("http");
   });

@@ -44,6 +44,19 @@ export interface ArquivoEnviado {
 const IMAGEM_ILEGIVEL =
   "Não conseguimos abrir esta imagem. Tente outra foto, em JPG, PNG ou WEBP.";
 
+const NAO_E_PDF =
+  "Este arquivo não é um PDF. Salve o currículo como PDF e envie de novo.";
+
+/** Os cinco primeiros bytes de todo PDF. */
+const ASSINATURA_PDF = "%PDF-";
+
+async function comecaComoPdf(arquivo: File): Promise<boolean> {
+  const inicio = new Uint8Array(
+    await arquivo.slice(0, ASSINATURA_PDF.length).arrayBuffer(),
+  );
+  return String.fromCharCode(...inicio) === ASSINATURA_PDF;
+}
+
 export async function enviarArquivo(
   usuarioId: string,
   especie: Especie,
@@ -69,6 +82,21 @@ export async function enviarArquivo(
   }
 
   const regra = REGRAS[especie];
+
+  /*
+   * Currículo precisa ser PDF de verdade, não só dizer que é (#332).
+   *
+   * `conferirArquivo` olha o tipo que o navegador declarou, e qualquer um
+   * declara o que quiser. A foto já era provada ao ser decodificada
+   * (#283); o PDF passava como veio. Todo PDF começa com `%PDF-`, e é isso
+   * que se confere — não abre o documento, só recusa o que nem finge ser.
+   */
+  if (especie === "curriculo" && !(await comecaComoPdf(arquivo))) {
+    throw erros.validacao(
+      [{ campo: "arquivo", mensagem: NAO_E_PDF }],
+      NAO_E_PDF,
+    );
+  }
 
   /*
    * Foto é reduzida antes de gravar (#283): WebP, tamanho de tela e sem
