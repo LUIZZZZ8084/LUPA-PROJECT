@@ -1,17 +1,18 @@
 "use server";
 
-import { headers } from "next/headers";
 import { z } from "zod";
 import { criarAcao } from "@/server/action";
 import { pedirRecuperacao } from "@/server/auth/recuperacao";
 import { erros } from "@/server/errors";
+import { origemDaRequisicao } from "@/server/origem-da-requisicao";
 import { urlPublica } from "@/server/url-publica";
 
 /**
  * Pede o e-mail de recuperação (#174).
  *
- * A origem sai do cabeçalho, não do formulário: o limite existe para
- * conter quem manda e-mail em massa em nome da Lupa, e um valor que o
+ * A origem sai do cabeçalho confiável da borda, não do formulário nem do
+ * primeiro item — forjável — de `x-forwarded-for` (#346): o limite existe
+ * para conter quem manda e-mail em massa em nome da Lupa, e um valor que o
  * cliente escolhe não limita ninguém. Mesma regra do limite de cadastro.
  */
 export const pedirRecuperacaoDeSenha = criarAcao({
@@ -20,10 +21,7 @@ export const pedirRecuperacaoDeSenha = criarAcao({
     email: z.string().trim().toLowerCase().email("E-mail inválido."),
   }),
   executar: async ({ email }) => {
-    const cabecalhos = await headers();
-    const origem =
-      cabecalhos.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "desconhecida";
+    const origem = await origemDaRequisicao();
 
     const resultado = await pedirRecuperacao(email, {
       origem,

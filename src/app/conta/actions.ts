@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
 import { criarAcao } from "@/server/action";
@@ -9,6 +8,7 @@ import { criarSessao, encerrarSessao } from "@/server/auth/cookies";
 import { schemaCadastro, schemaLogin } from "@/server/auth/schemas";
 import { cadastrar, entrar } from "@/server/auth/servico";
 import { enviarVerificacaoDeEmail } from "@/server/auth/verificacao-email";
+import { origemDaRequisicao } from "@/server/origem-da-requisicao";
 import { urlPublica } from "@/server/url-publica";
 
 /**
@@ -17,25 +17,11 @@ import { urlPublica } from "@/server/url-publica";
  * São finas de propósito: validam pelo envelope, chamam a regra de negócio e
  * gravam o cookie. Toda decisão está em `src/server/auth/servico.ts`, que é
  * testável sem servidor.
- */
-
-/**
- * De onde veio a requisição, para o limite de tentativas do cadastro.
  *
- * `x-forwarded-for` é a cadeia de proxies; o primeiro item é o cliente. Na
- * Vercel o cabeçalho é reescrito pela borda, então não dá para forjá-lo de
- * fora — em outro provedor isso precisaria ser reavaliado.
- *
- * Sem cabeçalho, todo mundo cai na mesma chave e passa a dividir o mesmo
- * limite. É deliberado: um limite compartilhado atrapalha mais do que
- * limite nenhum protege, e o caso só acontece fora da Vercel.
+ * A origem do limite de tentativas vem de `origemDaRequisicao` (#346), que lê
+ * o header confiável da borda em vez do primeiro item — forjável — de
+ * `x-forwarded-for`.
  */
-async function origemDaRequisicao(): Promise<string> {
-  const cabecalhos = await headers();
-  const encaminhado = cabecalhos.get("x-forwarded-for");
-  const ip = encaminhado?.split(",")[0]?.trim();
-  return ip || "desconhecida";
-}
 
 export const cadastrarConta = criarAcao({
   nome: "auth.cadastrar",
