@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import { entrarComoTeste, SENHA_DE_TESTE } from "./helpers";
+import { expect, type Page, test } from "@playwright/test";
+import { emailDaConta, SENHA_DE_TESTE } from "./helpers";
 
 /**
  * O `?destino=` do login só pode levar de volta para dentro da Lupa (#345).
@@ -8,27 +8,33 @@ import { entrarComoTeste, SENHA_DE_TESTE } from "./helpers";
  * navegador de verdade, pelo caminho que a pessoa percorre — porque quem
  * resolve `/\evil.com` em `https://evil.com` é o parser de URL do navegador,
  * e é o `router.replace`, no cliente, que decide para onde ir depois do login.
- * Medir no DOM o que o navegador faz com a barra invertida é o ponto.
+ *
+ * **Loga na conta compartilhada do setup, não cria conta.** Um
+ * `entrarComoTeste` por teste cadastra, e o teto de `cadastro:<origem>` é
+ * compartilhado por toda a suíte — em dois projetos e com retries, cadastrar
+ * aqui estoura o limite e derruba até testes vizinhos (o `virar-prestador`, que
+ * também cadastra). É a lição que o AGENTS.md registra: a suíte compartilha
+ * login justamente para não refazer cadastro. Login é por e-mail e não gasta
+ * esse teto.
  */
 test.describe("redirecionamento pós-login", () => {
   // Sem sessão: o teste precisa exercitar o login em si, com destino na URL.
   test.use({ storageState: { cookies: [], origins: [] } });
 
+  async function logarComDestino(page: Page, destino: string): Promise<void> {
+    await page.goto(`/entrar?destino=${encodeURIComponent(destino)}`);
+    await page.getByLabel("E-mail").fill(emailDaConta("candidato"));
+    await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
+    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+  }
+
   test("destino forjado com barra invertida não leva para fora do app", async ({
     page,
     baseURL,
   }) => {
-    // Cria a conta (termina logada) e guarda o e-mail; depois desloga para
-    // poder exercitar a tela de login com o destino na query.
-    const email = await entrarComoTeste(page);
-    await page.context().clearCookies();
-
     // `/\evil.com`: passa numa checagem ingênua de prefixo, e o navegador o
     // resolve para https://evil.com. É o trampolim que a correção fecha.
-    await page.goto(`/entrar?destino=${encodeURIComponent("/\\evil.com")}`);
-    await page.getByLabel("E-mail").fill(email);
-    await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
-    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+    await logarComDestino(page, "/\\evil.com");
 
     // A navegação pós-login acontece (sai de /entrar)…
     await page.waitForURL((url) => !url.pathname.startsWith("/entrar"));
@@ -40,13 +46,7 @@ test.describe("redirecionamento pós-login", () => {
   });
 
   test("destino interno legítimo é respeitado", async ({ page }) => {
-    const email = await entrarComoTeste(page);
-    await page.context().clearCookies();
-
-    await page.goto(`/entrar?destino=${encodeURIComponent("/perfil/editar")}`);
-    await page.getByLabel("E-mail").fill(email);
-    await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
-    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+    await logarComDestino(page, "/perfil/editar");
 
     await page.waitForURL(/\/perfil\/editar/);
     expect(new URL(page.url()).pathname).toBe("/perfil/editar");
