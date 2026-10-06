@@ -1,7 +1,6 @@
 "use client";
 
 import { Search } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -9,11 +8,6 @@ import { Select } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 
 type Tipo = "vagas" | "servicos";
-
-export interface Atalho {
-  rotulo: string;
-  href: string;
-}
 
 const OPCOES: {
   tipo: Tipo;
@@ -50,9 +44,10 @@ const OPCOES: {
  * **Sem JavaScript, o formulário envia para `/vagas`.** O alternador
  * Vagas/Serviços troca o `action` por estado, e sem hidratação ele não
  * troca. Vagas é o padrão porque é a busca mais frequente; quem quer
- * serviço ainda chega pelos atalhos, que são links. Com JavaScript, a
- * navegação monta a URL sem os campos vazios (`?q=&uf=` na barra de
- * endereço não diz nada a ninguém).
+ * serviço, sem JavaScript, usa o link "Serviços" do cabeçalho. Os atalhos
+ * de categoria que existiram aqui saíram (#364), e com eles a outra porta.
+ * Com JavaScript, a navegação monta a URL sem os campos vazios (`?q=&uf=`
+ * na barra de endereço não diz nada a ninguém).
  *
  * **Visitante sem conta vê, antes do clique, que vai entrar.** `/vagas` e
  * `/servicos` exigem login (decisão do Luiz, ver AGENTS.md), e uma busca
@@ -65,11 +60,9 @@ const OPCOES: {
  */
 export function BuscaDoHero({
   ufs,
-  atalhos,
   visitante,
 }: {
   ufs: { sigla: string; nome: string }[];
-  atalhos: Record<Tipo, Atalho[]>;
   visitante: boolean;
 }) {
   const router = useRouter();
@@ -144,19 +137,6 @@ export function BuscaDoHero({
           Para ver os resultados, entre ou crie sua conta. É grátis.
         </p>
       )}
-
-      <ul className="mt-4 flex flex-wrap gap-2" aria-label="Mais procurados">
-        {atalhos[tipo].map((a) => (
-          <li key={a.href}>
-            <Link
-              href={a.href}
-              className="inline-flex min-h-11 items-center rounded-full border border-line bg-panel px-4 text-sm font-medium text-ink transition-colors hover:bg-panel-2"
-            >
-              {a.rotulo}
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

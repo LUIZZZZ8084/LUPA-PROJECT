@@ -18,7 +18,6 @@ import { ProviderCard } from "@/components/provider-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { UFS } from "@/lib/cidades";
-import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
 import { formatPrecoBRL } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
@@ -83,25 +82,6 @@ export default async function HomePage() {
   const sessao = await sessaoAtual();
   const terceiroCard = cardDeServico(sessao?.papel, Boolean(sessao));
 
-  /*
-   * Os atalhos do hero são categorias, não termos soltos: cada um chega à
-   * lista já no filtro de categoria que ela tem, e o valor da URL é o que o
-   * filtro espera (nome na vaga, slug no serviço).
-   */
-  const atalhos = {
-    vagas: JOB_CATEGORIES.slice(0, 4).map((c) => ({
-      rotulo: c,
-      href: `/vagas?categoria=${encodeURIComponent(c)}`,
-    })),
-    servicos: ["diarista", "eletricista", "pintor", "encanador"].flatMap(
-      (slug) => {
-        const c = SERVICE_CATEGORIES.find((s) => s.slug === slug);
-        return c
-          ? [{ rotulo: c.name, href: `/servicos?categoria=${c.slug}` }]
-          : [];
-      },
-    ),
-  };
   const mais = (aoMenos: boolean) => (aoMenos ? "mais de " : "");
 
   /*
@@ -155,20 +135,24 @@ export default async function HomePage() {
             {origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
           </span>
 
-          <h1 className="mt-5 text-[2rem] leading-[1.1] font-bold tracking-tight sm:text-5xl">
-            O que você está procurando
-            <br />
-            <span className="text-vagas">aqui perto?</span>
-          </h1>
+          {/*
+           * O título sai da tela, mas não do HTML (#364).
+           *
+           * O hero ficou sem a frase grande: a busca já diz o que a página
+           * faz. A página, no entanto, não pode ficar sem `<h1>` — leitor de
+           * tela e buscador usam o título para saber do que ela trata, e a
+           * varredura de acessibilidade cobra. `sr-only` mantém o texto
+           * para eles, igual ao `<title>` da aba.
+           */}
+          <h1 className="sr-only">Trabalho e profissionais perto de você</h1>
 
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted sm:text-base">
+          <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted sm:text-base">
             Vagas de emprego e prestadores de serviço na sua região, com contato
             direto pelo WhatsApp.
           </p>
 
           <BuscaDoHero
             ufs={UFS.map((u) => ({ sigla: u.sigla, nome: u.nome }))}
-            atalhos={atalhos}
             visitante={!sessao}
           />
 

@@ -28,14 +28,29 @@ test.describe("busca no hero, com sessão", () => {
     await expect(page).toHaveURL(/\/servicos\?q=diarista$/);
   });
 
-  /** Os atalhos são links para a lista, já no filtro de categoria. */
-  test("um atalho abre a lista no filtro de categoria", async ({ page }) => {
+  /**
+   * O hero perdeu o título grande e os atalhos (#364), mas a home não pode
+   * ficar sem `<h1>`: leitor de tela e buscador dependem dele.
+   */
+  test("sem título grande nem atalhos, e com h1 para leitor de tela", async ({
+    page,
+  }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "Serviços" }).click();
-    await page.getByRole("link", { name: "Diarista" }).click();
+    await expect(page.getByText("O que você está procurando")).toHaveCount(0);
+    await expect(
+      page.getByRole("list", { name: "Mais procurados" }),
+    ).toHaveCount(0);
 
-    await expect(page).toHaveURL(/\/servicos\?categoria=diarista$/);
+    const h1 = page.getByRole("heading", { level: 1 });
+    await expect(h1).toHaveCount(1);
+    await expect(h1).toHaveText("Trabalho e profissionais perto de você");
+
+    // `sr-only` reduz a caixa a 1 px: está no HTML e na árvore de
+    // acessibilidade, e não ocupa lugar na tela.
+    const caixa = await h1.boundingBox();
+    expect(caixa?.width).toBeLessThanOrEqual(1);
+    expect(caixa?.height).toBeLessThanOrEqual(1);
   });
 });
 
