@@ -8,9 +8,17 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 05/10/2026.**
+**Última atualização: 06/10/2026.**
 
 ## Concluído
+
+Em 06/10/2026:
+
+- O hero da home perdeu o título "O que você está procurando aqui perto?" e
+  os atalhos de categoria, e ficou com o selo, a frase de apoio, a busca, a
+  contagem e o card de conta. O `<h1>` continua na página, só para leitor de
+  tela, porque a home não pode ficar sem título —
+  [#364](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/364)
 
 Em 05/10/2026:
 

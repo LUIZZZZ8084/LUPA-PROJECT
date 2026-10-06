@@ -17,17 +17,8 @@ const ufs = [
   { sigla: "MT", nome: "Mato Grosso" },
   { sigla: "SP", nome: "São Paulo" },
 ];
-const atalhos = {
-  vagas: [
-    { rotulo: "Administrativo", href: "/vagas?categoria=Administrativo" },
-  ],
-  servicos: [{ rotulo: "Diarista", href: "/servicos?categoria=diarista" }],
-};
-
 function hero(props: Partial<Parameters<typeof BuscaDoHero>[0]> = {}) {
-  return render(
-    <BuscaDoHero ufs={ufs} atalhos={atalhos} visitante={false} {...props} />,
-  );
+  return render(<BuscaDoHero ufs={ufs} visitante={false} {...props} />);
 }
 
 describe("BuscaDoHero", () => {
@@ -76,22 +67,31 @@ describe("BuscaDoHero", () => {
     expect(form).toHaveAttribute("action", "/vagas");
   });
 
-  it("o alternador diz qual está ativo e muda placeholder e atalhos", () => {
+  it("o alternador diz qual está ativo e muda o placeholder", () => {
     hero();
     const vagas = screen.getByRole("button", { name: "Vagas" });
     const servicos = screen.getByRole("button", { name: "Serviços" });
     expect(vagas).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("link", { name: "Administrativo" })).toBeVisible();
+    expect(screen.getByRole("searchbox")).toHaveAttribute(
+      "placeholder",
+      "Cargo ou empresa",
+    );
 
     fireEvent.click(servicos);
 
     expect(servicos).toHaveAttribute("aria-pressed", "true");
     expect(vagas).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("link", { name: "Diarista" })).toHaveAttribute(
-      "href",
-      "/servicos?categoria=diarista",
+    expect(screen.getByRole("searchbox")).toHaveAttribute(
+      "placeholder",
+      expect.stringMatching(/eletricista/i),
     );
-    expect(screen.queryByRole("link", { name: "Administrativo" })).toBeNull();
+  });
+
+  /** Saíram do hero a pedido do Luiz (#364): a busca fala por si. */
+  it("não traz atalhos de categoria", () => {
+    hero();
+    expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   /** Aviso antes do clique: a busca de quem não tem conta termina no login. */
@@ -106,15 +106,12 @@ describe("BuscaDoHero", () => {
   });
 
   /** Abaixo de 16 px o Safari do iPhone amplia a página ao focar (#314). */
-  it("o campo de busca é de 16 px, e os controles têm 44 px", () => {
+  it("o campo de busca é de 16 px, e o alternador tem 44 px", () => {
     hero();
     expect(screen.getByRole("searchbox").className).toContain("text-base");
     expect(screen.getByRole("button", { name: "Vagas" }).className).toContain(
       "h-11",
     );
-    expect(
-      screen.getByRole("link", { name: "Administrativo" }).className,
-    ).toContain("min-h-11");
   });
 });
 
