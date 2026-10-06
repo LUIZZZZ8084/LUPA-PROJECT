@@ -166,3 +166,6 @@ por construção, como o plano de vaga.
 > `supabase/aplica-mensalidade-prestador-atomica.sql` no SQL Editor antes do
 > deploy — sem ela, a RPC responde "função não existe" e estender a
 > mensalidade (parcela aprovada, teste grátis, estorno) falha.
+
+**PR:** [#349](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/349) (fecha
+#348). Em acompanhamento até a CI fechar verde.
