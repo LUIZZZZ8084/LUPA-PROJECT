@@ -86,6 +86,18 @@ export const TETO_ADMIN = 200;
 export const TETO_DO_DONO = 200;
 
 /**
+ * Cortes de revogação de sessão (#352).
+ *
+ * Esta lista não é de uma pessoa: é global, com uma linha por conta que
+ * trocou a senha ou o papel nos últimos 30 dias, e a checagem só está
+ * certa se ela vier inteira — conta que ficou de fora é lida como "não
+ * revogada". Por isso não reaproveita `TETO_DO_DONO`, que protege listas
+ * de tela, e o teto existe só contra crescimento sem fim. Ao chegar nele
+ * a consulta registra erro: passar daqui pede paginar, não subir o número.
+ */
+export const TETO_DE_CORTES_DE_SESSAO = 5000;
+
+/**
  * Quem recebe aviso de vaga nova.
  *
  * Este não é tela: é o alcance de um envio em segundo plano, e cresce com

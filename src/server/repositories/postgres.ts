@@ -1,9 +1,10 @@
 import "server-only";
 
-import { TETO_DO_DONO } from "@/lib/limites-de-lista";
+import { TETO_DE_CORTES_DE_SESSAO } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import type { Papel } from "../auth/rbac";
 import { erros } from "../errors";
+import { log } from "../logger";
 import type {
   DadosNovoUsuario,
   EdicaoBasica,
@@ -174,9 +175,19 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       .from("usuarios")
       .select("id, sessoes_validas_desde")
       .gte("sessoes_validas_desde", desde.toISOString())
-      .limit(TETO_DO_DONO);
+      // Os mais novos primeiro: se o teto cortar, perde-se o corte cujo
+      // token vence antes, e não o que acabou de ser pedido (#352).
+      .order("sessoes_validas_desde", { ascending: false })
+      .limit(TETO_DE_CORTES_DE_SESSAO);
 
     if (error) throw erros.indisponivel(`cortes de sessão: ${error.message}`);
+
+    if ((data ?? []).length >= TETO_DE_CORTES_DE_SESSAO) {
+      // Chegou ao teto: há revogação fora da checagem. Vai ao Sentry.
+      log.erro(erros.indisponivel("cortes de sessão chegaram ao teto"), {
+        teto: TETO_DE_CORTES_DE_SESSAO,
+      });
+    }
 
     return new Map(
       (data ?? []).map((l) => [
@@ -253,7 +264,10 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     const supabase = await cliente();
     const { error } = await supabase
       .from("usuarios")
-      .update({ papel })
+      // O corte vai na mesma instrução que troca o papel (#352): o papel
+      // viaja no token, e o que foi emitido antes da troca não pode
+      // continuar valendo com as capacidades antigas.
+      .update({ papel, sessoes_validas_desde: new Date().toISOString() })
       .eq("id", id);
 
     /*
