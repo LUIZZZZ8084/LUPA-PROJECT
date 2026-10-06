@@ -5,14 +5,28 @@ superfície que decide acesso, dinheiro ou identidade, a pergunta foi *como eu
 quebraria isto?*. Análise sobre o código-fonte da branch, sem tocar em produção
 e sem disparar nada contra o site no ar.
 
-**Resumo:** duas falhas reais encontradas (uma de impacto alto no modelo de
-abuso que o projeto adotou, uma de impacto médio). A maioria das superfícies
-sensíveis resistiu à análise — está listada no fim, porque "o que já aguenta"
-também é resultado de auditoria.
+**Resumo:** dois pontos corrigidos — um open redirect real (impacto médio) e um
+endurecimento da origem do rate-limit (impacto condicional: só explorável com um
+proxy na frente da Vercel). A maioria das superfícies sensíveis resistiu à
+análise — está listada no fim, porque "o que já aguenta" também é resultado de
+auditoria.
+
+> **Estado:** corrigido nas Issues
+> [#345](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/345) (open redirect)
+> e [#346](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/346) (origem do
+> rate-limit), com testes que travam a volta.
 
 ---
 
-## 🔴 1. O teto por ação (anti-abuso) é contornável forjando `X-Forwarded-For`
+> **Atualização pós-verificação (06/10, tarde).** A documentação da Vercel
+> confirma que ela **sobrescreve** `x-forwarded-for` e não repassa IP externo —
+> então, em Vercel pura, esta falha **não é explorável** e o comentário original
+> do código estava certo. Ela volta a valer apenas com um proxy na frente da
+> Vercel (um CDN/WAF como o Cloudflare), o caso que o próprio comentário admitia
+> precisar reavaliar. O item fica como **endurecimento** (impacto condicional),
+> não como falha explorável hoje. **Corrigido** nas Issues #346/#345.
+
+## 🟠 1. O teto por ação depende de um header que um proxy externo torna forjável
 
 **Onde:** `src/server/action.ts` (`chaveDoPedido`),
 `src/app/(auth)/esqueci-senha/actions.ts`, e o mesmo trecho no cadastro.
