@@ -1774,6 +1774,18 @@ saber que alguém desinstalou ou trocou de telefone; o navegador não avisa
 ninguém. Qualquer outra falha não apaga nada: sumir com a inscrição de quem
 estava sem sinal é pior que deixar de avisar uma vez.
 
+**O endereço da inscrição só vale se for de um serviço de push (#356).**
+Ele vem do navegador de quem se inscreveu, e a cada vaga publicada o
+servidor faz uma requisição HTTPS para ele. Validar só que era uma URL
+deixava a pessoa escolher o destino. Hoje `endpointDePushPermitido`
+aceita FCM, Mozilla, Apple e WNS, só em `https`, sem usuário, senha ou
+porta — na inscrição e de novo no envio, porque linha gravada antes da
+regra não passou pela primeira. O que falha na segunda sai da tabela pelo
+mesmo caminho do 404/410, e o envio tem prazo de 10 s. O preço da lista
+fechada: um navegador com serviço fora dela não liga o aviso. *Lista de
+quem pode, e não de quem não pode: a segunda sempre deixa passar a
+próxima forma.*
+
 **Bairro ficou fora**, decisão de 26/08/2026: não existe catálogo de bairro
 para os municípios do país. Notificar por bairro funcionaria bem numa cidade
 e mal em todas as outras — e desde a #321 a Lupa nem guarda o bairro de uma
