@@ -14,6 +14,11 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 06/10/2026:
 
+- `sharp` 0.35.4 → 0.35.5: o `npm audit` acusou, em 06/10/2026, uma falha de
+  severidade alta na librsvg que ele embute, e o check "Dependências
+  vulneráveis" reprovava todo PR e a `main`. O `sharp` reduz as fotos
+  enviadas (`src/server/arquivos/imagem.ts`) e gera o favicon —
+  [#366](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/366)
 - O hero da home perdeu o título "O que você está procurando aqui perto?" e
   os atalhos de categoria, e ficou com o selo, a frase de apoio, a busca, a
   contagem e o card de conta. O `<h1>` continua na página, só para leitor de
