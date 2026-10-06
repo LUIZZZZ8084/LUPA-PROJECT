@@ -433,6 +433,103 @@ describe("limite de publicações, imposto pelo banco", () => {
   });
 });
 
+/**
+ * A mensalidade de prestador estendida pela função do banco (#348).
+ *
+ * A aritmética — `max(agora, prazo atual) + dias`, para quem renova antes de
+ * vencer não perder os dias já pagos — mora no `update`, e não numa leitura
+ * seguida de gravação na aplicação: é onde duas extensões concorrentes do
+ * mesmo prestador deixariam de se atropelar. O que se prova aqui é o
+ * comportamento da conta num Postgres de verdade; a mesma aritmética no
+ * caminho de memória (demonstração) é coberta por
+ * `prestadores-mensalidade.test.ts`.
+ *
+ * As datas são conferidas com margem, não por igualdade: entre a função
+ * rodar e o teste ler, passam milissegundos.
+ */
+describe("mensalidade de prestador, no banco", () => {
+  const UM_DIA_MS = 24 * 60 * 60 * 1000;
+
+  async function novoPrestador(email: string): Promise<string> {
+    const id = await criarUsuario("prestador_servico", email);
+    await db.query(
+      "insert into perfis_prestador (usuario_id, categoria_id) values ($1, 1)",
+      [id],
+    );
+    return id;
+  }
+
+  async function estender(id: string, dias: number | null) {
+    const r = await db.query<{ ate: string | null }>(
+      "select mensalidade_valida_ate as ate from estender_mensalidade_prestador($1, $2)",
+      [id, dias],
+    );
+    return r.rows;
+  }
+
+  function diasAPartirDeAgora(iso: string): number {
+    return (new Date(iso).getTime() - Date.now()) / UM_DIA_MS;
+  }
+
+  it("sem validade anterior, estende a partir de agora", async () => {
+    const id = await novoPrestador("prest-sem@teste.lupa");
+
+    const linhas = await estender(id, 30);
+
+    expect(linhas).toHaveLength(1);
+    const dias = diasAPartirDeAgora(linhas[0].ate as string);
+    expect(dias).toBeGreaterThan(29);
+    expect(dias).toBeLessThan(31);
+  });
+
+  it("renovar antes de vencer soma ao prazo que já valia", async () => {
+    const id = await novoPrestador("prest-futuro@teste.lupa");
+    await db.query(
+      "update perfis_prestador set mensalidade_valida_ate = now() + interval '10 days' where usuario_id = $1",
+      [id],
+    );
+
+    const linhas = await estender(id, 30);
+
+    // Soma aos 10 que já valiam: ~40, não ~30.
+    const dias = diasAPartirDeAgora(linhas[0].ate as string);
+    expect(dias).toBeGreaterThan(39);
+    expect(dias).toBeLessThan(41);
+  });
+
+  it("com a validade já vencida, estende a partir de agora", async () => {
+    const id = await novoPrestador("prest-vencido@teste.lupa");
+    await db.query(
+      "update perfis_prestador set mensalidade_valida_ate = now() - interval '5 days' where usuario_id = $1",
+      [id],
+    );
+
+    const linhas = await estender(id, 30);
+
+    const dias = diasAPartirDeAgora(linhas[0].ate as string);
+    expect(dias).toBeGreaterThan(29);
+    expect(dias).toBeLessThan(31);
+  });
+
+  it("p_dias nulo revoga a mensalidade", async () => {
+    const id = await novoPrestador("prest-revoga@teste.lupa");
+    await estender(id, 30);
+
+    const linhas = await estender(id, null);
+
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0].ate).toBeNull();
+  });
+
+  it("sem perfil de prestador, não devolve linha nenhuma", async () => {
+    const id = await criarUsuario("candidato_clt", "so-candidato@teste.lupa");
+
+    const linhas = await estender(id, 30);
+
+    expect(linhas).toHaveLength(0);
+  });
+});
+
 describe("views devolvem o formato que a aplicação espera", () => {
   it("provider_listings traz a categoria como objeto", async () => {
     const r = await db.query<{

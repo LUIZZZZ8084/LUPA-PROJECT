@@ -194,18 +194,17 @@ export async function estenderMensalidade(
   usuarioId: string,
   dias = 30,
 ): Promise<void> {
-  const repo = repositorioUsuarios();
-  const perfil = await repo.perfilPrestador(usuarioId);
-  if (!perfil) throw erros.naoEncontrado("Perfil de prestador");
-
-  const baseMs = perfil.mensalidadeValidaAte
-    ? Math.max(Date.now(), new Date(perfil.mensalidadeValidaAte).getTime())
-    : Date.now();
-  const novaValidade = new Date(
-    baseMs + dias * 24 * 60 * 60 * 1000,
-  ).toISOString();
-
-  await repo.definirMensalidadeValidaAte(usuarioId, novaValidade);
+  /*
+   * A conta `max(agora, prazo atual) + dias` acontece no banco, não aqui
+   * (#348): lê-computar-gravar deixaria duas extensões concorrentes do
+   * mesmo prestador lerem a mesma base e perderem uma. É o mesmo cuidado
+   * do plano de vaga. Zero linhas é "não tem perfil" — o 404 de sempre.
+   */
+  const estendeu = await repositorioUsuarios().estenderMensalidadePrestador(
+    usuarioId,
+    dias,
+  );
+  if (!estendeu) throw erros.naoEncontrado("Perfil de prestador");
 
   log.info("mensalidade de prestador estendida", {
     acao: "prestador.mensalidade",
@@ -230,11 +229,13 @@ export async function estenderMensalidade(
  * novo, como qualquer mensalidade vencida.
  */
 export async function revogarMensalidade(usuarioId: string): Promise<void> {
-  const repo = repositorioUsuarios();
-  const perfil = await repo.perfilPrestador(usuarioId);
-  if (!perfil) throw erros.naoEncontrado("Perfil de prestador");
-
-  await repo.definirMensalidadeValidaAte(usuarioId, null);
+  // `null` zera a validade pela mesma função atômica (#348); zero linhas
+  // é "não tem perfil", o 404 de sempre.
+  const revogou = await repositorioUsuarios().estenderMensalidadePrestador(
+    usuarioId,
+    null,
+  );
+  if (!revogou) throw erros.naoEncontrado("Perfil de prestador");
 
   log.info("mensalidade de prestador revogada", {
     acao: "prestador.mensalidade_revogada",

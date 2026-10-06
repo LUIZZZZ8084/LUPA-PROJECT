@@ -1003,6 +1003,40 @@ as $$
 $$;
 
 
+-- A mesma conta da mensalidade de prestador, atômica no banco (#348).
+--
+-- Antes isto era um ler-modificar-gravar na aplicação
+-- (`estenderMensalidade`, em `src/server/prestadores/servico.ts`): lia a
+-- validade, calculava `max(agora, atual) + dias` em JS e gravava. Duas
+-- extensões concorrentes para o mesmo prestador leriam a mesma base e uma
+-- se perderia. A máquina de estado do pagamento serializava as chamadas, e
+-- por isso a corrida não acontecia na prática — mas depender de um
+-- invariante de outro módulo é o que esta função remove: a conta vive onde
+-- a corrida não existe, igual à do plano de vaga logo acima.
+--
+-- `p_dias is null` revoga, do mesmo jeito. A linha existe sempre que a
+-- pessoa é prestador; zero linhas devolvidas é "não tem perfil", e a
+-- aplicação traduz isso no 404 de sempre.
+create or replace function estender_mensalidade_prestador(
+  p_usuario uuid,
+  p_dias int
+)
+returns setof perfis_prestador language sql
+set search_path = public, pg_temp
+as $$
+  update perfis_prestador
+  set mensalidade_valida_ate = case
+    when p_dias is null then null
+    else greatest(
+      now(),
+      coalesce(mensalidade_valida_ate, now())
+    ) + make_interval(days => p_dias)
+  end
+  where usuario_id = p_usuario
+  returning *;
+$$;
+
+
 -- ============================================================================
 -- 9e. Assinaturas recorrentes
 --

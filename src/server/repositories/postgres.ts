@@ -455,6 +455,28 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     }
   }
 
+  /**
+   * Chama a função `estender_mensalidade_prestador` (#348): a conta
+   * `max(agora, atual) + dias` acontece dentro do `update`, onde duas
+   * extensões concorrentes não se atropelam. `setof perfis_prestador`
+   * devolve zero ou uma linha; zero é "não tem perfil".
+   */
+  async estenderMensalidadePrestador(
+    usuarioId: string,
+    dias: number | null,
+  ): Promise<boolean> {
+    const supabase = await cliente();
+    const { data, error } = await supabase.rpc(
+      "estender_mensalidade_prestador",
+      { p_usuario: usuarioId, p_dias: dias },
+    );
+
+    if (error) {
+      throw erros.indisponivel(`mensalidade de prestador: ${error.message}`);
+    }
+    return Array.isArray(data) ? data.length > 0 : data != null;
+  }
+
   async definirGeradorCurriculoLiberado(
     usuarioId: string,
     liberado: boolean,
