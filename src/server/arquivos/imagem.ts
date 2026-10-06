@@ -54,11 +54,49 @@ export class ImagemIlegivel extends Error {
   }
 }
 
+/**
+ * O arquivo começa como JPEG, PNG ou WebP? Pela assinatura, não pelo tipo
+ * declarado (#362).
+ *
+ * O `sharp` detecta o formato pelo conteúdo, e o que ele sabe ler vai além
+ * dos três que a Lupa aceita — SVG, GIF, TIFF, HEIF. `conferirArquivo` olha o
+ * tipo que o navegador declara, e quem declara é quem envia: um SVG com
+ * `image/png` chegaria ao decodificador. A assinatura fecha isso antes de o
+ * arquivo tocar em biblioteca nativa, e o que nunca é lido não pode ser
+ * explorado por um aviso novo na biblioteca que o lê.
+ */
+export function ehJpegPngOuWebp(b: Uint8Array): boolean {
+  const jpeg = b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  const png =
+    b[0] === 0x89 &&
+    b[1] === 0x50 &&
+    b[2] === 0x4e &&
+    b[3] === 0x47 &&
+    b[4] === 0x0d &&
+    b[5] === 0x0a &&
+    b[6] === 0x1a &&
+    b[7] === 0x0a;
+  const webp =
+    b[0] === 0x52 && // RIFF
+    b[1] === 0x49 &&
+    b[2] === 0x46 &&
+    b[3] === 0x46 &&
+    b[8] === 0x57 && // WEBP
+    b[9] === 0x45 &&
+    b[10] === 0x42 &&
+    b[11] === 0x50;
+  return jpeg || png || webp;
+}
+
 export async function reduzirImagem(
   bytes: Uint8Array,
   especie: Exclude<Especie, "curriculo">,
 ): Promise<Uint8Array> {
   const lado = MAIOR_LADO[especie];
+
+  if (!ehJpegPngOuWebp(bytes)) {
+    throw new ImagemIlegivel(new Error("formato fora de JPEG, PNG e WebP"));
+  }
 
   /*
    * Carregado só aqui, e não no topo do arquivo.

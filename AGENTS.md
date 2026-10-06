@@ -1027,6 +1027,17 @@ HTML como parâmetro do otimizador. Decodificar também é o que prova que o
 arquivo é imagem — `conferirArquivo` só confere o tipo declarado. O
 currículo em PDF passa como veio.
 
+**O `sharp` só recebe JPEG, PNG ou WebP, e a conferência é pela
+assinatura (#362).** Ele detecta o formato pelo conteúdo e lê mais do que
+a Lupa aceita — SVG, GIF, TIFF, HEIF —, enquanto `conferirArquivo` olha o
+tipo que o navegador declara, e quem declara é quem envia. Num dia em que
+saiu um aviso de severidade alta no decodificador de SVG embutido, o
+arquivo "image/png" que era um SVG chegava a ele. Hoje `ehJpegPngOuWebp`
+confere os primeiros bytes antes de o arquivo tocar em biblioteca nativa:
+*o que nunca é lido não pode ser explorado por um aviso novo na biblioteca
+que o lê.* A atualização do `sharp` fecha o aviso; a assinatura fecha a
+classe.
+
 **E foto grande é reduzida no celular, antes de sair (#325).** A redução
 acima só acontecia depois de a foto chegar, e a foto de celular — de 3 a 8
 MB — nem chegava: o limite de 2 MB a recusava antes. A pessoa precisava
