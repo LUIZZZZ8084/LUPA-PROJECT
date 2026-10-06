@@ -27,7 +27,7 @@ const conteudo = {
   titulo: zTexto(3, 120, "O título"),
   corpo: zTexto(10, 3000, "O texto"),
   imagemUrl: z
-    .union([z.url("Endereço de imagem inválido."), z.literal("")])
+    .union([z.httpUrl("Endereço de imagem inválido."), z.literal("")])
     .optional()
     .transform((v) => (v ? v : null)),
 };
