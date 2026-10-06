@@ -406,6 +406,51 @@ describe("confirmarPagamento", () => {
     expect(estenderMensalidadeMock).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["rejected", "recusada"],
+    ["cancelled", "cancelada"],
+  ])(
+    "%s antes da aprovada: a aprovação ainda vale, uma vez só (#358)",
+    async (statusAntes) => {
+      const pagamento = await cobrancaPendente();
+
+      await ctx.servico.confirmarPagamento(
+        "mp-1",
+        respostaJson({
+          id: "mp-1",
+          status: statusAntes,
+          external_reference: pagamento.id,
+        }),
+      );
+      expect(estenderMensalidadeMock).not.toHaveBeenCalled();
+
+      // Outra tentativa da mesma preferência, esta aprovada.
+      const aprovada = respostaJson({
+        id: "mp-2",
+        status: "approved",
+        external_reference: pagamento.id,
+      });
+      await ctx.servico.confirmarPagamento("mp-2", aprovada);
+      expect(estenderMensalidadeMock).toHaveBeenCalledTimes(1);
+
+      // A mesma aprovação reenviada não aplica o efeito de novo.
+      await ctx.servico.confirmarPagamento("mp-2", aprovada);
+      expect(estenderMensalidadeMock).toHaveBeenCalledTimes(1);
+
+      // E a notícia atrasada da recusada não desfaz o que foi comprado.
+      await ctx.servico.confirmarPagamento(
+        "mp-1",
+        respostaJson({
+          id: "mp-1",
+          status: statusAntes,
+          external_reference: pagamento.id,
+        }),
+      );
+      await ctx.servico.confirmarPagamento("mp-2", aprovada);
+      expect(estenderMensalidadeMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it("status pendente ou em processamento não muda nada ainda", async () => {
     const pagamento = await cobrancaPendente();
     const buscar = respostaJson({

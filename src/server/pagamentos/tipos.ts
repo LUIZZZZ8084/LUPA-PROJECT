@@ -205,6 +205,12 @@ export interface RepositorioPagamentos {
    * chegando ao mesmo tempo não podem aplicar o efeito duas vezes.
    * Devolve `null` quando não havia mais nada pendente para aprovar.
    *
+   * `aprovar` parte de `pendente` **e também de `rejeitado` e `cancelado`**
+   * (#358): uma preferência gera várias tentativas sob a mesma referência, e
+   * a recusada costuma chegar antes da aprovada. `rejeitar` e `cancelar`
+   * continuam partindo só de `pendente`, então a aprovação não é desfeita
+   * por uma notícia atrasada de recusa.
+   *
    * `mpPaymentId` é `null` em modo demonstração, sem chamada ao Mercado Pago.
    */
   aprovar(id: string, mpPaymentId: string | null): Promise<Pagamento | null>;
