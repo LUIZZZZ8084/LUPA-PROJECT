@@ -10,6 +10,11 @@ menores. O resto resistiu à análise.
 
 ---
 
+> **Corrigido (06/10):** HSTS adicionado em `next.config.ts`
+> (`max-age=63072000; includeSubDomains`, sem `preload`), com asserção no e2e
+> `cabecalhos-de-seguranca.spec.ts`. Issue
+> [#350](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/350).
+
 ## 🟠 Falta o cabeçalho `Strict-Transport-Security` (HSTS)
 
 **Onde:** `next.config.ts` → `async headers()`.
@@ -103,8 +108,10 @@ uma asserção para travar a presença.
 
 ---
 
-## Sugestão
+## Resultado
 
-Um item acionável: adicionar o HSTS (uma linha em `next.config.ts` + uma
-asserção no e2e). Baixo risco, fecha o ataque de downgrade. Posso implementar
-seguindo o fluxo Issue → PR, ou deixar registrado.
+O item acionável (HSTS) foi **implementado** na #350: uma linha em
+`next.config.ts` mais a asserção no e2e de cabeçalhos, validada em desktop e
+mobile contra a resposta HTTP de verdade. As observações menores
+(`img-src https:`, `geolocation=(self)`, redação XFO/frame-ancestors) ficam
+como registro, sem mudança — são de baixo a nulo risco.

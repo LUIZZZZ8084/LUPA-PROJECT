@@ -72,6 +72,24 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          /*
+           * HSTS: força HTTPS e fecha o SSL-stripping na primeira visita
+           * (#350). Sem ele, a requisição inicial pode sair como HTTP e um
+           * atacante na rede a intercepta — e aqui passam senha, CPF/CNPJ e
+           * currículo. A Vercel serve HTTPS mas não manda este cabeçalho
+           * sozinha.
+           *
+           * Dois anos e `includeSubDomains`. `preload` fica de fora de
+           * propósito: entrar na lista dos navegadores é compromisso difícil
+           * de desfazer (força HTTPS em todo subdomínio por meses), e só vale
+           * quando houver certeza de que todo subdomínio de lupapp.com.br
+           * fala HTTPS. Navegador ignora o cabeçalho sobre HTTP, então ele é
+           * inofensivo em desenvolvimento.
+           */
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains",
+          },
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(self)",
