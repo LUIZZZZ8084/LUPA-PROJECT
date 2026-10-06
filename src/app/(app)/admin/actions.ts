@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { sessaoAtual } from "@/server/auth/cookies";
+import { pode } from "@/server/auth/rbac";
 
 export type ReviewDecision = "aprovado" | "reprovado";
 
@@ -19,6 +21,16 @@ export async function decideVerification(
   requestId: string,
   decision: ReviewDecision,
 ): Promise<DecisionResult> {
+  /*
+   * Esta ação é um endpoint por si só: o muro do `proxy.ts` guarda a rota
+   * `/admin`, não a chamada. A checagem mora aqui, como em toda ação que
+   * muda dado (#360) — quem não é admin não chega nem a ler o pedido.
+   */
+  const sessao = await sessaoAtual();
+  if (!sessao || !pode(sessao.papel, "admin:decidir_verificacao")) {
+    return { ok: false, error: "Sem permissão." };
+  }
+
   const supabase = await createClient();
   if (!supabase) return { ok: true, demo: true };
 

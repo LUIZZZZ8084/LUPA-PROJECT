@@ -758,6 +758,14 @@ endereço e sem o corpo da resposta do Resend**, que pode ecoar o
 destinatário: a regra do log de recuperação vale em dobro no momento em
 que mais se lê log.
 
+**O token na URL não vai ao Sentry (#360).** O link leva o token na
+query, e a URL entra no evento (`request.url`, `query_string`, atributos
+de span). A máscara por nome de chave não alcançava: a chave ali é `url`,
+e o segredo está dentro do valor. Hoje `scrubSensitiveData` também mascara
+`token=`, `senha=` e parecidos dentro de qualquer texto. O token é de uso
+único e vale uma hora, o que limita o dano, mas um evento que sai com ele
+é uma credencial num serviço de terceiro.
+
 **O e-mail é texto puro, sem HTML.** O público daqui abre e-mail no
 celular, e template com imagem e botão colorido é o formato que os
 provedores mais pontuam como promoção — justamente o e-mail que precisa
@@ -993,6 +1001,15 @@ porque só ele e o Paulinho operam a conta.
 (`exigirCapacidade`) e este registro é desta pessoa (`exigirDono`). Só a
 primeira deixaria qualquer empresa autenticada alcançar a vaga de outra
 trocando o id na URL.
+
+**Server action exportada é endpoint, e o muro não a guarda (#360).**
+`decideVerification` mora em `/admin` e não conferia quem chamava: o
+`proxy.ts` guarda a rota, não a chamada. Em produção ela não alcançava
+nada — usa a chave anônima, e a tabela está fechada para ela —, mas era
+a única ação que mudava dado sem checar a capacidade, e ficava a uma
+mudança de chave de ser a porta aberta. Hoje confere `admin:decidir_verificacao`
+antes de abrir qualquer cliente de banco. *Toda action confere a
+capacidade dentro dela, mesmo quando "só o admin vê a tela".*
 
 ### Arquivos: o caminho vem da sessão, nunca do nome enviado
 

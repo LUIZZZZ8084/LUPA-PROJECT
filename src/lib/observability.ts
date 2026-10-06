@@ -81,6 +81,17 @@ const CHAVES_DE_RASTREIO =
 const FORMATO_DE_RASTREIO = /^[0-9a-f]{16,40}(?:-[0-9a-f]{16}(?:-[01])?)?$/i;
 
 /**
+ * Parâmetro de URL que carrega segredo (#360).
+ *
+ * O link de redefinir senha leva o token na query, e a URL aparece no evento
+ * (`request.url`, `query_string`, atributos de span). A máscara por nome de
+ * chave não alcança: a chave ali é `url`, e o segredo está dentro do valor.
+ * Pega no início do texto também, para `query_string`, que vem sem o `?`.
+ */
+const PARAMETRO_SECRETO =
+  /(^|[?&;\s])(token|access_token|refresh_token|api_key|apikey|secret|senha|password)=[^&#\s"']*/gi;
+
+/**
  * Remove dado pessoal antes do envio.
  *
  * O Lupa lida com telefone, CPF/CNPJ e documento. Nada disso pode sair para
@@ -134,6 +145,7 @@ export function scrubSensitiveData<T>(event: T): T {
        */
       return (
         valor
+          .replace(PARAMETRO_SECRETO, "$1$2=[removido]")
           /*
            * CNPJ alfanumérico, só na forma com pontuação (#297).
            *
