@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
+import { destinoSeguro } from "@/lib/destino";
 
 const inicial: EstadoFormulario = {};
 
@@ -24,23 +25,6 @@ function destino(papel: string | undefined): string {
   if (papel === "admin") return "/admin/painel";
   if (papel === "empresa") return "/empresa";
   return "/";
-}
-
-/**
- * Só caminho interno é aceito como destino.
- *
- * O valor vem da URL, e a URL vem de fora. Sem esta checagem,
- * `/entrar?destino=https://outro-site` transformaria a tela de login num
- * trampolim: o golpista manda o link, a pessoa entra de verdade na Lupa e
- * é despejada num site que imita a Lupa pedindo a senha de novo.
- *
- * `//` no começo também sai — o navegador lê como protocolo relativo e
- * `//evil.com` vira um endereço externo.
- */
-function destinoSeguro(bruto: string | undefined): string | null {
-  if (!bruto) return null;
-  if (!bruto.startsWith("/") || bruto.startsWith("//")) return null;
-  return bruto;
 }
 
 export function SignInForm({ destino: pretendido }: { destino?: string }) {
@@ -66,7 +50,9 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
    */
   useEffect(() => {
     if (!state.ok) return;
-    router.replace(destinoSeguro(pretendido) ?? destino(state.papel));
+    router.replace(
+      destinoSeguro(pretendido, window.location.origin) ?? destino(state.papel),
+    );
   }, [state.ok, state.papel, pretendido, router]);
 
   return (

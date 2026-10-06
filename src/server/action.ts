@@ -1,12 +1,12 @@
 import "server-only";
 
-import { headers } from "next/headers";
 import type { z } from "zod";
 import { sessaoAtual } from "./auth/cookies";
 import { consumirOrcamento } from "./auth/rate-limit";
 import { type AppError, comoAppError } from "./errors";
 import { ORCAMENTOS } from "./limites";
 import { cronometro, log, novoRequestId } from "./logger";
+import { origemDaRequisicao } from "./origem-da-requisicao";
 import { objetoDoFormData, validar } from "./validation";
 
 /**
@@ -63,10 +63,7 @@ async function chaveDoPedido(acao: string): Promise<string> {
   const sessao = await sessaoAtual();
   if (sessao) return `acao:${acao}:u:${sessao.usuarioId}`;
 
-  const cabecalhos = await headers();
-  const origem =
-    cabecalhos.get("x-forwarded-for")?.split(",")[0]?.trim() || "desconhecida";
-  return `acao:${acao}:o:${origem}`;
+  return `acao:${acao}:o:${await origemDaRequisicao()}`;
 }
 export interface DefinicaoAcao<TEntrada, TSaida> {
   /** Nome estável para o log, ex.: "auth.login". */
