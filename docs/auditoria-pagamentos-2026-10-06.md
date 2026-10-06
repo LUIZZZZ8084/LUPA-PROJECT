@@ -113,5 +113,56 @@ já é um `set ... = null` simples e está correto. É uma mudança de banco
 O único item acionável é o endurecimento da mensalidade do prestador para
 SQL atômico. É baixo risco e baixo esforço, e alinha o caminho do prestador
 ao do plano de vaga — que já é o jeito certo e está ali do lado como molde.
-Posso implementar (migração + teste) se você quiser, ou deixar registrado
-como melhoria para quando mexerem nessa área.
+
+---
+
+## Implementação (em andamento)
+
+Issue [#348](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/348). Decisão
+do Luiz em 06/10: implementar o endurecimento.
+
+**Desenho:**
+
+- Função SQL `estender_mensalidade_prestador(p_usuario, p_dias)` no molde de
+  `estender_mensalidade_vaga`: a conta `greatest(now(), coalesce(validade,
+  now())) + make_interval(days => p_dias)` acontece dentro da instrução, onde
+  a corrida não existe; `p_dias is null` revoga.
+- Migração `supabase/aplica-mensalidade-prestador-atomica.sql` para o banco
+  vivo (idempotente, `create or replace function`).
+- Repositório ganha `estenderMensalidadePrestador(usuarioId, dias | null)`:
+  o postgres chama a RPC atômica; a memória (demonstração) mantém a mesma
+  aritmética em JS, que é segura por ser single-thread. `definirMensalidade
+  ValidaAte` continua como setter cru (usado por teste de setup).
+- `estenderMensalidade` e `revogarMensalidade` passam a chamar a nova função,
+  deixando de ler-computar-gravar. O 404 de "sem perfil de prestador" é
+  preservado (a função devolve zero linhas).
+
+**Feito (06/10):**
+
+- `estender_mensalidade_prestador` adicionada ao `supabase/schema.sql`, no
+  mesmo bloco de `estender_mensalidade_vaga`, com `set search_path = public,
+  pg_temp` (o teste de `search_path` em `schema.test.ts` cobre a função nova
+  automaticamente) e sem `security definer`.
+- Migração `supabase/aplica-mensalidade-prestador-atomica.sql` (idempotente),
+  para rodar à mão no SQL Editor antes do deploy.
+- `estenderMensalidadePrestador(usuarioId, dias | null)` no contrato
+  (`repositories/tipos.ts`), no postgres (RPC atômica) e na memória (mesma
+  aritmética em JS). `estenderMensalidade` e `revogarMensalidade` deixaram de
+  ler-computar-gravar; o 404 de "sem perfil" é preservado.
+- Testes: cinco casos da função SQL num Postgres real (`schema.test.ts` —
+  estende de agora, soma ao prazo futuro, parte de agora quando vencida,
+  revoga com `null`, zero linhas sem perfil) e três do método do repositório
+  (`repositorio-postgres.test.ts` — chama a RPC com `p_usuario`/`p_dias`,
+  revoga com `null`, devolve `false` sem linha). Os de
+  `prestadores-mensalidade.test.ts` seguem provando a aritmética no caminho
+  de memória, inalterados.
+
+**Resultado:** `npm run verify` verde — 1820 testes (os 8 novos incluídos),
+cobertura acima do piso. A mensalidade do prestador agora é imune à corrida
+por construção, como o plano de vaga.
+
+> **Lembrete de operação:** a função nova é `create or replace`, então o
+> `schema.sql` num banco limpo já a traz. Num banco **vivo**, rode
+> `supabase/aplica-mensalidade-prestador-atomica.sql` no SQL Editor antes do
+> deploy — sem ela, a RPC responde "função não existe" e estender a
+> mensalidade (parcela aprovada, teste grátis, estorno) falha.

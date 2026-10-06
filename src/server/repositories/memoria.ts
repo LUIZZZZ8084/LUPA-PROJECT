@@ -249,6 +249,41 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.prestadores.set(usuarioId, { ...perfil, mensalidadeValidaAte: ate });
   }
 
+  /**
+   * A mesma conta da função SQL (#348), em JS. Aqui o ler-computar-gravar é
+   * seguro porque a demonstração roda num processo só, sem a concorrência
+   * que o banco enfrenta — o que importa é o resultado bater com o do SQL.
+   */
+  async estenderMensalidadePrestador(
+    usuarioId: string,
+    dias: number | null,
+  ): Promise<boolean> {
+    const perfil = this.prestadores.get(usuarioId);
+    if (!perfil) return false;
+
+    if (dias === null) {
+      this.prestadores.set(usuarioId, {
+        ...perfil,
+        mensalidadeValidaAte: null,
+      });
+      return true;
+    }
+
+    const agora = Date.now();
+    const base = perfil.mensalidadeValidaAte
+      ? Math.max(agora, new Date(perfil.mensalidadeValidaAte).getTime())
+      : agora;
+    const novaValidade = new Date(
+      base + dias * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    this.prestadores.set(usuarioId, {
+      ...perfil,
+      mensalidadeValidaAte: novaValidade,
+    });
+    return true;
+  }
+
   async definirGeradorCurriculoLiberado(
     usuarioId: string,
     liberado: boolean,

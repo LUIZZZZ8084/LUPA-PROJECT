@@ -53,7 +53,13 @@ function construtor(tabela: string) {
 
 vi.mock("@/lib/supabase/service", () => ({
   temChaveDeServico: true,
-  clienteDeServico: () => ({ from: (tabela: string) => construtor(tabela) }),
+  clienteDeServico: () => ({
+    from: (tabela: string) => construtor(tabela),
+    rpc: (funcao: string, args: unknown) => {
+      chamadas.push({ tabela: `rpc:${funcao}`, metodo: "rpc", args: [args] });
+      return Promise.resolve(resposta);
+    },
+  }),
 }));
 
 import { RepositorioPostgres } from "@/server/repositories/postgres";
@@ -570,6 +576,32 @@ describe("gravação de perfil", () => {
     expect(update?.args[0]).toEqual({
       mensalidade_valida_ate: "2026-10-01T00:00:00.000Z",
     });
+  });
+
+  it("prestador: estende a mensalidade pela função atômica do banco", async () => {
+    resposta = { data: [LINHA], error: null };
+
+    const estendeu = await repo.estenderMensalidadePrestador(ID, 30);
+
+    expect(estendeu).toBe(true);
+    const rpc = chamadas.find((c) => c.metodo === "rpc");
+    expect(rpc?.tabela).toBe("rpc:estender_mensalidade_prestador");
+    expect(rpc?.args[0]).toEqual({ p_usuario: ID, p_dias: 30 });
+  });
+
+  it("prestador: revogar manda p_dias nulo pela mesma função", async () => {
+    resposta = { data: [LINHA], error: null };
+
+    await repo.estenderMensalidadePrestador(ID, null);
+
+    const rpc = chamadas.find((c) => c.metodo === "rpc");
+    expect(rpc?.args[0]).toEqual({ p_usuario: ID, p_dias: null });
+  });
+
+  it("prestador: sem linha devolvida, a extensão foi para quem não tem perfil", async () => {
+    resposta = { data: [], error: null };
+
+    expect(await repo.estenderMensalidadePrestador(ID, 30)).toBe(false);
   });
 
   it("candidato: liga e desliga o gerador de currículo", async () => {

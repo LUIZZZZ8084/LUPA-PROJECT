@@ -378,6 +378,25 @@ export interface RepositorioUsuarios {
   ): Promise<void>;
 
   /**
+   * Estende a mensalidade do prestador **de forma atômica** (#348).
+   *
+   * A conta — `max(agora, prazo atual) + dias`, para quem renova antes de
+   * vencer não perder os dias já pagos — acontece dentro de uma instrução
+   * do banco, e não lendo-computando-gravando na aplicação: duas extensões
+   * concorrentes para o mesmo prestador leriam a mesma base e uma se
+   * perderia. É o mesmo cuidado de `creditar_vaga` e da mensalidade do
+   * plano de vaga.
+   *
+   * `dias = null` revoga (o estorno tira a mensalidade na hora). Devolve
+   * `false` quando não há perfil de prestador — o serviço traduz isso no
+   * 404 de sempre.
+   */
+  estenderMensalidadePrestador(
+    usuarioId: string,
+    dias: number | null,
+  ): Promise<boolean>;
+
+  /**
    * Liga ou desliga o gerador de currículo (#47) — compra única, sem data
    * de validade para gravar, ao contrário da mensalidade.
    */
