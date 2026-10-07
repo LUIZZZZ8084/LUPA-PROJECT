@@ -1,24 +1,26 @@
 import {
   ArrowRight,
   BadgeCheck,
+  Briefcase,
   Building2,
   MapPin,
   MessageCircle,
   ShieldCheck,
   Star,
   Users,
+  Wrench,
 } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
+import { BannerDaHome } from "@/components/banner-da-home";
 import { BuscaDoHero } from "@/components/busca-do-hero";
 import { JobCard } from "@/components/job-card";
 import { PageShell } from "@/components/layout/page-shell";
 import { Reveal } from "@/components/motion/reveal";
-import { ProviderCard } from "@/components/provider-card";
+import { ProfissionaisEmLinha } from "@/components/profissionais-em-linha";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { UFS } from "@/lib/cidades";
-import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
 import { getHomeFeed } from "@/lib/data";
 import { formatPrecoBRL } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
@@ -84,27 +86,6 @@ export default async function HomePage() {
   const terceiroCard = cardDeServico(sessao?.papel, Boolean(sessao));
 
   /*
-   * Os atalhos do hero são categorias, não termos soltos: cada um chega à
-   * lista já no filtro de categoria que ela tem, e o valor da URL é o que o
-   * filtro espera (nome na vaga, slug no serviço).
-   */
-  const atalhos = {
-    vagas: JOB_CATEGORIES.slice(0, 4).map((c) => ({
-      rotulo: c,
-      href: `/vagas?categoria=${encodeURIComponent(c)}`,
-    })),
-    servicos: ["diarista", "eletricista", "pintor", "encanador"].flatMap(
-      (slug) => {
-        const c = SERVICE_CATEGORIES.find((s) => s.slug === slug);
-        return c
-          ? [{ rotulo: c.name, href: `/servicos?categoria=${c.slug}` }]
-          : [];
-      },
-    ),
-  };
-  const mais = (aoMenos: boolean) => (aoMenos ? "mais de " : "");
-
-  /*
    * O JSON-LD é assinado com o mesmo nonce da CSP (#223) — sem ele, a
    * política de script-src recusaria este `<script>` do mesmo jeito que
    * recusaria um script de verdade. `type="application/ld+json"` não roda
@@ -135,67 +116,70 @@ export default async function HomePage() {
       />
 
       <section className="aurora border-b border-line">
-        <div className="mx-auto max-w-4xl px-4 pt-10 pb-12 sm:px-6 sm:pt-16">
-          {/*
-           * O pino de localização promete "aqui é onde você está" — e até
-           * a #107 dizia sempre "Mato Grosso · começando por Sinop",
-           * pra quem quer que fosse, de qualquer cidade. `origemDoUsuario()`
-           * já lê a cidade da conta para ordenar a busca por perto; usar o
-           * mesmo valor aqui é a diferença entre um selo de abrangência e
-           * uma promessa que o ícone já fazia sem cumprir.
-           *
-           * Sem sessão (a home é pública desde a #241), ou com uma conta
-           * sem cidade, o selo diz o alcance do app — o Brasil inteiro desde
-           * a #301 — em vez de mostrar um pino sem legenda. A cidade já é
-           * gravada com o estado ("Sinop - MT"), então não há rótulo a
-           * montar.
-           */}
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
-            <MapPin size={12} className="text-vagas" />
-            {origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
-          </span>
+        <div className="mx-auto max-w-4xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
+          <BannerDaHome />
 
-          <h1 className="mt-5 text-[2rem] leading-[1.1] font-bold tracking-tight sm:text-5xl">
-            O que você está procurando
-            <br />
-            <span className="text-vagas">aqui perto?</span>
-          </h1>
-
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted sm:text-base">
-            Vagas de emprego e prestadores de serviço na sua região, com contato
-            direto pelo WhatsApp.
-          </p>
+          <div className="mt-4 sm:mt-6">
+            {/*
+             * O pino de localização promete "aqui é onde você está" — e até
+             * a #107 dizia sempre "Mato Grosso · começando por Sinop",
+             * pra quem quer que fosse, de qualquer cidade. `origemDoUsuario()`
+             * já lê a cidade da conta para ordenar a busca por perto; usar o
+             * mesmo valor aqui é a diferença entre um selo de abrangência e
+             * uma promessa que o ícone já fazia sem cumprir.
+             *
+             * Sem sessão (a home é pública desde a #241), ou com uma conta
+             * sem cidade, o selo diz o alcance do app — o Brasil inteiro
+             * desde a #301 — em vez de mostrar um pino sem legenda. A cidade
+             * já é gravada com o estado ("Sinop - MT"), então não há rótulo
+             * a montar.
+             */}
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
+              <MapPin size={12} className="text-vagas" />
+              {origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
+            </span>
+          </div>
 
           <BuscaDoHero
             ufs={UFS.map((u) => ({ sigla: u.sigla, nome: u.nome }))}
-            atalhos={atalhos}
             visitante={!sessao}
           />
 
-          <p className="mt-6 text-xs text-muted">
-            {mais(totals.jobsAoMenos)}
-            {totals.jobs} vagas abertas · {mais(totals.providersAoMenos)}
-            {totals.providers} profissionais
-          </p>
+          <FaixaDeNumeros
+            vagas={totals.jobs}
+            vagasAoMenos={totals.jobsAoMenos}
+            profissionais={totals.providers}
+            profissionaisAoMenos={totals.providersAoMenos}
+          />
 
-          <div className="mt-3 max-w-sm">
-            <ActionCard
-              href={terceiroCard.href}
-              icon={<Users size={20} />}
-              title={terceiroCard.titulo}
-              subtitle={terceiroCard.legenda}
-              tone="empresas"
-            />
-          </div>
+          {/*
+           * Para quem não tem conta, o card de conta fica aqui no alto, que
+           * é onde converte (#241). Para quem já entrou, ele é um atalho
+           * para o próprio perfil, e vai para o fim da lista.
+           */}
+          {!sessao && (
+            <div className="mt-3 max-w-sm">
+              <CardDeConta card={terceiroCard} />
+            </div>
+          )}
         </div>
       </section>
 
       <PageShell>
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+        <div className="space-y-8">
+          {/*
+           * No celular as vagas rolam para o lado, uma e meia à vista, para
+           * dizer que há mais sem ocupar a tela. A partir de `sm` viram a
+           * grade de duas colunas, porque rolagem lateral no desktop é pior
+           * que ver as quatro de uma vez. O respiro vertical (`py-2` com
+           * `-my-2`) é para a sombra e a subida do card no hover não serem
+           * cortadas pelo `overflow`.
+           */}
           <FeedSection
             title="Vagas em destaque"
             href="/vagas"
             accent="text-vagas"
+            listaClassName="no-scrollbar stagger -mx-4 -my-2 flex scroll-px-4 snap-x snap-mandatory gap-3 overflow-x-auto px-4 py-2 grid-cols-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0"
             vazio={
               jobs.length === 0 && (
                 <Vazio
@@ -207,7 +191,11 @@ export default async function HomePage() {
             }
           >
             {jobs.map((job) => (
-              <JobCard key={job.id} job={job} />
+              <JobCard
+                key={job.id}
+                job={job}
+                className="w-[17rem] flex-none snap-start sm:w-auto"
+              />
             ))}
           </FeedSection>
 
@@ -215,6 +203,7 @@ export default async function HomePage() {
             title="Profissionais bem avaliados"
             href="/servicos"
             accent="text-servicos"
+            listaClassName=""
             vazio={
               providers.length === 0 && (
                 <Vazio
@@ -225,90 +214,19 @@ export default async function HomePage() {
               )
             }
           >
-            {providers.map((provider) => (
-              <ProviderCard
-                key={provider.profile_id}
-                provider={provider}
-                autenticado={Boolean(sessao)}
-              />
-            ))}
+            <ProfissionaisEmLinha providers={providers} />
           </FeedSection>
+
+          {sessao && (
+            <div className="max-w-sm">
+              <CardDeConta card={terceiroCard} />
+            </div>
+          )}
         </div>
 
-        {/* Confiança — o que faz alguém contratar um desconhecido */}
-        <Reveal>
-          {/*
-            Este bloco anunciava três verificações que o produto não entrega
-            (#237), na tela onde alguém decide deixar um estranho entrar em
-            casa.
-
-            "Telefone verificado" não existe — nada no código escreve
-            `telefone_verificado = true`, e os 14 perfis que exibiam o selo
-            em produção eram todos do seed. "Identidade confirmada" é a
-            alegação mais forte possível e a mais falsa: CPF válido e único
-            não prova que o documento é de quem o digitou, como os próprios
-            Termos de Uso dizem. E "a experiência de quem já contratou"
-            descrevia 17 avaliações das quais 16 eram semeadas — e nada liga
-            avaliação a contratação.
-
-            O que ficou é o que de fato é conferido, **com o alcance de cada
-            conferência dito junto**. Selo que promete mais do que confere
-            substitui o cuidado da pessoa por uma garantia que ninguém deu —
-            e é pior que selo nenhum, porque ela para de olhar.
-          */}
-          <Panel className="mt-10">
-            <h2 className="text-lg font-bold">
-              O que a gente <span className="text-vagas">confere</span>
-            </h2>
-            <p className="mt-1.5 max-w-lg text-sm text-muted">
-              E o que cada conferência prova, para você saber o que ainda
-              depende de você antes de contratar alguém.
-            </p>
-
-            <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-4">
-              <TrustItem
-                icon={<BadgeCheck size={22} />}
-                title="CNPJ na Receita"
-                description="Conferimos que a empresa existe e está ativa"
-              />
-              <TrustItem
-                icon={<ShieldCheck size={22} />}
-                title="Um CPF, uma conta"
-                description="Válido e sem repetir — não prova de quem é"
-              />
-              <TrustItem
-                icon={<Star size={22} />}
-                title="Uma avaliação por pessoa"
-                description="E ninguém avalia a si mesmo"
-              />
-              <TrustItem
-                icon={<MessageCircle size={22} />}
-                title="Gente daqui"
-                description="Da sua cidade e da sua região"
-              />
-            </div>
-
-            {/*
-              A frase que faltava.
-
-              Nenhuma das quatro conferências prova quem a pessoa é, e quem
-              vai abrir a porta de casa merece saber disso antes, não depois.
-              Sem alarde: produtor rural e autônomo contratam de verdade, e
-              tratar todo mundo como suspeito afastaria justamente quem o app
-              existe para atender.
-            */}
-            <p className="mt-5 border-t border-line pt-4 text-xs leading-relaxed text-muted">
-              Nada disso prova quem a pessoa é. Combine o primeiro encontro num
-              lugar movimentado, confira o serviço antes de pagar, e desconfie
-              de quem cobra qualquer taxa para você se candidatar — isso não
-              existe na Lupa.
-            </p>
-          </Panel>
-        </Reveal>
-
         {/* Chamada para empresas */}
-        <Reveal delay={60}>
-          <Panel className="mt-5 border-empresas/25 bg-gradient-to-br from-empresas/8 to-transparent">
+        <Reveal>
+          <Panel className="mt-10 border-empresas/25 bg-gradient-to-br from-empresas/8 to-transparent">
             <div className="flex flex-wrap items-center justify-between gap-5">
               <div className="flex items-start gap-4">
                 <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-empresas/15 text-empresas">
@@ -342,6 +260,73 @@ export default async function HomePage() {
         </Reveal>
 
         {/*
+          Confiança, no fim da página (#378).
+
+          Este bloco ficava logo depois das vagas, e fechava com frases de
+          alerta — "nada disso prova quem a pessoa é", "combine num lugar
+          movimentado", "desconfie de quem cobra taxa" — para quem acabou de
+          chegar. Primeira impressão não é lugar de aviso. Foi para o fim, e o
+          texto passou a dizer o que a Lupa faz, em linguagem de conversa.
+
+          **O que não mudou é o que ele afirma.** Ele anunciava verificações
+          que o produto não entrega (#237): "telefone verificado" não existe,
+          "identidade confirmada" é a alegação mais forte e a mais falsa — CPF
+          válido e único não prova que o documento é de quem o digitou, como
+          os Termos de Uso dizem — e a avaliação não se liga a nenhuma
+          contratação. Só entra aqui o que de fato é conferido: o CNPJ na
+          Receita, um CPF por conta, uma avaliação por pessoa. A trava é o
+          teste `promessas-da-tela`.
+
+          **A divisão de responsabilidade continua dita, sem tom de suspeita.**
+          A frase alarmante dizia, no fundo, que a Lupa confere o cadastro e
+          que o acerto é entre as pessoas. Isso agora é a última linha, em
+          tom de combinado: produtor rural e autônomo contratam de verdade, e
+          tratar todo mundo como suspeito afastaria justamente quem o app
+          existe para atender. O aviso jurídico, de que nenhuma conferência
+          prova quem a pessoa é, segue nos Termos de Uso.
+        */}
+        <Reveal delay={60}>
+          <Panel className="mt-5">
+            <h2 className="text-lg font-bold">
+              O que a gente <span className="text-vagas">confere</span> por você
+            </h2>
+            <p className="mt-1.5 max-w-lg text-sm text-muted">
+              Cuidados que a Lupa já toma, para você procurar e contratar com
+              mais tranquilidade.
+            </p>
+
+            <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-4">
+              <TrustItem
+                icon={<BadgeCheck size={22} />}
+                title="Empresas de verdade"
+                description="Conferimos o CNPJ na Receita: a empresa existe e está ativa"
+              />
+              <TrustItem
+                icon={<ShieldCheck size={22} />}
+                title="Uma conta por pessoa"
+                description="Cada CPF vale uma conta só, e ele precisa ser válido"
+              />
+              <TrustItem
+                icon={<Star size={22} />}
+                title="Uma avaliação por pessoa"
+                description="Cada um avalia uma vez, e ninguém avalia a si mesmo"
+              />
+              <TrustItem
+                icon={<MessageCircle size={22} />}
+                title="Gente daqui"
+                description="O que está mais perto de você aparece primeiro"
+              />
+            </div>
+
+            <p className="mt-5 border-t border-line pt-4 text-xs leading-relaxed text-muted">
+              A Lupa confere o cadastro. O resto você combina direto com a outra
+              pessoa, pelo WhatsApp: valor, prazo e detalhes. E se candidatar é
+              grátis.
+            </p>
+          </Panel>
+        </Reveal>
+
+        {/*
          * Direitos autorais, não área de cobertura.
          *
          * Dizia "aberto a todo o Mato Grosso · começamos por Sinop" — a
@@ -358,6 +343,87 @@ export default async function HomePage() {
         </p>
       </PageShell>
     </>
+  );
+}
+
+/** O card de conta, do jeito que o papel pede (ver `cardDeServico`). */
+function CardDeConta({
+  card,
+}: {
+  card: { href: string; titulo: string; legenda: string };
+}) {
+  return (
+    <ActionCard
+      href={card.href}
+      icon={<Users size={20} />}
+      title={card.titulo}
+      subtitle={card.legenda}
+      tone="empresas"
+    />
+  );
+}
+
+/**
+ * Quantas vagas e quantos profissionais há, cada número um link para a
+ * lista (#372).
+ *
+ * `aoMenos` é o "mais de" que a contagem já carregava: quando a consulta
+ * bate no teto, o número é um piso, e escrever "100" seria afirmar uma
+ * conta que ninguém fez. Aqui vira "100+".
+ */
+function FaixaDeNumeros({
+  vagas,
+  vagasAoMenos,
+  profissionais,
+  profissionaisAoMenos,
+}: {
+  vagas: number;
+  vagasAoMenos: boolean;
+  profissionais: number;
+  profissionaisAoMenos: boolean;
+}) {
+  return (
+    <div className="mt-4 grid max-w-2xl grid-cols-2 divide-x divide-vagas/20 overflow-hidden rounded-2xl bg-vagas/10">
+      <NumeroLink
+        href="/vagas"
+        icone={<Briefcase size={24} className="text-vagas" />}
+        numero={`${vagas}${vagasAoMenos ? "+" : ""}`}
+        rotulo="vagas abertas"
+      />
+      <NumeroLink
+        href="/servicos"
+        icone={<Wrench size={24} className="text-servicos" />}
+        numero={`${profissionais}${profissionaisAoMenos ? "+" : ""}`}
+        rotulo="profissionais"
+      />
+    </div>
+  );
+}
+
+function NumeroLink({
+  href,
+  icone,
+  numero,
+  rotulo,
+}: {
+  href: string;
+  icone: React.ReactNode;
+  numero: string;
+  rotulo: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-vagas/10"
+    >
+      {icone}
+      <span className="flex flex-col leading-tight">
+        <span className="font-bold text-xl tabular-nums tracking-tight">
+          {numero}
+        </span>
+        <span className="text-muted text-xs">{rotulo}</span>
+      </span>
+    </Link>
   );
 }
 
@@ -415,11 +481,14 @@ function FeedSection({
   href,
   accent,
   vazio,
+  listaClassName,
   children,
 }: {
   title: string;
   href: string;
   accent: string;
+  /** Como a lista se organiza; por padrão, empilhada com entrada em cascata. */
+  listaClassName?: string;
   /**
    * O que aparece quando não há nada para listar (#302). Sem os dados de
    * exemplo, a vitrine de produção começa quase vazia — e uma seção só com
@@ -440,7 +509,11 @@ function FeedSection({
           <ArrowRight size={13} />
         </Link>
       </div>
-      {vazio || <div className="stagger space-y-2.5">{children}</div>}
+      {vazio || (
+        <div className={listaClassName ?? "stagger space-y-2.5"}>
+          {children}
+        </div>
+      )}
     </section>
   );
 }

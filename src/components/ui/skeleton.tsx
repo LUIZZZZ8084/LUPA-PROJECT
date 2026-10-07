@@ -49,9 +49,14 @@ export function SkeletonAvatar({
    ============================================================ */
 
 /** Espelha JobCard. */
-export function JobCardSkeleton() {
+export function JobCardSkeleton({ className }: { className?: string }) {
   return (
-    <div className="flex gap-3.5 rounded-[var(--radius-card)] border border-line bg-panel p-4">
+    <div
+      className={cn(
+        "flex gap-3.5 rounded-[var(--radius-card)] border border-line bg-panel p-4",
+        className,
+      )}
+    >
       <SkeletonAvatar square />
       <div className="min-w-0 flex-1 space-y-2">
         <SkeletonText w="w-3/4" className="h-4" />
@@ -81,6 +86,26 @@ export function ProviderCardSkeleton() {
         <SkeletonText w="w-3/5" className="h-2.5" />
       </div>
       <Skeleton className="h-10 w-10 flex-none self-center rounded-full" />
+    </div>
+  );
+}
+
+/**
+ * Espelha ProfissionaisEmLinha: quatro avatares, cada um com nome, ofício e
+ * nota. A altura (141 px) é a do conteúdo medido, com as três linhas de
+ * texto; sem a terceira, a tela baixaria 27 px quando os dados chegassem.
+ */
+export function ProfissionaisEmLinhaSkeleton() {
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i} className="flex flex-col items-center gap-1.5 px-1 py-2">
+          <SkeletonAvatar size="lg" />
+          <SkeletonText w="w-3/4" className="h-[15px]" />
+          <SkeletonText w="w-1/2" className="h-[14px]" />
+          <SkeletonText w="w-1/3" className="h-[14px]" />
+        </div>
+      ))}
     </div>
   );
 }

@@ -16,11 +16,19 @@ export function ProviderCard({
   provider: ProviderListing;
   className?: string;
   /**
-   * Falso só na home pública (#241), o único lugar onde este card renderiza
-   * sem sessão. `provider.phone` nunca entra no WhatsApp: entra num convite
-   * para o login, com o perfil como destino. Não é esconder o botão com
-   * CSS — o telefone simplesmente não é lido em nenhum JSX deste ramo, e
-   * como o componente é de servidor, o que não é lido não sai no HTML.
+   * Falso para renderizar o card sem sessão. `provider.phone` nunca entra no
+   * WhatsApp: entra num convite para o login, com o perfil como destino. Não
+   * é esconder o botão com CSS — o telefone simplesmente não é lido em
+   * nenhum JSX deste ramo, e como o componente é de servidor, o que não é
+   * lido não sai no HTML.
+   *
+   * **Hoje nenhuma tela usa o `false`.** A home o usava (#241) e deixou de
+   * usar o card na #372: ela mostra `ProfissionaisEmLinha`, que não lê
+   * telefone. As duas telas que ainda o usam, `/servicos` e o perfil, ficam
+   * atrás do login. A prop **fica**, e é de propósito: o padrão é `true`,
+   * então ela é o único caminho seguro para quem puser o card numa página
+   * pública sem lembrar disto. Tirá-la deixaria só o caminho que vaza o
+   * telefone de todos os prestadores.
    */
   autenticado?: boolean;
 }) {

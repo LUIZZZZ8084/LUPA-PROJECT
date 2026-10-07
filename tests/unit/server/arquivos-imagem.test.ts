@@ -10,6 +10,7 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import {
+  formatoDaImagem,
   ImagemIlegivel,
   reduzirImagem,
   TIPO_REDUZIDO,
@@ -177,4 +178,142 @@ describe("conteúdo", () => {
       ImagemIlegivel,
     );
   });
+});
+
+/**
+ * O tipo declarado é palpite, e o `sharp` lê mais formatos do que o app
+ * aceita (#368). O que se cobra aqui é a assinatura real do arquivo, antes
+ * de qualquer decodificador.
+ */
+describe("o formato de verdade", () => {
+  async function quadrado() {
+    return sharp({
+      create: { width: 40, height: 40, channels: 3, background: "#3f6810" },
+    });
+  }
+
+  const SVG = new TextEncoder().encode(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">' +
+      '<rect width="64" height="64" fill="#3f6810"/></svg>',
+  );
+
+  it("JPEG, PNG e WebP de verdade são reconhecidos e reduzidos", async () => {
+    const por = {
+      jpeg: new Uint8Array(await (await quadrado()).jpeg().toBuffer()),
+      png: new Uint8Array(await (await quadrado()).png().toBuffer()),
+      webp: new Uint8Array(await (await quadrado()).webp().toBuffer()),
+    } as const;
+
+    for (const [formato, bytes] of Object.entries(por)) {
+      expect(formatoDaImagem(bytes), formato).toBe(formato);
+      const saida = await reduzirImagem(bytes, "avatar");
+      expect((await medir(saida)).format, formato).toBe("webp");
+    }
+  });
+
+  /**
+   * O defeito: um SVG enviado como `image/png` passava pela checagem de
+   * tipo, o `sharp` o decodificava, e ele chegava à librsvg. O teste prova
+   * os dois lados — que `sharp` o leria (senão o teste não vigia nada) e
+   * que `reduzirImagem` o recusa.
+   */
+  it("SVG disfarçado de foto é recusado, ainda que o sharp o leia", async () => {
+    expect((await medir(SVG)).format).toBe("svg");
+
+    expect(formatoDaImagem(SVG)).toBeNull();
+    await expect(reduzirImagem(SVG, "avatar")).rejects.toBeInstanceOf(
+      ImagemIlegivel,
+    );
+  });
+
+  it.each([
+    ["GIF", async () => (await quadrado()).gif().toBuffer()],
+    ["TIFF", async () => (await quadrado()).tiff().toBuffer()],
+  ] as const)(
+    "%s, que o sharp lê e o app não aceita, é recusado",
+    async (_nome, gerar) => {
+      const bytes = new Uint8Array(await gerar());
+
+      expect(formatoDaImagem(bytes)).toBeNull();
+      await expect(reduzirImagem(bytes, "logo")).rejects.toBeInstanceOf(
+        ImagemIlegivel,
+      );
+    },
+  );
+
+  it("arquivo vazio, curto ou RIFF que não é WebP é recusado", () => {
+    expect(formatoDaImagem(new Uint8Array())).toBeNull();
+    expect(formatoDaImagem(new Uint8Array([0xff, 0xd8]))).toBeNull();
+    // RIFF de áudio (WAVE): mesmo começo do WebP, outro arquivo.
+    const wav = new TextEncoder().encode("RIFF    WAVEfmt ");
+    expect(formatoDaImagem(wav)).toBeNull();
+  });
+});
+
+/**
+ * Arquivo com a assinatura de um formato aceito e um SVG logo depois (#370).
+ *
+ * A conferência de bytes do #368 barra o disfarce comum, mas deixa passar
+ * quem começa certo e esconde o resto. Medido com o `sharp` 0.35.5, isso não
+ * chega ao leitor de SVG: o libvips escolhe o leitor pela assinatura do
+ * começo, o do JPEG, do PNG ou do WebP recebe o arquivo e o recusa por
+ * cabeçalho corrompido.
+ *
+ * Essa proteção não é nossa, é do libvips, e pode mudar numa atualização do
+ * `sharp`. Por isso há dois testes por arquivo: o primeiro vigia o `sharp`
+ * sozinho — se ele um dia passar a ler SVG escondido, reprova aqui, na CI —,
+ * e o segundo vigia `reduzirImagem`.
+ */
+describe("assinatura aceita com SVG escondido", () => {
+  const SVG =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">' +
+    '<rect width="64" height="64" fill="#3f6810"/></svg>';
+
+  function juntar(...partes: (string | number[])[]) {
+    return new Uint8Array(
+      Buffer.concat(
+        partes.map((p) =>
+          typeof p === "string" ? Buffer.from(p, "latin1") : Buffer.from(p),
+        ),
+      ),
+    );
+  }
+
+  const CASOS = [
+    ["assinatura de JPEG", juntar([0xff, 0xd8, 0xff, 0xe0], SVG)],
+    [
+      "assinatura de PNG",
+      juntar([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], SVG),
+    ],
+    ["assinatura de WebP", juntar("RIFF", [0, 0, 0, 0], "WEBP", SVG)],
+    [
+      "assinatura de JPEG e 1.000 bytes de espaço antes do SVG",
+      juntar([0xff, 0xd8, 0xff, 0xe0], " ".repeat(1000), SVG),
+    ],
+  ] as const;
+
+  it("o ponto de partida: o SVG puro é lido pelo sharp", async () => {
+    // Sem isto os testes abaixo não vigiam nada: se o sharp deixasse de ler
+    // SVG, todo arquivo "recusado" seria recusado por outro motivo.
+    expect((await medir(juntar(SVG))).format).toBe("svg");
+  });
+
+  it.each(CASOS)(
+    "%s: o sharp recusa, e não lê como SVG",
+    async (_nome, bytes) => {
+      await expect(sharp(bytes).metadata()).rejects.toThrow();
+      await expect(
+        sharp(bytes).resize({ width: 32 }).webp().toBuffer(),
+      ).rejects.toThrow();
+    },
+  );
+
+  it.each(CASOS)(
+    "%s: reduzirImagem recusa com ImagemIlegivel",
+    async (_nome, bytes) => {
+      await expect(reduzirImagem(bytes, "avatar")).rejects.toBeInstanceOf(
+        ImagemIlegivel,
+      );
+    },
+  );
 });
