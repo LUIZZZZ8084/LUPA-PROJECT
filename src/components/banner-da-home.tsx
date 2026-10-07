@@ -14,15 +14,29 @@ import Image from "next/image";
  * claro usava a foto com o fundo da arte, e o escuro, o homem recortado
  * sobre faixas em CSS. Quem alternava o tema via o banner trocar de forma, e
  * isso incomoda (#378). Agora há uma foto só, o homem recortado do fundo
- * (`public/banner/trabalhador-recortado.webp`, WebP com transparência), sobre as
- * mesmas duas faixas inclinadas, com a mesma posição e as mesmas medidas.
- * Fundo, borda, faixas e texto vêm de variáveis (`--banner-*`, em
+ * (`public/banner/trabalhador-recortado-v2.webp`, WebP com transparência),
+ * sobre as mesmas duas faixas inclinadas, com a mesma posição e as mesmas
+ * medidas. Fundo, borda, faixas e texto vêm de variáveis (`--banner-*`, em
  * `globals.css`), como o degradê da logo.
  *
- * **O arquivo tem nome novo de propósito.** O otimizador de imagens do Next
- * guarda o resultado pelo endereço, e trocar o conteúdo de
- * `trabalhador.webp` mantendo o nome serviria a foto antiga a quem já tivesse
- * aberto a home, no desenvolvimento e em produção. Nome novo, endereço novo.
+ * **A foto é cortada acima do vão entre os antebraços (#382).** O recorte
+ * original deixava um buraco transparente de uns 20 × 10 px entre os braços,
+ * aberto para a borda de baixo. A foto fica encostada embaixo, então o que
+ * está atrás, a faixa e o fundo do tema, aparecia por ali, e a cor mudava
+ * com o tema. O arquivo termina antes do vão: 435 × 476, e não 435 × 494.
+ *
+ * **O arquivo tem nome novo de propósito**, a cada troca de conteúdo. O
+ * otimizador de imagens do Next guarda o resultado pelo endereço, e trocar o
+ * conteúdo mantendo o nome serviria a foto antiga a quem já tivesse aberto a
+ * home, no desenvolvimento e em produção. Nome novo, endereço novo.
+ *
+ * **O pé da foto some num desfoque discreto.** Cortada, a foto termina seca na
+ * borda do banner, com os braços interrompidos. Por cima dela, uma camada com
+ * a mesma caixa (mesma altura, mesma proporção 435 × 476, colada à direita e
+ * embaixo) borra o que está atrás, mais forte na borda e some uns 11% acima
+ * dela (`backdrop-filter` com máscara, 2 px de raio). Não tem cor: borra pixels, não pinta
+ * nenhum, então é a mesma nos dois temas. Onde o navegador não sabe fazer
+ * isso, a camada simplesmente não aparece e a foto fica como estava.
  *
  * A foto é decorativa (`alt=""`): ela não informa nada que o texto não diga.
  */
@@ -48,13 +62,18 @@ export function BannerDaHome() {
       </div>
 
       <Image
-        src="/banner/trabalhador-recortado.webp"
+        src="/banner/trabalhador-recortado-v2.webp"
         alt=""
         width={435}
-        height={494}
+        height={476}
         priority
-        sizes="(min-width: 640px) 240px, 141px"
+        sizes="(min-width: 640px) 248px, 146px"
         className="absolute right-0 bottom-0 h-full w-auto max-w-none"
+      />
+      <div
+        aria-hidden
+        data-desfoque-do-pe
+        className="pointer-events-none absolute right-0 bottom-0 aspect-[435/476] h-full backdrop-blur-[2px] [mask-image:linear-gradient(to_top,black,transparent_11%)]"
       />
     </section>
   );

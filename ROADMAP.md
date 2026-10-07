@@ -14,6 +14,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 07/10/2026:
 
+- A foto do banner da home não deixa mais o fundo aparecer entre os braços
+  do homem. O recorte tinha um vão transparente de uns 20 × 10 px no pé da
+  imagem, aberto para a borda de baixo; como a foto fica encostada embaixo, a
+  faixa atravessava por ali, e a cor mudava com o tema. A foto agora termina
+  acima do vão (435 × 476, com nome de arquivo novo para não servir a antiga
+  do cache de imagens), e um teste confere, nos pixels do arquivo, que o pé é
+  uma faixa contínua. O pé da foto também ganha um desfoque discreto (2 px,
+  só nos últimos ~11% da altura), para os braços não terminarem num corte
+  seco; não tem cor, então é igual nos dois temas —
+  [#382](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/382)
 - A busca do hero oferece a cidade logo depois do estado, com "Todas as
   cidades" (o estado inteiro) como padrão. As cidades chegam sob demanda, só
   as do estado escolhido, pelo mesmo gancho dos formulários

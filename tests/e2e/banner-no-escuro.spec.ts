@@ -105,6 +105,44 @@ test.describe("banner da home, os dois temas", () => {
     });
 
     /**
+     * O desfoque do pé da foto (#382) tem de existir de verdade, e estar
+     * exatamente sobre a foto: o navegador aplicou o `backdrop-filter`, e a
+     * caixa da camada é a da foto, no tema e no tamanho de tela que for.
+     */
+    test(`o desfoque do pé cobre a foto, no tema ${tema}`, async ({ page }) => {
+      await abrirNo(page, tema);
+
+      const { filtro, mascara, desfoque, foto } = await page.evaluate(() => {
+        const banner = document.querySelector("section:has(h1)");
+        const camada = banner?.querySelector("[data-desfoque-do-pe]");
+        const img = banner?.querySelector("img");
+        const caixa = (e: Element | null | undefined) => {
+          const r = e?.getBoundingClientRect();
+          return r
+            ? [r.x, r.y, r.width, r.height].map((n) => Math.round(n))
+            : null;
+        };
+        const estilo = camada ? getComputedStyle(camada) : null;
+        return {
+          filtro: estilo?.backdropFilter ?? "",
+          mascara: estilo?.maskImage ?? "",
+          desfoque: caixa(camada),
+          foto: caixa(img),
+        };
+      });
+
+      expect(filtro).toContain("blur(");
+      expect(mascara).toContain("linear-gradient");
+      expect(desfoque).not.toBeNull();
+      // Mesma caixa, com 1 px de folga para o arredondamento.
+      for (let i = 0; i < 4; i++) {
+        expect(
+          Math.abs((desfoque?.[i] ?? 0) - (foto?.[i] ?? 99)),
+        ).toBeLessThanOrEqual(1);
+      }
+    });
+
+    /**
      * O contraste do título e da frase sobre o fundo do tema. Só o banner é
      * medido: o resto da home no escuro tem a sua própria história, e uma
      * violação de fora não pode esconder uma de dentro nem o contrário.

@@ -34,7 +34,7 @@ describe("BannerDaHome", () => {
     expect(fotos).toHaveLength(1);
     expect(fotos[0]).toHaveAttribute("alt", "");
     expect(fotos[0].getAttribute("src")).toContain(
-      "trabalhador-recortado.webp",
+      "trabalhador-recortado-v2.webp",
     );
     expect(screen.queryAllByRole("img")).toHaveLength(0);
   });
@@ -56,13 +56,66 @@ describe("BannerDaHome", () => {
 
   it("as faixas e o texto pegam a cor das variáveis, e não de uma cor fixa", () => {
     const { container } = render(<BannerDaHome />);
-    const faixas = [...container.querySelectorAll("[aria-hidden]")].map(
-      (e) => e.className,
-    );
+    // As faixas são as decorações inclinadas; o desfoque do pé tem teste próprio.
+    const faixas = [...container.querySelectorAll("[aria-hidden]")]
+      .filter((e) => e.className.includes("skew-x"))
+      .map((e) => e.className);
 
     expect(faixas).toHaveLength(2);
     expect(faixas[0]).toContain("var(--banner-faixa-a)");
     expect(faixas[1]).toContain("var(--banner-faixa-b)");
+  });
+
+  /**
+   * O pé da foto some num desfoque discreto (#382). A camada tem de ser só
+   * decoração, ficar por cima da foto e ter a mesma caixa dela: se uma deixar
+   * de acompanhar a outra (a foto troca de proporção e a camada não), o
+   * desfoque cobre um pedaço errado do banner.
+   */
+  describe("desfoque do pé da foto", () => {
+    function camada() {
+      const { container } = render(<BannerDaHome />);
+      const foto = container.querySelector("img");
+      const desfoque = container.querySelector("[data-desfoque-do-pe]");
+      if (!foto || !desfoque) throw new Error("foto ou desfoque ausente");
+      return { container, foto, desfoque };
+    }
+
+    it("é decoração: fora da árvore de acessibilidade e sem pegar clique", () => {
+      const { desfoque } = camada();
+
+      expect(desfoque).toHaveAttribute("aria-hidden", "true");
+      expect(desfoque.className).toContain("pointer-events-none");
+    });
+
+    it("vem depois da foto, para ficar por cima dela, e abaixo do texto", () => {
+      const { container, foto, desfoque } = camada();
+      const ordem = [...(container.querySelector("section")?.children ?? [])];
+
+      expect(ordem.indexOf(desfoque)).toBeGreaterThan(ordem.indexOf(foto));
+      // O texto é `z-10`, a camada não tem z-index: o texto nunca é borrado.
+      expect(desfoque.className).not.toMatch(/(^|\s)z-/);
+    });
+
+    it("tem a mesma caixa da foto: colada à direita e embaixo, com a proporção do arquivo", () => {
+      const { foto, desfoque } = camada();
+      const largura = foto.getAttribute("width");
+      const altura = foto.getAttribute("height");
+
+      for (const classe of ["right-0", "bottom-0", "h-full"]) {
+        expect(desfoque.className).toContain(classe);
+        expect(foto.className).toContain(classe);
+      }
+      expect(desfoque.className).toContain(`aspect-[${largura}/${altura}]`);
+    });
+
+    it("borra, mas não pinta: nenhuma cor, então é a mesma nos dois temas", () => {
+      const { desfoque } = camada();
+
+      expect(desfoque.className).toContain("backdrop-blur-");
+      expect(desfoque.className).toContain("mask-image");
+      expect(desfoque.className).not.toMatch(/\bbg-|var\(--|text-|dark:/);
+    });
   });
 
   /**
