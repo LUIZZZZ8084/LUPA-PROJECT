@@ -10,10 +10,12 @@ import {
 } from "./password";
 import {
   conferirLimite,
+  consumirOrcamento,
   registrarFalha,
   registrarSucesso,
   reservarTentativa,
 } from "./rate-limit";
+import { LIMITE_DE_CONFLITOS_NO_CADASTRO } from "./rate-limit-tipos";
 import type { DadosCadastro, DadosLogin } from "./schemas";
 
 /**
@@ -48,6 +50,25 @@ export async function cadastrar(
   // Antes de qualquer trabalho: bloqueado não gasta Argon2 nem consulta.
   await conferirLimite(chave);
 
+  /*
+   * Quem testa se um e-mail, CPF ou CNPJ está cadastrado precisa de volume,
+   * e o limite acima só soma conta criada (#390). Os conflitos têm teto
+   * próprio, e origem já bloqueada por ele é recusada aqui, antes de
+   * qualquer consulta: senão continuaria perguntando e sendo respondida.
+   */
+  const chaveDeConflitos = `cadastro-conflito:${origem}`;
+  await conferirLimite(chaveDeConflitos);
+
+  /**
+   * Soma o conflito e devolve o erro para lançar. Passando do teto, quem
+   * lança é a recusa por excesso — o conflito deixa de ser dito, que é o
+   * ponto: a décima primeira pergunta não ganha resposta.
+   */
+  const conflito = async (mensagem: string, detalhe: string) => {
+    await consumirOrcamento(chaveDeConflitos, LIMITE_DE_CONFLITOS_NO_CADASTRO);
+    return erros.conflito(mensagem, detalhe);
+  };
+
   const jaExiste = await repo.porEmail(dados.email);
   if (jaExiste) {
     /*
@@ -55,7 +76,7 @@ export async function cadastrar(
      * pessoa fica tentando de novo sem entender. No login, o mesmo aviso
      * seria enumeração de contas; lá a mensagem é genérica.
      */
-    throw erros.conflito(
+    throw await conflito(
       "Já existe uma conta com este e-mail. Tente entrar.",
       "e-mail duplicado no cadastro",
     );
@@ -83,21 +104,21 @@ export async function cadastrar(
   }
 
   if (empresaViaCnpj && dados.cnpj && (await repo.cnpjEmUso(dados.cnpj))) {
-    throw erros.conflito(
+    throw await conflito(
       "Este CNPJ já está cadastrado. Entre com a conta existente.",
       "CNPJ duplicado",
     );
   }
 
   if (dados.papel !== "empresa" && (await repo.cpfEmUso(dados.cpf))) {
-    throw erros.conflito(
+    throw await conflito(
       "Este CPF já está cadastrado. Entre com a conta existente.",
       "CPF duplicado",
     );
   }
 
   if (empresaViaCpf && dados.cpf && (await repo.cpfEmUso(dados.cpf))) {
-    throw erros.conflito(
+    throw await conflito(
       "Este CPF já está cadastrado. Entre com a conta existente.",
       "CPF duplicado",
     );

@@ -1717,6 +1717,32 @@ aviso seria uma lista de quem tem conta — que aqui significa **quem está
 procurando emprego**, informação que pode custar o emprego atual de alguém.
 O tempo de resposta também é igualado (`gastarTempoDeVerificacao`).
 
+**O cadastro revela o conflito, e o volume de conflitos tem teto (#390).**
+A revelação do e-mail é decisão antiga; CPF e CNPJ vão na mesma linha: a
+pessoa que esqueceu que tinha conta precisa saber qual dado bateu. O que
+faltava era limite: o de criação (`cadastro:<origem>`, 5 por 15 minutos)
+só soma conta criada, e quem testa se um dado está cadastrado precisa de
+volume, não de contas. Decisão do Luiz em 07/10/2026, entre quatro opções:
+conflito de e-mail, CPF ou CNPJ conta num teto próprio por origem
+(`cadastro-conflito:<origem>`, 10 por 15 minutos). Passado o teto a resposta
+é "muitas tentativas" em vez do conflito, e origem já bloqueada é recusada
+**antes** de qualquer consulta — senão continuaria perguntando e sendo
+respondida. Quem cria conta com sucesso não gasta esse teto.
+
+Recusadas, e por quê. *Mensagem única para CPF e CNPJ:* não esconde nada,
+porque quem varia só o documento sabe qual bateu, e piora a mensagem para
+quem só esqueceu. *Confirmar por e-mail antes de criar, com resposta
+igual:* fecha a enumeração de verdade, mas o cadastro deixa de ser
+imediato, passa a depender do provedor de e-mail (100 por dia no plano
+grátis do Resend) e contradiz a decisão de que o e-mail não bloqueia nada
+(#227) — reconsiderar só se o problema aparecer medido.
+
+O que este teto **não** faz: não impede quem usa muitos IPs, só encarece, e
+não resolve o CPF ser conferido só pelo dígito — qualquer CPF válido pode
+ser ocupado por quem não é o dono, e a correção disso é a verificação paga
+da #120. A chave aparece como linha própria no painel de pressão (a view
+agrupa pelo texto antes do primeiro `:`), sem mudança de SQL.
+
 ### Polling, não websocket, no painel do admin
 
 Conexão aberta em serverless exige um serviço à parte, com custo e mais uma
