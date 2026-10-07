@@ -60,6 +60,11 @@ export class RepositorioLimitePostgres implements RepositorioLimite {
      * cron, a tabela cresceria com toda chave vista uma vez e nunca mais.
      * Falhar aqui não pode derrubar o login — o limite já foi aplicado.
      */
+    await this.limparVencidas();
+  }
+
+  async limparVencidas(): Promise<void> {
+    const supabase = await this.cliente();
     const limpeza = await supabase.rpc("limpar_tentativas_vencidas", {
       p_janela_segundos: CONFIG_LIMITE.JANELA_MS / 1000,
     });

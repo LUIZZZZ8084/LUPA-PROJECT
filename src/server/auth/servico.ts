@@ -8,7 +8,12 @@ import {
   gerarHash,
   precisaRehash,
 } from "./password";
-import { conferirLimite, registrarFalha, registrarSucesso } from "./rate-limit";
+import {
+  conferirLimite,
+  registrarFalha,
+  registrarSucesso,
+  reservarTentativa,
+} from "./rate-limit";
 import type { DadosCadastro, DadosLogin } from "./schemas";
 
 /**
@@ -226,18 +231,24 @@ export async function entrar(dados: DadosLogin): Promise<UsuarioPublico> {
   // Antes de qualquer trabalho: se está bloqueado, não gasta Argon2.
   await conferirLimite(chave);
 
+  /*
+   * A tentativa é reservada aqui, de forma atômica, e não registrada depois
+   * da verificação (#386): requisições simultâneas passavam todas pela
+   * conferência acima antes de a primeira falha ser registrada, e o teto de
+   * 5 virava uma rajada. A falha, portanto, já está contada; o sucesso zera.
+   */
+  await reservarTentativa(chave);
+
   const usuario = await repo.porEmail(dados.email);
 
   if (!usuario) {
     await gastarTempoDeVerificacao(dados.senha);
-    await registrarFalha(chave);
     throw credenciaisInvalidas("e-mail não encontrado");
   }
 
   const confere = await conferirSenha(dados.senha, usuario.senhaHash);
 
   if (!confere) {
-    await registrarFalha(chave);
     throw credenciaisInvalidas("senha incorreta");
   }
 

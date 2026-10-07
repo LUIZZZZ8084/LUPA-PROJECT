@@ -543,6 +543,44 @@ describe("cadastro e login", () => {
       expect(bloqueado.status).toBe(429);
     });
 
+    /**
+     * Antes (#386) o login conferia o bloqueio, gastava o Argon2 e só então
+     * registrava a falha: requisições simultâneas passavam todas pela
+     * conferência antes de a primeira falha ser registrada, e o teto virava
+     * uma rajada do tamanho da concorrência.
+     */
+    it("rajada simultânea de senhas erradas: só o teto chega à verificação (#386)", async () => {
+      const RAJADA = 20;
+      const resultados = await Promise.all(
+        Array.from({ length: RAJADA }, () =>
+          capturarErro(() =>
+            entrar(
+              validarOkLogin({ email: candidato.email, senha: "errada!!!" }),
+            ),
+          ),
+        ),
+      );
+
+      const verificadas = resultados.filter(
+        (e) => e.codigo !== "muitas_tentativas",
+      );
+      const recusadas = resultados.filter(
+        (e) => e.codigo === "muitas_tentativas",
+      );
+
+      expect(verificadas).toHaveLength(CONFIG_LIMITE.MAX_TENTATIVAS);
+      expect(recusadas).toHaveLength(RAJADA - CONFIG_LIMITE.MAX_TENTATIVAS);
+    });
+
+    /**
+     * A reserva bloqueia pela janela (`registrarUso` usa um número só para
+     * as duas coisas). Se a configuração separar os dois, este teste avisa
+     * antes de o bloqueio mudar sem ninguém ter decidido.
+     */
+    it("a janela e o bloqueio do login valem o mesmo tempo (#386)", () => {
+      expect(CONFIG_LIMITE.BLOQUEIO_MS).toBe(CONFIG_LIMITE.JANELA_MS);
+    });
+
     it("login bem-sucedido zera o contador", async () => {
       for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS - 1; i++) {
         await capturarErro(() =>

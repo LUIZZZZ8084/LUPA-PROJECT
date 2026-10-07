@@ -9,6 +9,7 @@ import {
   limparLimites,
   registrarFalha,
   registrarSucesso,
+  reservarTentativa,
 } from "@/server/auth/rate-limit";
 import { ehAppError } from "@/server/errors";
 
@@ -21,6 +22,38 @@ describe("limite de tentativas", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  /**
+   * A reserva soma e responde na mesma instrução (#386): com várias
+   * chamadas simultâneas, só o teto passa, e as outras são recusadas.
+   */
+  it("reservar: só o teto passa numa rajada simultânea (#386)", async () => {
+    const chave = "login:rajada@teste.lupa";
+    const resultados = await Promise.all(
+      Array.from({ length: 12 }, () =>
+        reservarTentativa(chave).then(
+          () => "passou",
+          (e) => (ehAppError(e) ? e.codigo : "outro"),
+        ),
+      ),
+    );
+
+    expect(resultados.filter((r) => r === "passou")).toHaveLength(
+      CONFIG_LIMITE.MAX_TENTATIVAS,
+    );
+    expect(resultados.filter((r) => r === "muitas_tentativas")).toHaveLength(
+      12 - CONFIG_LIMITE.MAX_TENTATIVAS,
+    );
+  });
+
+  it("reservar: o sucesso zera e a chave volta a passar (#386)", async () => {
+    const chave = "login:zera@teste.lupa";
+    for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS; i++) {
+      await reservarTentativa(chave);
+    }
+    await registrarSucesso(chave);
+    await expect(reservarTentativa(chave)).resolves.toBeUndefined();
   });
 
   it("chave nova passa livre", async () => {

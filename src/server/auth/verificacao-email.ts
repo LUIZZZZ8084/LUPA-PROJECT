@@ -5,7 +5,7 @@ import { enviarEmail, temEmailConfigurado } from "../email";
 import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
-import { conferirLimite, registrarFalha } from "./rate-limit";
+import { conferirLimite, reservarTentativa } from "./rate-limit";
 
 /**
  * Verificação de e-mail (#227).
@@ -100,7 +100,7 @@ export async function enviarVerificacaoDeEmail(
   }
 
   await conferirLimite(`verificacao:${opcoes.origem}`);
-  await registrarFalha(`verificacao:${opcoes.origem}`);
+  await reservarTentativa(`verificacao:${opcoes.origem}`);
 
   const repo = repositorioUsuarios();
   const usuario = await repo.porId(usuarioId);

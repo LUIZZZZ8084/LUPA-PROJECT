@@ -29,6 +29,14 @@ export interface RepositorioLimite {
    * que deu certo é justamente a que custou.
    */
   registrarUso(chave: string, orcamento: Orcamento): Promise<Date | null>;
+
+  /**
+   * Apaga as janelas vencidas (#386). Antes morava dentro de
+   * `registrarFalha`, e sai de lá junto com o registro tardio da falha de
+   * login: sem isto, as linhas de quem errou a senha só seriam limpas
+   * quando alguém criasse uma conta.
+   */
+  limparVencidas(): Promise<void>;
 }
 
 /**

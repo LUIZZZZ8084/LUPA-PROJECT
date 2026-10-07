@@ -1540,6 +1540,22 @@ cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se
 contém é adivinhação de senha; aqui o que se contém é a criação em si.
 
+**O limite de login reserva a tentativa antes do Argon2 (#386).** Ele
+conferia o bloqueio, gastava o Argon2 e só então registrava a falha:
+requisições simultâneas passavam todas pela conferência antes de a
+primeira falha ser registrada, e o teto de 5 virava uma rajada do tamanho
+da concorrência. Hoje `reservarTentativa` soma e responde na mesma
+instrução, pelo passo único que o resto do app já usava
+(`consumirOrcamento`), e com 20 tentativas simultâneas 5 chegam à
+verificação. `conferirLimite` continua vindo antes, para quem já está
+bloqueado ser recusado **sem somar** — senão insistir prolongaria o
+bloqueio da vítima. Vale para o login, a recuperação de senha e a
+confirmação de e-mail; o cadastro ficou de fora de propósito, porque
+contar toda tentativa dele muda a regra de produto (a pergunta do T2 no
+roadmap). *Dois `await` seguidos, conferir e depois registrar, é a forma
+de corrida mais comum que existe: a pergunta e a escrita têm de ser a
+mesma instrução.*
+
 **Captcha não vai existir, e isto é decisão, não espera.** Este parágrafo
 dizia "a hora de reavaliar é quando aparecer abuso real" — soava prudente e
 era adiamento. Decisão do Luiz em 14/09/2026: *"colocar captcha para
