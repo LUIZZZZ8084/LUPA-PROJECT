@@ -2221,6 +2221,42 @@ volta a valer numa segunda cobrança (`STATUS_LIQUIDADOS`). Menor que os
 voltando; ainda assim é uma decisão consciente, não uma lacuna
 despercebida.
 
+**O teste grátis é um por conta, gravado (#392).** Ele era concedido a
+cada assinatura que passava de pendente a ativa. Cancelar é terminal, então
+assinar de novo criava outra assinatura e outra concessão, e nada registrava
+que a pessoa já usara o dela: quem repetisse o ciclo a cada 15 dias ficava na
+vitrine sem nunca pagar. Decisão do Luiz em 07/10/2026, entre três opções.
+
+`usuarios.teste_gratis_usado_em` guarda a data, preenchida na primeira
+concessão por uma instrução só (`where teste_gratis_usado_em is null`), para
+duas ativações simultâneas não concederem o teste duas vezes. Quem já usou
+assina **sem `free_trial`**: o Mercado Pago cobra na hora, e a assinatura
+nunca concede dias de teste. A tela diz isso antes do botão — texto e rótulo
+("Assinar por R$ 19,90") acompanham a situação —, porque promessa na tela é
+contrato. A coluna mora em `usuarios` e não em `perfis_prestador`, que a
+chave anônima lê: é informação de cobrança.
+
+**Sem preenchimento retroativo, de propósito.** Quem tinha mensalidade antes
+recebeu acesso por outro caminho — a carência sem cartão, que acabou —, não
+pelo teste; marcá-las como "já usou" cobraria na hora de quem nunca viu a
+regra. Cada conta existente mantém o direito a um teste. E o arquivo
+`aplica-teste-gratis-usado.sql` roda **antes do deploy**: o código novo lê a
+coluna ao assinar, e sem ela assinar falha.
+
+Descartadas. *Deduzir de `mensalidade_valida_ate`* (sem coluna, sem SQL em
+produção): o estorno zera a validade, então quem pediu devolução ganharia
+outro teste — um ciclo a mais, já que o estorno só vale uma vez —, e a regra
+ficaria implícita, dependente do que "zerar a validade" significar amanhã.
+*Aceitar e acompanhar*: custo zero e sem assinante hoje, mas o dia em que
+houver o primeiro o buraco já estará aberto.
+
+O que continua aberto. Se `estenderMensalidade` falhar depois de a
+reivindicação ter sido gravada, o teste é gasto sem dar os dias — o mesmo
+tipo de buraco do efeito que falha depois do status (#384), e a nova
+tentativa do webhook não refaz, porque a assinatura já está ativa. E não
+sabemos se o Mercado Pago barra teste repetido no mesmo cartão: isso não
+está no nosso código.
+
 **A vitrine só mostra quem está com a mensalidade em dia**, mesma família
 de regra que `doc_verified`: o filtro mora em `getProviders`
 (`subscription_valid_until > now()`), não na view `provider_listings` —

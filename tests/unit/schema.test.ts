@@ -2134,3 +2134,101 @@ describe("aplica-avaliacao-assinada-pela-empresa.sql", () => {
     expect(await nomes()).toEqual(antes);
   });
 });
+
+/**
+ * O teste grátis é um por conta (#392).
+ *
+ * A coluna mora em `usuarios` — fechada para a chave anônima —, e não em
+ * `perfis_prestador`, que ela lê. A reivindicação é uma instrução só, e é
+ * isso que impede duas ativações simultâneas de concederem o teste duas
+ * vezes.
+ */
+describe("teste_gratis_usado_em", () => {
+  let banco: PGlite;
+  const MIGRACAO = readFileSync(
+    join(process.cwd(), "supabase/aplica-teste-gratis-usado.sql"),
+    "utf8",
+  );
+
+  async function conta(email: string) {
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ($1, 'h', 'prestador_servico', 'Prestador', '66999110001', 'Sinop - MT')
+       returning id`,
+      [email],
+    );
+    return r.rows[0].id;
+  }
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  });
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  it("conta nova nasce sem ter usado o teste", async () => {
+    const id = await conta("novo@teste.lupa");
+    const r = await banco.query<{ usado: string | null }>(
+      `select teste_gratis_usado_em as usado from usuarios where id = $1`,
+      [id],
+    );
+    expect(r.rows[0].usado).toBeNull();
+  });
+
+  /** A condição `is null` é o que faz a segunda reivindicação perder. */
+  it("a reivindicação é atômica: só a primeira leva o teste", async () => {
+    const id = await conta("reivindica@teste.lupa");
+    const reivindicar = () =>
+      banco.query(
+        `update usuarios set teste_gratis_usado_em = now()
+          where id = $1 and teste_gratis_usado_em is null
+          returning id`,
+        [id],
+      );
+
+    expect((await reivindicar()).rows).toHaveLength(1);
+    expect((await reivindicar()).rows).toHaveLength(0);
+  });
+
+  it("a chave anônima não alcança a coluna", async () => {
+    const r = await banco.query<{ tem: boolean }>(
+      `select has_column_privilege('anon', 'usuarios', 'teste_gratis_usado_em', 'SELECT') as tem`,
+    );
+    expect(r.rows[0].tem).toBe(false);
+  });
+
+  it("a migração é segura de rodar de novo e não preenche ninguém", async () => {
+    const id = await conta("migracao@teste.lupa");
+    await banco.exec(MIGRACAO);
+    await banco.exec(MIGRACAO);
+
+    const r = await banco.query<{ usado: string | null }>(
+      `select teste_gratis_usado_em as usado from usuarios where id = $1`,
+      [id],
+    );
+    // Sem preenchimento retroativo, de propósito: quem ainda não usou o
+    // teste mantém o direito a um.
+    expect(r.rows[0].usado).toBeNull();
+  });
+
+  it("a migração acrescenta a coluna a um banco que ainda não a tem", async () => {
+    const antigo = await PGlite.create();
+    try {
+      await antigo.exec(SCHEMA);
+      await antigo.exec(
+        `alter table usuarios drop column teste_gratis_usado_em`,
+      );
+      await antigo.exec(MIGRACAO);
+      const r = await antigo.query<{ coluna: string }>(
+        `select column_name as coluna from information_schema.columns
+          where table_name = 'usuarios' and column_name = 'teste_gratis_usado_em'`,
+      );
+      expect(r.rows).toHaveLength(1);
+    } finally {
+      await antigo.close();
+    }
+  });
+});

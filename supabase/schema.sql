@@ -195,6 +195,22 @@ create table usuarios (
    */
   sessoes_validas_desde timestamptz,
 
+  /*
+   * Quando a pessoa usou o teste gratis da mensalidade de prestador (#392).
+   *
+   * O teste e um por conta: sem este registro, cancelar e assinar de novo
+   * criava outra assinatura e outra concessao, e quem repetisse o ciclo a
+   * cada 15 dias nunca pagava. A coluna mora em `usuarios`, e nao em
+   * `perfis_prestador`, de proposito: aquela tabela e lida pela chave
+   * anonima, e esta e uma informacao de cobranca que ninguem de fora tem
+   * motivo para ver.
+   *
+   * Nulo e o normal. E o preenchimento e atomico (`update ... where
+   * teste_gratis_usado_em is null`), para duas ativacoes simultaneas nao
+   * concederem o teste duas vezes.
+   */
+  teste_gratis_usado_em timestamptz,
+
   constraint email_com_formato check (position('@' in email) > 1),
   constraint telefone_so_digitos check (telefone ~ '^[0-9]{10,13}$')
 );

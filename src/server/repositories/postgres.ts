@@ -455,6 +455,34 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     }
   }
 
+  async testeGratisJaUsado(usuarioId: string): Promise<boolean> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("teste_gratis_usado_em")
+      .eq("id", usuarioId)
+      .maybeSingle();
+
+    if (error) throw erros.indisponivel(`teste grátis: ${error.message}`);
+    return Boolean(data?.teste_gratis_usado_em);
+  }
+
+  async reivindicarTesteGratis(usuarioId: string): Promise<boolean> {
+    const supabase = await cliente();
+    // Uma instrução só: a condição `is null` é o que impede a segunda
+    // ativação simultânea de levar o teste também.
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update({ teste_gratis_usado_em: new Date().toISOString() })
+      .eq("id", usuarioId)
+      .is("teste_gratis_usado_em", null)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw erros.indisponivel(`teste grátis: ${error.message}`);
+    return data !== null;
+  }
+
   /**
    * Chama a função `estender_mensalidade_prestador` (#348): a conta
    * `max(agora, atual) + dias` acontece dentro do `update`, onde duas
