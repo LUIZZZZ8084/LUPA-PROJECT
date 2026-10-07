@@ -14,6 +14,14 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 07/10/2026:
 
+- A busca do hero oferece a cidade logo depois do estado, com "Todas as
+  cidades" (o estado inteiro) como padrão. As cidades chegam sob demanda, só
+  as do estado escolhido, pelo mesmo gancho dos formulários
+  (`useCidadesDaUf`, agora exportado). No desktop o cartão vira duas linhas,
+  com o botão alto à direita; no celular tudo empilha, na ordem de leitura e
+  de foco. Quem escolhe o estado antes de a página terminar de carregar não
+  perde a escolha: o campo é lido na hora em que a página fica pronta —
+  [#380](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/380)
 - Banner da home com a mesma forma nos dois temas: uma foto só (o homem
   recortado do fundo, com nome de arquivo novo para não servir a antiga do
   cache de imagens) sobre as mesmas faixas inclinadas, e só a cor muda, por
