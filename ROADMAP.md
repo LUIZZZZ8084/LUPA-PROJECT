@@ -14,6 +14,14 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 07/10/2026:
 
+- Esqueleto de carregamento da home com a forma da home nova (banner, cartão de
+  busca, faixa de números, vagas em fila e profissionais em linha), com as
+  alturas medidas no conteúdo carregado, para a tela não pular quando os
+  dados chegam. Os comentários que diziam que a home renderiza o card de
+  profissional sem sessão foram corrigidos; a prop `autenticado` do
+  `ProviderCard` fica, porque é o único caminho seguro para quem puser o card
+  numa página pública —
+  [#376](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/376)
 - Banner da home no tema escuro: o homem da foto é recortado do fundo claro (WebP
   com transparência) e fica sobre um verde fechado, com faixas inclinadas
   desenhadas em CSS e texto claro. Cada tema mostra a sua foto, e o cartão

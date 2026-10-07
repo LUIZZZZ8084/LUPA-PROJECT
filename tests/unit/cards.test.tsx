@@ -93,9 +93,12 @@ describe("ProviderCard", () => {
   });
 
   /**
-   * A home pública (#241) renderiza este card sem sessão. O telefone não
-   * pode aparecer em lugar nenhum do HTML — nem escondido, ausente — e o
-   * que substitui o botão do WhatsApp é um convite para entrar.
+   * Uma página pública que renderize este card sem sessão não pode vazar o
+   * telefone. A home o fazia (#241) e deixou de fazer na #372, mas a trava
+   * fica: é o único caminho seguro para o dia em que outra página pública o
+   * usar. O telefone não pode aparecer em lugar nenhum do HTML — nem
+   * escondido, ausente — e o que substitui o botão do WhatsApp é um convite
+   * para entrar.
    */
   it("sem sessão, esconde o telefone e convida para o login", () => {
     const { container } = render(

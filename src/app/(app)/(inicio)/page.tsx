@@ -179,7 +179,7 @@ export default async function HomePage() {
             title="Vagas em destaque"
             href="/vagas"
             accent="text-vagas"
-            listaClassName="no-scrollbar stagger -mx-4 -my-2 flex scroll-px-4 snap-x snap-mandatory gap-3 overflow-x-auto px-4 py-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0"
+            listaClassName="no-scrollbar stagger -mx-4 -my-2 flex scroll-px-4 snap-x snap-mandatory gap-3 overflow-x-auto px-4 py-2 grid-cols-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0"
             vazio={
               jobs.length === 0 && (
                 <Vazio
