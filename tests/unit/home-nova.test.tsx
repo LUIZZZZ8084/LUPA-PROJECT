@@ -21,12 +21,29 @@ describe("BannerDaHome", () => {
     ).toBeInTheDocument();
   });
 
-  it("o enfeite não polui o leitor de tela", () => {
+  /**
+   * A foto é decorativa e o título é texto: o que a arte original trazia
+   * desenhado (título, frase e logo) não pode voltar para dentro da imagem.
+   */
+  it("a foto é decorativa, e o título não está dentro da imagem", () => {
     const { container } = render(<BannerDaHome />);
-    // As faixas inclinadas e o símbolo da logo são decoração.
-    const decorativos = container.querySelectorAll("[aria-hidden]");
-    expect(decorativos.length).toBeGreaterThanOrEqual(3);
+
+    const foto = container.querySelector("img");
+    expect(foto).not.toBeNull();
+    expect(foto).toHaveAttribute("alt", "");
+    expect(foto?.getAttribute("src")).toContain("trabalhador.webp");
     expect(screen.queryAllByRole("img")).toHaveLength(0);
+  });
+
+  /** O fundo da foto é claro: o texto precisa de cor própria no tema escuro. */
+  it("o texto usa cor fixa, e não os tokens que invertem no escuro", () => {
+    render(<BannerDaHome />);
+    const titulo = screen.getByRole("heading", { level: 1 });
+    expect(titulo.className).toMatch(/text-\[#/);
+    expect(titulo.className).not.toMatch(/text-ink/);
+    expect(
+      screen.getByText(/vagas e profissionais perto de você/i).className,
+    ).not.toMatch(/text-muted/);
   });
 });
 

@@ -21,7 +21,10 @@ Em 06/10/2026:
   partir de `sm`, e profissionais em linha, com avatar, primeiro nome, ofício
   e nota. Fica de fora o que a referência mostra e o app não tem: "Urgente",
   ponto de "online" e "disponível", botão de salvar vaga e salário em texto
-  livre. O banner entra sem foto —
+  livre. O banner leva a foto da arte que o Luiz enviou (só a foto e as
+  faixas verdes; o título segue sendo texto), e a frase "Vagas de emprego e
+  prestadores de serviço na sua região, com contato direto pelo WhatsApp"
+  saiu da home —
   [#372](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/372)
 - Envio de foto confere os primeiros bytes do arquivo antes de entregá-lo ao
   `sharp`: só JPEG, PNG e WebP passam. Antes, só se olhava o tipo que o

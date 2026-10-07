@@ -1,49 +1,53 @@
-import { LupaMark } from "@/components/brand/logo";
+import Image from "next/image";
 
 /**
  * O banner do topo da home (#372).
  *
- * É onde mora o `<h1>` da página, e agora visível: o título do #364 tinha
- * saído da tela por ser grande demais ao lado da busca, e este é menor, é
- * uma frase de convite e divide a linha com o símbolo.
+ * É onde mora o `<h1>` da página, visível. O título é **texto**, e não parte
+ * da imagem: a arte que o Luiz enviou trazia o título, a frase de apoio e a
+ * logo desenhados dentro dela, e isso não serve aqui. Texto dentro de imagem
+ * não é lido por leitor de tela nem pelo buscador, não escala (a 375 px a
+ * frase de apoio ficaria com uns 7 px) e repetiria a logo que já está no
+ * cabeçalho. Da arte ficou o que é imagem de verdade: a foto e as faixas
+ * verdes, recortadas da metade direita (`public/banner/trabalhador.webp`).
  *
- * **Sem foto, por enquanto.** A referência de desenho tinha uma pessoa à
- * direita; o sistema de design da Lupa dizia "não introduza fotografia", e
- * foto precisa de direito de uso. O símbolo da logo ocupa o lugar, sobre
- * faixas inclinadas em verde claro, e a foto pode entrar depois sem mexer
- * no resto: é só o que fica à direita.
+ * **O banner tem cores próprias, nos dois temas.** A foto tem fundo claro e
+ * não existe versão escura dela, então o cartão é um bloco claro mesmo com
+ * o app no escuro, como um cartaz. Por isso o texto usa cores fixas, e não
+ * os tokens `ink` e `muted`, que no escuro ficam claros e sumiriam sobre
+ * este fundo.
  *
- * As faixas são só enfeite (`aria-hidden`) e usam a cor da marca a pouca
- * opacidade, porque o aro da logo é um degradê de verde e sumiria sobre
- * uma faixa de verde cheio.
+ * A borda esquerda da foto some num degradê (`mask-image`) para se misturar
+ * ao fundo do cartão, que é da cor da borda dela. A foto é decorativa
+ * (`alt=""`): ela não informa nada que o texto não diga.
  */
+const DEGRADE_DA_FOTO = "linear-gradient(to right, transparent 0%, #000 24%)";
+
 export function BannerDaHome() {
   return (
-    <section className="relative overflow-hidden rounded-[var(--radius-card)] border border-vagas/20 bg-vagas/10">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-4 -right-6 h-[140%] w-28 skew-x-[-18deg] bg-vagas/15 sm:w-44"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-4 right-24 h-[140%] w-8 skew-x-[-18deg] bg-vagas/20 sm:right-52 sm:w-10"
-      />
-
-      <div className="relative flex items-center justify-between gap-3 p-5 sm:p-8">
-        <div className="max-w-[12.5rem] sm:max-w-md">
-          <h1 className="font-bold text-[1.375rem] leading-[1.12] tracking-tight sm:text-4xl">
-            Encontre seu próximo trabalho
-          </h1>
-          <p className="mt-2 text-[13px] text-muted leading-snug sm:mt-3 sm:text-base sm:leading-relaxed">
-            Vagas e profissionais perto de você, de forma simples e rápida.
-          </p>
-        </div>
-
-        <LupaMark
-          size={84}
-          className="mr-1 sm:mr-6 sm:h-[128px] sm:w-[128px]"
-        />
+    <section className="relative flex h-[10rem] items-center overflow-hidden rounded-[var(--radius-card)] border border-[#cfe3b0] bg-gradient-to-r from-[#eef6e1] to-[#e2efcd] sm:h-[17rem]">
+      <div className="relative z-10 max-w-[10.5rem] pl-5 sm:max-w-md sm:pl-10">
+        <h1 className="font-bold text-[#12161b] text-[1.3rem] leading-[1.12] tracking-tight sm:text-4xl">
+          Encontre seu próximo trabalho
+        </h1>
+        <p className="mt-2 text-[#4a5361] text-[12.5px] leading-snug sm:mt-3 sm:text-base sm:leading-relaxed">
+          Vagas e profissionais perto de você, de forma simples e rápida.
+        </p>
       </div>
+
+      <Image
+        src="/banner/trabalhador.webp"
+        alt=""
+        width={560}
+        height={494}
+        priority
+        sizes="(min-width: 640px) 310px, 175px"
+        className="absolute right-0 bottom-0 h-full w-auto max-w-none"
+        style={{
+          WebkitMaskImage: DEGRADE_DA_FOTO,
+          maskImage: DEGRADE_DA_FOTO,
+        }}
+      />
     </section>
   );
 }

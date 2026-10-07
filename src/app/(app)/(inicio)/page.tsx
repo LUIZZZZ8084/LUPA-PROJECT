@@ -119,7 +119,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-4xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
           <BannerDaHome />
 
-          <div className="mt-4 flex flex-col items-start gap-3 sm:mt-6">
+          <div className="mt-4 sm:mt-6">
             {/*
              * O pino de localização promete "aqui é onde você está" — e até
              * a #107 dizia sempre "Mato Grosso · começando por Sinop",
@@ -138,11 +138,6 @@ export default async function HomePage() {
               <MapPin size={12} className="text-vagas" />
               {origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
             </span>
-
-            <p className="max-w-xl text-[15px] leading-relaxed text-muted sm:text-base">
-              Vagas de emprego e prestadores de serviço na sua região, com
-              contato direto pelo WhatsApp.
-            </p>
           </div>
 
           <BuscaDoHero
