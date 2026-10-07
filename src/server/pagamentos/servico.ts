@@ -1043,21 +1043,38 @@ export async function reconciliarPagamentosPendentes(
   for (const presa of presas) {
     try {
       const achados = await pagamentosPorReferencia(presa.id, opcoes.buscar);
-      const escolhido = escolherPagamento(achados);
-      if (!escolhido) continue;
+      // `null`: não deu para perguntar ao Mercado Pago. Não conta como
+      // conferida (#388): fica onde está e a próxima varredura tenta de novo.
+      if (achados === null) continue;
 
-      await confirmarPagamento(escolhido.id, opcoes.buscar);
+      const escolhido = escolherPagamento(achados);
+
+      if (escolhido) {
+        await confirmarPagamento(escolhido.id, opcoes.buscar);
+
+        /*
+         * Conta pelo que mudou no banco, não pelo que se tentou.
+         *
+         * `confirmarPagamento` pode não fazer nada — outra notificação
+         * chegou primeiro, ou o status remoto não pede mudança. Um contador
+         * de tentativas diria que a varredura resolveu vinte coisas numa
+         * noite em que ela não resolveu nenhuma.
+         */
+        const depois = await repo.porId(presa.id);
+        if (depois && depois.status !== "pendente") {
+          reconciliadas += 1;
+          continue;
+        }
+      }
 
       /*
-       * Conta pelo que mudou no banco, não pelo que se tentou.
-       *
-       * `confirmarPagamento` pode não fazer nada — outra notificação
-       * chegou primeiro, ou o status remoto não pede mudança. Um contador
-       * de tentativas diria que a varredura resolveu vinte coisas numa
-       * noite em que ela não resolveu nenhuma.
+       * Conferida e continua pendente — checkout abandonado, ou boleto e PIX
+       * ainda por pagar (#388). Vai para o fim da fila: sem isto ela voltava
+       * às mesmas 50 vagas em toda varredura e, com 50 dessas na frente, uma
+       * cobrança presa de verdade nunca era conferida. Em erro não se mexe:
+       * a próxima varredura tenta de novo.
        */
-      const depois = await repo.porId(presa.id);
-      if (depois && depois.status !== "pendente") reconciliadas += 1;
+      await repo.marcarConferida(presa.id);
     } catch (e) {
       log.erro(comoAppError(e), {
         acao: "pagamentos.reconciliar",

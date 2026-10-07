@@ -2157,6 +2157,22 @@ no matcher do `proxy.ts`, como `api/webhooks` já tinha entrado: o cron da
 Vercel faz um GET sem cookie, e o muro responderia 401 antes de a
 varredura existir. Seria o defeito do webhook de novo, e pior — **rede de
 proteção que nunca roda não deixa rastro de que não está rodando.**
+**A fila da varredura gira, e "não deu para perguntar" não conta como
+conferida (#388).** Ela pegava as 50 pendentes mais antigas. Checkout
+abandonado nunca sai de pendente e voltava às mesmas 50 vagas em toda
+varredura; com 50 dessas na frente, uma cobrança presa de verdade, criada
+depois, nunca era conferida. Hoje a ordem é por `atualizado_em` — que o
+banco já move por trigger, então sem coluna nova —, e uma cobrança
+conferida que continua pendente é marcada (`marcarConferida`) e vai para o
+fim. Para isso `pagamentosPorReferencia` passou a distinguir `null` (não
+deu para perguntar: rede, timeout, resposta torta) de `[]` (perguntei e
+não há nada): antes os dois eram lista vazia, e era seguro enquanto só
+importava o que fazer com o dinheiro, mas com a fila girando uma queda do
+Mercado Pago mandaria as cobranças examinadas para o fim sem ninguém tê-las
+conferido. Em erro nada se mexe, e a próxima varredura tenta de novo.
+*Quando a resposta ganha um segundo uso, confira se as duas causas que ela
+juntava ainda podem ser juntas.*
+
 **Cada domínio aplica o próprio efeito; `pagamentos` só aciona.**
 `aplicarEfeito`, em `src/server/pagamentos/servico.ts`, despacha por tipo
 para uma função do domínio certo — `estenderMensalidade`, em

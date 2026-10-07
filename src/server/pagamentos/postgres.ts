@@ -90,13 +90,19 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
       .lt("criado_em", janela.antesDe)
       .gt("criado_em", janela.depoisDe)
       /*
-       * Da mais velha para a mais nova.
+       * Da conferida há mais tempo para a conferida há menos (#388).
        *
        * `maximo` corta a lista, e o corte precisa cair sempre do mesmo
        * lado: ordenando pela mais nova, uma fila maior que o limite
-       * deixaria as antigas para trás em toda varredura — justamente as
-       * que estão presas há mais tempo, que são as que importam.
+       * deixaria as antigas para trás em toda varredura. Mas ordenar só
+       * pela mais velha tinha o defeito de cima para baixo: checkout
+       * abandonado nunca sai de pendente, voltava às mesmas 50 vagas, e
+       * uma cobrança presa de verdade, criada depois, nunca era
+       * conferida. `atualizado_em` nasce igual a `criado_em` e o banco o
+       * move a cada escrita (`tocar_atualizado_em`), então `marcarConferida`
+       * é o que faz a fila girar, sem coluna nova.
        */
+      .order("atualizado_em", { ascending: true })
       .order("criado_em", { ascending: true })
       .limit(janela.maximo);
 
@@ -170,6 +176,18 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
   }
 
   /** O índice único de `mp_payment_id` garante que só existe uma. */
+  async marcarConferida(id: string): Promise<void> {
+    const supabase = await cliente();
+    // Escrita que não muda nada, só para o trigger mover `atualizado_em`.
+    const { error } = await supabase
+      .from("pagamentos")
+      .update({ status: "pendente" })
+      .eq("id", id)
+      .eq("status", "pendente");
+
+    if (error) throw erros.indisponivel(error.message);
+  }
+
   async porMpPaymentId(mpPaymentId: string): Promise<Pagamento | null> {
     const supabase = await cliente();
     const { data, error } = await supabase
