@@ -47,6 +47,42 @@ const QUALIDADE = 80;
 
 export const TIPO_REDUZIDO = "image/webp";
 
+/**
+ * O formato de verdade, pelos primeiros bytes (#368).
+ *
+ * `conferirArquivo` olha o tipo que o navegador **declarou**, e qualquer
+ * cliente declara o que quiser. O `sharp`, por sua vez, decide o formato
+ * pelo conteúdo, e lê muito mais do que o app aceita — SVG entre eles, que
+ * um envio de foto não tem por que levar à librsvg. Este é o mesmo cuidado
+ * que o currículo já tem com `%PDF-`: conferir a assinatura antes de
+ * entregar o arquivo a uma biblioteca.
+ *
+ * Só JPEG, PNG e WebP, que é o que `tiposAceitos` promete. O resto volta
+ * `null`, e `reduzirImagem` recusa sem chamar o `sharp`.
+ */
+export function formatoDaImagem(
+  bytes: Uint8Array,
+): "jpeg" | "png" | "webp" | null {
+  const comeca = (...assinatura: number[]) =>
+    bytes.length >= assinatura.length &&
+    assinatura.every((b, i) => bytes[i] === b);
+
+  if (comeca(0xff, 0xd8, 0xff)) return "jpeg";
+  if (comeca(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return "png";
+
+  // WebP: "RIFF", o tamanho em 4 bytes, e "WEBP".
+  const ehRiff = comeca(0x52, 0x49, 0x46, 0x46);
+  const ehWebp =
+    bytes.length >= 12 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50;
+  if (ehRiff && ehWebp) return "webp";
+
+  return null;
+}
+
 export class ImagemIlegivel extends Error {
   constructor(causa: unknown) {
     super("o arquivo não pôde ser lido como imagem", { cause: causa });
@@ -59,6 +95,15 @@ export async function reduzirImagem(
   especie: Exclude<Especie, "curriculo">,
 ): Promise<Uint8Array> {
   const lado = MAIOR_LADO[especie];
+
+  /*
+   * Antes de carregar o `sharp`, e não depois: o que não é JPEG, PNG ou
+   * WebP não deve chegar a nenhum decodificador, e recusar aqui não custa
+   * nem o carregamento do binário nativo.
+   */
+  if (!formatoDaImagem(bytes)) {
+    throw new ImagemIlegivel(new Error("formato fora de JPEG, PNG e WebP"));
+  }
 
   /*
    * Carregado só aqui, e não no topo do arquivo.

@@ -1287,6 +1287,13 @@ botão é um convite para entrar. O componente é de servidor, então "não
 renderizar" aqui é "nunca existir na resposta", não CSS escondendo algo que
 o inspetor do navegador ainda revelaria.
 
+**Atualização (#372).** A home deixou de renderizar o `ProviderCard`: mostra
+`ProfissionaisEmLinha`, que não lê telefone nem monta `wa.me`, e o teste do
+muro de login continua cobrando que o HTML da home não tenha `wa.me`. A prop
+`autenticado` ficou, de propósito: o padrão é `true`, então ela é o único
+caminho seguro para quem puser o card numa página pública. Tirá-la deixaria
+só o caminho que vaza o telefone.
+
 O que sobreviveu das duas decisões: o modo demonstração. Ele responde por
 *de onde vêm os dados*, não por *quem pode entrar*, e continua sendo o que
 permite mostrar o produto sem infraestrutura.
