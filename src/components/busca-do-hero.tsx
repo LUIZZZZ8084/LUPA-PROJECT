@@ -82,9 +82,18 @@ export function BuscaDoHero({
   }
 
   return (
-    <div className="mt-7 max-w-2xl">
-      <form method="GET" action={`/${tipo}`} onSubmit={buscar}>
-        <fieldset className="mb-3 inline-flex min-w-0 rounded-full border border-line bg-panel p-1">
+    <div className="mt-4 max-w-2xl">
+      {/*
+       * O cartão é o próprio formulário: alternador, termo, estado e botão
+       * dentro de uma moldura só, como na referência da home (#372).
+       */}
+      <form
+        method="GET"
+        action={`/${tipo}`}
+        onSubmit={buscar}
+        className="rounded-[var(--radius-card)] border border-line bg-panel p-2.5 shadow-lg shadow-black/5"
+      >
+        <fieldset className="mb-2 inline-flex min-w-0 rounded-full border border-line bg-panel p-1">
           <legend className="sr-only">O que procurar</legend>
           {OPCOES.map((o) => (
             <button
@@ -102,7 +111,7 @@ export function BuscaDoHero({
           ))}
         </fieldset>
 
-        <div className="grid grid-cols-1 gap-2 rounded-[var(--radius-card)] border border-line bg-panel p-2 shadow-lg shadow-black/5 sm:grid-cols-[1fr_13rem_auto]">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_13rem_auto]">
           <div className="flex h-14 items-center gap-2.5 rounded-xl border border-line bg-panel-2 px-3.5 focus-within:border-vagas">
             <Search size={18} className="flex-none text-muted" aria-hidden />
             <input

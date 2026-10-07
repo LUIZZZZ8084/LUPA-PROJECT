@@ -1,20 +1,23 @@
 import {
   ArrowRight,
   BadgeCheck,
+  Briefcase,
   Building2,
   MapPin,
   MessageCircle,
   ShieldCheck,
   Star,
   Users,
+  Wrench,
 } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
+import { BannerDaHome } from "@/components/banner-da-home";
 import { BuscaDoHero } from "@/components/busca-do-hero";
 import { JobCard } from "@/components/job-card";
 import { PageShell } from "@/components/layout/page-shell";
 import { Reveal } from "@/components/motion/reveal";
-import { ProviderCard } from "@/components/provider-card";
+import { ProfissionaisEmLinha } from "@/components/profissionais-em-linha";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { UFS } from "@/lib/cidades";
@@ -82,8 +85,6 @@ export default async function HomePage() {
   const sessao = await sessaoAtual();
   const terceiroCard = cardDeServico(sessao?.papel, Boolean(sessao));
 
-  const mais = (aoMenos: boolean) => (aoMenos ? "mais de " : "");
-
   /*
    * O JSON-LD é assinado com o mesmo nonce da CSP (#223) — sem ele, a
    * política de script-src recusaria este `<script>` do mesmo jeito que
@@ -115,71 +116,75 @@ export default async function HomePage() {
       />
 
       <section className="aurora border-b border-line">
-        <div className="mx-auto max-w-4xl px-4 pt-10 pb-12 sm:px-6 sm:pt-16">
-          {/*
-           * O pino de localização promete "aqui é onde você está" — e até
-           * a #107 dizia sempre "Mato Grosso · começando por Sinop",
-           * pra quem quer que fosse, de qualquer cidade. `origemDoUsuario()`
-           * já lê a cidade da conta para ordenar a busca por perto; usar o
-           * mesmo valor aqui é a diferença entre um selo de abrangência e
-           * uma promessa que o ícone já fazia sem cumprir.
-           *
-           * Sem sessão (a home é pública desde a #241), ou com uma conta
-           * sem cidade, o selo diz o alcance do app — o Brasil inteiro desde
-           * a #301 — em vez de mostrar um pino sem legenda. A cidade já é
-           * gravada com o estado ("Sinop - MT"), então não há rótulo a
-           * montar.
-           */}
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
-            <MapPin size={12} className="text-vagas" />
-            {origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
-          </span>
+        <div className="mx-auto max-w-4xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
+          <BannerDaHome />
 
-          {/*
-           * O título sai da tela, mas não do HTML (#364).
-           *
-           * O hero ficou sem a frase grande: a busca já diz o que a página
-           * faz. A página, no entanto, não pode ficar sem `<h1>` — leitor de
-           * tela e buscador usam o título para saber do que ela trata, e a
-           * varredura de acessibilidade cobra. `sr-only` mantém o texto
-           * para eles, igual ao `<title>` da aba.
-           */}
-          <h1 className="sr-only">Trabalho e profissionais perto de você</h1>
+          <div className="mt-4 flex flex-col items-start gap-3 sm:mt-6">
+            {/*
+             * O pino de localização promete "aqui é onde você está" — e até
+             * a #107 dizia sempre "Mato Grosso · começando por Sinop",
+             * pra quem quer que fosse, de qualquer cidade. `origemDoUsuario()`
+             * já lê a cidade da conta para ordenar a busca por perto; usar o
+             * mesmo valor aqui é a diferença entre um selo de abrangência e
+             * uma promessa que o ícone já fazia sem cumprir.
+             *
+             * Sem sessão (a home é pública desde a #241), ou com uma conta
+             * sem cidade, o selo diz o alcance do app — o Brasil inteiro
+             * desde a #301 — em vez de mostrar um pino sem legenda. A cidade
+             * já é gravada com o estado ("Sinop - MT"), então não há rótulo
+             * a montar.
+             */}
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
+              <MapPin size={12} className="text-vagas" />
+              {origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
+            </span>
 
-          <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted sm:text-base">
-            Vagas de emprego e prestadores de serviço na sua região, com contato
-            direto pelo WhatsApp.
-          </p>
+            <p className="max-w-xl text-[15px] leading-relaxed text-muted sm:text-base">
+              Vagas de emprego e prestadores de serviço na sua região, com
+              contato direto pelo WhatsApp.
+            </p>
+          </div>
 
           <BuscaDoHero
             ufs={UFS.map((u) => ({ sigla: u.sigla, nome: u.nome }))}
             visitante={!sessao}
           />
 
-          <p className="mt-6 text-xs text-muted">
-            {mais(totals.jobsAoMenos)}
-            {totals.jobs} vagas abertas · {mais(totals.providersAoMenos)}
-            {totals.providers} profissionais
-          </p>
+          <FaixaDeNumeros
+            vagas={totals.jobs}
+            vagasAoMenos={totals.jobsAoMenos}
+            profissionais={totals.providers}
+            profissionaisAoMenos={totals.providersAoMenos}
+          />
 
-          <div className="mt-3 max-w-sm">
-            <ActionCard
-              href={terceiroCard.href}
-              icon={<Users size={20} />}
-              title={terceiroCard.titulo}
-              subtitle={terceiroCard.legenda}
-              tone="empresas"
-            />
-          </div>
+          {/*
+           * Para quem não tem conta, o card de conta fica aqui no alto, que
+           * é onde converte (#241). Para quem já entrou, ele é um atalho
+           * para o próprio perfil, e vai para o fim da lista.
+           */}
+          {!sessao && (
+            <div className="mt-3 max-w-sm">
+              <CardDeConta card={terceiroCard} />
+            </div>
+          )}
         </div>
       </section>
 
       <PageShell>
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+        <div className="space-y-8">
+          {/*
+           * No celular as vagas rolam para o lado, uma e meia à vista, para
+           * dizer que há mais sem ocupar a tela. A partir de `sm` viram a
+           * grade de duas colunas, porque rolagem lateral no desktop é pior
+           * que ver as quatro de uma vez. O respiro vertical (`py-2` com
+           * `-my-2`) é para a sombra e a subida do card no hover não serem
+           * cortadas pelo `overflow`.
+           */}
           <FeedSection
             title="Vagas em destaque"
             href="/vagas"
             accent="text-vagas"
+            listaClassName="no-scrollbar stagger -mx-4 -my-2 flex scroll-px-4 snap-x snap-mandatory gap-3 overflow-x-auto px-4 py-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0"
             vazio={
               jobs.length === 0 && (
                 <Vazio
@@ -191,7 +196,11 @@ export default async function HomePage() {
             }
           >
             {jobs.map((job) => (
-              <JobCard key={job.id} job={job} />
+              <JobCard
+                key={job.id}
+                job={job}
+                className="w-[17rem] flex-none snap-start sm:w-auto"
+              />
             ))}
           </FeedSection>
 
@@ -199,6 +208,7 @@ export default async function HomePage() {
             title="Profissionais bem avaliados"
             href="/servicos"
             accent="text-servicos"
+            listaClassName=""
             vazio={
               providers.length === 0 && (
                 <Vazio
@@ -209,14 +219,14 @@ export default async function HomePage() {
               )
             }
           >
-            {providers.map((provider) => (
-              <ProviderCard
-                key={provider.profile_id}
-                provider={provider}
-                autenticado={Boolean(sessao)}
-              />
-            ))}
+            <ProfissionaisEmLinha providers={providers} />
           </FeedSection>
+
+          {sessao && (
+            <div className="max-w-sm">
+              <CardDeConta card={terceiroCard} />
+            </div>
+          )}
         </div>
 
         {/* Confiança — o que faz alguém contratar um desconhecido */}
@@ -345,6 +355,87 @@ export default async function HomePage() {
   );
 }
 
+/** O card de conta, do jeito que o papel pede (ver `cardDeServico`). */
+function CardDeConta({
+  card,
+}: {
+  card: { href: string; titulo: string; legenda: string };
+}) {
+  return (
+    <ActionCard
+      href={card.href}
+      icon={<Users size={20} />}
+      title={card.titulo}
+      subtitle={card.legenda}
+      tone="empresas"
+    />
+  );
+}
+
+/**
+ * Quantas vagas e quantos profissionais há, cada número um link para a
+ * lista (#372).
+ *
+ * `aoMenos` é o "mais de" que a contagem já carregava: quando a consulta
+ * bate no teto, o número é um piso, e escrever "100" seria afirmar uma
+ * conta que ninguém fez. Aqui vira "100+".
+ */
+function FaixaDeNumeros({
+  vagas,
+  vagasAoMenos,
+  profissionais,
+  profissionaisAoMenos,
+}: {
+  vagas: number;
+  vagasAoMenos: boolean;
+  profissionais: number;
+  profissionaisAoMenos: boolean;
+}) {
+  return (
+    <div className="mt-4 grid max-w-2xl grid-cols-2 divide-x divide-vagas/20 overflow-hidden rounded-2xl bg-vagas/10">
+      <NumeroLink
+        href="/vagas"
+        icone={<Briefcase size={24} className="text-vagas" />}
+        numero={`${vagas}${vagasAoMenos ? "+" : ""}`}
+        rotulo="vagas abertas"
+      />
+      <NumeroLink
+        href="/servicos"
+        icone={<Wrench size={24} className="text-servicos" />}
+        numero={`${profissionais}${profissionaisAoMenos ? "+" : ""}`}
+        rotulo="profissionais"
+      />
+    </div>
+  );
+}
+
+function NumeroLink({
+  href,
+  icone,
+  numero,
+  rotulo,
+}: {
+  href: string;
+  icone: React.ReactNode;
+  numero: string;
+  rotulo: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-vagas/10"
+    >
+      {icone}
+      <span className="flex flex-col leading-tight">
+        <span className="font-bold text-xl tabular-nums tracking-tight">
+          {numero}
+        </span>
+        <span className="text-muted text-xs">{rotulo}</span>
+      </span>
+    </Link>
+  );
+}
+
 function ActionCard({
   href,
   icon,
@@ -399,11 +490,14 @@ function FeedSection({
   href,
   accent,
   vazio,
+  listaClassName,
   children,
 }: {
   title: string;
   href: string;
   accent: string;
+  /** Como a lista se organiza; por padrão, empilhada com entrada em cascata. */
+  listaClassName?: string;
   /**
    * O que aparece quando não há nada para listar (#302). Sem os dados de
    * exemplo, a vitrine de produção começa quase vazia — e uma seção só com
@@ -424,7 +518,11 @@ function FeedSection({
           <ArrowRight size={13} />
         </Link>
       </div>
-      {vazio || <div className="stagger space-y-2.5">{children}</div>}
+      {vazio || (
+        <div className={listaClassName ?? "stagger space-y-2.5"}>
+          {children}
+        </div>
+      )}
     </section>
   );
 }
