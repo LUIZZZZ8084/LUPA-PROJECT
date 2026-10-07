@@ -8,9 +8,84 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 05/10/2026.**
+**Última atualização: 07/10/2026.**
 
 ## Concluído
+
+Em 07/10/2026:
+
+- A foto do banner da home não deixa mais o fundo aparecer entre os braços
+  do homem. O recorte tinha um vão transparente de uns 20 × 10 px no pé da
+  imagem, aberto para a borda de baixo; como a foto fica encostada embaixo, a
+  faixa atravessava por ali, e a cor mudava com o tema. A foto agora termina
+  acima do vão (435 × 476, com nome de arquivo novo para não servir a antiga
+  do cache de imagens), e um teste confere, nos pixels do arquivo, que o pé é
+  uma faixa contínua. O pé da foto também ganha um desfoque discreto (2 px,
+  só nos últimos ~11% da altura), para os braços não terminarem num corte
+  seco; não tem cor, então é igual nos dois temas —
+  [#382](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/382)
+- A busca do hero oferece a cidade logo depois do estado, com "Todas as
+  cidades" (o estado inteiro) como padrão. As cidades chegam sob demanda, só
+  as do estado escolhido, pelo mesmo gancho dos formulários
+  (`useCidadesDaUf`, agora exportado). No desktop o cartão vira duas linhas,
+  com o botão alto à direita; no celular tudo empilha, na ordem de leitura e
+  de foco. Quem escolhe o estado antes de a página terminar de carregar não
+  perde a escolha: o campo é lido na hora em que a página fica pronta —
+  [#380](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/380)
+- Banner da home com a mesma forma nos dois temas: uma foto só (o homem
+  recortado do fundo, com nome de arquivo novo para não servir a antiga do
+  cache de imagens) sobre as mesmas faixas inclinadas, e só a cor muda, por
+  variáveis (`--banner-faixa-*`). Teste mede o banner, a foto, o título e as
+  faixas nos dois temas, em desktop e celular. O bloco "O que a gente
+  confere" foi para o fim da página, depois da chamada para empresas, com o
+  texto em linguagem de conversa e sem as frases de alerta; continua dizendo
+  só o que o app de fato confere —
+  [#378](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/378)
+- Esqueleto de carregamento da home com a forma da home nova (banner, cartão de
+  busca, faixa de números, vagas em fila e profissionais em linha), com as
+  alturas medidas no conteúdo carregado, para a tela não pular quando os
+  dados chegam. Os comentários que diziam que a home renderiza o card de
+  profissional sem sessão foram corrigidos; a prop `autenticado` do
+  `ProviderCard` fica, porque é o único caminho seguro para quem puser o card
+  numa página pública —
+  [#376](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/376)
+- Banner da home no tema escuro: o homem da foto é recortado do fundo claro (WebP
+  com transparência) e fica sobre um verde fechado, com faixas inclinadas
+  desenhadas em CSS e texto claro. Cada tema mostra a sua foto, e o cartão
+  e o texto trocam de cor por variáveis (`--banner-*`), como o degradê da
+  logo. A variante `dark:` do Tailwind passa a seguir o atributo
+  `data-theme`, e não a preferência do sistema —
+  [#374](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/374)
+
+Em 06/10/2026:
+
+- Home com a disposição nova, a partir da referência do Luiz: banner com o
+  convite "Encontre seu próximo trabalho" (agora o `<h1>` visível), busca num
+  cartão só, faixa com o número de vagas e de profissionais (cada um um link
+  para a lista), vagas em destaque num carrossel no celular e em grade a
+  partir de `sm`, e profissionais em linha, com avatar, primeiro nome, ofício
+  e nota. Fica de fora o que a referência mostra e o app não tem: "Urgente",
+  ponto de "online" e "disponível", botão de salvar vaga e salário em texto
+  livre. O banner leva a foto da arte que o Luiz enviou (só a foto e as
+  faixas verdes; o título segue sendo texto), e a frase "Vagas de emprego e
+  prestadores de serviço na sua região, com contato direto pelo WhatsApp"
+  saiu da home —
+  [#372](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/372)
+- Envio de foto confere os primeiros bytes do arquivo antes de entregá-lo ao
+  `sharp`: só JPEG, PNG e WebP passam. Antes, só se olhava o tipo que o
+  navegador declara, e um SVG enviado como PNG era decodificado e chegava à
+  librsvg, que o app não precisa expor —
+  [#368](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/368)
+- `sharp` 0.35.4 → 0.35.5: o `npm audit` acusou, em 06/10/2026, uma falha de
+  severidade alta na librsvg que ele embute, e o check "Dependências
+  vulneráveis" reprovava todo PR e a `main`. O `sharp` reduz as fotos
+  enviadas (`src/server/arquivos/imagem.ts`) e gera o favicon —
+  [#366](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/366)
+- O hero da home perdeu o título "O que você está procurando aqui perto?" e
+  os atalhos de categoria, e ficou com o selo, a frase de apoio, a busca, a
+  contagem e o card de conta. O `<h1>` continua na página, só para leitor de
+  tela, porque a home não pode ficar sem título —
+  [#364](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/364)
 
 Em 05/10/2026:
 
