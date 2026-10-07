@@ -10,6 +10,7 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import {
+  formatoDaImagem,
   ImagemIlegivel,
   reduzirImagem,
   TIPO_REDUZIDO,
@@ -176,5 +177,75 @@ describe("conteúdo", () => {
     await expect(reduzirImagem(falso, "avatar")).rejects.toBeInstanceOf(
       ImagemIlegivel,
     );
+  });
+});
+
+/**
+ * O tipo declarado é palpite, e o `sharp` lê mais formatos do que o app
+ * aceita (#368). O que se cobra aqui é a assinatura real do arquivo, antes
+ * de qualquer decodificador.
+ */
+describe("o formato de verdade", () => {
+  async function quadrado() {
+    return sharp({
+      create: { width: 40, height: 40, channels: 3, background: "#3f6810" },
+    });
+  }
+
+  const SVG = new TextEncoder().encode(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">' +
+      '<rect width="64" height="64" fill="#3f6810"/></svg>',
+  );
+
+  it("JPEG, PNG e WebP de verdade são reconhecidos e reduzidos", async () => {
+    const por = {
+      jpeg: new Uint8Array(await (await quadrado()).jpeg().toBuffer()),
+      png: new Uint8Array(await (await quadrado()).png().toBuffer()),
+      webp: new Uint8Array(await (await quadrado()).webp().toBuffer()),
+    } as const;
+
+    for (const [formato, bytes] of Object.entries(por)) {
+      expect(formatoDaImagem(bytes), formato).toBe(formato);
+      const saida = await reduzirImagem(bytes, "avatar");
+      expect((await medir(saida)).format, formato).toBe("webp");
+    }
+  });
+
+  /**
+   * O defeito: um SVG enviado como `image/png` passava pela checagem de
+   * tipo, o `sharp` o decodificava, e ele chegava à librsvg. O teste prova
+   * os dois lados — que `sharp` o leria (senão o teste não vigia nada) e
+   * que `reduzirImagem` o recusa.
+   */
+  it("SVG disfarçado de foto é recusado, ainda que o sharp o leia", async () => {
+    expect((await medir(SVG)).format).toBe("svg");
+
+    expect(formatoDaImagem(SVG)).toBeNull();
+    await expect(reduzirImagem(SVG, "avatar")).rejects.toBeInstanceOf(
+      ImagemIlegivel,
+    );
+  });
+
+  it.each([
+    ["GIF", async () => (await quadrado()).gif().toBuffer()],
+    ["TIFF", async () => (await quadrado()).tiff().toBuffer()],
+  ] as const)(
+    "%s, que o sharp lê e o app não aceita, é recusado",
+    async (_nome, gerar) => {
+      const bytes = new Uint8Array(await gerar());
+
+      expect(formatoDaImagem(bytes)).toBeNull();
+      await expect(reduzirImagem(bytes, "logo")).rejects.toBeInstanceOf(
+        ImagemIlegivel,
+      );
+    },
+  );
+
+  it("arquivo vazio, curto ou RIFF que não é WebP é recusado", () => {
+    expect(formatoDaImagem(new Uint8Array())).toBeNull();
+    expect(formatoDaImagem(new Uint8Array([0xff, 0xd8]))).toBeNull();
+    // RIFF de áudio (WAVE): mesmo começo do WebP, outro arquivo.
+    const wav = new TextEncoder().encode("RIFF    WAVEfmt ");
+    expect(formatoDaImagem(wav)).toBeNull();
   });
 });

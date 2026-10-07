@@ -14,6 +14,11 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 06/10/2026:
 
+- Envio de foto confere os primeiros bytes do arquivo antes de entregá-lo ao
+  `sharp`: só JPEG, PNG e WebP passam. Antes, só se olhava o tipo que o
+  navegador declara, e um SVG enviado como PNG era decodificado e chegava à
+  librsvg, que o app não precisa expor —
+  [#368](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/368)
 - `sharp` 0.35.4 → 0.35.5: o `npm audit` acusou, em 06/10/2026, uma falha de
   severidade alta na librsvg que ele embute, e o check "Dependências
   vulneráveis" reprovava todo PR e a `main`. O `sharp` reduz as fotos
