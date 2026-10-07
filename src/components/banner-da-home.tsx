@@ -30,6 +30,14 @@ import Image from "next/image";
  * conteúdo mantendo o nome serviria a foto antiga a quem já tivesse aberto a
  * home, no desenvolvimento e em produção. Nome novo, endereço novo.
  *
+ * **O pé da foto some num desfoque discreto.** Cortada, a foto termina seca na
+ * borda do banner, com os braços interrompidos. Por cima dela, uma camada com
+ * a mesma caixa (mesma altura, mesma proporção 435 × 476, colada à direita e
+ * embaixo) borra o que está atrás, mais forte na borda e some uns 11% acima
+ * dela (`backdrop-filter` com máscara, 2 px de raio). Não tem cor: borra pixels, não pinta
+ * nenhum, então é a mesma nos dois temas. Onde o navegador não sabe fazer
+ * isso, a camada simplesmente não aparece e a foto fica como estava.
+ *
  * A foto é decorativa (`alt=""`): ela não informa nada que o texto não diga.
  */
 export function BannerDaHome() {
@@ -61,6 +69,11 @@ export function BannerDaHome() {
         priority
         sizes="(min-width: 640px) 248px, 146px"
         className="absolute right-0 bottom-0 h-full w-auto max-w-none"
+      />
+      <div
+        aria-hidden
+        data-desfoque-do-pe
+        className="pointer-events-none absolute right-0 bottom-0 aspect-[435/476] h-full backdrop-blur-[2px] [mask-image:linear-gradient(to_top,black,transparent_11%)]"
       />
     </section>
   );

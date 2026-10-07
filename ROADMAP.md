@@ -20,7 +20,9 @@ Em 07/10/2026:
   faixa atravessava por ali, e a cor mudava com o tema. A foto agora termina
   acima do vão (435 × 476, com nome de arquivo novo para não servir a antiga
   do cache de imagens), e um teste confere, nos pixels do arquivo, que o pé é
-  uma faixa contínua —
+  uma faixa contínua. O pé da foto também ganha um desfoque discreto (2 px,
+  só nos últimos ~11% da altura), para os braços não terminarem num corte
+  seco; não tem cor, então é igual nos dois temas —
   [#382](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/382)
 - A busca do hero oferece a cidade logo depois do estado, com "Todas as
   cidades" (o estado inteiro) como padrão. As cidades chegam sob demanda, só
