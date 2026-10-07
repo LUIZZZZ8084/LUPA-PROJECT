@@ -8,9 +8,19 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 06/10/2026.**
+**Última atualização: 07/10/2026.**
 
 ## Concluído
+
+Em 07/10/2026:
+
+- Banner da home no tema escuro: o homem da foto é recortado do fundo claro (WebP
+  com transparência) e fica sobre um verde fechado, com faixas inclinadas
+  desenhadas em CSS e texto claro. Cada tema mostra a sua foto, e o cartão
+  e o texto trocam de cor por variáveis (`--banner-*`), como o degradê da
+  logo. A variante `dark:` do Tailwind passa a seguir o atributo
+  `data-theme`, e não a preferência do sistema —
+  [#374](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/374)
 
 Em 06/10/2026:
 

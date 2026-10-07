@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/*
+ * A variante `dark:` do Tailwind segue o atributo `data-theme` do `<html>`,
+ * que é o que o botão de tema e o script anti-flash mexem, e não a
+ * preferência do sistema (o padrão do Tailwind). Sem isto, `dark:hidden`
+ * responderia ao aparelho e não à escolha da pessoa no app.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* ============================================================
    LUPA — Design tokens
    Duas telas, os mesmos nomes: claro é o padrão da plataforma,
@@ -274,11 +282,29 @@ html[data-theme="dark"] {
 :root {
   --logo-a: #8cc63f;
   --logo-b: #3f6810;
+
+  /*
+   * O banner da home (#372, #374): fundo, borda e texto por tema. No claro
+   * são as cores da arte, e o título e a frase têm cor própria porque o
+   * fundo não é o da página. No escuro o fundo é um verde bem fechado, e o
+   * texto é claro (título 16:1, frase 7,9:1 sobre o ponto mais claro).
+   */
+  --banner-de: #eef6e1;
+  --banner-ate: #e2efcd;
+  --banner-borda: #cfe3b0;
+  --banner-titulo: #12161b;
+  --banner-texto: #4a5361;
 }
 
 :root[data-theme="dark"] {
   --logo-a: #c8ee6a;
   --logo-b: #7fb02a;
+
+  --banner-de: #0f1d0b;
+  --banner-ate: #183016;
+  --banner-borda: rgb(168 217 74 / 0.25);
+  --banner-titulo: #f2f5f8;
+  --banner-texto: #b7c4b5;
 }
 
 body {
