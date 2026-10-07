@@ -33,8 +33,11 @@ import {
  * módulo (`src/lib/cidades/index.ts`), e assinar é o que dispara o pedido.
  * No servidor não há lista — a primeira pintura mostra só a cidade já
  * escolhida, e as outras chegam logo depois, sem a pessoa perceber.
+ *
+ * Exportado para a busca do hero (#380), que escolhe estado e cidade fora de
+ * um formulário de cadastro e precisa da mesma lista, carregada do mesmo jeito.
  */
-function useCidadesDaUf(uf: UF | null): readonly string[] | null {
+export function useCidadesDaUf(uf: UF | null): readonly string[] | null {
   const assinar = useCallback(
     (avisar: () => void) => {
       const parar = ouvirCidades(avisar);
