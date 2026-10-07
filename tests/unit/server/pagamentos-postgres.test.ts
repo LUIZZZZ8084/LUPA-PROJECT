@@ -225,6 +225,19 @@ describe("RepositorioPagamentosPostgres", () => {
     ]);
   });
 
+  it("reabrir parte só de aprovado e não mexe no id do Mercado Pago (#384)", async () => {
+    resposta = { data: { ...LINHA, status: "pendente" }, error: null };
+    const pagamento = await repo.reabrir(LINHA.id);
+
+    expect(pagamento?.status).toBe("pendente");
+    const atualizacao = chamadas.find((c) => c.metodo === "update");
+    expect(atualizacao?.args[0]).toEqual({ status: "pendente" });
+    const condicao = chamadas.find(
+      (c) => c.metodo === "eq" && c.args[0] === "status",
+    );
+    expect(condicao?.args).toEqual(["status", "aprovado"]);
+  });
+
   it("rejeitar e cancelar continuam partindo só de pendente (#358)", async () => {
     resposta = { data: { ...LINHA, status: "rejeitado" }, error: null };
     await repo.rejeitar(LINHA.id, "mp-1");

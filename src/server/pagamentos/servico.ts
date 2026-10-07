@@ -56,6 +56,47 @@ export { temMercadoPagoConfigurado };
  * mensalidade se estende é `src/server/prestadores/servico.ts`, não este
  * arquivo.
  */
+/**
+ * Aplica o efeito de uma cobrança que acabou de virar aprovada (#384).
+ *
+ * O status muda antes do efeito, e é essa ordem que garante que duas
+ * notificações simultâneas não apliquem o efeito duas vezes. O outro lado
+ * dela: se o efeito falhar — o banco soluçou, o perfil não existe —, a
+ * cobrança já estava `aprovado`, a notificação reenviada achava isso e
+ * pulava o efeito, e a varredura só olha cobranças pendentes. Quem pagou
+ * ficava sem o que comprou, e nada acusava.
+ *
+ * Por isso a falha devolve a cobrança a `pendente` antes de subir: o
+ * webhook que respondeu erro é reenviado pelo Mercado Pago, e a varredura
+ * a enxerga. A nova tentativa aprova e aplica de novo.
+ *
+ * O preço, aceito: se o efeito chegou a gravar e só a resposta se perdeu,
+ * a nova tentativa aplica de novo. Esse erro cai para o lado de quem pagou
+ * — e é visível, no Sentry e no saldo —, em vez de cair para o de quem não
+ * recebeu e não tem como saber.
+ */
+async function aplicarEfeitoOuReabrir(pagamento: Pagamento): Promise<void> {
+  try {
+    await aplicarEfeito(pagamento);
+  } catch (erro) {
+    log.erro(comoAppError(erro), {
+      acao: "pagamentos.efeito",
+      tipo: pagamento.tipo,
+      pagamentoId: pagamento.id,
+    });
+    try {
+      await repositorioPagamentos().reabrir(pagamento.id);
+    } catch (e) {
+      // Sem isto a cobrança fica aprovada e sem efeito: avisa em voz alta.
+      log.erro(comoAppError(e), {
+        acao: "pagamentos.reabrir",
+        pagamentoId: pagamento.id,
+      });
+    }
+    throw erro;
+  }
+}
+
 async function aplicarEfeito(pagamento: Pagamento): Promise<void> {
   switch (pagamento.tipo) {
     case "prestador_mensalidade":
@@ -690,13 +731,23 @@ async function registrarParcela(
     mpPaymentId,
   });
 
-  // `null`: outro aviso já registrou esta mesma parcela.
-  if (!parcela) return;
+  let liquidada = parcela;
+  if (!liquidada) {
+    /*
+     * Outro aviso já registrou esta mesma parcela — a não ser que o efeito
+     * dela tenha falhado e a parcela tenha sido reaberta (#384): aí falta
+     * aprovar de novo e aplicar. Qualquer outro estado é "já resolvida".
+     */
+    const existente = await repo.porMpPaymentId(mpPaymentId);
+    if (existente?.status !== "pendente") return;
+    liquidada = await repo.aprovar(existente.id, mpPaymentId);
+    if (!liquidada) return;
+  }
 
   // Cobrou, logo está autorizada — mesmo que o aviso de autorização
   // ainda não tenha chegado, ou tenha se perdido.
   await repo.definirStatusAssinatura(assinatura.id, "ativa");
-  await aplicarEfeito(parcela);
+  await aplicarEfeitoOuReabrir(liquidada);
 
   log.info("parcela da assinatura registrada", {
     acao: "pagamentos.parcela",
@@ -859,7 +910,7 @@ export async function confirmarPagamento(
     // o efeito já foi aplicado (ou nunca deveria ser), e reaplicar
     // dobraria o que a cobrança compra.
     if (aprovado) {
-      await aplicarEfeito(aprovado);
+      await aplicarEfeitoOuReabrir(aprovado);
       log.info("pagamento aprovado", {
         acao: "pagamentos.confirmar",
         tipo: pagamento.tipo,
