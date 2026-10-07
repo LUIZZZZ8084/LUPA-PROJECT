@@ -14,6 +14,18 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 06/10/2026:
 
+- Home com a disposição nova, a partir da referência do Luiz: banner com o
+  convite "Encontre seu próximo trabalho" (agora o `<h1>` visível), busca num
+  cartão só, faixa com o número de vagas e de profissionais (cada um um link
+  para a lista), vagas em destaque num carrossel no celular e em grade a
+  partir de `sm`, e profissionais em linha, com avatar, primeiro nome, ofício
+  e nota. Fica de fora o que a referência mostra e o app não tem: "Urgente",
+  ponto de "online" e "disponível", botão de salvar vaga e salário em texto
+  livre. O banner leva a foto da arte que o Luiz enviou (só a foto e as
+  faixas verdes; o título segue sendo texto), e a frase "Vagas de emprego e
+  prestadores de serviço na sua região, com contato direto pelo WhatsApp"
+  saiu da home —
+  [#372](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/372)
 - Envio de foto confere os primeiros bytes do arquivo antes de entregá-lo ao
   `sharp`: só JPEG, PNG e WebP passam. Antes, só se olhava o tipo que o
   navegador declara, e um SVG enviado como PNG era decodificado e chegava à

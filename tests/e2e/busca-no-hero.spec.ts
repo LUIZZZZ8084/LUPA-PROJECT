@@ -29,28 +29,47 @@ test.describe("busca no hero, com sessão", () => {
   });
 
   /**
-   * O hero perdeu o título grande e os atalhos (#364), mas a home não pode
-   * ficar sem `<h1>`: leitor de tela e buscador dependem dele.
+   * O banner da home (#372): o `<h1>` agora é visível, com o convite novo.
+   * O título "O que você está procurando aqui perto?" e os atalhos de
+   * categoria (#364) continuam fora.
    */
-  test("sem título grande nem atalhos, e com h1 para leitor de tela", async ({
+  test("o banner tem o h1 visível, sem o título antigo nem os atalhos", async ({
     page,
   }) => {
     await page.goto("/");
+
+    const h1 = page.getByRole("heading", { level: 1 });
+    await expect(h1).toHaveCount(1);
+    await expect(h1).toHaveText("Encontre seu próximo trabalho");
+    await expect(h1).toBeVisible();
 
     await expect(page.getByText("O que você está procurando")).toHaveCount(0);
     await expect(
       page.getByRole("list", { name: "Mais procurados" }),
     ).toHaveCount(0);
+  });
 
-    const h1 = page.getByRole("heading", { level: 1 });
-    await expect(h1).toHaveCount(1);
-    await expect(h1).toHaveText("Trabalho e profissionais perto de você");
+  test("a faixa de números leva às listas", async ({ page }) => {
+    await page.goto("/");
 
-    // `sr-only` reduz a caixa a 1 px: está no HTML e na árvore de
-    // acessibilidade, e não ocupa lugar na tela.
-    const caixa = await h1.boundingBox();
-    expect(caixa?.width).toBeLessThanOrEqual(1);
-    expect(caixa?.height).toBeLessThanOrEqual(1);
+    await expect(
+      page.getByRole("link", { name: /vagas abertas/i }),
+    ).toHaveAttribute("href", "/vagas");
+    await expect(
+      page.getByRole("link", { name: /profissionais$/i }),
+    ).toHaveAttribute("href", "/servicos");
+  });
+
+  test("os profissionais são links para o perfil, sem contato na home", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    const perfis = page.locator('a[href^="/servicos/"]');
+    expect(await perfis.count()).toBeGreaterThan(0);
+
+    const html = await page.content();
+    expect(html).not.toContain("wa.me");
   });
 });
 
