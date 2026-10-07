@@ -224,80 +224,9 @@ export default async function HomePage() {
           )}
         </div>
 
-        {/* Confiança — o que faz alguém contratar um desconhecido */}
-        <Reveal>
-          {/*
-            Este bloco anunciava três verificações que o produto não entrega
-            (#237), na tela onde alguém decide deixar um estranho entrar em
-            casa.
-
-            "Telefone verificado" não existe — nada no código escreve
-            `telefone_verificado = true`, e os 14 perfis que exibiam o selo
-            em produção eram todos do seed. "Identidade confirmada" é a
-            alegação mais forte possível e a mais falsa: CPF válido e único
-            não prova que o documento é de quem o digitou, como os próprios
-            Termos de Uso dizem. E "a experiência de quem já contratou"
-            descrevia 17 avaliações das quais 16 eram semeadas — e nada liga
-            avaliação a contratação.
-
-            O que ficou é o que de fato é conferido, **com o alcance de cada
-            conferência dito junto**. Selo que promete mais do que confere
-            substitui o cuidado da pessoa por uma garantia que ninguém deu —
-            e é pior que selo nenhum, porque ela para de olhar.
-          */}
-          <Panel className="mt-10">
-            <h2 className="text-lg font-bold">
-              O que a gente <span className="text-vagas">confere</span>
-            </h2>
-            <p className="mt-1.5 max-w-lg text-sm text-muted">
-              E o que cada conferência prova, para você saber o que ainda
-              depende de você antes de contratar alguém.
-            </p>
-
-            <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-4">
-              <TrustItem
-                icon={<BadgeCheck size={22} />}
-                title="CNPJ na Receita"
-                description="Conferimos que a empresa existe e está ativa"
-              />
-              <TrustItem
-                icon={<ShieldCheck size={22} />}
-                title="Um CPF, uma conta"
-                description="Válido e sem repetir — não prova de quem é"
-              />
-              <TrustItem
-                icon={<Star size={22} />}
-                title="Uma avaliação por pessoa"
-                description="E ninguém avalia a si mesmo"
-              />
-              <TrustItem
-                icon={<MessageCircle size={22} />}
-                title="Gente daqui"
-                description="Da sua cidade e da sua região"
-              />
-            </div>
-
-            {/*
-              A frase que faltava.
-
-              Nenhuma das quatro conferências prova quem a pessoa é, e quem
-              vai abrir a porta de casa merece saber disso antes, não depois.
-              Sem alarde: produtor rural e autônomo contratam de verdade, e
-              tratar todo mundo como suspeito afastaria justamente quem o app
-              existe para atender.
-            */}
-            <p className="mt-5 border-t border-line pt-4 text-xs leading-relaxed text-muted">
-              Nada disso prova quem a pessoa é. Combine o primeiro encontro num
-              lugar movimentado, confira o serviço antes de pagar, e desconfie
-              de quem cobra qualquer taxa para você se candidatar — isso não
-              existe na Lupa.
-            </p>
-          </Panel>
-        </Reveal>
-
         {/* Chamada para empresas */}
-        <Reveal delay={60}>
-          <Panel className="mt-5 border-empresas/25 bg-gradient-to-br from-empresas/8 to-transparent">
+        <Reveal>
+          <Panel className="mt-10 border-empresas/25 bg-gradient-to-br from-empresas/8 to-transparent">
             <div className="flex flex-wrap items-center justify-between gap-5">
               <div className="flex items-start gap-4">
                 <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-empresas/15 text-empresas">
@@ -327,6 +256,73 @@ export default async function HomePage() {
                 <ArrowRight size={16} />
               </ButtonLink>
             </div>
+          </Panel>
+        </Reveal>
+
+        {/*
+          Confiança, no fim da página (#378).
+
+          Este bloco ficava logo depois das vagas, e fechava com frases de
+          alerta — "nada disso prova quem a pessoa é", "combine num lugar
+          movimentado", "desconfie de quem cobra taxa" — para quem acabou de
+          chegar. Primeira impressão não é lugar de aviso. Foi para o fim, e o
+          texto passou a dizer o que a Lupa faz, em linguagem de conversa.
+
+          **O que não mudou é o que ele afirma.** Ele anunciava verificações
+          que o produto não entrega (#237): "telefone verificado" não existe,
+          "identidade confirmada" é a alegação mais forte e a mais falsa — CPF
+          válido e único não prova que o documento é de quem o digitou, como
+          os Termos de Uso dizem — e a avaliação não se liga a nenhuma
+          contratação. Só entra aqui o que de fato é conferido: o CNPJ na
+          Receita, um CPF por conta, uma avaliação por pessoa. A trava é o
+          teste `promessas-da-tela`.
+
+          **A divisão de responsabilidade continua dita, sem tom de suspeita.**
+          A frase alarmante dizia, no fundo, que a Lupa confere o cadastro e
+          que o acerto é entre as pessoas. Isso agora é a última linha, em
+          tom de combinado: produtor rural e autônomo contratam de verdade, e
+          tratar todo mundo como suspeito afastaria justamente quem o app
+          existe para atender. O aviso jurídico, de que nenhuma conferência
+          prova quem a pessoa é, segue nos Termos de Uso.
+        */}
+        <Reveal delay={60}>
+          <Panel className="mt-5">
+            <h2 className="text-lg font-bold">
+              O que a gente <span className="text-vagas">confere</span> por você
+            </h2>
+            <p className="mt-1.5 max-w-lg text-sm text-muted">
+              Cuidados que a Lupa já toma, para você procurar e contratar com
+              mais tranquilidade.
+            </p>
+
+            <div className="mt-6 grid grid-cols-2 gap-5 md:grid-cols-4">
+              <TrustItem
+                icon={<BadgeCheck size={22} />}
+                title="Empresas de verdade"
+                description="Conferimos o CNPJ na Receita: a empresa existe e está ativa"
+              />
+              <TrustItem
+                icon={<ShieldCheck size={22} />}
+                title="Uma conta por pessoa"
+                description="Cada CPF vale uma conta só, e ele precisa ser válido"
+              />
+              <TrustItem
+                icon={<Star size={22} />}
+                title="Uma avaliação por pessoa"
+                description="Cada um avalia uma vez, e ninguém avalia a si mesmo"
+              />
+              <TrustItem
+                icon={<MessageCircle size={22} />}
+                title="Gente daqui"
+                description="O que está mais perto de você aparece primeiro"
+              />
+            </div>
+
+            <p className="mt-5 border-t border-line pt-4 text-xs leading-relaxed text-muted">
+              A Lupa confere o cadastro. O resto você combina direto com a outra
+              pessoa, pelo WhatsApp: valor, prazo e detalhes. E se candidatar é
+              grátis.
+            </p>
           </Panel>
         </Reveal>
 

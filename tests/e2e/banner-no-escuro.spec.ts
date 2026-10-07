@@ -1,88 +1,142 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 /**
- * O banner da home tem uma foto por tema (#374).
+ * O banner da home tem a mesma forma nos dois temas (#378).
  *
- * A clara, da arte original, no tema claro; o homem recortado do fundo, no
- * escuro. O tema é uma escolha guardada no navegador (`lupa:tema`) e lida
- * por um script antes da primeira pintura, então aqui ela é posta antes de
- * a página carregar, como faz quem já tinha escolhido o escuro.
+ * Até a #374 havia uma foto para cada tema, e quem alternava via o banner
+ * trocar de composição. Agora é uma foto só, o homem recortado do fundo, e as
+ * mesmas faixas; só a cor muda. O que se cobra aqui é a **medida**: o
+ * retângulo do banner, o da foto e o do título nos mesmos lugares, nos dois
+ * temas, em desktop e em celular.
  *
- * A home é pública: sem sessão, que é como quem recebe o link a vê.
+ * O tema é uma escolha guardada no navegador (`lupa:tema`) e lida por um
+ * script antes da primeira pintura, então aqui ela é posta antes de a página
+ * carregar, como faz quem já tinha escolhido. A home é pública: sem sessão,
+ * que é como quem recebe o link a vê.
  */
 const SEM_SESSAO = { cookies: [], origins: [] };
 
-async function fotoCarregada(
-  page: import("@playwright/test").Page,
-  trecho: string,
-) {
-  await page.waitForFunction((t) => {
-    const img = document.querySelector<HTMLImageElement>(`img[src*="${t}"]`);
+type Tema = "light" | "dark";
+
+async function abrirNo(page: Page, tema: Tema) {
+  await page.addInitScript((t) => localStorage.setItem("lupa:tema", t), tema);
+  await page.goto("/");
+  // Claro é o padrão e não tem atributo nenhum; escuro põe `data-theme="dark"`.
+  if (tema === "dark") {
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  } else {
+    await expect(page.locator("html")).not.toHaveAttribute(
+      "data-theme",
+      "dark",
+    );
+  }
+  await page.waitForFunction(() => {
+    const img = document.querySelector<HTMLImageElement>(
+      'img[src*="trabalhador"]',
+    );
     return Boolean(img?.complete && img.naturalWidth > 0);
-  }, trecho);
+  });
 }
 
-test.describe("banner da home, tema escuro", () => {
+/** Onde estão o banner, a foto e o texto, em pixels, arredondados. */
+async function medidas(page: Page) {
+  return page.evaluate(() => {
+    const caixa = (e: Element | null) => {
+      const r = e?.getBoundingClientRect();
+      return r ? [r.x, r.y, r.width, r.height].map((n) => Math.round(n)) : null;
+    };
+    const banner = document.querySelector("section:has(h1)");
+    return {
+      banner: caixa(banner),
+      foto: caixa(banner?.querySelector("img") ?? null),
+      titulo: caixa(banner?.querySelector("h1") ?? null),
+      frase: caixa(banner?.querySelector("p") ?? null),
+      faixas: [...(banner?.querySelectorAll("[aria-hidden]") ?? [])].map(caixa),
+    };
+  });
+}
+
+test.describe("banner da home, os dois temas", () => {
   test.use({ storageState: SEM_SESSAO });
 
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("lupa:tema", "dark"));
-  });
+  for (const [nome, largura, altura] of [
+    ["desktop", 1280, 800],
+    ["celular", 375, 812],
+  ] as const) {
+    test(`tem as mesmas medidas no claro e no escuro (${nome})`, async ({
+      browser,
+    }) => {
+      const resultado: Record<Tema, Awaited<ReturnType<typeof medidas>>> = {
+        light: await (async () => {
+          const ctx = await browser.newContext({
+            viewport: { width: largura, height: altura },
+          });
+          const page = await ctx.newPage();
+          await abrirNo(page, "light");
+          const m = await medidas(page);
+          await ctx.close();
+          return m;
+        })(),
+        dark: await (async () => {
+          const ctx = await browser.newContext({
+            viewport: { width: largura, height: altura },
+          });
+          const page = await ctx.newPage();
+          await abrirNo(page, "dark");
+          const m = await medidas(page);
+          await ctx.close();
+          return m;
+        })(),
+      };
 
-  test("mostra o recorte e esconde a foto clara", async ({ page }) => {
-    await page.goto("/");
+      expect(resultado.light.banner).not.toBeNull();
+      expect(resultado.dark).toEqual(resultado.light);
+    });
+  }
 
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(page.locator('img[src*="trabalhador-escuro"]')).toBeVisible();
-    await expect(page.locator('img[src*="trabalhador.webp"]')).toBeHidden();
-    await fotoCarregada(page, "trabalhador-escuro");
-  });
+  for (const tema of ["light", "dark"] as const) {
+    test(`mostra a mesma foto no tema ${tema}`, async ({ page }) => {
+      await abrirNo(page, tema);
 
-  /**
-   * O contraste do título e da frase sobre o fundo verde escuro. Só o banner
-   * é medido: o resto da home no escuro tem a sua própria história, e uma
-   * violação de fora não pode esconder uma de dentro nem o contrário.
-   */
-  test("o banner não tem violações de acessibilidade no escuro", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await fotoCarregada(page, "trabalhador-escuro");
+      const foto = page.locator('section:has(h1) img[src*="trabalhador"]');
+      await expect(foto).toHaveCount(1);
+      await expect(foto).toBeVisible();
+    });
 
-    const resultado = await new AxeBuilder({ page })
-      .include("section:has(h1)")
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-      .analyze();
+    /**
+     * O contraste do título e da frase sobre o fundo do tema. Só o banner é
+     * medido: o resto da home no escuro tem a sua própria história, e uma
+     * violação de fora não pode esconder uma de dentro nem o contrário.
+     */
+    test(`o banner não tem violações de acessibilidade no tema ${tema}`, async ({
+      page,
+    }) => {
+      await abrirNo(page, tema);
 
-    expect(
-      resultado.violations.map((v) => ({
-        regra: v.id,
-        elementos: v.nodes.slice(0, 2).map((n) => n.html.slice(0, 100)),
-      })),
-    ).toEqual([]);
-  });
+      const resultado = await new AxeBuilder({ page })
+        .include("section:has(h1)")
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .analyze();
 
-  test("sem rolagem horizontal no celular", async ({ page }) => {
-    await page.setViewportSize({ width: 360, height: 800 });
-    await page.goto("/");
-    await fotoCarregada(page, "trabalhador-escuro");
+      expect(
+        resultado.violations.map((v) => ({
+          regra: v.id,
+          elementos: v.nodes.slice(0, 2).map((n) => n.html.slice(0, 100)),
+        })),
+      ).toEqual([]);
+    });
 
-    const sobra = await page.evaluate(
-      () => document.documentElement.scrollWidth - window.innerWidth,
-    );
-    expect(sobra).toBeLessThanOrEqual(0);
-  });
-});
+    test(`sem rolagem horizontal no celular, tema ${tema}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 360, height: 800 });
+      await abrirNo(page, tema);
 
-test.describe("banner da home, tema claro", () => {
-  test.use({ storageState: SEM_SESSAO });
-
-  test("mostra a foto clara e esconde o recorte", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("lupa:tema", "light"));
-    await page.goto("/");
-
-    await expect(page.locator('img[src*="trabalhador.webp"]')).toBeVisible();
-    await expect(page.locator('img[src*="trabalhador-escuro"]')).toBeHidden();
-  });
+      const sobra = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(sobra).toBeLessThanOrEqual(0);
+    });
+  }
 });
