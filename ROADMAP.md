@@ -14,6 +14,15 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 07/10/2026:
 
+- Banner da home com a mesma forma nos dois temas: uma foto só (o homem
+  recortado do fundo, com nome de arquivo novo para não servir a antiga do
+  cache de imagens) sobre as mesmas faixas inclinadas, e só a cor muda, por
+  variáveis (`--banner-faixa-*`). Teste mede o banner, a foto, o título e as
+  faixas nos dois temas, em desktop e celular. O bloco "O que a gente
+  confere" foi para o fim da página, depois da chamada para empresas, com o
+  texto em linguagem de conversa e sem as frases de alerta; continua dizendo
+  só o que o app de fato confere —
+  [#378](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/378)
 - Esqueleto de carregamento da home com a forma da home nova (banner, cartão de
   busca, faixa de números, vagas em fila e profissionais em linha), com as
   alturas medidas no conteúdo carregado, para a tela não pular quando os

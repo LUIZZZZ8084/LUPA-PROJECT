@@ -24,29 +24,45 @@ describe("BannerDaHome", () => {
   });
 
   /**
-   * As fotos são decorativas e o título é texto: o que a arte original trazia
+   * A foto é decorativa e o título é texto: o que a arte original trazia
    * desenhado (título, frase e logo) não pode voltar para dentro da imagem.
-   * Há uma foto por tema (#374), e a errada fica escondida por CSS.
    */
-  it("as duas fotos são decorativas, e o título não está dentro delas", () => {
+  it("há uma foto só, decorativa, e o título não está dentro dela", () => {
     const { container } = render(<BannerDaHome />);
 
     const fotos = [...container.querySelectorAll("img")];
-    expect(fotos).toHaveLength(2);
-    for (const f of fotos) expect(f).toHaveAttribute("alt", "");
-    expect(fotos[0].getAttribute("src")).toContain("trabalhador.webp");
-    expect(fotos[1].getAttribute("src")).toContain("trabalhador-escuro.webp");
+    expect(fotos).toHaveLength(1);
+    expect(fotos[0]).toHaveAttribute("alt", "");
+    expect(fotos[0].getAttribute("src")).toContain(
+      "trabalhador-recortado.webp",
+    );
     expect(screen.queryAllByRole("img")).toHaveLength(0);
   });
 
-  /** Cada tema mostra a sua foto, e só ela. */
-  it("a foto clara some no escuro e o recorte só aparece nele", () => {
+  /**
+   * O banner tem a mesma forma nos dois temas; só a cor muda (#378). Antes
+   * havia uma foto para cada tema, e quem alternava via o banner trocar de
+   * composição. Qualquer `dark:` aqui reabriria esse caminho: um elemento
+   * que só existe, ou só tem outro tamanho, num dos temas.
+   */
+  it("nada no banner depende do tema para ter forma", () => {
     const { container } = render(<BannerDaHome />);
-    const [clara, escura] = [...container.querySelectorAll("img")];
+    const todas = [...container.querySelectorAll("*")]
+      .map((e) => e.getAttribute("class") ?? "")
+      .join(" ");
 
-    expect(clara.className).toContain("dark:hidden");
-    expect(escura.className).toContain("hidden");
-    expect(escura.className).toContain("dark:block");
+    expect(todas).not.toContain("dark:");
+  });
+
+  it("as faixas e o texto pegam a cor das variáveis, e não de uma cor fixa", () => {
+    const { container } = render(<BannerDaHome />);
+    const faixas = [...container.querySelectorAll("[aria-hidden]")].map(
+      (e) => e.className,
+    );
+
+    expect(faixas).toHaveLength(2);
+    expect(faixas[0]).toContain("var(--banner-faixa-a)");
+    expect(faixas[1]).toContain("var(--banner-faixa-b)");
   });
 
   /**
@@ -74,6 +90,8 @@ describe("cores do banner por tema", () => {
     "--banner-borda",
     "--banner-titulo",
     "--banner-texto",
+    "--banner-faixa-a",
+    "--banner-faixa-b",
   ];
 
   it("o claro e o escuro definem as mesmas variáveis", () => {

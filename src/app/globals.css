@@ -294,6 +294,14 @@ html[data-theme="dark"] {
   --banner-borda: #cfe3b0;
   --banner-titulo: #12161b;
   --banner-texto: #4a5361;
+  /*
+   * As faixas inclinadas atrás do homem: a mesma geometria nos dois temas, só
+   * a cor muda. No claro são dois verdes de média luminosidade, claros o
+   * bastante para a camisa escura aparecer na frente; no escuro, o lima da
+   * marca a pouca opacidade.
+   */
+  --banner-faixa-a: linear-gradient(165deg, #b7d96c, #7fb02a);
+  --banner-faixa-b: #d3e8ab;
 }
 
 :root[data-theme="dark"] {
@@ -305,6 +313,8 @@ html[data-theme="dark"] {
   --banner-borda: rgb(168 217 74 / 0.25);
   --banner-titulo: #f2f5f8;
   --banner-texto: #b7c4b5;
+  --banner-faixa-a: rgb(168 217 74 / 0.15);
+  --banner-faixa-b: rgb(168 217 74 / 0.25);
 }
 
 body {
