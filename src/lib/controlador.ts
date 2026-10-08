@@ -61,7 +61,7 @@ export const CONTROLADOR: Controlador = {
  * de quando é o texto — e porque a LGPD exige avisar mudança relevante, o
  * que só faz sentido contra uma data.
  */
-export const REVISADO_EM = "2026-09-14";
+export const REVISADO_EM = "2026-10-08";
 
 /**
  * As páginas legais só podem ir ao ar com o controlador identificado.
