@@ -25,13 +25,16 @@ on conflict (id) do nothing;
 
 -- Foto de perfil e logo de empresa moram no mesmo bucket, separadas por
 -- pasta (`avatar/` e `logo/`). São a mesma coisa do ponto de vista de
--- acesso — imagem pública que aparece na busca — e um bucket a menos é uma
--- policy a menos para manter em dia.
-create policy "avatares publicos para leitura"
-  on storage.objects for select using (bucket_id = 'avatares');
-
-create policy "portfolio publico para leitura"
-  on storage.objects for select using (bucket_id = 'portfolio');
+-- acesso — imagem pública que aparece na busca.
+--
+-- Nenhum bucket recebe policy de `select` (#396), nem os públicos. A URL
+-- pública de um bucket público é servida sem passar por policy nenhuma; o
+-- que a policy de `select` liberava era **listar** o bucket pela API, com a
+-- chave anônima que vai para o navegador. Como o caminho começa pelo id da
+-- conta, a listagem entregava o id de todo mundo que tem foto. O app não
+-- lista nada: envia, troca e apaga pelo servidor, com a chave de serviço.
+-- Em banco que já existe, quem tira as duas antigas é
+-- `aplica-storage-sem-listagem.sql`.
 
 -- Currículo e verificação não recebem policy: com RLS ligada e nenhuma
 -- policy, o Postgres nega tudo. O acesso é feito pelo servidor com a chave

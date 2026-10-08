@@ -100,3 +100,45 @@ describe("limites dos buckets", () => {
     },
   );
 });
+
+/**
+ * Nenhum bucket é listável (#396).
+ *
+ * A URL pública de bucket público não passa por policy; uma policy de
+ * `select` em `storage.objects` só serve para listar o bucket pela API com
+ * a chave anônima — e o caminho de cada arquivo começa pelo id da conta.
+ * O app não lista nada: tudo passa pelo servidor, com a chave de serviço.
+ */
+describe("storage sem listagem", () => {
+  const semComentarios = (sql: string) =>
+    sql.replace(/--.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  it("o storage.sql não cria policy de select", () => {
+    const fonte = semComentarios(
+      readFileSync(join(SUPABASE, "storage.sql"), "utf8"),
+    );
+    expect(fonte).not.toMatch(/create\s+policy/i);
+  });
+
+  it("o script tira as duas policies antigas", () => {
+    const fonte = semComentarios(
+      readFileSync(join(SUPABASE, "aplica-storage-sem-listagem.sql"), "utf8"),
+    );
+    for (const nome of [
+      "avatares publicos para leitura",
+      "portfolio publico para leitura",
+    ]) {
+      expect(fonte).toContain(
+        `drop policy if exists "${nome}" on storage.objects;`,
+      );
+    }
+  });
+
+  it("o app não lista bucket nenhum", () => {
+    const servico = readFileSync(
+      join(process.cwd(), "src/server/arquivos/servico.ts"),
+      "utf8",
+    );
+    expect(servico).not.toMatch(/\.list\(/);
+  });
+});

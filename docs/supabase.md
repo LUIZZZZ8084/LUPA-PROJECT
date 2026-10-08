@@ -83,6 +83,7 @@ e repetível, ao lado do `schema.sql`:
 | [`supabase/aplica-remove-dados-de-exemplo.sql`](../supabase/aplica-remove-dados-de-exemplo.sql) | Uma vez, em banco de produção que recebeu o `seed.sql` (#302) — ver a seção 4 |
 | [`supabase/aplica-cidades-do-brasil.sql`](../supabase/aplica-cidades-do-brasil.sql) | Uma vez, em banco criado antes da Issue #301 — **antes** do deploy: depois dele, "Sinop" sem estado é recusado |
 | [`supabase/aplica-avaliacao-assinada-pela-empresa.sql`](../supabase/aplica-avaliacao-assinada-pela-empresa.sql) | Uma vez, em banco criado antes da Issue #315 — antes ou depois do deploy, tanto faz |
+| [`supabase/aplica-storage-sem-listagem.sql`](../supabase/aplica-storage-sem-listagem.sql) | Uma vez, em banco criado antes da Issue #396 — tira a listagem dos buckets públicos; antes ou depois do deploy, tanto faz |
 
 Banco novo não precisa de nenhum deles: o `schema.sql` já traz tudo.
 

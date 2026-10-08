@@ -1,4 +1,4 @@
-# Roadmap da auditoria de código (06/10/2026, estado de 07/10)
+# Roadmap da auditoria de código (06/10/2026, estado de 08/10)
 
 Leitura de código da Lupa com o roteiro da skill de auditoria da Cloudflare:
 quatro agentes de reconhecimento e caçadores por área. Esta página junta o que
@@ -6,15 +6,21 @@ saiu dela, o que virou PR e o que ainda não foi lido. Os relatórios da outra
 frente da auditoria (`docs/auditoria-*-2026-10-06.md`) cobrem arquivos e
 cabeçalhos, RBAC, e-mail e tokens, pagamentos e ataques.
 
+**Atualização de 08/10.** Os dez PRs foram mergeados na ordem sugerida
+abaixo, depois de rodarem juntos num branch local (`verify` e e2e inteiros
+verdes), e o SQL do #393 rodou antes. As seis áreas que tinham ficado sem
+leitura foram lidas: o resultado está em "Segunda leitura", no fim, e as
+correções na #396.
+
 **Resumo.** Treze pontos viraram correção, em dez pull requests, todos com
-teste. Nenhum foi mergeado até a escrita desta página. Nada ficou esperando
+teste. Nada ficou esperando
 decisão: o T2 e o T5 foram decididos pelo Luiz em 07/10 e estão em PR. O que a
 leitura achou são candidatos que ninguém reproduziu contra o app; o que os
 testes provam é que cada correção muda o comportamento (nos de pagamento,
 cron, login, cadastro e teste grátis, os testes novos falham sem a correção,
 conferido tirando o código e rodando de novo).
 
-## Corrigido, esperando merge
+## Corrigido e mergeado em 08/10
 
 | PR | Issue | O que corrige | Severidade |
 |---|---|---|---|
@@ -87,7 +93,7 @@ alguém mexer nos módulos.
   gravada, o teste é gasto sem dar os dias. E não se sabe se o Mercado Pago
   barra teste repetido no mesmo cartão.
 
-## Ordem sugerida de merge
+## Ordem de merge (seguida em 08/10)
 
 1. #357 e #359, depois que a CI ficar verde. Mexem com rede e com dinheiro.
 2. #385, que parte do #359.
@@ -96,7 +102,7 @@ alguém mexer nos módulos.
 5. #389, sem pressa.
 6. #393, **só depois de rodar o SQL**.
 
-## O que não foi lido
+## O que não foi lido em 06/10
 
 Quatro dos quatorze caçadores devolveram resultado: sessão, cadastro e
 recuperação, ações e CSRF, pagamentos e webhook. Os outros dez foram
@@ -106,6 +112,48 @@ frente cobriu arquivos e cabeçalhos, RBAC, e-mail e tokens, e pagamentos.
 Pelo que se sabe, **seguem sem leitura dedicada:** schema e RLS, views e ciclo
 de vida, busca e injeção, links e CSP, push, e configuração e CI. Isso não quer
 dizer que estejam limpos.
+
+## Segunda leitura (08/10, #396)
+
+As seis áreas acima, lidas direto no código, sem agentes. Nada foi enviado a
+produção para conferir; o que a leitura afirma está dito com o caminho do
+arquivo, e as correções têm teste.
+
+**Corrigido na #396:**
+
+- **Buckets públicos listáveis.** `avatares` e `portfolio` tinham policy de
+  `select` em `storage.objects`, que não serve para entregar a URL pública e
+  servia para listar o bucket com a chave anônima — e o caminho começa pelo id
+  da conta. Saíram do `storage.sql`; `aplica-storage-sem-listagem.sql` tira
+  do banco que já existe. Baixa.
+- **Actions mortas que aceitavam endereço de imagem.** `publicar` e
+  `editar`, em `perfil/publicacoes/actions.ts`, recebiam qualquer `https`
+  como foto e nenhuma tela as chamava. Removidas. Baixa.
+- **Permissões do workflow no arquivo.** `permissions: contents: read` no
+  topo do `ci.yml`; o padrão do repositório já era leitura. Endurecimento.
+
+**Registrado, sem correção:**
+
+- **A `main` não tem proteção de branch.** Push direto e force-push são
+  aceitos, e cada push publica em produção; "tudo por PR com CI verde" é só
+  combinação. Ligar a proteção, exigindo os checks da CI, é configuração do
+  repositório, com o Luiz.
+- **Não há exclusão de conta pela tela.** Direito do titular na LGPD (art.
+  18). Fica para a página de privacidade (#235/#236) dizer como pedir.
+- **A decisão do admin apaga documento de `verificacao` com a chave
+  anônima**, que não tem policy de `delete` — a remoção falharia em
+  silêncio. Sem efeito hoje: nenhum documento chega à fila (#133).
+- **`tokens_recuperacao` nunca é limpa.** Hash, usados ou vencidos; só
+  ocupam espaço.
+
+**Sem achado:** RLS das tabelas (todas ligadas, só policies de leitura),
+escrita por view (nenhuma é atualizável: todas têm `join` ou agregação),
+funções (nenhuma é `security definer`, então RPC com a chave anônima
+esbarra no RLS), busca (termo entre aspas com escape, estado validado
+contra a lista de siglas, termo gravado com 2 a 80 caracteres), CSP (nonce,
+`frame-ancestors`, `object-src`, `base-uri` e `form-action` travados;
+imagem remota só do host do Supabase no otimizador), push (inscrição por
+`endpoint`, que só o navegador conhece) e segredos no repositório.
 
 ## Como foi feito
 

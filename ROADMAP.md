@@ -8,9 +8,18 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 07/10/2026.**
+**Última atualização: 08/10/2026.**
 
 ## Concluído
+
+Em 08/10/2026:
+
+- Os dez PRs da auditoria de 06/10 mergeados, e as seis áreas que tinham
+  ficado sem leitura lidas: buckets públicos deixam de ser listáveis, saem
+  duas actions mortas que aceitavam endereço de imagem, e o workflow declara
+  token só de leitura. O resto ficou registrado em
+  `docs/auditoria-roadmap-2026-10-07.md` —
+  [#396](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/396)
 
 Em 07/10/2026:
 
