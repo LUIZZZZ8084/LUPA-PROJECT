@@ -80,9 +80,10 @@ alguém mexer nos módulos.
   `api/cron`) e exclui por extensão de arquivo.
 - `confirmarParcelaDaAssinatura` confia no status embutido na fatura em vez de
   reler o pagamento.
-- Um token de recuperação antigo continua válido por uma hora quando se pede
+- ~~Um token de recuperação antigo continua válido por uma hora quando se pede
   outro, e `/verificar-email` consome o token no GET, o que um antivírus de
-  e-mail pode gastar.
+  e-mail pode gastar.~~ Corrigido na #398: o token novo aposenta os
+  anteriores, e a confirmação é um botão.
 - A cota de 100 e-mails por dia do Resend tem limite só por origem: uma origem
   esgota a cota de todo mundo.
 - `SESSION_SECRET` igual em preview e produção aceitaria token de um no outro.
