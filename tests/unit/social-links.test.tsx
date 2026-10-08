@@ -44,4 +44,25 @@ describe("redes sociais", () => {
     const link = screen.getByRole("link", { name: "Site" });
     expect(link.className).toContain("text-ink");
   });
+
+  it("endereço guardado com esquema perigoso não vira link (#354)", () => {
+    const { container } = render(
+      <SocialLinks
+        site="javascript:alert(1)"
+        instagram="data:text/html,x"
+        facebook="https://facebook.com/fulano"
+      />,
+    );
+
+    expect(container.querySelectorAll("a")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Facebook" })).toHaveAttribute(
+      "href",
+      "https://facebook.com/fulano",
+    );
+  });
+
+  it("só esquema perigoso: não desenha nada (#354)", () => {
+    const { container } = render(<SocialLinks site="javascript:alert(1)" />);
+    expect(container).toBeEmptyDOMElement();
+  });
 });

@@ -2678,6 +2678,16 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   padrões deixados nas telas** — a camada de dados estava certa o tempo
   todo, e teste sobre ela passava verde com o bug em pé.
 
+- **`z.url()` do Zod 4 aceita qualquer esquema.** `javascript:alert(1)` e
+  `data:text/html,…` passam como "endereço válido" — o nome sugere web, e a
+  função só confere que é uma URL. Site, Instagram, Facebook e a imagem de
+  publicação usavam `z.url()` e acabam num `<a href>` ou `<img src>` que
+  qualquer conta logada vê (#354). Hoje o cadastro e a edição usam
+  `z.httpUrl()`, e a tela passa o que lê por `linkExterno` (`src/lib/format.ts`):
+  o que foi gravado antes da validação não vira `javascript:` num link.
+  *Validar na entrada não limpa o que já está no banco; a tela é a última
+  porta.*
+
 Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
 último em `tests/unit/cidades.test.ts` — os três varrem o código-fonte.
 

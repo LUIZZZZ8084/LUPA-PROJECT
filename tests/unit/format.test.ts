@@ -7,6 +7,7 @@ import {
   formatSalaryRange,
   formatStartingPrice,
   initials,
+  linkExterno,
   normalizarCnpj,
   onlyDigits,
   pluralize,
@@ -235,5 +236,31 @@ describe("pluralize", () => {
     expect(pluralize(1, "vaga", "vagas")).toBe("1 vaga");
     expect(pluralize(3, "vaga", "vagas")).toBe("3 vagas");
     expect(pluralize(0, "vaga", "vagas")).toBe("0 vagas");
+  });
+});
+
+describe("linkExterno", () => {
+  it("deixa passar http e https", () => {
+    expect(linkExterno("https://instagram.com/fulano")).toBe(
+      "https://instagram.com/fulano",
+    );
+    expect(linkExterno("http://exemplo.com.br")).toBe("http://exemplo.com.br");
+  });
+
+  it.each([
+    "javascript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    "data:text/html,<b>x</b>",
+    "ftp://exemplo.com.br",
+    "//exemplo.com.br",
+    "texto solto",
+    "",
+  ])("recusa %s (#354)", (url) => {
+    expect(linkExterno(url)).toBeNull();
+  });
+
+  it("ausente vira nulo", () => {
+    expect(linkExterno(null)).toBeNull();
+    expect(linkExterno(undefined)).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
 import { Globe } from "lucide-react";
+import { linkExterno } from "@/lib/format";
 
 /**
  * Ícones de marca que o lucide-react não tem.
@@ -96,13 +97,18 @@ export function SocialLinks({
   instagram?: string | null;
   facebook?: string | null;
 }) {
-  if (!site && !instagram && !facebook) return null;
+  const links = {
+    site: linkExterno(site),
+    instagram: linkExterno(instagram),
+    facebook: linkExterno(facebook),
+  };
+  if (!links.site && !links.instagram && !links.facebook) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {site && <SocialLink rede="site" url={site} />}
-      {instagram && <SocialLink rede="instagram" url={instagram} />}
-      {facebook && <SocialLink rede="facebook" url={facebook} />}
+      {links.site && <SocialLink rede="site" url={links.site} />}
+      {links.instagram && <SocialLink rede="instagram" url={links.instagram} />}
+      {links.facebook && <SocialLink rede="facebook" url={links.facebook} />}
     </div>
   );
 }
