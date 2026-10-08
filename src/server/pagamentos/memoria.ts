@@ -128,7 +128,14 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
     id: string,
     mpPaymentId: string | null,
   ): Promise<Pagamento | null> {
-    return this.mudarStatusSePendente(id, "aprovado", mpPaymentId);
+    // Mesma regra do Postgres (#358): a recusada de uma tentativa anterior
+    // não impede a aprovação da seguinte.
+    return this.mudarStatusSe(
+      id,
+      ["pendente", "rejeitado", "cancelado"],
+      "aprovado",
+      mpPaymentId,
+    );
   }
 
   async rejeitar(
@@ -164,13 +171,14 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
 
   private mudarStatusSe(
     id: string,
-    de: StatusPagamento,
+    de: StatusPagamento | readonly StatusPagamento[],
     para: StatusPagamento,
     mpPaymentId: string | null,
   ): Pagamento | null {
     const atual = this.itens.get(id);
     if (!atual) throw erros.naoEncontrado("Pagamento");
-    if (atual.status !== de) return null;
+    const origens = typeof de === "string" ? [de] : de;
+    if (!origens.includes(atual.status)) return null;
     const status = para;
 
     const novo: Pagamento = {

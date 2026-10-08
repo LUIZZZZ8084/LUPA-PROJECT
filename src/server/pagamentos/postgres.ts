@@ -207,7 +207,14 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
     id: string,
     mpPaymentId: string | null,
   ): Promise<Pagamento | null> {
-    return mudarStatusSePendente(id, "aprovado", mpPaymentId);
+    // Aprova também a que uma tentativa anterior fechou (#358): uma
+    // preferência gera várias tentativas, e a recusada costuma chegar antes.
+    return mudarStatusSe(
+      id,
+      STATUS_QUE_AINDA_PODEM_APROVAR,
+      "aprovado",
+      mpPaymentId,
+    );
   }
 
   async rejeitar(
@@ -365,6 +372,21 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
  * duas vezes. `maybeSingle` porque zero linhas é resultado esperado
  * quando outra notificação já resolveu esta antes.
  */
+/**
+ * De onde uma aprovação ainda vale (#358).
+ *
+ * Uma preferência do Checkout Pro gera várias tentativas sob a mesma
+ * referência: cartão recusado, depois PIX aprovado. A notificação da
+ * recusada chega primeiro e fecha a cobrança; se a aprovação só partisse de
+ * `pendente`, a segunda seria descartada e quem pagou ficaria sem o que
+ * comprou. O dinheiro entrou, então a aprovação é a que manda.
+ */
+const STATUS_QUE_AINDA_PODEM_APROVAR: readonly StatusPagamento[] = [
+  "pendente",
+  "rejeitado",
+  "cancelado",
+];
+
 async function mudarStatusSePendente(
   id: string,
   status: StatusPagamento,
@@ -375,19 +397,22 @@ async function mudarStatusSePendente(
 
 async function mudarStatusSe(
   id: string,
-  de: StatusPagamento,
+  de: StatusPagamento | readonly StatusPagamento[],
   status: StatusPagamento,
   mpPaymentId: string | null,
 ): Promise<Pagamento | null> {
   const supabase = await cliente();
-  const { data, error } = await supabase
+  const alteracao = supabase
     .from("pagamentos")
     .update({
       status,
       ...(mpPaymentId !== null ? { mp_payment_id: mpPaymentId } : {}),
     })
-    .eq("id", id)
-    .eq("status", de)
+    .eq("id", id);
+  const { data, error } = await (typeof de === "string"
+    ? alteracao.eq("status", de)
+    : alteracao.in("status", [...de])
+  )
     .select("*")
     .maybeSingle();
 

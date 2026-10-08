@@ -2157,6 +2157,25 @@ para aprovar, porque a guarda mora na própria instrução do banco. **O
 crédito sumiria de vez, por causa da ordem em que uma lista voltou.**
 Ordem que decide dinheiro não pode ser herdada da resposta de terceiro.
 
+**A mesma precedência vale no webhook, e não só na varredura (#358).** A
+varredura enxerga todas as tentativas de uma preferência de uma vez e
+escolhe a aprovada. O webhook recebe uma por notificação, e a recusada
+costuma chegar antes: `rejeitar` e `cancelar` fechavam a cobrança, e
+`aprovar` só partia de `pendente`, então a aprovação seguinte era
+descartada em silêncio — quem pagou ficava sem o que comprou. Hoje
+`aprovar` parte de `pendente`, `rejeitado` e `cancelado`, e as duas
+outras continuam partindo só de `pendente`, para que uma notícia atrasada
+de recusa não desfaça uma aprovação. O dinheiro entrou, então a
+aprovação é a que manda. *Máquina de estados com estado terminal precisa
+perguntar se o terminal pode ser ultrapassado por uma prova melhor.*
+
+**O cron recusa sem segredo em qualquer deploy da Vercel (#358).** Só
+`VERCEL_ENV === "production"` recusava; num preview a rota rodava aberta
+para qualquer GET, e um preview pode carregar a chave de serviço e o
+token do Mercado Pago. Agora é `VERCEL` (qualquer deploy), e a comparação
+do segredo é em tempo constante. Fora da Vercel — dev local e suíte —
+continua rodando solta.
+
 **O que ainda pode virar dinheiro não se toca:** boleto em aberto e PIX
 não pago são `pending` lá também, e encerrar a cobrança ali tiraria de
 alguém uma compra que ele ainda pode concluir. E há janela dos dois lados

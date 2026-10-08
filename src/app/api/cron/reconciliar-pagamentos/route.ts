@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { comoAppError } from "@/server/errors";
 import { cronometro, log, novoRequestId } from "@/server/logger";
@@ -29,6 +30,15 @@ export const dynamic = "force-dynamic";
 /** Varredura fala com o Mercado Pago uma vez por cobrança presa. */
 export const maxDuration = 60;
 
+/** Compara sem vazar, pelo tempo, quantos caracteres já batem (#358). */
+function segredoConfere(cabecalho: string | null, segredo: string): boolean {
+  const recebido = Buffer.from(cabecalho ?? "");
+  const esperado = Buffer.from(`Bearer ${segredo}`);
+  return (
+    recebido.length === esperado.length && timingSafeEqual(recebido, esperado)
+  );
+}
+
 export async function GET(request: Request) {
   const requestId = novoRequestId();
   const medir = cronometro();
@@ -38,10 +48,13 @@ export async function GET(request: Request) {
 
     if (!segredo) {
       /*
-       * Fora de produção não há cron nem dinheiro: a varredura roda solta,
-       * para dar para exercitá-la localmente e na suíte.
+       * Sem segredo, a varredura só roda solta **fora da Vercel**, para dar
+       * para exercitá-la localmente e na suíte. Qualquer deploy dela —
+       * produção, preview — recusa (#358): um preview pode carregar a chave
+       * de serviço e o token do Mercado Pago, e "fora de produção" não quer
+       * dizer "sem dinheiro".
        */
-      if (process.env.VERCEL_ENV === "production") {
+      if (process.env.VERCEL) {
         log.erro(
           comoAppError(
             new Error(
@@ -53,7 +66,7 @@ export async function GET(request: Request) {
         );
         return NextResponse.json({ erro: "não configurado" }, { status: 503 });
       }
-    } else if (request.headers.get("authorization") !== `Bearer ${segredo}`) {
+    } else if (!segredoConfere(request.headers.get("authorization"), segredo)) {
       /*
        * 401 sem detalhe: quem bateu aqui sem o segredo não precisa saber se
        * errou o cabeçalho ou se a rota existe para outra coisa.
