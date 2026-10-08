@@ -21,7 +21,7 @@ describe("cliente de serviço", () => {
 
   it("sem chave configurada, devolve null em vez de um cliente quebrado", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+    vi.stubEnv("SUPABASE_ANON_KEY", "");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
 
     const { clienteDeServico, temChaveDeServico } = await carregar();
@@ -32,7 +32,7 @@ describe("cliente de serviço", () => {
 
   it("exige as duas coisas: URL do projeto e chave de serviço", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://exemplo.supabase.co");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon");
+    vi.stubEnv("SUPABASE_ANON_KEY", "anon");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
 
     const { temChaveDeServico } = await carregar();
@@ -41,7 +41,7 @@ describe("cliente de serviço", () => {
 
   it("com tudo configurado, devolve um cliente utilizável", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://exemplo.supabase.co");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon");
+    vi.stubEnv("SUPABASE_ANON_KEY", "anon");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "chave-de-servico");
 
     const { clienteDeServico } = await carregar();
@@ -53,7 +53,7 @@ describe("cliente de serviço", () => {
 
   it("reaproveita a mesma instância entre chamadas", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://exemplo.supabase.co");
-    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon");
+    vi.stubEnv("SUPABASE_ANON_KEY", "anon");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "chave-de-servico");
 
     const { clienteDeServico } = await carregar();

@@ -6,8 +6,6 @@ import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import {
   arquivarPublicacao,
-  criarPublicacao,
-  editarPublicacao,
   editarTrabalho,
   publicarTrabalho,
   reativarPublicacao,
@@ -23,24 +21,16 @@ import { zTexto } from "@/server/validation";
 
 const zId = z.uuid("Publicação inválida.");
 
+/*
+ * Não há action que receba endereço de imagem (#396). Havia duas,
+ * `publicar` e `editar`, que aceitavam qualquer URL `https` como foto e
+ * nenhuma tela chamava: a foto só entra por envio de arquivo, que o
+ * servidor confere, reduz e grava no nosso bucket.
+ */
 const conteudo = {
   titulo: zTexto(3, 120, "O título"),
   corpo: zTexto(10, 3000, "O texto"),
-  imagemUrl: z
-    .union([z.url("Endereço de imagem inválido."), z.literal("")])
-    .optional()
-    .transform((v) => (v ? v : null)),
 };
-
-export const publicar = criarAcao({
-  nome: "publicacao.criar",
-  entrada: z.object(conteudo),
-  executar: async (dados) => {
-    const publicacao = await criarPublicacao(await sessaoAtual(), dados);
-    revalidatePath("/perfil");
-    return { id: publicacao.id };
-  },
-});
 
 /**
  * As duas telas onde a grade de trabalhos aparece.
@@ -119,21 +109,6 @@ export async function reativarComEstado(
 ): Promise<EstadoPublicacao> {
   return paraEstado(await reativar(formData));
 }
-
-export const editar = criarAcao({
-  nome: "publicacao.editar",
-  entrada: z.object({
-    id: zId,
-    titulo: conteudo.titulo.optional(),
-    corpo: conteudo.corpo.optional(),
-    imagemUrl: conteudo.imagemUrl,
-  }),
-  executar: async ({ id, ...campos }) => {
-    const publicacao = await editarPublicacao(await sessaoAtual(), id, campos);
-    revalidatePath("/perfil");
-    return { id: publicacao.id, atualizadoEm: publicacao.atualizadoEm };
-  },
-});
 
 export const arquivar = criarAcao({
   nome: "publicacao.arquivar",

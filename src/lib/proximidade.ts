@@ -1,16 +1,19 @@
-import { REGIOES_MT } from "./regioes-mt";
+import { ufDaCidade } from "./cidades";
+import { REGIOES } from "./regioes";
 
 /**
  * Quão perto de quem está olhando.
  *
- * A busca cobre Mato Grosso inteiro desde a #76, e o estado tem 903 mil
- * km². Ordenar só por data faz a primeira coisa que alguém de Sinop vê ser
- * uma vaga em Cuiabá, a 500km — o oposto do que "hiperlocal" promete.
+ * A busca cobre o Brasil inteiro desde a #301 (e Mato Grosso, antes dela,
+ * desde a #76). Ordenar só por data faz a primeira coisa que alguém de
+ * Sinop vê ser uma vaga em Porto Alegre — o oposto do que "perto de você"
+ * promete.
  *
  * MEDIR PERTO SEM COORDENADAS
  * ───────────────────────────
  * A API do IBGE que já gera a lista de municípios não devolve latitude e
- * longitude, mas devolve **região imediata** e **região intermediária**.
+ * longitude, mas devolve **região imediata** e **região intermediária**,
+ * para os 5.571 municípios do país.
  *
  * A região imediata agrupa municípios pelo deslocamento real das pessoas
  * para bens e serviços. É a pergunta certa para um app de emprego — até
@@ -18,6 +21,18 @@ import { REGIOES_MT } from "./regioes-mt";
  * estado onde quem decide o tempo de viagem é a estrada: 200km de asfalto
  * e 200km de terra não são a mesma distância. Duas cidades na mesma região
  * imediata já são, por definição, cidades entre as quais se circula.
+ *
+ * Depois da intermediária vem o **estado**, que não precisa de mapa
+ * nenhum: está no próprio valor gravado ("Sinop - MT"). É o degrau que
+ * separa "longe, mas no mesmo estado" de "outro canto do país".
+ *
+ * SEM BAIRRO
+ * ──────────
+ * Esta escada já começou em "mesmo bairro". Saiu em 01/10/2026 (#321),
+ * por decisão do Luiz: não existe lista de bairros para os municípios do
+ * país, o campo era texto livre onde "Jd. Botânico" e "Jardim Botanico"
+ * não se encontram, e o bairro de uma pessoa não é o que decide se uma
+ * vaga lhe serve. O primeiro degrau passou a ser a cidade.
  *
  * ORDENAR NÃO É FILTRAR
  * ─────────────────────
@@ -29,32 +44,22 @@ import { REGIOES_MT } from "./regioes-mt";
 
 /** Menor é mais perto. */
 export const GRAU = {
-  MESMO_BAIRRO: 0,
-  MESMA_CIDADE: 1,
-  MESMA_REGIAO_IMEDIATA: 2,
-  MESMA_REGIAO_INTERMEDIARIA: 3,
-  RESTO_DO_ESTADO: 4,
+  MESMA_CIDADE: 0,
+  MESMA_REGIAO_IMEDIATA: 1,
+  MESMA_REGIAO_INTERMEDIARIA: 2,
+  MESMO_ESTADO: 3,
+  RESTO_DO_PAIS: 4,
 } as const;
 
 export interface Origem {
   cidade: string;
-  bairro?: string | null;
 }
 
 export interface Local {
   cidade: string;
-  bairro?: string | null;
-  /**
-   * Bairros que o prestador declara atender.
-   *
-   * Para prestador, "perto" é onde ele trabalha, não onde ele mora. O
-   * eletricista que mora no Jacarandá e atende o Centro está perto de quem
-   * é do Centro — usar o endereço dele responderia a pergunta errada.
-   */
-  atende?: readonly string[] | null;
 }
 
-/** Minúsculas e sem acento: "Jd. Botânico" e "jd botanico" são o mesmo. */
+/** Minúsculas e sem acento: "Cuiabá" e "cuiaba" são a mesma cidade. */
 const norm = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
@@ -76,31 +81,29 @@ export function grauDeProximidade(
   origem: Origem | null | undefined,
   local: Local,
 ): number {
-  if (!origem?.cidade) return GRAU.RESTO_DO_ESTADO;
+  if (!origem?.cidade) return GRAU.RESTO_DO_PAIS;
 
-  if (mesmoTexto(origem.cidade, local.cidade)) {
-    const atendeOBairro = (local.atende ?? []).some((b) =>
-      mesmoTexto(b, origem.bairro),
-    );
-    return mesmoTexto(origem.bairro, local.bairro) || atendeOBairro
-      ? GRAU.MESMO_BAIRRO
-      : GRAU.MESMA_CIDADE;
+  if (mesmoTexto(origem.cidade, local.cidade)) return GRAU.MESMA_CIDADE;
+
+  const daOrigem = REGIOES[origem.cidade];
+  const doLocal = REGIOES[local.cidade];
+
+  if (daOrigem && doLocal) {
+    if (daOrigem[0] === doLocal[0]) return GRAU.MESMA_REGIAO_IMEDIATA;
+    if (daOrigem[1] === doLocal[1]) return GRAU.MESMA_REGIAO_INTERMEDIARIA;
   }
 
-  const daOrigem = REGIOES_MT[origem.cidade];
-  const doLocal = REGIOES_MT[local.cidade];
-
   /*
-   * Cidade fora do mapa cai no último degrau em vez de quebrar. Acontece
-   * com dado antigo, com cidade de outro estado que tenha entrado antes da
-   * validação, e com o município novo entre a criação pelo IBGE e alguém
-   * rodar o gerador de novo.
+   * Cidade fora do mapa não quebra: cai no degrau do estado, que vem do
+   * próprio valor, ou no último. Acontece com dado gravado antes da
+   * migração para "Cidade - UF" e com município novo entre a criação pelo
+   * IBGE e alguém rodar o gerador de novo.
    */
-  if (!daOrigem || !doLocal) return GRAU.RESTO_DO_ESTADO;
-
-  if (daOrigem[0] === doLocal[0]) return GRAU.MESMA_REGIAO_IMEDIATA;
-  if (daOrigem[1] === doLocal[1]) return GRAU.MESMA_REGIAO_INTERMEDIARIA;
-  return GRAU.RESTO_DO_ESTADO;
+  const ufOrigem = ufDaCidade(origem.cidade);
+  if (ufOrigem && ufOrigem === ufDaCidade(local.cidade)) {
+    return GRAU.MESMO_ESTADO;
+  }
+  return GRAU.RESTO_DO_PAIS;
 }
 
 /**

@@ -5,21 +5,24 @@ import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL, passouDoPrazo } from "@/lib/format";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { DIAS_TESTE_GRATIS, PRECO_CENTAVOS } from "@/server/pagamentos/planos";
-import { estadoDaAssinatura } from "@/server/pagamentos/servico";
+import {
+  diasDeTesteDisponiveis,
+  estadoDaAssinatura,
+} from "@/server/pagamentos/servico";
 import { repositorioUsuarios } from "@/server/repositories";
 import { AssinarButton } from "./assinar-button";
 import { CancelarRenovacaoButton } from "./cancelar-button";
 
 export const metadata: Metadata = {
-  title: "Assinatura",
+  title: "Assinatura de prestador",
 };
 
 export default async function AssinaturaPage() {
-  const sessao = await sessaoAtual();
-  if (!sessao || !pode(sessao.papel, "prestador:gerenciar_assinatura")) {
+  const sessao = await sessaoOuEntrar("/perfil/assinatura");
+  if (!pode(sessao.papel, "prestador:gerenciar_assinatura")) {
     notFound();
   }
 
@@ -30,6 +33,12 @@ export default async function AssinaturaPage() {
     sessao,
     "prestador_mensalidade",
   );
+
+  // O teste é um por conta (#392): a tela diz, antes do clique, se a
+  // primeira cobrança sai na hora.
+  const testeDisponivel =
+    (await diasDeTesteDisponiveis(sessao.usuarioId, "prestador_mensalidade")) >
+    0;
 
   const ate = perfil.mensalidadeValidaAte;
   const emDia = Boolean(ate) && !passouDoPrazo(ate as string);
@@ -101,8 +110,10 @@ export default async function AssinaturaPage() {
               ) : comecouENaoTerminou ? (
                 <p>
                   Você começou e não terminou. Continue de onde parou para
-                  autorizar o cartão e começar os {DIAS_TESTE_GRATIS} dias de
-                  teste.
+                  autorizar o cartão
+                  {testeDisponivel
+                    ? ` e começar os ${DIAS_TESTE_GRATIS} dias de teste.`
+                    : `. A primeira cobrança de ${preco} sai na hora.`}
                 </p>
               ) : emDia ? (
                 <p>
@@ -119,14 +130,26 @@ export default async function AssinaturaPage() {
                     <strong className="text-ink">não aparece na busca</strong>{" "}
                     de quem procura profissional.
                   </p>
-                  <p>
-                    Você autoriza o cartão e testa{" "}
-                    <strong className="text-ink">
-                      {DIAS_TESTE_GRATIS} dias grátis
-                    </strong>
-                    . A primeira cobrança de {preco} só acontece depois disso —
-                    e se cancelar antes, não pagou nada.
-                  </p>
+                  {testeDisponivel ? (
+                    <p>
+                      Você autoriza o cartão e testa{" "}
+                      <strong className="text-ink">
+                        {DIAS_TESTE_GRATIS} dias grátis
+                      </strong>
+                      . A primeira cobrança de {preco} só acontece depois disso
+                      — e se cancelar antes, não pagou nada.
+                    </p>
+                  ) : (
+                    <p>
+                      Esta conta{" "}
+                      <strong className="text-ink">
+                        já usou o teste grátis
+                      </strong>
+                      . Ao autorizar o cartão, a primeira cobrança de {preco}{" "}
+                      <strong className="text-ink">sai na hora</strong>, e você
+                      pode cancelar quando quiser.
+                    </p>
+                  )}
                 </>
               )}
             </div>
@@ -148,7 +171,9 @@ export default async function AssinaturaPage() {
                     ? "Continuar"
                     : emDia
                       ? "Ativar renovação automática"
-                      : `Testar ${DIAS_TESTE_GRATIS} dias grátis`
+                      : testeDisponivel
+                        ? `Testar ${DIAS_TESTE_GRATIS} dias grátis`
+                        : `Assinar por ${preco}`
                 }
               />
             )}

@@ -11,6 +11,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Só leitura para todos os jobs (#396). O padrão do repositório já é este,
+# mas é uma configuração que alguém pode trocar sem passar por PR; escrito
+# aqui, mudar exige um diff que alguém revisa. Job que precisa de mais
+# (o do roadmap lê Issues) declara o próprio bloco.
+permissions:
+  contents: read
+
 env:
   NODE_VERSION: "24"
 

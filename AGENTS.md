@@ -1,6 +1,8 @@
 # Lupa — notas para agentes
 
-Plataforma hiperlocal de emprego e serviços. Cidade-piloto: Sinop-MT.
+Plataforma de emprego e serviços para o Brasil inteiro, com o que está mais
+perto de quem procura primeiro. Começou em Sinop-MT, abriu para Mato Grosso
+e, desde a #301, aceita qualquer município do país.
 O brief completo do produto está em `docs/brief-tecnico.md`.
 
 **Leia a seção "Fluxo de trabalho obrigatório" antes de escrever a primeira
@@ -27,8 +29,9 @@ Scripts operacionais:
 ```bash
 node scripts/criar-admin.mjs      # cria ou promove a conta de admin
 node scripts/gerar-avatares.mjs   # regenera os avatares de demonstração
-node scripts/gerar-cidades.mjs    # baixa a lista de municípios de MT (IBGE)
+node scripts/gerar-cidades.mjs    # baixa a lista de municípios do Brasil (IBGE)
 node scripts/gerar-regioes.mjs    # baixa a região de cada município (IBGE)
+node scripts/gerar-favicon.mjs    # regenera o ícone da aba a partir da logo
 ```
 
 ```bash
@@ -97,7 +100,11 @@ descritor curto em português com hífens.
   conta e entrar. É o que permite demonstrar antes de existir
   infraestrutura, e é requisito de negócio, não atalho técnico. O login
   continua obrigatório aqui: o que muda é de onde vêm os dados, não quem
-  entra.
+  entra. **No domínio de produção isso não vale** (#279): sem
+  `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_ANON_KEY` ou
+  `SUPABASE_SERVICE_ROLE_KEY`, o deploy recusa subir. Cair em demonstração
+  ali seria servir dado de exemplo como real, com conta criada numa
+  memória que some no próximo deploy, e sem nada ficar vermelho.
 - **Banco.** `supabase/schema.sql` é a fonte da verdade e roda de uma vez num
   banco limpo. Ele é **executado por teste** contra um Postgres real
   (`tests/unit/schema.test.ts`, via PGlite) — schema não executado é schema
@@ -188,8 +195,13 @@ envios simultâneos passariam os dois por ela.
 solto: servia para popular o seed, não para receber gente autenticada —
 sem dono, a mesma pessoa avalia dez vezes e ninguém consegue mostrar a ela
 a própria avaliação depois. O nome continua sendo gravado junto, porque a
-tela lista sem consultar `usuarios`, que é fechada para `anon` — e porque
-a avaliação é o registro do que aconteceu naquele dia.
+tela lista sem consultar `usuarios`, que é fechada para `anon`.
+
+**Quem assina é quem age, e o nome não muda depois (#315).** A avaliação
+de uma empresa grava o nome da empresa, não o do responsável — a seção
+"O nome é definido no cadastro", mais abaixo. A cópia gravada não
+envelhece porque o nome deixou de ser editável; a única troca que sobrou,
+a da Receita, leva junto as avaliações já feitas (`renomearAvaliacoesDe`).
 
 **A confirmação é renderizada pelo servidor.** A action revalida a rota,
 e a revalidação desmonta o formulário levando junto o "enviado" que ele
@@ -197,20 +209,29 @@ mostrava: quem avaliava via o formulário sumir, sem confirmação nenhuma.
 Mesma armadilha do 404 depois de virar prestador — estado de cliente não
 sobrevive à revalidação da própria rota.
 
-### O perfil em duas abas, e o bairro que sobrou
+### O perfil em duas abas
 
 Desenho do Luiz em 03/09/2026: "Sobre mim" e "Serviços", com as fotos do
 trabalho em grade de três por linha; o toque expande com a legenda.
 
 **A razão de ser aba, e não mais uma seção rolando para baixo:** no
 celular, o que decide a contratação são as fotos, e elas ficavam embaixo
-de descrição, bairros e redes sociais — longe de quem abriu o perfil
-justamente para ver trabalho.
+de descrição e redes sociais — longe de quem abriu o perfil justamente
+para ver trabalho.
 
 **O dono edita dentro da própria aba.** O atalho "Meus trabalhos" no
 perfil levava a uma tela separada só para isso — uma tela a mais entre a
 pessoa e a foto do trabalho dela, estando ela já olhando para o lugar onde
 a foto vai aparecer. O atalho saiu; sobrou "Como você aparece na busca".
+
+**A tela separada continua, e a aba leva a ela (#333).** Ela é a única que
+traz de volta um trabalho tirado do perfil — e o "Remover" do cartão
+promete exatamente isso ("nada é apagado"). Com o atalho fora, a promessa
+ficou sem porta por um mês: a auditoria de 29/09 achou a tela órfã e
+sugeriu removê-la, e removê-la teria tornado a promessa falsa. Hoje a aba
+"Serviços" do próprio perfil tem o link "Trabalhos que você tirou do
+perfil ficam guardados aqui". *Antes de apagar uma tela sem link, procure
+o que só ela faz.*
 
 **Editar e remover moram dentro da própria foto, não numa lista abaixo da
 grade.** A primeira versão desenhava as duas coisas: a grade de miniaturas
@@ -238,10 +259,10 @@ some antes da hora, um estado que sobrevive além da hora. A saída foi
 fechar o que a lista já reflete, em vez de confiar que o React vai
 perceber sozinho.
 
-**"Bairros atendidos" saiu junto.** Era lista curada por cidade, e não
-existe lista pronta de bairro para os 142 municípios de MT — a mesma razão
-que já tinha derrubado o enum de bairro antes. O bairro que vale é o que a
-pessoa informou no cadastro, e ele já aparece na linha de localização.
+**"Bairros atendidos" saiu junto, e o bairro de pessoa também.** A
+primeira rodada (#119) tirou a lista de bairros atendidos; a segunda
+(#321, 01/10/2026) tirou o resto — ver "Bairro de pessoa não existe", na
+seção sobre Mato Grosso inteiro. A localização do perfil é a cidade.
 
 A grade e a expansão são travadas em teste de componente, não no e2e: no
 modo demonstração a vitrine é estática, e o prestador criado durante o
@@ -284,8 +305,11 @@ O backend de publicações existia inteiro — serviço, repositório, actions,
 tabela e trigger de limite — e **nenhuma tela o consumia**. O atalho do
 perfil apontava para `/servicos`, a busca pública, prometendo "edite
 categoria, preço e publicações": a pessoa clicava para mexer no próprio
-anúncio e caía na vitrine de todo mundo. Hoje o atalho leva a
-`/perfil/publicacoes`, que é a tela que aquela descrição sempre prometeu.
+anúncio e caía na vitrine de todo mundo. O atalho passou a levar a
+`/perfil/publicacoes`, que é a tela que aquela descrição sempre prometeu
+— e depois saiu do perfil, quando a publicação foi para a aba
+"Serviços" (ver "O perfil em duas abas"). A tela ficou como o lugar dos
+trabalhos guardados, com link a partir da aba.
 
 Cada item é uma foto do trabalho com um texto. **Dez ativos**, o limite
 que já morava no banco — mantido por decisão do Luiz em 03/09/2026,
@@ -446,6 +470,14 @@ municípios ser versionada em vez de buscada no IBGE em execução. É ação de
 quem já tem conta, e uma falha aqui não tira o CNPJ do perfil nem derruba
 o que já verifica a conta.
 
+**Sem chave, mas com nome (#318).** A BrasilAPI recusa com 403 o
+`User-Agent` padrão do `fetch` do Node, e a conferência falhou para todo
+mundo, dizendo "Receita fora do ar", sem nada ficar vermelho: o teste
+injeta um `fetch` falso, que não liga para cabeçalho. Hoje a consulta se
+apresenta como `Lupa/1.0`, e resposta inesperada deixa o status no log.
+*Duble de API de terceiro prova o que o código faz com a resposta, não se
+o terceiro aceita o pedido — isso só se confere batendo nele de verdade.*
+
 **O prestador tem CPF, não CNPJ**, e não há consulta pública gratuita de
 CPF — é a [#120](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/120),
 presa a provedor pago. O que verifica o prestador é o CPF em si, válido e
@@ -476,6 +508,52 @@ O que continua não provado é a **posse**: alguém pode digitar o CNPJ de
 uma empresa alheia e sair verificado com o nome dela. Isso não piorou com
 a mudança — era exatamente assim antes, só que com uma etapa a mais que
 dava impressão de estar barrando algo.
+
+### CNPJ com letras, e o valor que a Lupa guarda (#297)
+
+Desde julho de 2026 a Receita emite CNPJ alfanumérico (IN RFB 2.229/2024).
+A adoção é gradual, e vale para empresa nova **e para filial nova de
+empresa antiga**: uma raiz numérica pode ter, na ordem do estabelecimento,
+letras. O que já existe não muda. São 14 caracteres — 12 de letra ou
+número e 2 dígitos verificadores, sempre numéricos.
+
+Até 29/09/2026 a Lupa apagava toda letra antes de validar (`onlyDigits`), e
+o exemplo oficial, `12.ABC.345/01DE-35`, voltava "CNPJ inválido" com o
+dígito certo. A empresa que abriu depois de julho seria barrada e leria
+uma mensagem que a faz achar que errou o número.
+
+**O valor guardado é um só: maiúscula, sem pontuação** (`normalizarCnpj`,
+em `src/lib/format.ts`). É o que a checagem de duplicidade compara e o que
+a BrasilAPI espera — ela não converte minúscula e responde "não
+encontrado" para o CNPJ certo. Sem normalizar, `12abc…` e `12ABC…` seriam
+duas empresas e abririam duas contas.
+
+**A conta do dígito é a de sempre, e por isso o CNPJ numérico não ganhou
+caminho à parte.** O valor de cada caractere é o código ASCII menos 48: para
+número dá o próprio número, para a letra A dá 17. Conferido contra o
+exemplo da documentação da Receita e contra a validação da BrasilAPI, que
+aceita o dígito calculado. A letra O digitada no lugar do zero também
+reprova: o dígito não fecha.
+
+**O teclado do campo é de texto, não numérico.** `inputMode="numeric"` faz
+o celular oferecer só números — o servidor aceitando e o campo não deixando
+digitar seria o mesmo defeito por outra porta. O preço, aceito: quem tem
+CNPJ numérico, que é quase todo mundo hoje, digita num teclado completo em
+vez do teclado de números. Há teste que lê o código-fonte dos dois
+formulários e reprova a volta do `numeric`.
+
+**O que a Lupa não sabe:** se a BrasilAPI já devolve os dados de uma empresa
+real com letras. Ela entende o formato — 404 para o válido que não existe,
+400 para o dígito errado —, mas não foi possível testar com uma empresa de
+verdade. O cadastro não depende disso (só confere o dígito); o botão
+"Conferir CNPJ" pode dizer "não encontrado" para uma empresa recém-aberta
+até ela entrar na base pública, e essa mensagem já existe.
+
+**O filtro do Sentry só mascara a forma com pontuação.** Sem ponto, barra e
+traço, o CNPJ alfanumérico são 14 caracteres iguais a um `trace_id` ou a um
+hash de commit, e máscara larga já corrompeu os dois (#275, #277). O CNPJ é
+registro público, e o campo chamado `cnpj` já é mascarado pelo nome da
+chave.
 
 ### Nem todo prestador é só CPF, nem toda empresa é CNPJ
 
@@ -669,6 +747,25 @@ deixaria a pessoa esperando um e-mail que nunca sai, e concluindo que a
 conta sumiu. `RESEND_API_KEY` e `EMAIL_REMETENTE` são o que liga —
 nenhuma das duas leva prefixo `NEXT_PUBLIC_`.
 
+**E com provedor, a falha chega ao Sentry (#326).** Até 05/10/2026 quem
+chamava `enviarEmail` registrava a falha como `warn`, e `warn` não sai da
+Vercel. O plano grátis do Resend manda no máximo 100 e-mails por dia: num
+dia de lançamento, confirmação e recuperação podiam parar de sair sem
+ninguém saber, até alguém não conseguir entrar. Hoje a própria
+`enviarEmail` registra por `log.erro` com `indisponivel` — o caminho que
+vai ao Sentry —, com o fluxo e o status, e o 429 diz que é cota. **Sem o
+endereço e sem o corpo da resposta do Resend**, que pode ecoar o
+destinatário: a regra do log de recuperação vale em dobro no momento em
+que mais se lê log.
+
+**O token na URL não vai ao Sentry (#360).** O link leva o token na
+query, e a URL entra no evento (`request.url`, `query_string`, atributos
+de span). A máscara por nome de chave não alcançava: a chave ali é `url`,
+e o segredo está dentro do valor. Hoje `scrubSensitiveData` também mascara
+`token=`, `senha=` e parecidos dentro de qualquer texto. O token é de uso
+único e vale uma hora, o que limita o dano, mas um evento que sai com ele
+é uma credencial num serviço de terceiro.
+
 **O e-mail é texto puro, sem HTML.** O público daqui abre e-mail no
 celular, e template com imagem e botão colorido é o formato que os
 provedores mais pontuam como promoção — justamente o e-mail que precisa
@@ -746,14 +843,63 @@ confirmação. *Aviso que exagera ensina a ignorar aviso.*
 19 MiB, `t=2`, `p=1`. Dimensionados para caber na memória de uma função
 serverless — parâmetro que derruba a função em produção não protege
 ninguém. `precisaRehash()` permite subir o custo depois sem pedir troca de
-senha a ninguém.
+senha a ninguém — e sem derrubar os outros aparelhos de quem entra: a
+regravação vai por `regravarHash`, que não corta sessão, e não por
+`atualizarSenhaHash`, que corta (#330). A senha é a mesma; ninguém está
+sendo expulso.
+
+### Senha de 6 caracteres, e o número num lugar só (#290)
+
+O servidor exigia 10 caracteres desde 20/08, e as duas telas que pedem
+senha diziam 8 desde 22/08. Durante um mês, quem seguia a dica levava
+erro, e o formulário ainda apagava tudo (#291). **Decisão do Luiz em
+25/09/2026: o mínimo é 6.** Dez era demais para quem digita no celular.
+
+O NIST recomenda 8, e isso fica registrado de olhos abertos. O que segura
+a senha curta aqui é o resto da proteção: limite de tentativas de login
+por e-mail, Argon2id no hash e a mesma resposta de login exista a conta ou
+não. Continua sem regra de composição.
+
+**O número mora em `SENHA_MINIMA`, em `src/lib/constants.ts`**, e dali o
+leem o schema do servidor, as dicas das telas e o `minLength` dos campos.
+A divergência de um mês foi possível porque a regra morava no servidor e a
+dica era texto solto na tela. *Número que aparece na tela e é cobrado no
+servidor precisa vir da mesma constante.*
 
 ### Sessão em JWT, não em banco
 
 Serverless não tem processo de longa duração, e cada consulta a mais é
-latência para quem está em 3G. A validade é de 7 dias com renovação
-silenciosa faltando 2, e o payload carrega **só id e papel** — cookie é
-legível por quem tem o aparelho.
+latência para quem está em 3G. O payload carrega **só id e papel** —
+cookie é legível por quem tem o aparelho.
+
+**Sete dias sem abrir o app, ou trinta desde o login (#323).** Cada token
+vale 7 dias, e o `proxy.ts` o renova em silêncio quando ele passa de um
+dia — então os 7 dias funcionam como janela de inatividade. Mas nenhuma
+sessão passa de 30 dias desde o login, renovada ou não, e aí a pessoa
+entra de novo.
+
+**Esta frase dizia "renovação silenciosa faltando 2", e era falsa.**
+`renovarSeNecessario` existia desde 20/08 e nada a chamava: todo mundo era
+deslogado aos 7 dias, usando o app todo dia ou não. O teste que havia
+testava a função, não o lugar que deveria chamá-la. E o limiar de dois
+dias também não servia: quem abrisse o app a cada quatro dias chegava no
+quarto com três faltando, não renovava, e no oitavo estava fora. Achado na
+auditoria de 29/09. *Função que existe e ninguém chama é a versão de
+código do estado sem produtor: o teste dela passa, porque ninguém
+escreveu o teste de quem devia chamá-la.*
+
+**A renovação preserva o `iat` do login**, e é isso que a torna segura no
+proxy, que não tem banco para conferir a revogação. A revogação compara o
+`iat` com o corte de quem trocou a senha; um token renovado com `iat` de
+agora nasceria depois do corte e escaparia dele — o ladrão do cookie
+renovaria a própria sessão para sempre. Com o `iat` do login, o token
+revogado continua revogado depois de renovado.
+
+**Só em GET.** Entrar, sair, virar prestador e trocar a senha gravam o
+cookie em server action, que é POST. Renovar na mesma resposta poria dois
+`Set-Cookie` com o mesmo nome, e o que valesse por último decidiria —
+podendo desfazer a troca de papel, ou deslogar quem acabou de trocar a
+senha. Navegação é GET, e renovar só nela não perde nada.
 
 **O preço de não revogar deixou de ser total (#225).** Era: token válido
 por até uma semana, sem volta, mesmo depois de a pessoa trocar a senha
@@ -763,18 +909,35 @@ corte por pessoa, e `sessaoAtual()` descarta token emitido antes dele.
 **E isto não é "sessão no banco", que é a alternativa que se recusou.**
 Sessão no banco significa perguntar, a cada requisição, se aquela sessão
 vale — uma consulta por navegação, para todo mundo, o tempo todo. Aqui a
-pergunta é outra: o app lê a lista de **quem cortou nos últimos 7 dias** e
+pergunta é outra: o app lê a lista de **quem cortou nos últimos 30 dias** e
 a guarda em cache por 60 segundos. No caminho comum não há consulta
 nenhuma.
 
-A lista é curta por construção e **não cresce com o tempo**: token com
-mais de 7 dias já expirou sozinho, então quem trocou a senha no mês
-passado sai dela. Ela cresce com o número de trocas de senha desta semana
-— num app de 26 contas, é quase sempre vazia. *Quando revogar exige
+A lista é curta por construção e **não cresce com o tempo**: nenhuma
+sessão vive mais de 30 dias desde o login, então quem trocou a senha há
+mais tempo que isso sai dela. Ela cresce com o número de trocas de senha
+do último mês — num app de 30 contas, é quase sempre vazia. **O alcance
+da lista e a vida máxima da sessão são o mesmo número**: `revogacao.ts` o
+lê de `CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS`. Eram 7 e 7 até a #323; com
+a renovação, uma lista que olhasse só 7 dias deixaria o corte sumir antes
+de o token renovado morrer. *Quando revogar exige
 estado, procure o estado que responde a todos de uma vez, não o que
 responde a um por requisição.*
 
 O preço novo, aceito: uma sessão revogada pode sobreviver até 60 segundos.
+
+**A lista tem teto próprio, e o teto avisa (#352).** Ela lia com o teto
+genérico das listas do dono, 200, sem ordem. Passando disso, quem ficou
+de fora era lido como "não revogado" — o erro silencioso de sempre. Hoje
+`TETO_DE_CORTES_DE_SESSAO` (5.000) é só contra crescimento sem fim, a
+consulta vem do corte mais novo para o mais velho, e atingir o teto
+registra erro no Sentry: passar dele pede paginar, não subir o número.
+
+**Trocar o papel também corta (#352).** O papel viaja no token, e
+`atualizarPapel` não gravava o corte: quem virava prestador ficava com o
+cookie de candidato válido nos outros aparelhos até vencer. Agora o corte
+vai na mesma instrução da troca, e a ação derruba o cache de revogações
+antes de reemitir a sessão — a ordem de sempre, o corte primeiro.
 
 **A leitura falha aberta**, e é o oposto do webhook de pagamento, de
 propósito. Lá, deixar passar confirmaria dinheiro que ninguém provou;
@@ -788,6 +951,14 @@ falta: toda rota que decide alguma coisa sobre uma pessoa lê a sessão por
 ali — as duas que não leem, o cron e o webhook, se autenticam por segredo
 e por assinatura.
 
+**E por isso a tela sem sessão manda ao login, não ao 404 (#330).** O
+muro deixa passar o token assinado mesmo depois de revogado, e as telas de
+produto que contavam com ele chamavam `notFound()` quando `sessaoAtual()`
+voltava `null`: quem trocou a senha num aparelho abria o outro e lia "Não
+encontramos essa página". Hoje elas usam `sessaoOuEntrar(destino)`, e um
+teste varre `src/app/(app)` reprovando `if (!sessao) … notFound()`. A área
+administrativa fica de fora: lá o 404 vale para todo mundo.
+
 **A comparação é estritamente `<`, e isso não é detalhe.** Corte e `iat`
 são epoch de **segundos**, e a troca de senha grava um e emite o outro
 quase no mesmo instante. Com `<=`, a sessão recém-emitida cairia no
@@ -797,6 +968,16 @@ reproduzir.
 
 Sem `SESSION_SECRET`, produção recusa subir. Segredo padrão versionado
 significa sessão de admin forjável por qualquer um que leia o repositório.
+
+**Até a #271 esta frase era falsa.** A recusa morava só em `segredo()`,
+que roda quando alguém lê ou assina uma sessão — e `lerSessao` a chama
+dentro de um `try` que devolve `null`. Sem a variável o site subia, todo
+mundo aparecia deslogado e o login dava erro interno, sem nada vermelho.
+Hoje quem recusa é `conferirConfiguracaoDeProducao()`, na subida, com o
+mesmo mínimo de 32 caracteres. Achado ao trocar a variável para o tipo
+Secret na Vercel, em 23/09/2026 — e eu tinha acabado de repetir a frase ao
+Luiz sem abrir o código. *Afirmação sobre modo de falha se confere no
+caminho que falha, não no comentário que o descreve.*
 
 ### RBAC como matriz declarativa
 
@@ -834,6 +1015,15 @@ porque só ele e o Paulinho operam a conta.
 primeira deixaria qualquer empresa autenticada alcançar a vaga de outra
 trocando o id na URL.
 
+**Server action exportada é endpoint, e o muro não a guarda (#360).**
+`decideVerification` mora em `/admin` e não conferia quem chamava: o
+`proxy.ts` guarda a rota, não a chamada. Em produção ela não alcançava
+nada — usa a chave anônima, e a tabela está fechada para ela —, mas era
+a única ação que mudava dado sem checar a capacidade, e ficava a uma
+mudança de chave de ser a porta aberta. Hoje confere `admin:decidir_verificacao`
+antes de abrir qualquer cliente de banco. *Toda action confere a
+capacidade dentro dela, mesmo quando "só o admin vê a tela".*
+
 ### Arquivos: o caminho vem da sessão, nunca do nome enviado
 
 Foto, currículo e logo passam pelo servidor com a chave de serviço; o
@@ -856,6 +1046,50 @@ envio. Na ordem inversa, o banco apontaria para arquivo inexistente e a
 tela mostraria imagem quebrada. Na remoção a ordem se inverte, pelo mesmo
 raciocínio.
 
+**A foto é reduzida antes de gravar, não só na entrega (#283).** A #268
+passou a foto pelo otimizador do Next, e o celular passou a receber WebP do
+tamanho da tela — mas o bucket continuava guardando o original de 1 a 2 MB.
+Hoje o servidor decodifica, aplica a orientação do celular, reduz (512 px
+para perfil e logo, 1600 para o feed) e grava WebP **sem metadado**. O
+metadado era o problema maior: foto de celular leva o GPS de onde foi
+tirada, os buckets de foto são públicos, e a URL do original aparece no
+HTML como parâmetro do otimizador. Decodificar também é o que prova que o
+arquivo é imagem — `conferirArquivo` só confere o tipo declarado. O
+currículo em PDF passa como veio.
+
+**E foto grande é reduzida no celular, antes de sair (#325).** A redução
+acima só acontecia depois de a foto chegar, e a foto de celular — de 3 a 8
+MB — nem chegava: o limite de 2 MB a recusava antes. A pessoa precisava
+diminuir a foto por conta própria. Hoje todo `<input type="file">` passa
+por `ajustarAoLimite`: foto acima do limite vira WebP de 1600 px no próprio
+aparelho (o que ainda poupa o dado móvel), e o que não dá para reduzir é
+recusado ao lado do campo com a mesma mensagem do servidor. O servidor
+continua conferindo e reduzindo tudo, porque nada que vem do navegador é
+garantia — o formato e a retirada do GPS são dele. Há teste que varre
+`src` e reprova campo de arquivo sem a conferência.
+
+O texto do limite embaixo de cada campo vem de `REGRAS[especie].aviso`, e o
+`accept` de `tiposAceitos`. O currículo dizia "até 5 MB" escrito à mão na
+tela — a mesma divergência da senha (#290) esperando acontecer.
+
+Como tudo virou `.webp`, a foto de perfil antiga em `.jpg` ficaria órfã no
+caminho fixo. `removerVersoesAnteriores` a apaga — **depois** de o banco
+apontar para a nova, pela mesma ordem de sempre.
+
+**O currículo precisa ser PDF de verdade (#332).** `conferirArquivo` olha o
+tipo que o navegador declara, e qualquer um declara o que quiser: a foto
+era provada ao ser decodificada, e o PDF passava como veio. Hoje o servidor
+recusa o que não começa com `%PDF-`. Não abre o documento — só recusa o
+que nem finge ser.
+
+**E o bucket também tem limite (#332).** Até 05/10/2026 os quatro aceitavam
+qualquer arquivo de qualquer tamanho, e só a aplicação conferia. Hoje
+`file_size_limit` e `allowed_mime_types` estão no `storage.sql`, com os
+números de `REGRAS`, e há teste comparando os três lugares. É a segunda
+camada, como o `revoke` em cima da RLS: o caminho de envio novo que
+esquecer a conferência é recusado pelo próprio Storage. Em produção, quem
+aplica é `supabase/aplica-limites-dos-buckets.sql`, rodado à mão.
+
 **Sem Supabase não há Storage.** A tela diz isso em vez de aceitar o envio
 e perder o arquivo — aceitar em silêncio faria a pessoa achar que salvou.
 
@@ -869,6 +1103,9 @@ plataforma tem gente de verdade.
 separa vaga real de anúncio falso. Poder trocar depois permitiria
 cadastrar com um CNPJ válido, passar pela verificação e então virar outra
 empresa. Correção é caso de suporte, com gente olhando.
+
+**O nome também não (#315)** — nem o da pessoa, nem o da empresa. A
+seção logo abaixo explica.
 
 **Um formulário por assunto, cada um com o próprio botão.** Um formulário
 só obrigaria a reenviar o currículo inteiro para corrigir o telefone, e um
@@ -901,20 +1138,87 @@ nenhum** — nem na tela pública, nem na prévia do próprio perfil. Campo
 que se edita e cujo resultado ninguém vê é campo que a pessoa preenche
 uma vez e conclui que não funciona.
 
-### O endereço da vaga é aditivo ao bairro, não substituto
+### O nome é definido no cadastro, e a empresa assina com o dela (#315)
+
+Pedido do Paulinho em 01/10/2026. Dois defeitos que se somavam:
+
+- **A avaliação da empresa mostrava o responsável.** A conta de empresa
+  tem dois nomes — o de quem a abriu e o da empresa —, e a avaliação
+  gravava o primeiro. Quem contratou o serviço foi a empresa; o
+  responsável é uma pessoa que não pediu para aparecer.
+- **Todo nome se editava a qualquer hora.** Como a avaliação grava o nome
+  do momento, dava para trocar de nome entre um comentário e outro e
+  avaliar cada prestador com uma identidade diferente. A trava de "uma
+  avaliação por pessoa" continuava valendo, mas ninguém de fora conseguia
+  ligar os comentários a quem os escreveu.
+
+**O nome da empresa — fantasia ou razão social, como ela preferir — é o
+que assina tudo o que ela faz**: vaga e avaliação. O do responsável fica
+como registro da conta, e a tela de edição diz que nas vagas e avaliações
+quem aparece é a empresa.
+
+**Nenhum nome se edita no perfil**, de nenhum papel. Decisão do Paulinho,
+escolhendo entre travar só a empresa e travar todos: o mesmo abuso cabe
+no "Nome completo" de candidato e prestador. O campo aparece desabilitado
+e sem `name`, e os schemas nem conhecem a chave — um `nomeCompleto` ou
+`razaoSocial` forjado no formulário é descartado pelo Zod. Correção é
+caso de suporte, como a cidade e o CNPJ, e o cadastro avisa antes de a
+pessoa digitar.
+
+**A Receita continua trocando o nome da empresa (#130)**, também por
+decisão do Paulinho. É a única troca que sobrou, e não é a pessoa quem
+escolhe: ao conferir o CNPJ, a razão social oficial entra no lugar do que
+foi digitado. Ela grava por `definirRazaoSocialDaReceita`, que só mexe no
+nome, e leva junto as avaliações já feitas pela empresa — sem isso, a vaga
+diria o nome oficial e o comentário da mesma empresa, o digitado.
+
+**Isto resolve a #304 por outro caminho.** A Issue pedia que o nome no
+comentário acompanhasse a troca de nome da conta, e a proposta foi um
+trigger no banco (#308, fechado). Com o nome travado, não há troca para
+acompanhar — exceto a da Receita, que a aplicação já trata no mesmo passo.
+
+As avaliações que empresas fizeram antes disto passam a levar o nome da
+empresa por `supabase/aplica-avaliacao-assinada-pela-empresa.sql`.
+
+### O endereço da vaga, e o bairro que ficou nela
 
 A vaga informa endereço — rua, número, ponto de referência, texto livre.
 Quem depende de ônibus ou de andar precisa saber onde é **antes** de se
 candidatar, não depois, no contato com a empresa.
 
-**Ele não entra no ranking de proximidade**, que continua olhando só
-bairro e cidade. Comparar endereço livre não é confiável o bastante para
-decidir ordem: "Rua X, 123" e "Rua X 123" são a mesma rua e strings
-diferentes. Bairro é curado onde existe lista, e é isso que o torna
-comparável.
+**Ele não entra no ranking de proximidade**, que olha só cidade, região
+e estado. Comparar endereço livre não é confiável o bastante para decidir
+ordem: "Rua X, 123" e "Rua X 123" são a mesma rua e strings diferentes. O
+bairro da vaga, que mora ao lado do endereço, tem o mesmo estatuto — texto
+livre e opcional, informativo, nunca filtro nem ordem (#321).
 
 A coluna é opcional no banco, para não quebrar vaga publicada antes do
 campo existir; a tela de publicação é que exige preenchido em vaga nova.
+
+### Modalidade da vaga: obrigatória na tela, opcional no banco (#300)
+
+Presencial, home office ou híbrido. Com o app aberto ao Brasil inteiro,
+isso deixou de ser detalhe: uma vaga home office em outra cidade interessa
+a quem está longe, e uma presencial não — sem o campo, as duas pareciam
+iguais no card.
+
+**É enum no banco (`modalidade_vaga`), não texto livre**, porque o valor
+gravado é o que a tela traduz (`WORK_MODE_LABELS`): "Home office",
+"home-office" e "remoto" seriam três valores para a mesma coisa. A coluna
+é opcional pelo mesmo motivo do endereço — vaga publicada antes dela
+continua válida e só não ganha selo —, e a tela de publicação exige.
+
+**Ela não mexe na ordenação por proximidade.** A localização da vaga
+continua sendo a da vaga; quem procura trabalho remoto vê o selo no card.
+Tratar home office como "perto de todo mundo" encheria a busca local de
+qualquer cidade com vagas remotas do país inteiro — decisão de produto
+que, se vier, vem com filtro próprio, e não escondida na ordem.
+
+**A coluna vai por último em `job_listings`.** `create or replace view` só
+aceita coluna nova no fim, e é assim que `aplica-modalidade-vaga.sql`
+chega a um banco vivo sem derrubar a view. **Rode a migração antes do
+deploy**: o `insert` de vaga passa a mandar `modalidade`, e sem a coluna
+publicar vaga falha.
 
 ### Estágio da candidatura: o nome depende de quem lê
 
@@ -996,6 +1300,13 @@ botão é um convite para entrar. O componente é de servidor, então "não
 renderizar" aqui é "nunca existir na resposta", não CSS escondendo algo que
 o inspetor do navegador ainda revelaria.
 
+**Atualização (#372).** A home deixou de renderizar o `ProviderCard`: mostra
+`ProfissionaisEmLinha`, que não lê telefone nem monta `wa.me`, e o teste do
+muro de login continua cobrando que o HTML da home não tenha `wa.me`. A prop
+`autenticado` ficou, de propósito: o padrão é `true`, então ela é o único
+caminho seguro para quem puser o card numa página pública. Tirá-la deixaria
+só o caminho que vaza o telefone.
+
 O que sobreviveu das duas decisões: o modo demonstração. Ele responde por
 *de onde vêm os dados*, não por *quem pode entrar*, e continua sendo o que
 permite mostrar o produto sem infraestrutura.
@@ -1009,6 +1320,39 @@ já tinha exigido: um crawler não tem sessão, e sem a exceção o muro
 responderia com um redirecionamento para `/entrar` que nenhum crawler segue
 para descobrir a política — a mesma armadilha do item esquecido no matcher,
 registrada mais abaixo neste arquivo.
+
+### A vitrine de produção mostra só quem existe (#302)
+
+As contas de exemplo do `seed.sql` — 9 prestadores, 3 empresas e as vagas
+de Sinop — estavam no banco de produção e apareciam para visitante real
+como ofertas de verdade. Com a home pública desde a #241, eram a primeira
+coisa que alguém via.
+
+**Isto reverte a #245.** Em 22/09/2026 a decisão foi o contrário: manter
+esse conteúdo no ar com vitrine até 2099 (`aplica-demo-vitalicia.sql`),
+porque era o que se usava para demonstrar a Lupa a clientes em Sinop. Em
+01/10/2026 o pedido do Paulinho foi tirar: anúncio que não existe, numa
+plataforma de emprego, é exatamente o que o produto promete não ter.
+
+**Demonstrar continua possível, só que no lugar certo.** O modo
+demonstração — o app sem Supabase, lendo `src/lib/mock-data.ts` — não
+muda nada e não toca banco. O que muda é o banco de produção, por
+`supabase/aplica-remove-dados-de-exemplo.sql`, que precisa ser rodado à
+mão no SQL Editor.
+
+**O script apaga por id, nunca por "o que está visível".** O seed usa ids
+fixos, e só eles saem; o resto vai junto pelas chaves estrangeiras com
+`on delete cascade`. Conta de gente de verdade — inclusive as que o
+`aplica-demo-vitalicia.sql` pôs na vitrine para sempre — não é tocada: o
+que fazer com elas é decisão de quem é dono delas, não de um script
+versionado. Há teste em `schema.test.ts` rodando seed, conta real e
+limpeza num Postgres de verdade.
+
+**E a tela passou a dizer quando está vazia.** Sem os exemplos, a home e
+as buscas podem ficar sem nada nos primeiros dias. Seção só com o título
+parece tela quebrada; "Nenhuma vaga com esses filtros" sem filtro nenhum
+manda a pessoa mexer no que não existe. As duas situações agora têm frase
+própria.
 
 ### Segurança: o que já vale, e o que se decidiu não fazer
 
@@ -1226,6 +1570,22 @@ cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se
 contém é adivinhação de senha; aqui o que se contém é a criação em si.
 
+**O limite de login reserva a tentativa antes do Argon2 (#386).** Ele
+conferia o bloqueio, gastava o Argon2 e só então registrava a falha:
+requisições simultâneas passavam todas pela conferência antes de a
+primeira falha ser registrada, e o teto de 5 virava uma rajada do tamanho
+da concorrência. Hoje `reservarTentativa` soma e responde na mesma
+instrução, pelo passo único que o resto do app já usava
+(`consumirOrcamento`), e com 20 tentativas simultâneas 5 chegam à
+verificação. `conferirLimite` continua vindo antes, para quem já está
+bloqueado ser recusado **sem somar** — senão insistir prolongaria o
+bloqueio da vítima. Vale para o login, a recuperação de senha e a
+confirmação de e-mail; o cadastro ficou de fora de propósito, porque
+contar toda tentativa dele muda a regra de produto (a pergunta do T2 no
+roadmap). *Dois `await` seguidos, conferir e depois registrar, é a forma
+de corrida mais comum que existe: a pergunta e a escrita têm de ser a
+mesma instrução.*
+
 **Captcha não vai existir, e isto é decisão, não espera.** Este parágrafo
 dizia "a hora de reavaliar é quando aparecer abuso real" — soava prudente e
 era adiamento. Decisão do Luiz em 14/09/2026: *"colocar captcha para
@@ -1242,28 +1602,87 @@ para atender.
 O que contém abuso aqui é o teto por ação (#202), que não pede nada a
 ninguém.
 
-### Mato Grosso inteiro, começando por Sinop
+### O Brasil inteiro, e não mais só Mato Grosso (#301)
 
-Os 142 municípios do estado são aceitos no cadastro, na publicação de vaga
-e nos filtros. `CIDADE_INICIAL` é Sinop e significa só uma coisa: é o valor
-que já vem escolhido. Atender Sinop primeiro é estratégia de divulgação;
-*recusar* quem é de Sorriso era um formulário dizendo que o app não é dele.
+O app começou aceitando só Sinop, abriu para os 142 municípios de Mato
+Grosso, e desde 01/10/2026 aceita **os 5.571 municípios do país** — pedido
+do Paulinho: o app deixa de se apresentar como de um estado só. Recusar
+quem é de outro lugar era um formulário dizendo que o app não é dele, e
+foi esse o argumento que já tinha aberto MT inteiro.
 
-**A lista vem do IBGE, por script.** 142 nomes com acento e com "do/da/de"
-no meio, digitados à mão, dão um "Vila Bela da Santíssima Trindade" errado
-que ninguém revisa — e alguém de lá não acha a própria cidade. O arquivo
-gerado é versionado: em execução o app não fala com o IBGE, porque
-cadastro não pode depender de API de terceiro estar no ar.
+**Não existe mais cidade inicial.** `CIDADE_INICIAL` (Sinop), `ESTADO` e
+`ESTADO_NOME` saíram de `src/lib/constants.ts`. O cadastro vinha com Sinop
+escolhida, e quem não mexia no campo virava morador de Sinop sem saber —
+com o país inteiro aberto, esse palpite erra para quase todo mundo. A
+coluna também perdeu o `default 'Sinop'`: padrão de cidade é a cidade de
+quem não escolheu nenhuma.
 
-**Bairro deixou de ser enum.** Era `z.enum` dos 14 bairros de Sinop, usado
-no cadastro, no perfil e na vaga. Não existe lista de bairros de 142
-municípios pronta em lugar nenhum, e enum recusaria loteamento novo até em
-Sinop, onde a cidade cresce todo ano. A curadoria ficou na tela — lista
-onde existe, texto onde não existe —, e o servidor garante só o que evita
-lixo: tamanho mínimo e máximo.
+**A cidade é gravada com o estado: `"Sinop - MT"`.** 232 nomes de
+município se repetem entre estados — "Bom Jesus" existe em cinco —, e o
+nome sozinho deixou de identificar a cidade. O formato é o mesmo que a
+tela já mostrava (`rotuloDaCidade` montava "Sinop - MT"), então o valor
+gravado passou a ser o próprio rótulo, e o passo de "formatar a cidade"
+que alguém esqueceria numa tela nova deixou de existir. Os ajudantes
+(`cidadeComUf`, `ufDaCidade`, `nomeDaCidade`) moram em
+`src/lib/cidades/index.ts`. O dado antigo é convertido por
+`supabase/aplica-cidades-do-brasil.sql` — que precisa rodar **antes** do
+deploy, porque depois dele "Sinop" sem estado é recusado.
 
-O preço, aceito: sem enum, "Jd. Botânico" e "Jardim Botânico" podem
-coexistir onde não há lista. Vale menos que travar o cadastro.
+**A lista vem do IBGE, por script, em três formas.** Mais de 5.500 nomes
+com acento e com "do/da/de" no meio, digitados à mão, dão um "Vila Bela da
+Santíssima Trindade" errado que ninguém revisa. `scripts/gerar-cidades.mjs`
+grava:
+
+- `src/lib/cidades/dados/<UF>.ts` — um arquivo por estado;
+- `src/lib/cidades/indice.ts` — a lista de estados e um `import()` por
+  estado, escrito um a um para qualquer bundler separar cada estado no
+  próprio pedaço;
+- `src/lib/cidades/todas.ts` — tudo junto, com `server-only`, para a
+  validação.
+
+O formulário escolhe **estado e depois cidade**, e o celular baixa só as
+cidades do estado escolhido: 5.571 nomes numa lista só seriam impossíveis
+de percorrer e caros de baixar em 3G. O `server-only` é a trava do outro
+lado: se um componente de cliente importar a lista inteira, o build quebra
+em vez de mandá-la ao celular. Em execução o app não fala com o IBGE,
+porque cadastro não pode depender de API de terceiro estar no ar.
+
+**O filtro de busca segue a mesma ideia.** `/vagas` e `/servicos` têm
+filtro de estado, e o de cidade só aparece com o estado escolhido —
+`filtrosDeLugar`, em `src/lib/busca.ts`. Sem isso a página levaria 5.571
+opções dentro do HTML a cada abertura. Trocar o estado solta a cidade
+(`limpa`, no `FilterBar`): "Sinop - MT" com SP escolhido é um filtro que
+nunca casa, e a tela diria "nenhuma vaga" sem dizer por quê.
+
+**Bairro de pessoa não existe (#321).** Decisão do Luiz em 01/10/2026: o cadastro e o perfil pedem só a cidade. O
+bairro tinha sido tirado em pedaços — o enum dos 14 bairros de Sinop caiu
+com a abertura para o estado, a lista de "bairros atendidos" na #119 — e
+sobreviveu em outro canto: o campo no cadastro e na edição, o degrau
+"mesmo bairro" da escada de proximidade, o selo "Perto de você" nos
+cards. Não existe lista de bairros do país, então o campo só funcionava
+bem em Sinop; e nenhuma tela filtra por ele (#285). Pedir um dado que não
+decide nada é custo de formulário sem retorno.
+
+**O que sobrou é o bairro da vaga:** texto livre, opcional, escrito por
+quem publica e mostrado no card e no detalhe, para quem decide se vai até
+lá. Não entra em filtro nem em ordem — o mesmo estatuto do endereço.
+
+**O banco não mudou, de propósito.** `usuarios.bairro` e
+`perfis_prestador.bairros_atendidos` continuam lá, comentadas como legado
+no schema, e a aplicação não lê nem grava. Apagar dado de produção é
+decisão do Luiz, e a coluna é inofensiva — `usuarios` é fechada para
+`anon`. O preço aceito: `provider_listings`, lida pela chave anônima,
+ainda devolve o bairro das contas antigas, que a Lupa não mostra mais. A
+limpeza (`update ... set bairro = null`) fica para quando ele decidir. A
+view `metricas_por_local` segue agrupando por cidade e bairro, e o painel
+soma por cidade (`somarPorCidade`).
+
+**A trava é um teste que lê o código-fonte** —
+`tests/unit/sem-bairro-de-pessoa.test.ts`: só os arquivos que falam da
+vaga podem mencionar bairro, e os nomes que o carregavam
+(`bairrosAtendidos`, `MESMO_BAIRRO`, `BAIRROS_POR_CIDADE`…) não existem em
+lugar nenhum. *Remover um campo em etapas deixa sempre um resto que o
+próximo pedido encontra; o teste cobra o resto, não só a etapa.*
 
 **A cidade da vaga é da vaga, não da empresa.** Transportadora de Sinop
 contrata motorista em Sorriso; herdar a cidade da empresa esconderia a
@@ -1276,18 +1695,27 @@ correção de campo. Por ora é caso de suporte, como o CNPJ.
 
 ### Perto se mede por região do IBGE, não por quilômetro
 
-A busca cobre Mato Grosso inteiro e o estado tem 903 mil km². Ordenar só
-por data faz a primeira coisa que alguém de Sinop vê ser uma vaga em
-Cuiabá, a 500km — o oposto do que "hiperlocal" promete. Por isso a
-listagem ordena pelo mais perto de quem está olhando, numa escada de cinco
-degraus (`src/lib/proximidade.ts`): mesmo bairro, mesma cidade, mesma
-região imediata, mesma região intermediária, resto do estado.
+A busca cobre o Brasil inteiro. Ordenar só por data faz a primeira coisa
+que alguém de Sinop vê ser uma vaga em Porto Alegre — o oposto do que
+"perto de você" promete. Por isso a listagem ordena pelo mais perto de
+quem está olhando, numa escada de cinco degraus (`src/lib/proximidade.ts`):
+mesma cidade, mesma região imediata, mesma região intermediária,
+**mesmo estado**, resto do país. Já houve um sexto, "mesmo bairro", e
+saiu na #321 com o bairro de pessoa.
+
+**O degrau do estado entrou com a #301** e não precisa de mapa: o estado
+está no próprio valor gravado ("Sinop - MT"). É o que separa "longe, mas
+no mesmo estado" de "outro canto do país". As regiões vão pelo **id** do
+IBGE, não pelo nome, porque nome de região também se repete entre estados.
+O mapa (`src/lib/regioes.ts`, 5.571 entradas) é `server-only`: a busca
+ordena antes de a página sair, e mandá-lo ao celular seria centenas de kB
+para nada.
 
 **Por que região e não distância.** A região imediata do IBGE agrupa
 municípios pelo deslocamento real das pessoas para bens e serviços — é a
 pergunta certa aqui: até onde alguém daqui viaja para trabalhar. Linha reta
-seria pior e ainda exigiria outra fonte de dados, porque em MT quem decide
-o tempo de viagem é a estrada: 200km de asfalto e 200km de terra não são a
+seria pior e ainda exigiria outra fonte de dados, porque quem decide o
+tempo de viagem é a estrada: 200km de asfalto e 200km de terra não são a
 mesma distância. O mapa vem do mesmo IBGE que já gera a lista de cidades,
 por `scripts/gerar-regioes.mjs`, e é versionado — busca não pode depender
 de API de terceiro estar no ar.
@@ -1301,9 +1729,9 @@ vaga de quem tinha acabado de publicar.
 motivo. Ordenação que muda o resultado sem aparecer em lugar nenhum é a
 mesma armadilha, só que mais difícil de perceber.
 
-**Para prestador, perto é onde ele atende**, não onde mora: o eletricista
-do Jacarandá que atende o Centro está perto de quem é do Centro. O endereço
-dele responderia a pergunta errada.
+**Para prestador, perto é a cidade dele**, como para a vaga. Havia uma
+regra mais fina — "onde ele atende, não onde mora", pelos bairros
+atendidos —, e saiu junto com o bairro (#321).
 
 ### 404 em vez de 403 quando faz sentido
 
@@ -1318,6 +1746,32 @@ necessário, senão a pessoa tenta de novo sem entender. No login, o mesmo
 aviso seria uma lista de quem tem conta — que aqui significa **quem está
 procurando emprego**, informação que pode custar o emprego atual de alguém.
 O tempo de resposta também é igualado (`gastarTempoDeVerificacao`).
+
+**O cadastro revela o conflito, e o volume de conflitos tem teto (#390).**
+A revelação do e-mail é decisão antiga; CPF e CNPJ vão na mesma linha: a
+pessoa que esqueceu que tinha conta precisa saber qual dado bateu. O que
+faltava era limite: o de criação (`cadastro:<origem>`, 5 por 15 minutos)
+só soma conta criada, e quem testa se um dado está cadastrado precisa de
+volume, não de contas. Decisão do Luiz em 07/10/2026, entre quatro opções:
+conflito de e-mail, CPF ou CNPJ conta num teto próprio por origem
+(`cadastro-conflito:<origem>`, 10 por 15 minutos). Passado o teto a resposta
+é "muitas tentativas" em vez do conflito, e origem já bloqueada é recusada
+**antes** de qualquer consulta — senão continuaria perguntando e sendo
+respondida. Quem cria conta com sucesso não gasta esse teto.
+
+Recusadas, e por quê. *Mensagem única para CPF e CNPJ:* não esconde nada,
+porque quem varia só o documento sabe qual bateu, e piora a mensagem para
+quem só esqueceu. *Confirmar por e-mail antes de criar, com resposta
+igual:* fecha a enumeração de verdade, mas o cadastro deixa de ser
+imediato, passa a depender do provedor de e-mail (100 por dia no plano
+grátis do Resend) e contradiz a decisão de que o e-mail não bloqueia nada
+(#227) — reconsiderar só se o problema aparecer medido.
+
+O que este teto **não** faz: não impede quem usa muitos IPs, só encarece, e
+não resolve o CPF ser conferido só pelo dígito — qualquer CPF válido pode
+ser ocupado por quem não é o dono, e a correção disso é a verificação paga
+da #120. A chave aparece como linha própria no painel de pressão (a view
+agrupa pelo texto antes do primeiro `:`), sem mudança de SQL.
 
 ### Polling, não websocket, no painel do admin
 
@@ -1369,6 +1823,21 @@ preferência é gravada **antes** do pedido, para que negar não custe a
 escolha. Pedir ao abrir a tela queimaria a única chance com quem ainda não
 entendeu a oferta.
 
+**A porta de entrada é o sininho do cabeçalho (#288).** Os avisos
+nasceram no fim de "Editar perfil", depois de nome, telefone, anúncio e
+CNPJ — e ninguém abre "Editar perfil" para pedir aviso de vaga. Enquanto
+não havia chave VAPID em produção, o esconderijo não custava nada; no dia
+em que as chaves entraram (24/09/2026), passou a custar o recurso inteiro.
+Hoje moram em `/avisos`, a um toque de qualquer tela, e saíram do perfil:
+dois lugares para a mesma escolha divergiriam na primeira mudança.
+
+**O sininho aparece para quem pode se candidatar**, e só. Aviso de vaga
+nova para quem não pode se candidatar levaria a uma vaga sem botão — a
+armadilha do "botão que só recusa depois do clique". A rota continua
+aberta a qualquer conta com sessão, como o serviço já permitia: quem
+decide mostrar o atalho é o cabeçalho, não o portão, e quem chega por
+link não cai num 404.
+
 **Ninguém é avisado da própria vaga.** Parece óbvio e não é: quem publica
 está na mesma cidade e quase sempre na mesma categoria, então sem essa
 linha a primeira notificação que a pessoa recebe é a dela mesma — e a
@@ -1384,9 +1853,22 @@ saber que alguém desinstalou ou trocou de telefone; o navegador não avisa
 ninguém. Qualquer outra falha não apaga nada: sumir com a inscrição de quem
 estava sem sinal é pior que deixar de avisar uma vez.
 
+**O endereço da inscrição só vale se for de um serviço de push (#356).**
+Ele vem do navegador de quem se inscreveu, e a cada vaga publicada o
+servidor faz uma requisição HTTPS para ele. Validar só que era uma URL
+deixava a pessoa escolher o destino. Hoje `endpointDePushPermitido`
+aceita FCM, Mozilla, Apple e WNS, só em `https`, sem usuário, senha ou
+porta — na inscrição e de novo no envio, porque linha gravada antes da
+regra não passou pela primeira. O que falha na segunda sai da tabela pelo
+mesmo caminho do 404/410, e o envio tem prazo de 10 s. O preço da lista
+fechada: um navegador com serviço fora dela não liga o aviso. *Lista de
+quem pode, e não de quem não pode: a segunda sempre deixa passar a
+próxima forma.*
+
 **Bairro ficou fora**, decisão de 26/08/2026: não existe catálogo de bairro
-para os 142 municípios, só para Sinop. Notificar por bairro funcionaria bem
-numa cidade e mal nas outras 141.
+para os municípios do país. Notificar por bairro funcionaria bem numa cidade
+e mal em todas as outras — e desde a #321 a Lupa nem guarda o bairro de uma
+pessoa.
 
 **O envio sai por `after()`**, depois da resposta — quem publicou quer a
 vaga no ar, e o aviso é consequência. Mesma disciplina do registro de
@@ -1699,6 +2181,23 @@ toda notificação — falha fechada, não aberta: melhor não confirmar
 pagamento nenhum sozinho do que confirmar um que ninguém pode provar que
 veio do Mercado Pago.
 
+**A assinatura não tem prazo, de propósito (#331).** A auditoria de 29/09
+sugeriu recusar `ts` com mais de dez minutos, contra o reenvio de uma
+notificação capturada. Não se fez: o Mercado Pago **reenvia sozinho**, por
+horas, a notificação que falhou, e não está documentado se a retentativa
+assina de novo. Um prazo podia recusar a retentativa legítima — e foi um
+401 nosso que perdeu a primeira venda (#196). O reenvio malicioso, do
+outro lado, não ganha nada: a rota relê o pagamento no Mercado Pago, e a
+aprovação é condicional na própria instrução do banco.
+
+**E o valor pago é conferido, mas não barra (#331).** `confirmarPagamento`
+compara o `transaction_amount` relido com o valor da cobrança, e a
+divergência vai ao Sentry com os dois números. A aprovação segue: hoje o
+valor sai da preferência que o próprio servidor cria, e barrar seria
+segurar o crédito de quem pagou por uma diferença que talvez nem seja
+fraude — o defeito mais caro deste caminho. Quem opera decide, e o estorno
+está a um botão.
+
 **A aprovação é condicional na própria instrução do banco — `update ...
 where status = 'pendente'`** —, não "lê o status, decide, grava" em dois
 passos. O Mercado Pago reenvia webhook; duas notificações chegando quase
@@ -1730,6 +2229,41 @@ para aprovar, porque a guarda mora na própria instrução do banco. **O
 crédito sumiria de vez, por causa da ordem em que uma lista voltou.**
 Ordem que decide dinheiro não pode ser herdada da resposta de terceiro.
 
+**A mesma precedência vale no webhook, e não só na varredura (#358).** A
+varredura enxerga todas as tentativas de uma preferência de uma vez e
+escolhe a aprovada. O webhook recebe uma por notificação, e a recusada
+costuma chegar antes: `rejeitar` e `cancelar` fechavam a cobrança, e
+`aprovar` só partia de `pendente`, então a aprovação seguinte era
+descartada em silêncio — quem pagou ficava sem o que comprou. Hoje
+`aprovar` parte de `pendente`, `rejeitado` e `cancelado`, e as duas
+outras continuam partindo só de `pendente`, para que uma notícia atrasada
+de recusa não desfaça uma aprovação. O dinheiro entrou, então a
+aprovação é a que manda. *Máquina de estados com estado terminal precisa
+perguntar se o terminal pode ser ultrapassado por uma prova melhor.*
+
+**Efeito que falha devolve a cobrança a `pendente` (#384).** O status
+muda antes do efeito, e é essa ordem que impede dois webhooks simultâneos
+de aplicarem o efeito duas vezes. O outro lado: se o efeito falhasse
+depois — o banco soluçou, o perfil não existia —, o reenvio do Mercado
+Pago achava a cobrança já `aprovado` e pulava o efeito, e a varredura só
+olha pendentes. Quem pagou ficava sem o que comprou, sem erro visível.
+Hoje `aplicarEfeitoOuReabrir` desfaz a aprovação (`reabrir`) antes de
+propagar o erro, que vai ao Sentry com o tipo e o id da cobrança; o
+reenvio e a varredura refazem. Vale também para a parcela da assinatura,
+que bate no índice único do `mp_payment_id` e agora, se a encontra
+reaberta, aprova de novo. O preço, aceito: se o efeito chegou a gravar e só
+a resposta se perdeu, a nova tentativa aplica de novo — erro para o lado de
+quem pagou, e visível, em vez de para o lado de quem não recebeu e não
+tem como saber. O teste grátis (`confirmarAssinatura`) segue com o mesmo
+buraco, registrado como pendência.
+
+**O cron recusa sem segredo em qualquer deploy da Vercel (#358).** Só
+`VERCEL_ENV === "production"` recusava; num preview a rota rodava aberta
+para qualquer GET, e um preview pode carregar a chave de serviço e o
+token do Mercado Pago. Agora é `VERCEL` (qualquer deploy), e a comparação
+do segredo é em tempo constante. Fora da Vercel — dev local e suíte —
+continua rodando solta.
+
 **O que ainda pode virar dinheiro não se toca:** boleto em aberto e PIX
 não pago são `pending` lá também, e encerrar a cobrança ali tiraria de
 alguém uma compra que ele ainda pode concluir. E há janela dos dois lados
@@ -1742,6 +2276,22 @@ no matcher do `proxy.ts`, como `api/webhooks` já tinha entrado: o cron da
 Vercel faz um GET sem cookie, e o muro responderia 401 antes de a
 varredura existir. Seria o defeito do webhook de novo, e pior — **rede de
 proteção que nunca roda não deixa rastro de que não está rodando.**
+**A fila da varredura gira, e "não deu para perguntar" não conta como
+conferida (#388).** Ela pegava as 50 pendentes mais antigas. Checkout
+abandonado nunca sai de pendente e voltava às mesmas 50 vagas em toda
+varredura; com 50 dessas na frente, uma cobrança presa de verdade, criada
+depois, nunca era conferida. Hoje a ordem é por `atualizado_em` — que o
+banco já move por trigger, então sem coluna nova —, e uma cobrança
+conferida que continua pendente é marcada (`marcarConferida`) e vai para o
+fim. Para isso `pagamentosPorReferencia` passou a distinguir `null` (não
+deu para perguntar: rede, timeout, resposta torta) de `[]` (perguntei e
+não há nada): antes os dois eram lista vazia, e era seguro enquanto só
+importava o que fazer com o dinheiro, mas com a fila girando uma queda do
+Mercado Pago mandaria as cobranças examinadas para o fim sem ninguém tê-las
+conferido. Em erro nada se mexe, e a próxima varredura tenta de novo.
+*Quando a resposta ganha um segundo uso, confira se as duas causas que ela
+juntava ainda podem ser juntas.*
+
 **Cada domínio aplica o próprio efeito; `pagamentos` só aciona.**
 `aplicarEfeito`, em `src/server/pagamentos/servico.ts`, despacha por tipo
 para uma função do domínio certo — `estenderMensalidade`, em
@@ -1805,6 +2355,42 @@ volta a valer numa segunda cobrança (`STATUS_LIQUIDADOS`). Menor que os
 60 dias de antes, e a metade que restou não envolve dinheiro indo e
 voltando; ainda assim é uma decisão consciente, não uma lacuna
 despercebida.
+
+**O teste grátis é um por conta, gravado (#392).** Ele era concedido a
+cada assinatura que passava de pendente a ativa. Cancelar é terminal, então
+assinar de novo criava outra assinatura e outra concessão, e nada registrava
+que a pessoa já usara o dela: quem repetisse o ciclo a cada 15 dias ficava na
+vitrine sem nunca pagar. Decisão do Luiz em 07/10/2026, entre três opções.
+
+`usuarios.teste_gratis_usado_em` guarda a data, preenchida na primeira
+concessão por uma instrução só (`where teste_gratis_usado_em is null`), para
+duas ativações simultâneas não concederem o teste duas vezes. Quem já usou
+assina **sem `free_trial`**: o Mercado Pago cobra na hora, e a assinatura
+nunca concede dias de teste. A tela diz isso antes do botão — texto e rótulo
+("Assinar por R$ 19,90") acompanham a situação —, porque promessa na tela é
+contrato. A coluna mora em `usuarios` e não em `perfis_prestador`, que a
+chave anônima lê: é informação de cobrança.
+
+**Sem preenchimento retroativo, de propósito.** Quem tinha mensalidade antes
+recebeu acesso por outro caminho — a carência sem cartão, que acabou —, não
+pelo teste; marcá-las como "já usou" cobraria na hora de quem nunca viu a
+regra. Cada conta existente mantém o direito a um teste. E o arquivo
+`aplica-teste-gratis-usado.sql` roda **antes do deploy**: o código novo lê a
+coluna ao assinar, e sem ela assinar falha.
+
+Descartadas. *Deduzir de `mensalidade_valida_ate`* (sem coluna, sem SQL em
+produção): o estorno zera a validade, então quem pediu devolução ganharia
+outro teste — um ciclo a mais, já que o estorno só vale uma vez —, e a regra
+ficaria implícita, dependente do que "zerar a validade" significar amanhã.
+*Aceitar e acompanhar*: custo zero e sem assinante hoje, mas o dia em que
+houver o primeiro o buraco já estará aberto.
+
+O que continua aberto. Se `estenderMensalidade` falhar depois de a
+reivindicação ter sido gravada, o teste é gasto sem dar os dias — o mesmo
+tipo de buraco do efeito que falha depois do status (#384), e a nova
+tentativa do webhook não refaz, porque a assinatura já está ativa. E não
+sabemos se o Mercado Pago barra teste repetido no mesmo cartão: isso não
+está no nosso código.
 
 **A vitrine só mostra quem está com a mensalidade em dia**, mesma família
 de regra que `doc_verified`: o filtro mora em `getProviders`
@@ -1885,10 +2471,30 @@ mudasse numa e não na outra — a mesma lição do preço, que já vinha de
 
 **O trial ganhou card com benefícios, não só um link "pular".** Pedido
 explícito: mostrar os dois lados, não esconder a alternativa grátis atrás
-de um texto pequeno. O que muda é o peso visual — o plano pago tem borda
-e fundo destacados, badge "Recomendado", e vem primeiro; o trial fica
-discreto, mas continua sendo uma opção completa, com a mesma lista de
-benefícios que os planos pagos.
+de um texto pequeno.
+
+**Na empresa, o grátis passou a vir primeiro (#299).** A #184 nasceu com
+o pago em cima, destacado, e o grátis por último — e quem acabava de criar
+a conta lia quatro preços seguidos como "o app já está me cobrando para
+usar". O "Conta criada" era pequeno perto da lista, e a saída grátis só
+aparecia depois de rolar: no celular, o que fica abaixo da dobra é o que a
+pessoa não vê. Hoje a confirmação diz com todas as letras que **nada foi
+cobrado**, o grátis vem logo abaixo e em destaque, e as quatro compras
+viram linhas compactas, marcadas como opcionais. A tela inteira cabe num
+celular comum sem rolar, e há teste e2e medindo isso.
+
+**O prestador continua com o pago primeiro, de propósito.** Para ele,
+"continuar sem assinar" não é um plano grátis: sem mensalidade ele não
+aparece na busca (ver "Sem carência", acima). Pôr essa opção em destaque
+seria oferecer como equivalente um caminho em que ninguém o encontra. Na
+empresa, o grátis é uso de verdade — perfil no ar e busca de candidatos —
+e a compra só faz sentido quando existe a primeira vaga.
+
+**O título "Leva menos de dois minutos" some depois de a conta existir.**
+Ele era renderizado pela página, acima do formulário, e continuava ali em
+cima do "Conta criada" — ocupando o topo da tela e dizendo algo que já não
+era verdade. Mora agora dentro de `SignUpForm`, que só o mostra antes do
+envio.
 
 ---
 
@@ -2004,11 +2610,11 @@ para manter sem ninguém pedindo ainda.
   Lupa. As duas de rede social são a cor oficial clareada até passar no
   contraste (#133): a original reprovava em WCAG AA contra `panel-3`,
   do mesmo jeito que `--color-empresas` já tinha precisado de ajuste.
-- **Multi-cidade:** toda entidade tem `city`, e o app aceita os 142
-  municípios de Mato Grosso — lista gerada do IBGE por
-  `scripts/gerar-cidades.mjs`. `CIDADE_INICIAL` é Sinop, e é só isso: o
-  valor que já vem escolhido. Bairro tem lista curada onde alguém conferiu
-  (`BAIRROS_POR_CIDADE`) e é texto livre no resto.
+- **Multi-cidade:** toda entidade tem `city`, gravada com o estado
+  (`"Sinop - MT"`), e o app aceita os 5.571 municípios do Brasil — lista
+  gerada do IBGE por `scripts/gerar-cidades.mjs` (#301). Nenhuma cidade vem
+  escolhida por padrão. Bairro de pessoa não existe (#321); só a vaga
+  tem bairro, texto livre e opcional.
 - **Dados sensíveis:** documento e selfie vão para o bucket privado
   `verificacao` e são apagados na decisão do admin. Erros enviados ao Sentry
   passam por `scrubSensitiveData`. Senha nunca é logada. São obrigações de
@@ -2028,11 +2634,18 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   revalidação re-renderiza *aquela mesma rota*, cujo portão agora recusa
   quem acabou de passar por ele: quem ativava com sucesso terminava
   olhando para "Não encontramos essa página". A navegação no cliente
-  (`router.replace`) perdia a corrida contra a revalidação, e não dava
-  para redirecionar de dentro da action porque `criarAcao` captura toda
-  exceção — inclusive o `NEXT_REDIRECT`. A saída foi a própria página
-  redirecionar quem já é prestador, que é determinístico e roda no
-  servidor. **Ação que muda o papel e revalida precisa responder o que a
+  (`router.replace`) perdia a corrida contra a revalidação. A saída foi a
+  própria página redirecionar quem já é prestador, que é determinístico e
+  roda no servidor.
+
+  **Este parágrafo dizia também que não dava para redirecionar de dentro
+  da action, porque `criarAcao` engoliria o `NEXT_REDIRECT`. Era falso**
+  (#334): `criarAcao` repassa `redirect()` e `notFound()` desde 21/08
+  (`e36fdf4`, `ehControleDeFluxoDoNext` em `src/server/action.ts`) — um
+  dia antes de a frase ser escrita pela primeira vez, num comentário do
+  login. A saída escolhida continua certa pelo motivo de cima; o motivo de
+  baixo nunca existiu. *Premissa sobre o próprio código se confere no
+  código, não no comentário que a repete.* **Ação que muda o papel e revalida precisa responder o que a
   rota de origem faz depois** — e a resposta não pode ser 404 na cara de
   quem acabou de acertar.
 
@@ -2070,6 +2683,21 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   ela ainda deixa o teste para trás, em vez de um clique que ninguém
   repete.
 
+- **O React 19 apaga o formulário depois de toda action, até da que
+  devolveu erro.** Para ele, `<form action={...}>` que terminou é
+  formulário enviado, e ele chama `form.reset()`. O servidor apontava o
+  CPF errado, e a mensagem chegava num cadastro já em branco: a pessoa
+  preenchia tudo de novo por causa de um campo (#291). No login, errar a
+  senha apagava também o e-mail. Hoje todo formulário com
+  `useActionState` passa por `useEnvioQueNaoApaga`
+  (`src/components/ui/formulario.ts`): o `onSubmit` chama a action dentro
+  de uma transição, caminho em que o React não limpa, e a tela rola até o
+  primeiro campo com erro. O `action` continua no `<form>` para o envio
+  funcionar antes de o JavaScript carregar. Há teste que varre
+  `src/app` e `src/components` e reprova formulário novo sem a proteção,
+  com as exceções e o porquê de cada uma escritos no próprio teste.
+  **Erro de validação é resposta normal para o usuário, e o framework não
+  sabe disso: quem sabe é a aplicação.**
 - **`useSearchParams()` exige `<Suspense>`, e esse boundary pode nunca
   resolver.** A barra de filtros ficou invisível e inerte: o conteúdo era
   transmitido mas ficava preso num `<template>`. Hoje os valores descem por
@@ -2098,6 +2726,16 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   `6mb` no `next.config.ts`, cobrindo a maior regra com folga para o
   envelope do multipart. **Limite anunciado pela aplicação precisa caber
   no limite do framework.**
+
+  **E no da plataforma, que vem antes (#324).** O conserto acima subiu o
+  limite do Next para 6 MB, e o currículo continuou prometendo 5 — só que a
+  Vercel corta o corpo de uma função em 4,5 MB, antes de o Next existir. O
+  PDF entre 4,5 e 5 MB era recusado com erro genérico em inglês. Hoje o
+  currículo vai até 4 MB, há teste que reprova qualquer regra acima de
+  4,5 MB, e o navegador confere o tamanho antes de mandar
+  (`src/components/ui/arquivo-que-cabe.ts`). *O limite que vale é o menor
+  da corrente — aplicação, framework e plataforma —, e o da plataforma não
+  aparece em nenhum arquivo do projeto.*
 - **Página que lê a sessão e nunca consulta a matriz.** `/empresa` e
   `/empresa/vagas/nova` chamavam `sessaoAtual()` — uma para saber de quem
   era o painel, a outra só para preencher a cidade — e nenhuma das duas
@@ -2131,6 +2769,15 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   instalável para quem ainda não tem conta, que é justamente quem acabou
   de receber o link. Nenhuma tela quebrou. Arquivo gerado por rota vai no
   matcher, não em `ABERTAS`, que é lista de rota de navegação.
+- **Ter a logo declarada não é a aba mostrar a logo.** `icon.tsx` e
+  `apple-icon.tsx` desenhavam a lupa desde o começo, e o `favicon.ico` de
+  fábrica do Next continuava em `src/app`. O HTML declarava os dois, e o
+  Chrome escolhia o `.ico`: a aba mostrou o triângulo do Next desde o
+  primeiro commit, sem nada quebrar (#303). Hoje o `.ico` sai de
+  `scripts/gerar-favicon.mjs`, com o mesmo desenho, e
+  `tests/unit/favicon.test.ts` decodifica o arquivo e procura o verde da
+  marca. **Arquivo de fábrica de framework é o que ninguém lembra de
+  trocar, porque nunca foi escrito por ninguém.**
 - **Valor padrão de filtro na tela vira filtro invisível.** `/vagas` lia
   `single("cidade") ?? "Sinop"` — sobra do tempo em que Sinop era a única
   cidade. Aberto o estado inteiro, toda vaga publicada fora de Sinop sumia
@@ -2141,6 +2788,16 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   não estava na URL. **Quando o alcance de uma listagem muda, procure os
   padrões deixados nas telas** — a camada de dados estava certa o tempo
   todo, e teste sobre ela passava verde com o bug em pé.
+
+- **`z.url()` do Zod 4 aceita qualquer esquema.** `javascript:alert(1)` e
+  `data:text/html,…` passam como "endereço válido" — o nome sugere web, e a
+  função só confere que é uma URL. Site, Instagram, Facebook e a imagem de
+  publicação usavam `z.url()` e acabam num `<a href>` ou `<img src>` que
+  qualquer conta logada vê (#354). Hoje o cadastro e a edição usam
+  `z.httpUrl()`, e a tela passa o que lê por `linkExterno` (`src/lib/format.ts`):
+  o que foi gravado antes da validação não vira `javascript:` num link.
+  *Validar na entrada não limpa o que já está no banco; a tela é a última
+  porta.*
 
 Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
 último em `tests/unit/cidades.test.ts` — os três varrem o código-fonte.

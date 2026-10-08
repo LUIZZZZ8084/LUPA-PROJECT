@@ -1,9 +1,10 @@
 import "server-only";
 
-import { TETO_DO_DONO } from "@/lib/limites-de-lista";
+import { TETO_DE_CORTES_DE_SESSAO } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import type { Papel } from "../auth/rbac";
 import { erros } from "../errors";
+import { log } from "../logger";
 import type {
   DadosNovoUsuario,
   EdicaoBasica,
@@ -42,7 +43,6 @@ function paraUsuario(linha: Record<string, unknown>): Usuario {
     cpf: (linha.cpf as string | null) ?? null,
     telefone: String(linha.telefone),
     cidade: String(linha.cidade),
-    bairro: (linha.bairro as string | null) ?? null,
     avatarUrl: (linha.avatar_url as string | null) ?? null,
     emailVerificado: Boolean(linha.email_verificado),
     telefoneVerificado: Boolean(linha.telefone_verificado),
@@ -104,7 +104,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         cpf: dados.cpf ?? null,
         telefone: dados.telefone,
         cidade: dados.cidade,
-        bairro: dados.bairro ?? null,
         avatar_url: dados.avatarUrl ?? null,
       })
       .select("*")
@@ -154,6 +153,20 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       throw erros.indisponivel(`atualização de senha: ${error.message}`);
   }
 
+  async regravarHash(id: string, senhaHash: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({
+        // mesma-senha (#330): só parâmetros novos do Argon2, sem corte de
+        // sessão. A exceção está escrita em `troca-de-senha-revoga.test.ts`.
+        senha_hash: senhaHash,
+      })
+      .eq("id", id);
+
+    if (error) throw erros.indisponivel(`regravação de hash: ${error.message}`);
+  }
+
   async cortesDeSessao(dias: number): Promise<Map<string, number>> {
     const supabase = await cliente();
     const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
@@ -162,9 +175,19 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       .from("usuarios")
       .select("id, sessoes_validas_desde")
       .gte("sessoes_validas_desde", desde.toISOString())
-      .limit(TETO_DO_DONO);
+      // Os mais novos primeiro: se o teto cortar, perde-se o corte cujo
+      // token vence antes, e não o que acabou de ser pedido (#352).
+      .order("sessoes_validas_desde", { ascending: false })
+      .limit(TETO_DE_CORTES_DE_SESSAO);
 
     if (error) throw erros.indisponivel(`cortes de sessão: ${error.message}`);
+
+    if ((data ?? []).length >= TETO_DE_CORTES_DE_SESSAO) {
+      // Chegou ao teto: há revogação fora da checagem. Vai ao Sentry.
+      log.erro(erros.indisponivel("cortes de sessão chegaram ao teto"), {
+        teto: TETO_DE_CORTES_DE_SESSAO,
+      });
+    }
 
     return new Map(
       (data ?? []).map((l) => [
@@ -241,7 +264,10 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     const supabase = await cliente();
     const { error } = await supabase
       .from("usuarios")
-      .update({ papel })
+      // O corte vai na mesma instrução que troca o papel (#352): o papel
+      // viaja no token, e o que foi emitido antes da troca não pode
+      // continuar valendo com as capacidades antigas.
+      .update({ papel, sessoes_validas_desde: new Date().toISOString() })
       .eq("id", id);
 
     /*
@@ -298,7 +324,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       descricao: perfil.descricao,
       preco_inicial: perfil.precoInicial,
       anos_experiencia: perfil.anosExperiencia,
-      bairros_atendidos: perfil.bairrosAtendidos,
       instagram: perfil.instagram,
       facebook: perfil.facebook,
       cnpj: perfil.cnpj,
@@ -444,6 +469,56 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     }
   }
 
+  async testeGratisJaUsado(usuarioId: string): Promise<boolean> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("teste_gratis_usado_em")
+      .eq("id", usuarioId)
+      .maybeSingle();
+
+    if (error) throw erros.indisponivel(`teste grátis: ${error.message}`);
+    return Boolean(data?.teste_gratis_usado_em);
+  }
+
+  async reivindicarTesteGratis(usuarioId: string): Promise<boolean> {
+    const supabase = await cliente();
+    // Uma instrução só: a condição `is null` é o que impede a segunda
+    // ativação simultânea de levar o teste também.
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update({ teste_gratis_usado_em: new Date().toISOString() })
+      .eq("id", usuarioId)
+      .is("teste_gratis_usado_em", null)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw erros.indisponivel(`teste grátis: ${error.message}`);
+    return data !== null;
+  }
+
+  /**
+   * Chama a função `estender_mensalidade_prestador` (#348): a conta
+   * `max(agora, atual) + dias` acontece dentro do `update`, onde duas
+   * extensões concorrentes não se atropelam. `setof perfis_prestador`
+   * devolve zero ou uma linha; zero é "não tem perfil".
+   */
+  async estenderMensalidadePrestador(
+    usuarioId: string,
+    dias: number | null,
+  ): Promise<boolean> {
+    const supabase = await cliente();
+    const { data, error } = await supabase.rpc(
+      "estender_mensalidade_prestador",
+      { p_usuario: usuarioId, p_dias: dias },
+    );
+
+    if (error) {
+      throw erros.indisponivel(`mensalidade de prestador: ${error.message}`);
+    }
+    return Array.isArray(data) ? data.length > 0 : data != null;
+  }
+
   async definirGeradorCurriculoLiberado(
     usuarioId: string,
     liberado: boolean,
@@ -507,7 +582,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         data.preco_inicial === null ? null : Number(data.preco_inicial),
       anosExperiencia:
         data.anos_experiencia === null ? null : Number(data.anos_experiencia),
-      bairrosAtendidos: (data.bairros_atendidos as string[] | null) ?? [],
       instagram: (data.instagram as string | null) ?? null,
       facebook: (data.facebook as string | null) ?? null,
       cnpj: (data.cnpj as string | null) ?? null,
@@ -555,9 +629,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     const { error } = await supabase
       .from("usuarios")
       .update({
-        nome_completo: dados.nomeCompleto,
         telefone: dados.telefone,
-        bairro: dados.bairro,
       })
       .eq("id", usuarioId);
 
@@ -605,7 +677,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         descricao: dados.descricao,
         preco_inicial: dados.precoInicial,
         anos_experiencia: dados.anosExperiencia,
-        bairros_atendidos: dados.bairrosAtendidos,
         instagram: dados.instagram,
         facebook: dados.facebook,
       },
@@ -629,7 +700,6 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     const { error } = await supabase
       .from("perfis_empresa")
       .update({
-        razao_social: dados.razaoSocial,
         setor: dados.setor,
         porte: dados.porte,
         site: dados.site,
@@ -640,6 +710,19 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       .eq("usuario_id", usuarioId);
 
     if (error) throw erros.indisponivel(`perfil de empresa: ${error.message}`);
+  }
+
+  async definirRazaoSocialDaReceita(
+    usuarioId: string,
+    razaoSocial: string,
+  ): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("perfis_empresa")
+      .update({ razao_social: razaoSocial })
+      .eq("usuario_id", usuarioId);
+
+    if (error) throw erros.indisponivel(`razão social: ${error.message}`);
   }
 
   /* ---------- Arquivos ---------- */

@@ -163,6 +163,17 @@ describe("gerenciar trabalhos", () => {
   });
 
   /**
+   * "Remover" promete "nada é apagado" (#333). A promessa precisa de uma
+   * porta: a única tela que traz o trabalho de volta é a de guardados.
+   */
+  it("leva aos trabalhos guardados, de onde eles voltam", () => {
+    montarGerenciador(7);
+    expect(
+      screen.getByRole("link", { name: /tirou do perfil/i }),
+    ).toHaveAttribute("href", "/perfil/publicacoes");
+  });
+
+  /**
    * No limite, o botão desabilita e o texto diz o que fazer. Um botão que
    * aceita o clique e recusa depois é a armadilha que este projeto já
    * registrou mais de uma vez.

@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { ativarPrestadorComEstado, type EstadoAtivacao } from "./actions";
 
@@ -85,11 +86,9 @@ function FaltaFoto() {
 
 export function AtivarPrestadorForm({
   precisaDeFoto,
-  bairro,
   temCpf,
 }: {
   precisaDeFoto: boolean;
-  bairro: string | null;
   /** Quem já informou CPF no cadastro não digita de novo aqui. */
   temCpf: boolean;
 }) {
@@ -97,6 +96,7 @@ export function AtivarPrestadorForm({
     ativarPrestadorComEstado,
     inicial,
   );
+  const envio = useEnvioQueNaoApaga(action, state);
   /*
    * Não há navegação no cliente aqui de propósito.
    *
@@ -113,7 +113,7 @@ export function AtivarPrestadorForm({
     <>
       <AvisoDaTroca />
 
-      <form action={action}>
+      <form action={action} {...envio}>
         <Panel className="space-y-5">
           {!temCpf && (
             <Field
@@ -176,16 +176,9 @@ export function AtivarPrestadorForm({
               name="descricao"
               rows={5}
               required
-              placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo Sinop e região."
+              placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo minha cidade e a região."
             />
           </Field>
-
-          {bairro && (
-            <p className="text-faint text-xs leading-relaxed">
-              Seu perfil nasce atendendo o {bairro}. Você acrescenta outros
-              bairros depois, em Editar perfil.
-            </p>
-          )}
 
           {state.erro && (
             <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-danger text-sm">

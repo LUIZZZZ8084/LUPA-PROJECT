@@ -1,82 +1,29 @@
-import { CIDADES_MT } from "./cidades-mt";
-import type { ContractType, ServiceCategory } from "./types";
+import type { ContractType, ServiceCategory, WorkMode } from "./types";
+
+/*
+ * Não existe mais cidade inicial nem estado do app (#301).
+ *
+ * O app começou em Sinop e passou a aceitar Mato Grosso inteiro; hoje aceita
+ * qualquer município do Brasil, e nenhum vem escolhido por padrão — uma
+ * cidade pré-selecionada é um palpite que a pessoa de outro lugar precisa
+ * desfazer, e quem não percebe acaba cadastrado na cidade errada. A lista e
+ * o formato da cidade ("Sinop - MT") moram em `src/lib/cidades/`.
+ */
 
 /**
- * Onde o app começa, e até onde ele vai.
+ * O menor tamanho de senha que o app aceita (#290).
  *
- * `CIDADE_INICIAL` é Sinop: é lá que estão os dados, o contato e o esforço
- * de divulgação. Mas atender só Sinop é diferente de *aceitar* só Sinop —
- * quem é de Sorriso e esbarra num formulário que não tem a cidade dele
- * conclui que o app não serve para ele, e não volta.
+ * Mora aqui, e não só no schema do servidor, porque a dica da tela e a regra
+ * precisam dizer o mesmo número. Ficaram um mês dizendo números diferentes:
+ * o servidor exigia 10 e as duas telas de senha prometiam 8. Quem seguia a
+ * dica levava erro, e o formulário ainda apagava tudo (#291).
  *
- * O estado inteiro está aberto desde o cadastro. A lista dos municípios é
- * gerada do IBGE por `scripts/gerar-cidades.mjs`.
+ * Seis é decisão do Luiz em 25/09/2026: o público digita no celular, e dez
+ * era demais. O NIST recomenda no mínimo 8. O que segura a senha curta aqui é
+ * o resto da proteção: limite de tentativas de login por e-mail, Argon2id no
+ * hash e a mesma resposta de login exista a conta ou não.
  */
-export const CIDADE_INICIAL = "Sinop";
-export const ESTADO = "MT";
-export const ESTADO_NOME = "Mato Grosso";
-
-export const CIDADES = CIDADES_MT;
-
-export function ehCidadeAtendida(valor: string): boolean {
-  return (CIDADES as readonly string[]).includes(valor);
-}
-
-/** "Sinop - MT", para onde a cidade aparece sozinha na tela. */
-export function rotuloDaCidade(cidade: string): string {
-  return `${cidade} - ${ESTADO}`;
-}
-
-/**
- * Bairros conhecidos, por cidade.
- *
- * Só entra cidade cuja lista alguém conferiu. O resto usa texto livre —
- * ver `bairroLivre()` abaixo.
- *
- * A lista existe porque é ela que mantém o filtro de bairro utilizável:
- * digitado à mão, "Jd. Botânico", "Jardim Botanico" e "JARDIM BOTÂNICO"
- * viram três bairros diferentes e o filtro deixa de agrupar. O preço de
- * exigir lista para todo mundo seria manter os bairros de 142 municípios,
- * o que não existe pronto em lugar nenhum e envelheceria sozinho.
- */
-export const BAIRROS_POR_CIDADE: Record<string, readonly string[]> = {
-  Sinop: [
-    "Centro",
-    "Jardim Botânico",
-    "Jardim Paraíso",
-    "Jardim das Palmeiras",
-    "Setor Comercial",
-    "Setor Industrial",
-    "Residencial Florença",
-    "Jardim Primavera",
-    "Jardim Itália",
-    "Menezes",
-    "Boa Esperança",
-    "Jacarandá",
-    "Jardim Celeste",
-    "Aquarela Brasil",
-  ],
-};
-
-/**
- * Os bairros que a cidade oferece numa lista. Vazio significa texto livre —
- * é assim que a tela decide entre `select` e `input`.
- */
-export function bairrosDe(
-  cidade: string | null | undefined,
-): readonly string[] {
-  if (!cidade) return [];
-  return BAIRROS_POR_CIDADE[cidade] ?? [];
-}
-
-/**
- * Quantos bairros um prestador pode marcar como atendidos.
- *
- * Era 14 — o número de bairros de Sinop — e por isso quebrava em qualquer
- * outra cidade. Vinte é folga suficiente para o prestador dizer onde
- * atende sem que a lista vire "a cidade inteira", que não informa nada.
- */
-export const MAX_BAIRROS_ATENDIDOS = 20;
+export const SENHA_MINIMA = 6;
 
 /**
  * As sete primeiras são o V0 — mão de obra manual, o público mais
@@ -151,6 +98,15 @@ export const CONTRACT_TYPES: ContractType[] = [
   "Freelance",
   "Jovem Aprendiz",
 ];
+
+/** O valor gravado é o do enum; o rótulo é o que a tela mostra (#300). */
+export const WORK_MODE_LABELS: Record<WorkMode, string> = {
+  presencial: "Presencial",
+  home_office: "Home office",
+  hibrido: "Híbrido",
+};
+
+export const WORK_MODES = Object.keys(WORK_MODE_LABELS) as WorkMode[];
 
 export const ROLE_LABELS = {
   candidato_clt: "Candidato",

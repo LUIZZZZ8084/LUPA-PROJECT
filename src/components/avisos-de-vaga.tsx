@@ -2,10 +2,11 @@
 
 import { BellOff, BellRing } from "lucide-react";
 import { useState, useTransition } from "react";
+import { CampoCidade } from "@/components/campo-cidade";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Select } from "@/components/ui/field";
-import { CIDADES, JOB_CATEGORIES } from "@/lib/constants";
+import { JOB_CATEGORIES } from "@/lib/constants";
 
 /**
  * Avisos de vaga nova (#48).
@@ -45,6 +46,7 @@ export function AvisosDeVaga({
     preferencia ? "ligado" : "parado",
   );
   const [pendente, comTransicao] = useTransition();
+  const [cidade, setCidade] = useState(preferencia?.cidade ?? cidadePadrao);
 
   if (!pushDisponivel) {
     return (
@@ -113,18 +115,7 @@ export function AvisosDeVaga({
       </p>
 
       <form action={ligar} className="mt-4 space-y-4">
-        <Field label="Cidade" required>
-          <Select
-            name="cidade"
-            defaultValue={preferencia?.cidade ?? cidadePadrao}
-          >
-            {CIDADES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <CampoCidade value={cidade} onChange={setCidade} />
 
         <Field
           label="Área"

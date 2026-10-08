@@ -21,6 +21,8 @@ describe("avaliar prestador", () => {
   let restaurar: () => void;
   let avaliarPrestador: typeof import("@/server/avaliacoes/servico").avaliarPrestador;
   let jaAvaliou: typeof import("@/server/avaliacoes/servico").jaAvaliou;
+  let avaliacoesEmMemoria: typeof import("@/server/avaliacoes/servico").avaliacoesEmMemoria;
+  let renomearAvaliacoesDe: typeof import("@/server/avaliacoes/servico").renomearAvaliacoesDe;
   /*
    * `ehAppError` também precisa vir do ciclo novo.
    *
@@ -38,7 +40,7 @@ describe("avaliar prestador", () => {
       papel,
       nomeCompleto: "Quem Avalia",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     return { usuarioId: usuario.id, papel };
   }
@@ -63,6 +65,8 @@ describe("avaliar prestador", () => {
     ]);
     avaliarPrestador = modulo.avaliarPrestador;
     jaAvaliou = modulo.jaAvaliou;
+    avaliacoesEmMemoria = modulo.avaliacoesEmMemoria;
+    renomearAvaliacoesDe = modulo.renomearAvaliacoesDe;
     ehAppError = errosDoCiclo.ehAppError;
 
     repo = new repositorios.RepositorioMemoria();
@@ -138,6 +142,72 @@ describe("avaliar prestador", () => {
     await expect(
       avaliarPrestador(quem, { prestadorId: PRESTADOR, nota }),
     ).rejects.toSatisfy((e) => ehAppError(e) && e.codigo === "validacao");
+  });
+
+  /**
+   * Quem assina a avaliação da empresa é a empresa (#315). O nome do
+   * responsável é registro da conta: mostrá-lo no comentário expunha uma
+   * pessoa que não pediu para aparecer.
+   */
+  describe("quem assina", () => {
+    async function criarEmpresa(razaoSocial: string) {
+      const quem = await criarConta("empresa");
+      await repo.criarPerfilEmpresa({
+        usuarioId: quem.usuarioId,
+        razaoSocial,
+        cnpj: "11222333000181",
+        setor: null,
+        porte: null,
+        site: null,
+        instagram: null,
+        facebook: null,
+        descricao: null,
+        logoUrl: null,
+        plano: "trial",
+      });
+      return quem;
+    }
+
+    it("a empresa assina com o nome da empresa, não o do responsável", async () => {
+      const empresa = await criarEmpresa("Mercado Bom Preço");
+
+      await avaliarPrestador(empresa, { prestadorId: PRESTADOR, nota: 5 });
+
+      expect(avaliacoesEmMemoria(PRESTADOR)[0]?.nome).toBe("Mercado Bom Preço");
+    });
+
+    it("empresa sem perfil assina com o nome da conta", async () => {
+      const empresa = await criarConta("empresa");
+
+      await avaliarPrestador(empresa, { prestadorId: PRESTADOR, nota: 5 });
+
+      expect(avaliacoesEmMemoria(PRESTADOR)[0]?.nome).toBe("Quem Avalia");
+    });
+
+    it("pessoa assina com o próprio nome", async () => {
+      const quem = await criarConta("candidato_clt");
+
+      await avaliarPrestador(quem, { prestadorId: PRESTADOR, nota: 5 });
+
+      expect(avaliacoesEmMemoria(PRESTADOR)[0]?.nome).toBe("Quem Avalia");
+    });
+
+    /** A troca da Receita alcança o que a empresa já escreveu, e só isso. */
+    it("renomear troca só as avaliações de quem foi renomeado", async () => {
+      const empresa = await criarEmpresa("Mercado Bom Preço");
+      const outra = await criarConta("candidato_clt");
+      await avaliarPrestador(empresa, { prestadorId: PRESTADOR, nota: 5 });
+      await avaliarPrestador(empresa, { prestadorId: "outro", nota: 4 });
+      await avaliarPrestador(outra, { prestadorId: PRESTADOR, nota: 3 });
+
+      await renomearAvaliacoesDe(empresa.usuarioId, "BOM PRECO LTDA");
+
+      expect(avaliacoesEmMemoria(PRESTADOR).map((a) => a.nome)).toEqual([
+        "BOM PRECO LTDA",
+        "Quem Avalia",
+      ]);
+      expect(avaliacoesEmMemoria("outro")[0]?.nome).toBe("BOM PRECO LTDA");
+    });
   });
 
   it("recusa sem sessão", async () => {

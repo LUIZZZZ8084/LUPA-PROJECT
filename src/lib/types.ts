@@ -34,6 +34,9 @@ export type ContractType =
   | "Freelance"
   | "Jovem Aprendiz";
 
+/** Onde o trabalho acontece (#300). Espelha o enum `modalidade_vaga`. */
+export type WorkMode = "presencial" | "home_office" | "hibrido";
+
 export type CompanyPlan = "trial" | "mensal";
 
 export interface Profile {
@@ -42,7 +45,6 @@ export interface Profile {
   phone: string;
   role: Role;
   city: string;
-  neighborhood: string | null;
   avatar_url: string | null;
   phone_verified: boolean;
   doc_verified: boolean;
@@ -79,7 +81,6 @@ export interface ProviderProfile {
   description: string | null;
   starting_price: number | null;
   years_experience: number | null;
-  service_area: string[];
   photo_urls: string[];
   avg_rating: number;
   review_count: number;
@@ -109,10 +110,12 @@ export interface Job {
   city: string;
   neighborhood: string | null;
   /** Rua, número, ponto de referência — texto livre, sem geocodificação.
-   * Informativo: não entra no ranking de proximidade, que usa só bairro
-   * e cidade. `null` em vaga publicada antes deste campo existir. */
+   * Informativo: não entra no ranking de proximidade, que usa só a
+   * cidade, a região e o estado. `null` em vaga publicada antes deste campo existir. */
   address: string | null;
   contract_type: ContractType | null;
+  /** `null` em vaga publicada antes de o campo existir — sem selo. */
+  work_mode: WorkMode | null;
   salary_min: number | null;
   salary_max: number | null;
   /** O que a vaga pede. Vazio quando a empresa não declarou — aí o
@@ -168,7 +171,6 @@ export interface ProviderListing extends ProviderProfile {
   full_name: string;
   phone: string;
   city: string;
-  neighborhood: string | null;
   avatar_url: string | null;
   phone_verified: boolean;
   doc_verified: boolean;
@@ -185,7 +187,7 @@ export interface ApplicationWithCandidate extends Application {
    * que filtra sempre pela empresa da sessão, mais o `revoke` da view
    * para a chave anônima. Este objeto nunca chega a uma tela pública.
    */
-  candidate: Pick<Profile, "full_name" | "avatar_url" | "neighborhood"> & {
+  candidate: Pick<Profile, "full_name" | "avatar_url"> & {
     city: string | null;
     email: string | null;
     phone: string | null;
@@ -218,6 +220,8 @@ export interface MyApplication extends Application {
 
 export interface JobFilters {
   city?: string;
+  /** Sigla do estado, quando não há cidade escolhida (#301). */
+  uf?: string;
   perto?: Origem;
   category?: string;
   contract_type?: string;
@@ -226,6 +230,8 @@ export interface JobFilters {
 
 export interface ProviderFilters {
   city?: string;
+  /** Sigla do estado, quando não há cidade escolhida (#301). */
+  uf?: string;
   perto?: Origem;
   category?: string;
   /** Nota mínima, ex.: 4 mostra só quem tem 4,0 ou mais. */

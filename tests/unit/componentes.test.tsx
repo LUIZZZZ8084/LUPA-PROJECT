@@ -17,7 +17,7 @@ describe("marca", () => {
 
   it("o logo mostra o nome e a assinatura opcional", () => {
     render(<LupaLogo tagline="Sinop - MT" />);
-    expect(screen.getByText("Lupa")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Lupa" })).toBeInTheDocument();
     expect(screen.getByText("Sinop - MT")).toBeInTheDocument();
   });
 });

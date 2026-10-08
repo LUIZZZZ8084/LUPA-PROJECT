@@ -82,7 +82,6 @@ export class RepositorioMemoria implements RepositorioUsuarios {
       cpf,
       telefone: dados.telefone,
       cidade: dados.cidade,
-      bairro: dados.bairro ?? null,
       avatarUrl: dados.avatarUrl ?? null,
       emailVerificado: false,
       telefoneVerificado: false,
@@ -106,6 +105,11 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     // mesma regra, e ter duas implementações é justamente o que exige que
     // ela esteja escrita nas duas.
     this.cortes.set(id, Date.now());
+  }
+
+  async regravarHash(id: string, senhaHash: string): Promise<void> {
+    const usuario = this.usuarios.get(id);
+    if (usuario) this.usuarios.set(id, { ...usuario, senhaHash });
   }
 
   async cortesDeSessao(dias: number): Promise<Map<string, number>> {
@@ -148,7 +152,12 @@ export class RepositorioMemoria implements RepositorioUsuarios {
 
   async atualizarPapel(id: string, papel: Papel): Promise<void> {
     const usuario = this.usuarios.get(id);
-    if (usuario) this.usuarios.set(id, { ...usuario, papel });
+    if (usuario) {
+      this.usuarios.set(id, { ...usuario, papel });
+      // Mesma regra do Postgres (#352): trocar o papel corta as sessões
+      // emitidas antes.
+      this.cortes.set(id, Date.now());
+    }
   }
 
   async registrarAcesso(id: string): Promise<void> {
@@ -245,6 +254,54 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     this.prestadores.set(usuarioId, { ...perfil, mensalidadeValidaAte: ate });
   }
 
+  /** Em memória o teste usado é um conjunto de ids (#392). */
+  private testesGratisUsados = new Set<string>();
+
+  async testeGratisJaUsado(usuarioId: string): Promise<boolean> {
+    return this.testesGratisUsados.has(usuarioId);
+  }
+
+  async reivindicarTesteGratis(usuarioId: string): Promise<boolean> {
+    if (this.testesGratisUsados.has(usuarioId)) return false;
+    this.testesGratisUsados.add(usuarioId);
+    return true;
+  }
+
+  /**
+   * A mesma conta da função SQL (#348), em JS. Aqui o ler-computar-gravar é
+   * seguro porque a demonstração roda num processo só, sem a concorrência
+   * que o banco enfrenta — o que importa é o resultado bater com o do SQL.
+   */
+  async estenderMensalidadePrestador(
+    usuarioId: string,
+    dias: number | null,
+  ): Promise<boolean> {
+    const perfil = this.prestadores.get(usuarioId);
+    if (!perfil) return false;
+
+    if (dias === null) {
+      this.prestadores.set(usuarioId, {
+        ...perfil,
+        mensalidadeValidaAte: null,
+      });
+      return true;
+    }
+
+    const agora = Date.now();
+    const base = perfil.mensalidadeValidaAte
+      ? Math.max(agora, new Date(perfil.mensalidadeValidaAte).getTime())
+      : agora;
+    const novaValidade = new Date(
+      base + dias * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    this.prestadores.set(usuarioId, {
+      ...perfil,
+      mensalidadeValidaAte: novaValidade,
+    });
+    return true;
+  }
+
   async definirGeradorCurriculoLiberado(
     usuarioId: string,
     liberado: boolean,
@@ -320,6 +377,15 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     const atual = this.empresas.get(usuarioId);
     if (!atual) return;
     this.empresas.set(usuarioId, { ...atual, ...dados });
+  }
+
+  async definirRazaoSocialDaReceita(
+    usuarioId: string,
+    razaoSocial: string,
+  ): Promise<void> {
+    const atual = this.empresas.get(usuarioId);
+    if (!atual) return;
+    this.empresas.set(usuarioId, { ...atual, razaoSocial });
   }
 
   /* ---------- Arquivos ---------- */

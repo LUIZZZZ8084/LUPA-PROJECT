@@ -42,6 +42,20 @@ describe("JobCard", () => {
     render(<JobCard job={{ ...job, salary_min: null, salary_max: null }} />);
     expect(screen.getByText("A combinar")).toBeInTheDocument();
   });
+
+  /** A modalidade vira selo no card (#300). */
+  it("mostra a modalidade como selo", () => {
+    render(<JobCard job={{ ...job, work_mode: "home_office" }} />);
+    expect(screen.getByText("Home office")).toBeInTheDocument();
+  });
+
+  /** Vaga publicada antes do campo existir não ganha selo inventado. */
+  it("vaga sem modalidade não mostra selo nenhum", () => {
+    render(<JobCard job={{ ...job, work_mode: null }} />);
+    for (const rotulo of ["Presencial", "Home office", "Híbrido"]) {
+      expect(screen.queryByText(rotulo)).not.toBeInTheDocument();
+    }
+  });
 });
 
 describe("ProviderCard", () => {
@@ -79,9 +93,12 @@ describe("ProviderCard", () => {
   });
 
   /**
-   * A home pública (#241) renderiza este card sem sessão. O telefone não
-   * pode aparecer em lugar nenhum do HTML — nem escondido, ausente — e o
-   * que substitui o botão do WhatsApp é um convite para entrar.
+   * Uma página pública que renderize este card sem sessão não pode vazar o
+   * telefone. A home o fazia (#241) e deixou de fazer na #372, mas a trava
+   * fica: é o único caminho seguro para o dia em que outra página pública o
+   * usar. O telefone não pode aparecer em lugar nenhum do HTML — nem
+   * escondido, ausente — e o que substitui o botão do WhatsApp é um convite
+   * para entrar.
    */
   it("sem sessão, esconde o telefone e convida para o login", () => {
     const { container } = render(

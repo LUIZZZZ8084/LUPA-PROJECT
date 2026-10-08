@@ -3,11 +3,12 @@
 import { Check, Loader2, Plus, Trash2 } from "lucide-react";
 import { useActionState, useId, useRef, useState } from "react";
 import type { EstadoVerificacao } from "@/app/(app)/perfil/actions";
-import { CampoBairro } from "@/components/cidade-e-bairro";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
+import { formatPhone } from "@/lib/format";
 import type { Experience } from "@/lib/types";
 import type { PerfilCompleto } from "@/server/perfil/servico";
 import {
@@ -91,22 +92,34 @@ function Conta({ perfil }: { perfil: PerfilCompleto }) {
     salvarContaComEstado,
     inicial,
   );
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const u = perfil.usuario;
 
   return (
-    <form action={acao}>
+    <form action={acao} {...envio}>
       <Secao
         titulo="Sua conta"
-        descricao="Nome e telefone aparecem para quem entra em contato com você."
+        descricao={
+          u.papel === "empresa"
+            ? "Os dados de quem responde pela empresa. Nas vagas e avaliações, quem aparece é a empresa."
+            : "Nome e telefone aparecem para quem entra em contato com você."
+        }
         estado={estado}
         pendente={pendente}
       >
+        {/*
+          O nome aparece, mas não se edita (#315). Ele assina as avaliações,
+          e quem podia trocá-lo a qualquer hora comentava em cada prestador
+          com um nome diferente. Sem `name`: o campo desabilitado não é
+          enviado, e o servidor também não o aceitaria.
+        */}
         <Field
-          label="Nome completo"
-          required
-          error={estado.campos?.nomeCompleto}
+          label={
+            u.papel === "empresa" ? "Nome do responsável" : "Nome completo"
+          }
+          hint="Não pode ser alterado. Para corrigir, fale com o suporte."
         >
-          <Input name="nomeCompleto" defaultValue={u.nomeCompleto} required />
+          <Input value={u.nomeCompleto} disabled readOnly />
         </Field>
 
         <Field
@@ -115,10 +128,18 @@ function Conta({ perfil }: { perfil: PerfilCompleto }) {
           hint="É por onde as pessoas vão falar com você."
           error={estado.campos?.telefone}
         >
+          {/*
+            Com a máscara, como no cadastro (#333): "66999999999" cru não
+            parece um telefone, e a pessoa fica sem saber se o número salvo
+            está certo. O servidor tira a pontuação de qualquer jeito.
+          */}
           <Input
             name="telefone"
             type="tel"
-            defaultValue={u.telefone}
+            inputMode="tel"
+            autoComplete="tel"
+            defaultValue={formatPhone(u.telefone)}
+            placeholder="(11) 99999-0000"
             required
           />
         </Field>
@@ -129,11 +150,6 @@ function Conta({ perfil }: { perfil: PerfilCompleto }) {
           mudança de contexto inteiro, não correção de campo. Enquanto não
           houver essa tela, é caso de suporte, com gente olhando.
         */}
-        <CampoBairro
-          cidade={u.cidade}
-          defaultValue={u.bairro}
-          error={estado.campos?.bairro}
-        />
       </Secao>
     </form>
   );
@@ -301,6 +317,7 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
     salvarCurriculoComEstado,
     inicial,
   );
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const c = perfil.candidato;
 
   // O caminho de um erro dentro do array é "experiencias.0.role", não
@@ -311,7 +328,7 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
   )?.[1];
 
   return (
-    <form action={acao}>
+    <form action={acao} {...envio}>
       <Secao
         titulo="Currículo"
         descricao="É o que a empresa lê ao receber sua candidatura. Não aparece em busca pública."
@@ -383,13 +400,14 @@ function Anuncio({ perfil }: { perfil: PerfilCompleto }) {
     salvarAnuncioComEstado,
     inicial,
   );
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const p = perfil.prestador;
 
   return (
-    <form action={acao}>
+    <form action={acao} {...envio}>
       <Secao
         titulo="Seu anúncio"
-        descricao="É como você aparece para quem procura profissional em Sinop."
+        descricao="É como você aparece para quem procura profissional na sua região."
         estado={estado}
         pendente={pendente}
       >
@@ -449,15 +467,6 @@ function Anuncio({ perfil }: { perfil: PerfilCompleto }) {
           </Field>
         </div>
 
-        {/*
-         * "Bairros atendidos" saiu.
-         *
-         * Era lista curada por cidade, e não existe lista pronta de bairro
-         * para os 142 municípios de MT — a mesma razão que já tinha
-         * derrubado o enum de bairro. O bairro que vale é o que a pessoa
-         * informou no cadastro. Decisão do Luiz em 03/09/2026.
-         */}
-
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Instagram" error={estado.campos?.instagram}>
             <Input
@@ -499,10 +508,11 @@ function CnpjDaEmpresa({ perfil }: { perfil: PerfilCompleto }) {
     salvarCnpjDoPrestador,
     inicialVerificacao,
   );
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const p = perfil.prestador;
 
   return (
-    <form action={acao}>
+    <form action={acao} {...envio}>
       <Panel className="mb-5 space-y-3">
         <div>
           <h2 className="font-bold text-lg">CNPJ da sua empresa</h2>
@@ -513,10 +523,18 @@ function CnpjDaEmpresa({ perfil }: { perfil: PerfilCompleto }) {
           </p>
         </div>
 
-        <Field label="CNPJ">
+        <Field
+          label="CNPJ"
+          hint="Com ou sem pontuação. CNPJ novo pode ter letras."
+        >
+          {/* Teclado de texto: CNPJ novo pode ter letras (#297). */}
           <Input
             name="cnpj"
-            inputMode="numeric"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            autoComplete="off"
+            spellCheck={false}
+            className="uppercase"
             defaultValue={p?.cnpj ?? ""}
             placeholder="00.000.000/0000-00"
           />
@@ -564,22 +582,27 @@ function Empresa({ perfil }: { perfil: PerfilCompleto }) {
     salvarEmpresaComEstado,
     inicial,
   );
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const e = perfil.empresa;
 
   return (
-    <form action={acao}>
+    <form action={acao} {...envio}>
       <Secao
         titulo="Sua empresa"
-        descricao="É o que a candidata lê antes de decidir se confia na vaga."
+        descricao="É o que quem procura emprego lê antes de decidir se confia na vaga."
         estado={estado}
         pendente={pendente}
       >
-        <Field label="Nome" required error={estado.campos?.razaoSocial}>
-          <Input
-            name="razaoSocial"
-            defaultValue={e?.razaoSocial ?? ""}
-            required
-          />
+        {/*
+         * O nome também não se edita (#315): é ele que assina as vagas e as
+         * avaliações da empresa. Só a conferência do CNPJ o troca, pela
+         * razão social da Receita.
+         */}
+        <Field
+          label="Nome da empresa"
+          hint="Aparece em tudo o que a empresa faz na Lupa. Não pode ser alterado."
+        >
+          <Input value={e?.razaoSocial ?? ""} disabled readOnly />
         </Field>
 
         {/*
@@ -690,8 +713,7 @@ export function FormularioDePerfil({
         <CampoDeArquivo
           titulo="Foto de perfil"
           descricao="Aparece na busca e ao lado do seu nome. Perfil com foto passa mais confiança para quem vai contratar."
-          formatos="JPG, PNG ou WEBP, até 2 MB"
-          accept="image/jpeg,image/png,image/webp"
+          especie="avatar"
           enviar={enviarFotoComEstado}
           remover={() => removerFoto({})}
           disponivel={temArmazenamento}
@@ -708,8 +730,7 @@ export function FormularioDePerfil({
           <CampoDeArquivo
             titulo="Currículo em PDF"
             descricao="Vai junto com a candidatura. Só a empresa da vaga vê — não aparece em busca pública."
-            formatos="PDF, até 5 MB"
-            accept="application/pdf"
+            especie="curriculo"
             enviar={enviarCurriculoComEstado}
             remover={() => removerCurriculo({})}
             disponivel={temArmazenamento}
@@ -732,8 +753,7 @@ export function FormularioDePerfil({
           <CampoDeArquivo
             titulo="Logo da empresa"
             descricao="Aparece em cada vaga que você publica. É o que faz a vaga parecer de empresa de verdade."
-            formatos="JPG, PNG ou WEBP, até 2 MB"
-            accept="image/jpeg,image/png,image/webp"
+            especie="logo"
             enviar={enviarLogoComEstado}
             remover={() => removerLogo({})}
             disponivel={temArmazenamento}

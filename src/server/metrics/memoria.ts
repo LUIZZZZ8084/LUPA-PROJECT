@@ -10,6 +10,7 @@ import {
   type DistribuicaoLocal,
   type PressaoNoTeto,
   type RepositorioMetricas,
+  somarPorCidade,
   type Totais,
 } from "./tipos";
 
@@ -66,21 +67,15 @@ export class RepositorioMetricasMemoria implements RepositorioMetricas {
   }
 
   async distribuicaoPorLocal(limite: number): Promise<DistribuicaoLocal[]> {
-    const contagem = new Map<string, DistribuicaoLocal>();
+    const cidades = [
+      ...this.usuarios.todos().map((u) => u.cidade),
+      ...(await getProviders()).itens.map((p) => p.city),
+    ];
 
-    const somar = (cidade: string, bairro: string | null) => {
-      const chave = `${cidade}|${bairro ?? ""}`;
-      const atual = contagem.get(chave);
-      if (atual) atual.total += 1;
-      else contagem.set(chave, { cidade, bairro, total: 1 });
-    };
-
-    for (const u of this.usuarios.todos()) somar(u.cidade, u.bairro);
-    for (const p of (await getProviders()).itens) somar(p.city, p.neighborhood);
-
-    return [...contagem.values()]
-      .sort((a, b) => b.total - a.total)
-      .slice(0, limite);
+    return somarPorCidade(
+      cidades.map((cidade) => ({ cidade, total: 1 })),
+      limite,
+    );
   }
 
   /**

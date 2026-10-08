@@ -1,12 +1,14 @@
 # Lupa
 
-Plataforma hiperlocal de emprego e serviços. Conecta três públicos —
-candidatos a vaga CLT, prestadores de serviço autônomos e empresas
-contratando — com busca filtrada por cidade, bairro e categoria, perfis
-verificados e contato direto no WhatsApp.
+Plataforma de emprego e serviços para o Brasil inteiro. Conecta três
+públicos — candidatos a vaga CLT, prestadores de serviço autônomos e
+empresas contratando — com busca por estado, cidade e categoria, o que está
+mais perto de quem procura primeiro, perfis verificados e contato direto no
+WhatsApp.
 
-Cidade-piloto: **Sinop-MT**. O objetivo é substituir os grupos de WhatsApp de
-"vagas Sinop" por algo que se possa filtrar e no qual se possa confiar.
+Começou em **Sinop-MT**, com o objetivo de substituir os grupos de WhatsApp
+de "vagas Sinop" por algo que se possa filtrar e no qual se possa confiar —
+e hoje aceita qualquer município do país.
 
 O nome vem de **Lu**iz + **Pa**ulinho — e de "lupa", o instrumento de quem
 procura.
@@ -33,7 +35,7 @@ produto para alguém.
 2. No **SQL Editor**, rode `supabase/schema.sql` (tabelas, RLS, triggers,
    views e buckets).
 3. Copie `.env.example` para `.env.local` e preencha `NEXT_PUBLIC_SUPABASE_URL`
-   e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Project Settings → API).
+   e `SUPABASE_ANON_KEY` (Project Settings → API).
 4. Reinicie o `npm run dev`. A camada de dados passa a ler do banco sozinha.
 
 Para dados de desenvolvimento em ambiente **local**, rode também
@@ -57,7 +59,7 @@ src/
     data.ts               Camada de dados (Supabase → fallback demo)
     mock-data.ts          Dados de demonstração de Sinop
     types.ts              Tipos espelhando o schema
-    constants.ts          Cidade-piloto, bairros, categorias
+    constants.ts          Cidade-piloto, categorias
 supabase/
   schema.sql              Schema, RLS, triggers, views, buckets
   seed.sql                Dados de desenvolvimento (local)
@@ -77,17 +79,17 @@ docs/
 - **Verificação é manual no V0.** O fundador aprova em `/admin`. A imagem do
   documento é apagada do storage na decisão — fica só o status no perfil,
   conforme a política de retenção da LGPD.
-- **Mato Grosso inteiro, começando por Sinop.** Os 142 municípios do estado
-  são aceitos no cadastro, na vaga e nos filtros — a lista vem do IBGE por
-  `scripts/gerar-cidades.mjs`. Sinop é onde o esforço de divulgação começa,
-  não o limite de quem pode entrar. A busca aberta, sem cidade escolhida,
-  mostra o estado inteiro: quem quiser só a sua cidade filtra, e o filtro
-  fica na URL.
+- **O Brasil inteiro.** Os 5.571 municípios do país são aceitos no
+  cadastro, na vaga e nos filtros — a lista vem do IBGE por
+  `scripts/gerar-cidades.mjs`, e a cidade é gravada com o estado
+  ("Sinop - MT"). Nenhuma cidade vem escolhida por padrão. A busca aberta,
+  sem lugar escolhido, mostra o país inteiro: quem quiser só o seu estado ou
+  a sua cidade filtra, e o filtro fica na URL.
 - **O mais perto de você aparece primeiro.** A ordem da busca é uma escada
-  de cinco degraus — mesmo bairro, mesma cidade, mesma região imediata,
-  mesma região intermediária, resto do estado. "Perto" vem da divisão
-  regional do IBGE, que agrupa municípios pelo deslocamento real das
-  pessoas, e não de distância em linha reta: em MT quem decide o tempo de
+  de cinco degraus — mesma cidade, mesma região imediata, mesma região
+  intermediária, mesmo estado, resto do país. "Perto" vem da
+  divisão regional do IBGE, que agrupa municípios pelo deslocamento real
+  das pessoas, e não de distância em linha reta: quem decide o tempo de
   viagem é a estrada. Ordenar não é filtrar — nada some da lista por estar
   longe, e a tela avisa quando a ordem é essa.
 - **PWA, não app de loja.** Manifest e ícones gerados em build; "adicionar à

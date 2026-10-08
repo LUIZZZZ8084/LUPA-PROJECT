@@ -267,21 +267,12 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
             {painel.locais.map((local) => {
               const maior = painel.locais[0].total;
               return (
-                <li
-                  key={`${local.cidade}-${local.bairro ?? "sem-bairro"}`}
-                  className="flex items-center gap-3"
-                >
+                <li key={local.cidade} className="flex items-center gap-3">
                   <span
                     className="w-40 shrink-0 truncate text-xs text-muted"
-                    title={
-                      local.bairro
-                        ? `${local.bairro}, ${local.cidade}`
-                        : local.cidade
-                    }
+                    title={local.cidade}
                   >
-                    {local.bairro
-                      ? `${local.bairro}, ${local.cidade}`
-                      : local.cidade}
+                    {local.cidade}
                   </span>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-panel-3">
                     <div

@@ -14,7 +14,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { umParametro } from "@/lib/busca";
 import { JOB_CATEGORIES } from "@/lib/constants";
 import { pluralize } from "@/lib/format";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { candidatosDisponiveis } from "@/server/candidatos/servico";
 
@@ -28,14 +28,14 @@ export default async function CandidatosPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const sessao = await sessaoAtual();
+  const sessao = await sessaoOuEntrar("/candidatos");
 
   /*
    * 404 e não 403, como no resto da casa: um 403 confirma que a área
    * existe para quem está sondando. Aqui o que existe é uma lista de
    * pessoas procurando emprego.
    */
-  if (!sessao || !pode(sessao.papel, "candidato:buscar_disponiveis")) {
+  if (!pode(sessao.papel, "candidato:buscar_disponiveis")) {
     notFound();
   }
 
@@ -129,7 +129,7 @@ export default async function CandidatosPage({
                   </p>
                   <p className="truncate text-[11px] text-muted">
                     {c.desired_area ?? "Área não informada"}
-                    {` · ${[c.neighborhood, c.city].filter(Boolean).join(", ")}`}
+                    {` · ${c.city}`}
                   </p>
 
                   {/*

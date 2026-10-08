@@ -52,6 +52,13 @@ export const ROTAS: readonly RotaVarrida[] = [
    * frente: o que se mede é o formulário, não o aviso.
    */
   { path: "/perfil/virar-prestador", nome: "Virar prestador" },
+  /*
+   * Os avisos de vaga, em tela própria desde a #288. Em demonstração não
+   * há chave VAPID, então o que se mede é a tela explicando que o recurso
+   * não está disponível — o mesmo layout, com o formulário no lugar em
+   * produção.
+   */
+  { path: "/avisos", nome: "Avisos de vaga" },
 ] as const;
 
 /**

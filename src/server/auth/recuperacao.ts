@@ -6,7 +6,7 @@ import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
 import { gerarHash } from "./password";
-import { conferirLimite, registrarFalha } from "./rate-limit";
+import { conferirLimite, reservarTentativa } from "./rate-limit";
 
 /**
  * "Esqueci minha senha" (#174).
@@ -116,7 +116,9 @@ export async function pedirRecuperacao(
    * adivinhação de senha: é o envio em si.
    */
   await conferirLimite(`recuperacao:${opcoes.origem}`);
-  await registrarFalha(`recuperacao:${opcoes.origem}`);
+  // Soma e responde na mesma instrução (#386): dois `await` seguidos
+  // deixavam requisições simultâneas passarem todas do teto.
+  await reservarTentativa(`recuperacao:${opcoes.origem}`);
 
   const repo = repositorioUsuarios();
   const usuario = await repo.porEmail(email.trim().toLowerCase());
@@ -147,6 +149,7 @@ export async function pedirRecuperacao(
     {
       para: usuario.email,
       assunto: "Redefinir sua senha na Lupa",
+      tipo: "recuperacao",
       corpo: [
         `Olá, ${usuario.nomeCompleto.split(" ")[0]}.`,
         "",

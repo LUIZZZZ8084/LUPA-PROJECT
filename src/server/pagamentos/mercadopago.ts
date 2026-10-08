@@ -139,6 +139,15 @@ export interface PagamentoNoMercadoPago {
   /** "approved" | "pending" | "rejected" | "cancelled" | "refunded" | ... */
   status: string;
   referenciaExterna: string | null;
+  /**
+   * O que foi pago, em centavos, e em que moeda (#331).
+   *
+   * Só a leitura por id traz: a busca por referência da varredura volta
+   * sem, e o valor é conferido quando a varredura chama
+   * `confirmarPagamento`, que relê por id.
+   */
+  valorCentavos?: number | null;
+  moeda?: string | null;
 }
 
 /**
@@ -166,6 +175,8 @@ export async function consultarPagamento(
       id?: unknown;
       status?: unknown;
       external_reference?: unknown;
+      transaction_amount?: unknown;
+      currency_id?: unknown;
     };
 
     if (
@@ -182,6 +193,11 @@ export async function consultarPagamento(
         typeof corpo.external_reference === "string"
           ? corpo.external_reference
           : null,
+      valorCentavos:
+        typeof corpo.transaction_amount === "number"
+          ? Math.round(corpo.transaction_amount * 100)
+          : null,
+      moeda: typeof corpo.currency_id === "string" ? corpo.currency_id : null,
     };
   } catch {
     return null;
@@ -201,11 +217,18 @@ export async function consultarPagamento(
  * tentativas**: cartão recusado, depois PIX aprovado. Quem chama decide
  * qual vale — e a ordem em que se decide não é detalhe, está em
  * `reconciliarPagamentosPendentes`.
+ *
+ * **`null` é "não deu para perguntar"; `[]` é "perguntei e não há nada"
+ * (#388).** Antes os dois eram `[]`, e isso era seguro enquanto só
+ * importava o que fazer com o dinheiro: nos dois casos não se mexe na
+ * cobrança. Com a fila da varredura girando, importa: uma queda do Mercado
+ * Pago mandaria as cobranças examinadas para o fim da fila sem que ninguém
+ * as tivesse conferido.
  */
 export async function pagamentosPorReferencia(
   referenciaExterna: string,
   buscar: typeof fetch = fetch,
-): Promise<PagamentoNoMercadoPago[]> {
+): Promise<PagamentoNoMercadoPago[] | null> {
   try {
     const resposta = await buscar(
       `${BASE}/v1/payments/search?external_reference=${encodeURIComponent(
@@ -218,10 +241,10 @@ export async function pagamentosPorReferencia(
       },
     );
 
-    if (!resposta.ok) return [];
+    if (!resposta.ok) return null;
 
     const corpo = (await resposta.json()) as { results?: unknown };
-    if (!Array.isArray(corpo.results)) return [];
+    if (!Array.isArray(corpo.results)) return null;
 
     return corpo.results.flatMap((cru) => {
       const item = cru as {
@@ -250,12 +273,11 @@ export async function pagamentosPorReferencia(
     /*
      * Rede, timeout, TLS: a varredura tenta de novo amanhã.
      *
-     * Lista vazia aqui significa "não deu para perguntar", e quem chama
-     * trata igual a "não há nada" — de propósito. Os dois levam à mesma
-     * ação, que é não mexer na cobrança: inventar uma distinção obrigaria
-     * a decidir algo sobre dinheiro sem ter falado com o Mercado Pago.
+     * `null`, e não lista vazia (#388): quem chama não mexe na cobrança nos
+     * dois casos, e é isso que continua valendo para o dinheiro. O que
+     * muda é a fila — "não deu para perguntar" não conta como conferida.
      */
-    return [];
+    return null;
   }
 }
 

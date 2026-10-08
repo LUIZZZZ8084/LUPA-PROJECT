@@ -3,9 +3,12 @@
 import { ImagePlus, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useActionState } from "react";
+import { ajustarAoLimite } from "@/components/ui/arquivo-que-cabe";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
+import { REGRAS } from "@/server/arquivos/regras";
 import type { Publicacao } from "@/server/publicacoes/tipos";
 import {
   arquivarComEstado,
@@ -34,6 +37,12 @@ function FormularioNovo({
     publicarComFotoComEstado,
     inicial,
   );
+  /*
+   * O formulário fica na tela depois de publicar, pronto para o próximo
+   * trabalho, então limpa quando dá certo. Quando dá errado, a foto e o
+   * texto continuam lá.
+   */
+  const envio = useEnvioQueNaoApaga(action, state, { limparAoConcluir: true });
 
   if (cheio) {
     return (
@@ -48,7 +57,7 @@ function FormularioNovo({
   }
 
   return (
-    <form action={action} className="mb-8">
+    <form action={action} className="mb-8" {...envio}>
       <Panel className="space-y-5">
         <div>
           <h2 className="font-bold text-base">Publicar um trabalho</h2>
@@ -63,14 +72,15 @@ function FormularioNovo({
           error={state.campos?.foto ?? state.campos?.arquivo}
           hint={
             temArmazenamento
-              ? "JPG, PNG ou WEBP, até 2 MB."
+              ? REGRAS.publicacao.aviso
               : "O envio de imagem precisa do Supabase configurado. Sem ele, o trabalho é publicado só com o texto."
           }
         >
           <Input
             name="foto"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={REGRAS.publicacao.tiposAceitos.join(",")}
+            onChange={ajustarAoLimite("publicacao")}
             required={temArmazenamento}
             disabled={!temArmazenamento}
           />
@@ -215,7 +225,7 @@ export function FeedDoPrestador({
 
   return (
     <>
-      <p className="mb-5 font-mono text-faint text-xs">
+      <p className="mb-5 text-faint text-xs">
         {ativas} de {limite} no feed
       </p>
 

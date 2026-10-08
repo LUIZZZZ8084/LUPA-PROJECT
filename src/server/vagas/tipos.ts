@@ -7,6 +7,8 @@
  * funcionando sem banco.
  */
 
+import type { WorkMode } from "@/lib/types";
+
 export type StatusVaga = "aberta" | "fechada";
 
 export interface Vaga {
@@ -21,6 +23,9 @@ export interface Vaga {
    * publicada antes deste campo existir; nunca decide ranking. */
   endereco: string | null;
   tipoContrato: string | null;
+  /** Presencial, home office ou híbrido (#300). `null` em vaga publicada
+   * antes deste campo existir. */
+  modalidade: WorkMode | null;
   salarioMin: number | null;
   salarioMax: number | null;
   habilidades: string[];
@@ -40,6 +45,7 @@ export interface DadosNovaVaga {
   bairro?: string | null;
   endereco: string;
   tipoContrato: string;
+  modalidade: WorkMode;
   salarioMin?: number | null;
   salarioMax?: number | null;
   habilidades?: string[];
@@ -56,6 +62,7 @@ export type EdicaoVaga = Partial<
     | "endereco"
     | "habilidades"
     | "tipoContrato"
+    | "modalidade"
     | "salarioMin"
     | "salarioMax"
   >

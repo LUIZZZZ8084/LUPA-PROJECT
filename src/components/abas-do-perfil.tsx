@@ -2,10 +2,14 @@
 
 import { ImagePlus, Loader2, Pencil, Trash2, X } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useActionState, useEffect, useState, useTransition } from "react";
+import { ajustarAoLimite } from "@/components/ui/arquivo-que-cabe";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { cn } from "@/lib/utils";
+import { REGRAS } from "@/server/arquivos/regras";
 
 /**
  * O que o dono pode fazer com a própria publicação, de dentro da foto.
@@ -34,7 +38,7 @@ export interface TrabalhoNaAba {
  *
  * Desenho do Luiz. A razão de ser aba, e não uma seção a mais rolando para
  * baixo: no celular, o que decide a contratação são as fotos, e elas
- * ficavam embaixo de descrição, bairros e redes sociais — longe demais de
+ * ficavam embaixo de descrição e redes sociais — longe demais de
  * quem abriu o perfil para ver trabalho.
  *
  * Três por linha, como uma grade de fotos que todo mundo já sabe usar. O
@@ -380,6 +384,7 @@ function FormularioDeEdicao({
   pronto: () => void;
 }) {
   const [estado, acao, pendente] = useActionState(editar, {});
+  const envio = useEnvioQueNaoApaga(acao, estado);
 
   const [ultimoOk, setUltimoOk] = useState(false);
   const okAgora = Boolean(estado.ok);
@@ -389,7 +394,7 @@ function FormularioDeEdicao({
   }
 
   return (
-    <form action={acao} className="space-y-4">
+    <form action={acao} className="space-y-4" {...envio}>
       <input type="hidden" name="id" value={trabalho.id} />
 
       <div>
@@ -432,7 +437,8 @@ function FormularioDeEdicao({
           id="e-foto"
           name="foto"
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept={REGRAS.publicacao.tiposAceitos.join(",")}
+          onChange={ajustarAoLimite("publicacao")}
           className="mt-1.5 w-full text-muted text-sm"
         />
       </div>
@@ -481,6 +487,7 @@ export function GerenciarTrabalhos({
   ) => Promise<{ erro?: string; ok?: boolean }>;
 }) {
   const [estado, acao, pendente] = useActionState(publicar, {});
+  const envio = useEnvioQueNaoApaga(acao, estado);
   const [abrindo, setAbrindo] = useState(false);
 
   /*
@@ -518,9 +525,22 @@ export function GerenciarTrabalhos({
             <ImagePlus size={16} />
             Adicionar trabalho
           </Button>
+          {/*
+            O caminho de volta (#333). "Remover" diz "nada é apagado", e é
+            verdade: o trabalho é arquivado. Mas a única tela que o traz de
+            volta é `/perfil/publicacoes`, e desde que o atalho "Meus
+            trabalhos" saiu do perfil nenhum link levava até lá — a
+            promessa ficava sem porta.
+          */}
+          <Link
+            href="/perfil/publicacoes"
+            className="w-full text-muted text-xs underline underline-offset-2 hover:text-ink"
+          >
+            Trabalhos que você tirou do perfil ficam guardados aqui
+          </Link>
         </div>
       ) : (
-        <form action={acao}>
+        <form action={acao} {...envio}>
           <Panel className="space-y-4">
             <div>
               <label htmlFor="t-titulo" className="font-medium text-sm">
@@ -559,7 +579,8 @@ export function GerenciarTrabalhos({
                 id="t-foto"
                 name="imagem"
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={REGRAS.publicacao.tiposAceitos.join(",")}
+                onChange={ajustarAoLimite("publicacao")}
                 className="mt-1.5 w-full text-muted text-sm"
               />
             </div>

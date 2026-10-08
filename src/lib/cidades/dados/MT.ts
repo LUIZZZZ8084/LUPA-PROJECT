@@ -1,15 +1,11 @@
 /**
- * Municípios de Mato Grosso.
+ * Municípios de Mato Grosso (MT).
  *
  * GERADO POR `node scripts/gerar-cidades.mjs` — não edite à mão.
- * Fonte: API de localidades do IBGE. Gerado em 2026-08-25.
- *
- * Fica em arquivo próprio, e não em `constants.ts`, porque é dado
- * gerado: misturar dado gerado com constante escrita à mão é como se
- * perde uma edição manual na próxima geração.
+ * Fonte: API de localidades do IBGE. Gerado em 2026-10-01.
  */
 
-export const CIDADES_MT = [
+export const CIDADES = [
   "Acorizal",
   "Água Boa",
   "Alta Floresta",

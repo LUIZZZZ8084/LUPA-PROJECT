@@ -1,11 +1,11 @@
 "use server";
 
-import { headers } from "next/headers";
 import { z } from "zod";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { enviarVerificacaoDeEmail } from "@/server/auth/verificacao-email";
 import { erros } from "@/server/errors";
+import { origemDaRequisicao } from "@/server/origem-da-requisicao";
 import { urlPublica } from "@/server/url-publica";
 
 /**
@@ -23,10 +23,7 @@ export const reenviarConfirmacao = criarAcao({
     const sessao = await sessaoAtual();
     if (!sessao) throw erros.naoAutenticado();
 
-    const cabecalhos = await headers();
-    const origem =
-      cabecalhos.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "desconhecida";
+    const origem = await origemDaRequisicao();
 
     const resultado = await enviarVerificacaoDeEmail(sessao.usuarioId, {
       urlBase: urlPublica(),

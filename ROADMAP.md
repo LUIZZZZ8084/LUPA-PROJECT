@@ -8,9 +8,217 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 15/09/2026.**
+**Última atualização: 08/10/2026.**
 
 ## Concluído
+
+Em 08/10/2026:
+
+- Os dez PRs da auditoria de 06/10 mergeados, e as seis áreas que tinham
+  ficado sem leitura lidas: buckets públicos deixam de ser listáveis, saem
+  duas actions mortas que aceitavam endereço de imagem, e o workflow declara
+  token só de leitura. O resto ficou registrado em
+  `docs/auditoria-roadmap-2026-10-07.md` —
+  [#396](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/396)
+
+Em 07/10/2026:
+
+- A foto do banner da home não deixa mais o fundo aparecer entre os braços
+  do homem. O recorte tinha um vão transparente de uns 20 × 10 px no pé da
+  imagem, aberto para a borda de baixo; como a foto fica encostada embaixo, a
+  faixa atravessava por ali, e a cor mudava com o tema. A foto agora termina
+  acima do vão (435 × 476, com nome de arquivo novo para não servir a antiga
+  do cache de imagens), e um teste confere, nos pixels do arquivo, que o pé é
+  uma faixa contínua. O pé da foto também ganha um desfoque discreto (2 px,
+  só nos últimos ~11% da altura), para os braços não terminarem num corte
+  seco; não tem cor, então é igual nos dois temas —
+  [#382](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/382)
+- A busca do hero oferece a cidade logo depois do estado, com "Todas as
+  cidades" (o estado inteiro) como padrão. As cidades chegam sob demanda, só
+  as do estado escolhido, pelo mesmo gancho dos formulários
+  (`useCidadesDaUf`, agora exportado). No desktop o cartão vira duas linhas,
+  com o botão alto à direita; no celular tudo empilha, na ordem de leitura e
+  de foco. Quem escolhe o estado antes de a página terminar de carregar não
+  perde a escolha: o campo é lido na hora em que a página fica pronta —
+  [#380](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/380)
+- Banner da home com a mesma forma nos dois temas: uma foto só (o homem
+  recortado do fundo, com nome de arquivo novo para não servir a antiga do
+  cache de imagens) sobre as mesmas faixas inclinadas, e só a cor muda, por
+  variáveis (`--banner-faixa-*`). Teste mede o banner, a foto, o título e as
+  faixas nos dois temas, em desktop e celular. O bloco "O que a gente
+  confere" foi para o fim da página, depois da chamada para empresas, com o
+  texto em linguagem de conversa e sem as frases de alerta; continua dizendo
+  só o que o app de fato confere —
+  [#378](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/378)
+- Esqueleto de carregamento da home com a forma da home nova (banner, cartão de
+  busca, faixa de números, vagas em fila e profissionais em linha), com as
+  alturas medidas no conteúdo carregado, para a tela não pular quando os
+  dados chegam. Os comentários que diziam que a home renderiza o card de
+  profissional sem sessão foram corrigidos; a prop `autenticado` do
+  `ProviderCard` fica, porque é o único caminho seguro para quem puser o card
+  numa página pública —
+  [#376](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/376)
+- Banner da home no tema escuro: o homem da foto é recortado do fundo claro (WebP
+  com transparência) e fica sobre um verde fechado, com faixas inclinadas
+  desenhadas em CSS e texto claro. Cada tema mostra a sua foto, e o cartão
+  e o texto trocam de cor por variáveis (`--banner-*`), como o degradê da
+  logo. A variante `dark:` do Tailwind passa a seguir o atributo
+  `data-theme`, e não a preferência do sistema —
+  [#374](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/374)
+
+Em 06/10/2026:
+
+- Home com a disposição nova, a partir da referência do Luiz: banner com o
+  convite "Encontre seu próximo trabalho" (agora o `<h1>` visível), busca num
+  cartão só, faixa com o número de vagas e de profissionais (cada um um link
+  para a lista), vagas em destaque num carrossel no celular e em grade a
+  partir de `sm`, e profissionais em linha, com avatar, primeiro nome, ofício
+  e nota. Fica de fora o que a referência mostra e o app não tem: "Urgente",
+  ponto de "online" e "disponível", botão de salvar vaga e salário em texto
+  livre. O banner leva a foto da arte que o Luiz enviou (só a foto e as
+  faixas verdes; o título segue sendo texto), e a frase "Vagas de emprego e
+  prestadores de serviço na sua região, com contato direto pelo WhatsApp"
+  saiu da home —
+  [#372](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/372)
+- Envio de foto confere os primeiros bytes do arquivo antes de entregá-lo ao
+  `sharp`: só JPEG, PNG e WebP passam. Antes, só se olhava o tipo que o
+  navegador declara, e um SVG enviado como PNG era decodificado e chegava à
+  librsvg, que o app não precisa expor —
+  [#368](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/368)
+- `sharp` 0.35.4 → 0.35.5: o `npm audit` acusou, em 06/10/2026, uma falha de
+  severidade alta na librsvg que ele embute, e o check "Dependências
+  vulneráveis" reprovava todo PR e a `main`. O `sharp` reduz as fotos
+  enviadas (`src/server/arquivos/imagem.ts`) e gera o favicon —
+  [#366](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/366)
+- O hero da home perdeu o título "O que você está procurando aqui perto?" e
+  os atalhos de categoria, e ficou com o selo, a frase de apoio, a busca, a
+  contagem e o card de conta. O `<h1>` continua na página, só para leitor de
+  tela, porque a home não pode ficar sem título —
+  [#364](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/364)
+
+Em 05/10/2026:
+
+- Logo nova: lupa de aro grosso em degradê de verde com uma pessoa no
+  centro, e o nome "Lupa" desenhado em vetor (Outfit Bold, sem carregar a
+  fonte). Troca o *check* da logo antiga, que prometia "verificado". Vale
+  para o cabeçalho, o login, o 404 e a tela de erro, nos dois temas; para o
+  ícone do app e do iPhone, a imagem do link no WhatsApp e o favicon —
+  [#343](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/343)
+- Busca no hero da home, no lugar dos cards de ação: alternador Vagas |
+  Serviços, campo de busca, estado e atalhos de categoria, que levam à lista
+  já filtrada. As listas ganharam o mesmo alternador no topo, que leva o
+  termo e o lugar de uma para a outra. Sem conta, o hero avisa que a busca
+  termina no login (o muro de `/vagas` e `/servicos` continua) —
+  [#341](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/341)
+- Os quatro buckets do Storage têm limite de tamanho e de tipo no próprio
+  Supabase — imagem até 2 MB, currículo e verificação até 4 MB —, como
+  segunda camada atrás da conferência da aplicação. Aplicado em produção
+  em 05/10/2026, e os arquivos que já existiam cabem nos limites.
+  Currículo agora também precisa ser PDF de verdade —
+  [#332](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/332)
+- Os achados baixos da auditoria de 29/09: sessão revogada vai ao login
+  em vez de "página não encontrada", regravar o hash no login não derruba
+  os outros aparelhos, ponto literal no muro de login, valor pago
+  diferente avisa o Sentry, currículo precisa ser PDF de verdade,
+  trabalho tirado do perfil tem caminho de volta, textos, documentação
+  que contradizia o código e dependências de desenvolvimento —
+  [#330](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/330),
+  [#331](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/331),
+  [#333](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/333),
+  [#334](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/334)
+
+- Quem usa o app não é mais deslogado a cada sete dias: a sessão renova
+  sozinha na navegação, sai depois de sete dias sem uso e, em qualquer
+  caso, trinta dias depois do login. A renovação guarda a hora do login,
+  e trocar a senha continua derrubando as outras sessões —
+  [#323](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/323)
+- E-mail que não sai chega ao Sentry, com o fluxo e o status, e o limite
+  do plano grátis do Resend (429) diz que é cota. Sem o endereço de
+  ninguém no registro —
+  [#326](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/326)
+- Foto do celular entra: acima de 2 MB, ela é reduzida no próprio
+  aparelho antes de enviar, em vez de recusada —
+  [#325](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/325)
+- Currículo em PDF até 4 MB, o que cabe na Vercel, e o tamanho é
+  conferido antes de enviar, com mensagem em português —
+  [#324](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/324)
+
+Em 01/10/2026:
+
+- Cadastro e perfil pedem só a cidade: o bairro de pessoa saiu de tudo —
+  formulários, ordem da busca, selo "Perto de você", currículo e painel do
+  admin. Só a vaga mantém o bairro, texto livre e opcional, só
+  informativo. O banco não mudou —
+  [#321](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/321)
+- O app atende o Brasil inteiro: os 5.571 municípios do IBGE, estado e
+  cidade em dois passos, filtro de estado na busca e o degrau "mesmo
+  estado" na ordem por proximidade. Nenhuma cidade vem escolhida por
+  padrão — [#301](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/301)
+- Modalidade da vaga — presencial, home office ou híbrido — no cadastro da
+  vaga e como selo no card e no detalhe —
+  [#300](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/300)
+- Tela de plano depois do cadastro da empresa: o grátis vem primeiro, a
+  confirmação diz que nada foi cobrado, e tudo cabe no celular sem rolar —
+  [#299](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/299)
+- Script para tirar os dados de exemplo da vitrine de produção, e frase
+  própria para home e busca vazias. Reverte a #245; o script roda à mão,
+  ver "Depende de decisão" —
+  [#302](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/302)
+- "Conferir CNPJ" voltou a funcionar: a BrasilAPI recusava o pedido do
+  servidor por causa do `User-Agent` padrão do Node —
+  [#318](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/318)
+- A empresa assina vaga e avaliação com o nome dela, não o do responsável,
+  e nenhum nome se edita depois do cadastro — só a conferência do CNPJ
+  troca o da empresa, pelo da Receita. Resolve também a
+  [#304](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/304) —
+  [#315](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/315)
+- A aba do navegador mostra a logo da Lupa, e não mais o triângulo do
+  Next. Página inexistente, erro e cada tipo de cadastro ganharam título
+  próprio — [#303](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/303)
+
+Preparação para o lançamento, de 15 a 25/09/2026:
+
+- Celular sem zoom no iPhone e com alvos de toque de 44 px: campos de
+  formulário com 16 px abaixo de `md`, e "Ver todas", "Entrar",
+  "Esqueci minha senha", "Criar conta gratuita" e os links do rodapé com
+  altura mínima de 44 px —
+  [#314](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/314)
+- Avisos de vaga a um toque: sininho no cabeçalho, para quem pode se
+  candidatar, em vez de escondidos no fim de "Editar perfil" —
+  [#288](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/288)
+- Erro num campo não apaga mais o formulário: o que foi digitado fica, e a
+  tela leva ao campo errado, com borda vermelha. Vale para todo formulário
+  do app, com teste que cobra o próximo —
+  [#291](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/291)
+- Senha mínima de 6 caracteres, decisão do Luiz. O servidor exigia 10 e as
+  telas diziam 8; hoje o número vem de uma constante só —
+  [#290](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/290)
+- Foto entregue no tamanho da tela, e gravada já reduzida, em WebP e sem o
+  GPS do celular — [#267](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/267), [#283](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/283)
+- Envio de foto bloqueado em produção pelo WAF do Cloudflare, antes de
+  chegar à Vercel. Resolvido com o domínio em DNS only —
+  [#287](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/287)
+- Sentry recebendo de verdade: os erros que o `criarAcao` captura, os de
+  quem não está logado, e as transações que a máscara de dados corrompia
+  ou descartava — [#247](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/247), [#269](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/269), [#273](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/273), [#275](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/275), [#277](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/277),
+  [#281](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/281), [#255](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/255)
+- Produção não sobe sem `SESSION_SECRET` válido nem sem as três variáveis
+  do Supabase. Sem elas, o site subia com todo mundo deslogado, ou servia
+  dado de demonstração como real — [#271](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/271), [#279](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/279)
+- Página de erro em português, com caminho de volta, no lugar da tela
+  preta do Next — [#249](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/249)
+- A tela para de prometer o que não entrega: verificação que o produto não
+  faz ([#237](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/237), [#243](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/243)), filtro por bairro ([#285](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/285)), "emprego
+  formal" num app que aceita freela e vaga de pessoa física ([#257](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/257)),
+  "Documento não verificado" para sempre no perfil do candidato
+  ([#253](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/253)), e prestador sem assinatura lendo "como você aparece na
+  busca" sem aparecer ([#256](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/256))
+- Currículos recebidos legíveis no celular, e o painel do prestador sem os
+  links de busca de candidatos que davam 404 — [#252](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/252), [#251](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/251)
+- Canal de contato (Instagram e e-mail) visível antes do login, e link da
+  Lupa com imagem de prévia no WhatsApp — [#239](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/239), [#259](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/259)
+- As vagas e os prestadores de demonstração não vencem mais, e o seed
+  passou a reproduzi-los — [#245](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/245)
 
 Em 15/09/2026:
 
@@ -54,18 +262,21 @@ Base:
   `/perfil/editar`
 - Envio de foto de perfil, currículo em PDF e logo de empresa, com
   caminho derivado da sessão
-- Busca de vagas e de prestadores, com filtro por cidade, bairro e
-  categoria
+- Busca de vagas e de prestadores, com filtro por cidade e categoria (e
+  tipo de contrato, nas vagas). Bairro não filtra nem ordena: o de pessoa
+  saiu na #321, e a promessa de filtro saiu das telas na #285
 - Candidatura a vaga, e acompanhamento em "Minhas candidaturas"
 - Aviso de vaga nova por cidade e categoria, via Web Push (#48)
 - Publicações no perfil do prestador, com limite de 10 ativas
-- Painel administrativo: fila de verificação manual, métricas básicas
+- Painel administrativo: métricas, caixa (#179) e pressão nos tetos
+  (#207). A fila de verificação manual existe no banco, mas nunca teve
+  tela de envio; a verificação do prestador é o CPF desde a #133
 - Schema único (`supabase/schema.sql`), executado por teste contra
   Postgres real
 - Modo demonstração (roda sem Supabase configurado)
 - Contraste WCAG AA em todas as rotas, com teste automático
 
-Painel da empresa — completo, menos cobrança:
+Painel da empresa:
 
 - Busca entre quem pediu para ser encontrado, com filtro por habilidade e
   área, e perfil do candidato —
@@ -86,7 +297,8 @@ Painel da empresa — completo, menos cobrança:
   [#71](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/71),
   PR [#72](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/72)
 
-- Publicar, editar e encerrar vaga —
+- Publicar e encerrar vaga. Editar existiu até a #173, que trocou a
+  edição pela revisão antes de publicar —
   [#43](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/43),
   PR [#51](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/51)
 - Mover candidatura entre estágios —
@@ -118,7 +330,7 @@ Prestador:
   nova — com aviso do que a troca de papel custa —
   [#112](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/112)
 - A busca de serviços só mostra quem passou pela verificação; o perfil
-  continua alcançável e diz que está em análise —
+  continua alcançável e diz por que ainda não aparece —
   [#114](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/114)
 - O feed de trabalhos do prestador, que tinha backend e nenhuma tela — e
   o atalho do perfil que apontava para a busca pública —
@@ -134,7 +346,7 @@ Prestador:
 
 Perfil e vaga, o que cada um informa:
 
-- Endereço na vaga, aditivo ao bairro e fora do ranking —
+- Endereço na vaga, fora do ranking de proximidade —
   [#86](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/86),
   PR [#87](https://github.com/LUIZZZZ8084/LUPA-PROJECT/pull/87)
 - Instagram e Facebook para empresa e prestador; o `site`, que existia e
@@ -234,7 +446,8 @@ Qualidade:
   crédito — [#173](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/173)
 - "Esqueci minha senha", com token de uso único guardado em hash. Fecha
   metade da dívida que a migração 0001 abriu ao trocar o Supabase Auth por
-  autenticação própria; a verificação de e-mail continua em aberto —
+  autenticação própria; a outra metade, a confirmação de e-mail, veio
+  na #227 —
   [#174](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/174)
 - A busca de candidatos ficou alcançável pelo painel da empresa: existia
   desde a #83 e só tinha um botão pequeno no cabeçalho —
@@ -309,18 +522,34 @@ duas redes de proteção que o episódio da primeira venda expôs.
 
 **Tudo o que sobrou vai junto com o empacotamento em APK** — decisão do
 Luiz em 01/09/2026, que reúne numa etapa só o que antes estava
-espalhado. Nada aqui está bloqueado por código.
+espalhado.
 
+Antes do lançamento, fora disso:
 
+- [ ] Termos de Uso, Política de Privacidade e página de suporte —
+      [#235](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/235)
 
+      O texto está pronto no PR #236. Espera o CNPJ da PALU, a empresa por
+      trás da Lupa, para ter quem assina como controladora dos dados. É o
+      item mais sério da lista: o cadastro já diz "ao criar a conta você
+      concorda com os termos de uso", e a página ainda não existe.
+
+      **O SQL do #236 já está em produção**, antes do merge: a tabela
+      `mensagens_suporte` existe lá e não existe no `schema.sql` da `main`
+      (achado B10 da auditoria, #334). Está fechada — RLS ligada, sem
+      acesso para a chave anônima —, e o `aplica-suporte.sql` do PR usa
+      `if not exists`, então rodá-lo de novo no merge não quebra nada.
 
 ## Depende de decisão, não de código
 
 | O que | Quem decide | Por que está parado |
 |---|---|---|
 | Verificação por SMS e CPF (#120) | Luiz | Depende de provedor pago |
-| Cloudflare | Luiz | Só com abuso real medido — o passo antes é o #67 |
+| Plano Pro da Vercel | Luiz | O Hobby não permite uso comercial, e a Lupa cobra. O Luiz já concluiu que é o passo certo; falta assinar. O Pro também destrava o 2FA da #229, porque permite convidar o Paulinho como membro |
+| Backup do banco (plano pago do Supabase) | Luiz | Nada pago por enquanto, decisão de 23/09. O gratuito não tem backup automático |
+| Proxy e WAF do Cloudflare | Luiz | O domínio está no Cloudflare em DNS only desde a #287: a regra gratuita do WAF bloqueava envio de foto. Religar só com abuso medido, e com a exceção da regra feita antes. **E conferir antes a origem que chega ao app** (#334): o limite de cadastro e de "esqueci minha senha" lê o primeiro item do `x-forwarded-for`, e com o proxy ligado ele pode passar a ser um IP do Cloudflare, o mesmo para muita gente — todo mundo dividiria o mesmo limite de 5 tentativas. Se for o caso, ler o `CF-Connecting-IP` |
 | Busca vetorial | Luiz | Só com o dado do #66 na mão |
+| Rodar `aplica-remove-dados-de-exemplo.sql` em produção (#302) | Luiz e Paulinho | Reverte a #245, que manteve os exemplos no ar para demonstrar a clientes. O script está pronto e testado; falta os dois concordarem e alguém rodar no SQL Editor |
 
 ## Depende de uma ação manual
 

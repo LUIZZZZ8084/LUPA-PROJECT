@@ -1,45 +1,37 @@
 import { Lock, MapPin } from "lucide-react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { RatingInline } from "@/components/ui/stars";
 import { VerifiedMark } from "@/components/verified-badge";
 import { WhatsAppIconButton } from "@/components/whatsapp-button";
 import { formatStartingPrice } from "@/lib/format";
-import { GRAU, grauDeProximidade, type Origem } from "@/lib/proximidade";
 import type { ProviderListing } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function ProviderCard({
   provider,
-  perto,
   className,
   autenticado = true,
 }: {
   provider: ProviderListing;
-  /**
-   * De onde quem está olhando está. Só serve para o selo "Perto de você" —
-   * a ordem em si já vem pronta da consulta, ver `src/lib/data.ts`.
-   */
-  perto?: Origem;
   className?: string;
   /**
-   * Falso só na home pública (#241), o único lugar onde este card renderiza
-   * sem sessão. `provider.phone` nunca entra no WhatsApp: entra num convite
-   * para o login, com o perfil como destino. Não é esconder o botão com
-   * CSS — o telefone simplesmente não é lido em nenhum JSX deste ramo, e
-   * como o componente é de servidor, o que não é lido não sai no HTML.
+   * Falso para renderizar o card sem sessão. `provider.phone` nunca entra no
+   * WhatsApp: entra num convite para o login, com o perfil como destino. Não
+   * é esconder o botão com CSS — o telefone simplesmente não é lido em
+   * nenhum JSX deste ramo, e como o componente é de servidor, o que não é
+   * lido não sai no HTML.
+   *
+   * **Hoje nenhuma tela usa o `false`.** A home o usava (#241) e deixou de
+   * usar o card na #372: ela mostra `ProfissionaisEmLinha`, que não lê
+   * telefone. As duas telas que ainda o usam, `/servicos` e o perfil, ficam
+   * atrás do login. A prop **fica**, e é de propósito: o padrão é `true`,
+   * então ela é o único caminho seguro para quem puser o card numa página
+   * pública sem lembrar disto. Tirá-la deixaria só o caminho que vaza o
+   * telefone de todos os prestadores.
    */
   autenticado?: boolean;
 }) {
-  const noSeuBairro =
-    Boolean(perto?.cidade) &&
-    grauDeProximidade(perto, {
-      cidade: provider.city,
-      bairro: provider.neighborhood,
-      atende: provider.service_area,
-    }) === GRAU.MESMO_BAIRRO;
-
   return (
     <div
       className={cn(
@@ -63,10 +55,7 @@ export function ProviderCard({
           </h3>
         </Link>
 
-        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-servicos">
-          {provider.category.name}
-          {noSeuBairro && <Badge tone="servicos">Perto de você</Badge>}
-        </p>
+        <p className="mt-0.5 text-xs text-servicos">{provider.category.name}</p>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <RatingInline
@@ -80,7 +69,6 @@ export function ProviderCard({
 
         <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-faint">
           <MapPin size={12} />
-          {provider.neighborhood ? `${provider.neighborhood}, ` : ""}
           {provider.city}
           {provider.years_experience
             ? ` · ${provider.years_experience} anos de experiência`

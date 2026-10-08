@@ -85,6 +85,67 @@ describe("consulta à Receita", () => {
     expect(r.tipo).toBe("indisponivel");
   });
 
+  /*
+   * O que vai para a BrasilAPI é sempre o CNPJ normalizado (#297): sem
+   * pontuação e em maiúscula. Ela não converte minúscula — para
+   * "12abc34501de35" respondia "não encontrado" mesmo com o CNPJ certo.
+   */
+  it.each([
+    ["11.222.333/0001-81", "11222333000181"],
+    ["12.ABC.345/01DE-35", "12ABC34501DE35"],
+    ["12abc34501de35", "12ABC34501DE35"],
+  ])("consulta %s como %s", async (informado, esperado) => {
+    let urlChamada = "";
+    const espiao = (async (url: string) => {
+      urlChamada = url;
+      return new Response(JSON.stringify({ ...ATIVA, cnpj: esperado }), {
+        status: 200,
+      });
+    }) as unknown as typeof fetch;
+
+    const r = await consultarCnpj(informado, espiao);
+
+    expect(urlChamada).toMatch(new RegExp(`/${esperado}$`));
+    expect(r.tipo).toBe("encontrado");
+    if (r.tipo !== "encontrado") return;
+    expect(r.empresa.cnpj).toBe(esperado);
+  });
+
+  /**
+   * A BrasilAPI recusa com 403 o `User-Agent` padrão do Node (#318), e a
+   * conferência falhava para todo mundo. O duble de `fetch` daqui não liga
+   * para cabeçalho, e foi assim que o defeito passou: este teste olha o
+   * cabeçalho que sai.
+   */
+  it("se apresenta como Lupa, não como o Node", async () => {
+    let cabecalhos = new Headers();
+    const espiao = (async (_url: string, init?: RequestInit) => {
+      cabecalhos = new Headers(init?.headers);
+      return new Response(JSON.stringify(ATIVA), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    await consultarCnpj("11222333000181", espiao);
+
+    expect(cabecalhos.get("user-agent")).toMatch(/^Lupa\//);
+  });
+
+  /** Recusado e fora do ar são o mesmo para a tela, não para o log. */
+  it("403 é indisponível, e o status fica no log", async () => {
+    const saida = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const r = await consultarCnpj("11222333000181", respostaDaReceita({}, 403));
+
+    expect(r.tipo).toBe("indisponivel");
+    expect(saida.mock.calls.flat().join(" ")).toContain('"status":403');
+    saida.mockRestore();
+  });
+
+  it("alfanumérico com tamanho errado também nem sai daqui", async () => {
+    await expect(
+      consultarCnpj("12ABC34501DE3", naoDeviaConsultar),
+    ).resolves.toEqual({ tipo: "nao_encontrado" });
+  });
+
   it("número com tamanho errado nem sai daqui", async () => {
     await expect(consultarCnpj("123", naoDeviaConsultar)).resolves.toEqual({
       tipo: "nao_encontrado",
@@ -95,16 +156,21 @@ describe("consulta à Receita", () => {
 describe("verificação automática", () => {
   let verificar: typeof import("@/server/verificacao/servico").verificarCnpjAutomatico;
   let repo: import("@/server/repositories").RepositorioMemoria;
+  let avaliarPrestador: typeof import("@/server/avaliacoes/servico").avaliarPrestador;
+  let avaliacoesEmMemoria: typeof import("@/server/avaliacoes/servico").avaliacoesEmMemoria;
   let restaurar: () => void;
   let usuarioId: string;
 
   beforeEach(async () => {
     vi.resetModules();
-    const [modulo, repositorios] = await Promise.all([
+    const [modulo, repositorios, avaliacoes] = await Promise.all([
       import("@/server/verificacao/servico"),
       import("@/server/repositories"),
+      import("@/server/avaliacoes/servico"),
     ]);
     verificar = modulo.verificarCnpjAutomatico;
+    avaliarPrestador = avaliacoes.avaliarPrestador;
+    avaliacoesEmMemoria = avaliacoes.avaliacoesEmMemoria;
 
     repo = new repositorios.RepositorioMemoria();
     restaurar = repositorios.usarRepositorio(repo);
@@ -115,7 +181,7 @@ describe("verificação automática", () => {
       papel: "empresa",
       nomeCompleto: "Quem Representa",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     usuarioId = usuario.id;
     await repo.criarPerfilEmpresa({
@@ -190,15 +256,34 @@ describe("verificação automática", () => {
   });
 
   /**
+   * A vaga e o comentário falam com o mesmo nome (#315). A troca da Receita
+   * é a única que existe, e sem levar as avaliações junto a empresa
+   * assinaria a vaga com um nome e o comentário com outro.
+   */
+  it("o nome da Receita chega às avaliações que a empresa já fez", async () => {
+    const prestadorId = "prestador-avaliado";
+    await avaliarPrestador(sessao(), { prestadorId, nota: 5 });
+    expect(avaliacoesEmMemoria(prestadorId)[0]?.nome).toBe(
+      "Agro Norte Comércio de Insumos Ltda.",
+    );
+
+    await verificar(
+      sessao(),
+      respostaDaReceita({ ...ATIVA, razao_social: "AGRO NORTE LTDA" }),
+    );
+
+    expect(avaliacoesEmMemoria(prestadorId)[0]?.nome).toBe("AGRO NORTE LTDA");
+  });
+
+  /**
    * O resto do perfil sobrevive à gravação.
    *
-   * `salvarPerfilEmpresa` recebe o objeto inteiro, então esquecer um campo
-   * aqui apagaria em silêncio o que a empresa preencheu — a mesma
-   * armadilha que `salvarPerfilPrestador` já teve com os campos de CNPJ.
+   * A gravação passava o objeto inteiro por `salvarPerfilEmpresa`, e
+   * esquecer um campo apagaria em silêncio o que a empresa preencheu. Hoje
+   * ela grava só o nome (#315); o teste segura a volta do objeto inteiro.
    */
   it("preencher o nome não apaga setor, site nem descrição", async () => {
     await repo.salvarPerfilEmpresa(usuarioId, {
-      razaoSocial: "Agro Norte Comércio de Insumos Ltda.",
       setor: "Agronegócio",
       porte: "Média",
       site: "https://agronorte.com.br",
@@ -247,7 +332,7 @@ describe("verificação automática", () => {
       papel: "prestador_servico",
       nomeCompleto: "Quem Presta",
       telefone: "66999990001",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
 
     const r = await verificar(

@@ -50,8 +50,9 @@ const DADOS_VAGA = {
   titulo: "Operador de Empilhadeira",
   descricao: "Movimentação de carga no armazém, turno da manhã.",
   categoria: "Logística",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
   tipoContrato: "CLT",
+  modalidade: "presencial" as const,
   endereco: "Av. das Itaúbas, 1200",
 };
 
@@ -186,10 +187,11 @@ describe("visualizações de vaga", () => {
       titulo: "Vaga de ontem",
       descricao: "Publicada antes desta sessão.",
       categoria: null,
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       bairro: null,
       endereco: null,
       tipoContrato: null,
+      modalidade: null,
       salarioMin: null,
       salarioMax: null,
       habilidades: [],

@@ -137,6 +137,23 @@ test.describe("virar prestador", () => {
     await expect(page.getByText(/não se candidatam a vagas/i)).toBeVisible();
   });
 
+  /**
+   * O sininho some junto com o botão (#288).
+   *
+   * Aviso de vaga nova para quem não pode se candidatar levaria a uma vaga
+   * sem botão. A tela continua abrindo por link, sem 404: quem decide
+   * mostrar o atalho é o cabeçalho, não a rota.
+   */
+  test("o sininho dos avisos de vaga some", async () => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("link", { name: "Avisos de vaga" }),
+    ).toHaveCount(0);
+
+    const resposta = await page.goto("/avisos");
+    expect(resposta?.status()).toBe(200);
+  });
+
   /** O histórico sobrevive — foi o que o aviso prometeu. */
   test("as candidaturas antigas continuam alcançáveis", async () => {
     const resposta = await page.goto("/perfil/candidaturas");

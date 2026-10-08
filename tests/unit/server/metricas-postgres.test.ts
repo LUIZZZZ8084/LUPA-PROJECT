@@ -118,22 +118,28 @@ describe("RepositorioMetricasPostgres", () => {
     expect(gte?.args[0]).toBe("dia");
   });
 
-  it("locais vêm ordenados e limitados", async () => {
+  /*
+   * A view ainda agrupa por cidade e bairro — o banco não mudou (#321) —, e
+   * a tela mostra só a cidade. As linhas de bairros diferentes da mesma
+   * cidade somam, e a ordem é pelo total já somado.
+   */
+  it("locais somam por cidade, ordenados e limitados", async () => {
     respostas.set("metricas_por_local", {
       data: [
-        { cidade: "Sinop", bairro: "Centro", total: "12" },
-        { cidade: "Sinop", bairro: null, total: "3" },
+        { cidade: "Sinop - MT", bairro: "Centro", total: "12" },
+        { cidade: "Sinop - MT", bairro: null, total: "3" },
+        { cidade: "Sorriso - MT", bairro: null, total: "10" },
+        { cidade: "Cuiabá - MT", bairro: null, total: "1" },
       ],
       error: null,
     });
 
-    const locais = await repo.distribuicaoPorLocal(10);
+    const locais = await repo.distribuicaoPorLocal(2);
 
-    expect(locais[0]).toEqual({ cidade: "Sinop", bairro: "Centro", total: 12 });
-    expect(locais[1].bairro).toBeNull();
-
-    const limit = chamadas.find((c) => c.metodo === "limit");
-    expect(limit?.args[0]).toBe(10);
+    expect(locais).toEqual([
+      { cidade: "Sinop - MT", total: 15 },
+      { cidade: "Sorriso - MT", total: 10 },
+    ]);
   });
 
   /**

@@ -29,9 +29,30 @@ describe("matcher do proxy", () => {
     "/opengraph-image",
     "/api/webhooks/mercado-pago",
     "/api/cron/reconciliar-pagamentos",
+    // O túnel do Sentry (#269): erro de quem não está logado se perdia.
+    "/monitoring",
   ])("%s fica fora do muro — quem busca não tem sessão", (caminho) => {
     expect(casa(caminho)).toBe(false);
   });
+
+  /*
+   * O ponto antes da extensão é literal (#330). Sem o escape, todo
+   * caminho terminado em "png", "gif" ou "svg" — com ou sem ponto — ficava
+   * fora do muro.
+   */
+  it.each(["/vagas/acerto-gif", "/perfil/png", "/servicos/pintor-svg"])(
+    "%s passa pelo proxy, mesmo terminando como extensão",
+    (caminho) => {
+      expect(casa(caminho)).toBe(true);
+    },
+  );
+
+  it.each(["/logo.png", "/fundo.webp", "/fonte.woff2"])(
+    "%s, arquivo estático, fica fora",
+    (caminho) => {
+      expect(casa(caminho)).toBe(false);
+    },
+  );
 
   it.each(["/", "/vagas", "/perfil", "/admin", "/entrar"])(
     "%s passa pelo proxy",

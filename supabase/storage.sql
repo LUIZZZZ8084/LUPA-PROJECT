@@ -10,22 +10,31 @@
 -- Rode DEPOIS do `schema.sql`, no mesmo SQL Editor.
 -- ============================================================================
 
-insert into storage.buckets (id, name, public) values
-  ('avatares',    'avatares',    true),
-  ('portfolio',   'portfolio',   true),
-  ('curriculos',  'curriculos',  false),
-  ('verificacao', 'verificacao', false)
+-- Limite de tamanho e de tipo no próprio bucket (#332): a segunda camada,
+-- para o dia em que um caminho de envio novo esquecer a conferência da
+-- aplicação. Os números são os de `src/server/arquivos/regras.ts`, e há
+-- teste que compara. Imagem é gravada como WebP desde a #283; JPEG e PNG
+-- seguem aceitos. Em banco que já existe, quem aplica é
+-- `aplica-limites-dos-buckets.sql`.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
+  ('avatares',    'avatares',    true,  2097152, array['image/webp', 'image/jpeg', 'image/png']),
+  ('portfolio',   'portfolio',   true,  2097152, array['image/webp', 'image/jpeg', 'image/png']),
+  ('curriculos',  'curriculos',  false, 4194304, array['application/pdf']),
+  ('verificacao', 'verificacao', false, 4194304, array['image/webp', 'image/jpeg', 'image/png', 'application/pdf'])
 on conflict (id) do nothing;
 
 -- Foto de perfil e logo de empresa moram no mesmo bucket, separadas por
 -- pasta (`avatar/` e `logo/`). São a mesma coisa do ponto de vista de
--- acesso — imagem pública que aparece na busca — e um bucket a menos é uma
--- policy a menos para manter em dia.
-create policy "avatares publicos para leitura"
-  on storage.objects for select using (bucket_id = 'avatares');
-
-create policy "portfolio publico para leitura"
-  on storage.objects for select using (bucket_id = 'portfolio');
+-- acesso — imagem pública que aparece na busca.
+--
+-- Nenhum bucket recebe policy de `select` (#396), nem os públicos. A URL
+-- pública de um bucket público é servida sem passar por policy nenhuma; o
+-- que a policy de `select` liberava era **listar** o bucket pela API, com a
+-- chave anônima que vai para o navegador. Como o caminho começa pelo id da
+-- conta, a listagem entregava o id de todo mundo que tem foto. O app não
+-- lista nada: envia, troca e apaga pelo servidor, com a chave de serviço.
+-- Em banco que já existe, quem tira as duas antigas é
+-- `aplica-storage-sem-listagem.sql`.
 
 -- Currículo e verificação não recebem policy: com RLS ligada e nenhuma
 -- policy, o Postgres nega tudo. O acesso é feito pelo servidor com a chave

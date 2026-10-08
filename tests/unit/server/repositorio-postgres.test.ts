@@ -37,6 +37,8 @@ function construtor(tabela: string) {
     "select",
     "eq",
     "gte",
+    "order",
+    "is",
     "limit",
     "insert",
     "update",
@@ -53,9 +55,17 @@ function construtor(tabela: string) {
 
 vi.mock("@/lib/supabase/service", () => ({
   temChaveDeServico: true,
-  clienteDeServico: () => ({ from: (tabela: string) => construtor(tabela) }),
+  clienteDeServico: () => ({
+    from: (tabela: string) => construtor(tabela),
+    rpc: (funcao: string, args: unknown) => {
+      chamadas.push({ tabela: `rpc:${funcao}`, metodo: "rpc", args: [args] });
+      return Promise.resolve(resposta);
+    },
+  }),
 }));
 
+import { TETO_DE_CORTES_DE_SESSAO } from "@/lib/limites-de-lista";
+import { log } from "@/server/logger";
 import { RepositorioPostgres } from "@/server/repositories/postgres";
 
 const LINHA = {
@@ -65,7 +75,9 @@ const LINHA = {
   papel: "prestador_servico",
   nome_completo: "João Silva",
   telefone: "66999110001",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
+  // A coluna continua no banco (#321), com o que as contas antigas
+  // informaram — e o mapeamento a ignora, como o teste abaixo confere.
   bairro: "Centro",
   avatar_url: "https://exemplo/avatar.svg",
   email_verificado: true,
@@ -98,8 +110,7 @@ describe("RepositorioPostgres", () => {
       // Nulo para quem não é prestador — que é a esmagadora maioria.
       cpf: null,
       telefone: "66999110001",
-      cidade: "Sinop",
-      bairro: "Centro",
+      cidade: "Sinop - MT",
       avatarUrl: "https://exemplo/avatar.svg",
       emailVerificado: true,
       telefoneVerificado: true,
@@ -139,8 +150,7 @@ describe("RepositorioPostgres", () => {
       papel: "prestador_servico",
       nomeCompleto: "João Silva",
       telefone: "66999110001",
-      cidade: "Sinop",
-      bairro: "Centro",
+      cidade: "Sinop - MT",
     });
 
     const insert = chamadas.find((c) => c.metodo === "insert");
@@ -149,7 +159,7 @@ describe("RepositorioPostgres", () => {
       email: "joao@teste.lupa",
       senha_hash: "hash",
       nome_completo: "João Silva",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
   });
 
@@ -171,7 +181,7 @@ describe("RepositorioPostgres", () => {
         papel: "empresa",
         nomeCompleto: "João",
         telefone: "66999110001",
-        cidade: "Sinop",
+        cidade: "Sinop - MT",
       }),
     ).rejects.toThrow("email já cadastrado");
   });
@@ -201,7 +211,6 @@ describe("RepositorioPostgres", () => {
       descricao: null,
       precoInicial: null,
       anosExperiencia: null,
-      bairrosAtendidos: [],
       instagram: null,
       facebook: null,
       cnpj: null,
@@ -335,7 +344,7 @@ describe("perfis para a edição", () => {
     );
   });
 
-  it("prestador: números vêm como número, listas nunca vêm nulas", async () => {
+  it("prestador: números vêm como número", async () => {
     resposta = {
       data: {
         usuario_id: ID,
@@ -343,7 +352,6 @@ describe("perfis para a edição", () => {
         descricao: "Instalações elétricas.",
         preco_inicial: "150",
         anos_experiencia: "7",
-        bairros_atendidos: null,
       },
       error: null,
     };
@@ -352,7 +360,6 @@ describe("perfis para a edição", () => {
     expect(p?.categoriaId).toBe(1);
     expect(p?.precoInicial).toBe(150);
     expect(p?.anosExperiencia).toBe(7);
-    expect(p?.bairrosAtendidos).toEqual([]);
   });
 
   it("prestador: traz a validade da mensalidade", async () => {
@@ -363,7 +370,6 @@ describe("perfis para a edição", () => {
         descricao: null,
         preco_inicial: null,
         anos_experiencia: null,
-        bairros_atendidos: [],
         mensalidade_valida_ate: "2026-10-01T00:00:00.000Z",
       },
       error: null,
@@ -382,7 +388,6 @@ describe("perfis para a edição", () => {
         descricao: null,
         preco_inicial: 0,
         anos_experiencia: 0,
-        bairros_atendidos: [],
       },
       error: null,
     };
@@ -464,19 +469,12 @@ describe("gravação de perfil", () => {
   });
 
   it("conta: escreve nas colunas em português", async () => {
-    await repo.atualizarBasicos(ID, {
-      nomeCompleto: "Ana Paula Ribeiro",
-      telefone: "66999110005",
-      bairro: "Centro",
-    });
+    await repo.atualizarBasicos(ID, { telefone: "66999110005" });
 
     const update = chamadas.find((c) => c.metodo === "update");
     expect(update?.tabela).toBe("usuarios");
-    expect(update?.args[0]).toEqual({
-      nome_completo: "Ana Paula Ribeiro",
-      telefone: "66999110005",
-      bairro: "Centro",
-    });
+    // Sem `nome_completo`: o nome não se edita no perfil (#315).
+    expect(update?.args[0]).toEqual({ telefone: "66999110005" });
   });
 
   /**
@@ -517,7 +515,6 @@ describe("gravação de perfil", () => {
       descricao: "Instalações elétricas.",
       precoInicial: 150,
       anosExperiencia: 7,
-      bairrosAtendidos: ["Centro"],
       instagram: null,
       facebook: null,
     });
@@ -528,8 +525,10 @@ describe("gravação de perfil", () => {
       categoria_id: 1,
       preco_inicial: 150,
       anos_experiencia: 7,
-      bairros_atendidos: ["Centro"],
     });
+    expect(Object.keys(upsert?.args[0] as object)).not.toContain(
+      "bairros_atendidos",
+    );
   });
 
   /**
@@ -537,9 +536,8 @@ describe("gravação de perfil", () => {
    * criar aqui exigiria inventar um. Empresa sem CNPJ é o que a plataforma
    * não pode ter.
    */
-  it("empresa: atualiza sem criar e sem tocar no CNPJ", async () => {
+  it("empresa: atualiza sem criar e sem tocar no CNPJ nem no nome", async () => {
     await repo.salvarPerfilEmpresa(ID, {
-      razaoSocial: "Agro Norte S.A.",
       setor: "Agronegócio",
       porte: "Média",
       site: null,
@@ -553,6 +551,25 @@ describe("gravação de perfil", () => {
     const update = chamadas.find((c) => c.metodo === "update");
     expect(update?.tabela).toBe("perfis_empresa");
     expect(Object.keys(update?.args[0] as object)).not.toContain("cnpj");
+    expect(Object.keys(update?.args[0] as object)).not.toContain(
+      "razao_social",
+    );
+  });
+
+  /** A única troca de nome de empresa que existe: a da Receita (#315). */
+  it("empresa: a razão social da Receita grava só o nome", async () => {
+    await repo.definirRazaoSocialDaReceita(ID, "AGRO NORTE LTDA");
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("perfis_empresa");
+    expect(update?.args[0]).toEqual({ razao_social: "AGRO NORTE LTDA" });
+  });
+
+  it("empresa: falha ao gravar a razão social não passa em silêncio", async () => {
+    resposta = { data: null, error: { message: "conexão recusada" } };
+    await expect(
+      repo.definirRazaoSocialDaReceita(ID, "AGRO NORTE LTDA"),
+    ).rejects.toMatchObject({ codigo: "indisponivel" });
   });
 
   it("prestador: grava a validade da mensalidade", async () => {
@@ -563,6 +580,32 @@ describe("gravação de perfil", () => {
     expect(update?.args[0]).toEqual({
       mensalidade_valida_ate: "2026-10-01T00:00:00.000Z",
     });
+  });
+
+  it("prestador: estende a mensalidade pela função atômica do banco", async () => {
+    resposta = { data: [LINHA], error: null };
+
+    const estendeu = await repo.estenderMensalidadePrestador(ID, 30);
+
+    expect(estendeu).toBe(true);
+    const rpc = chamadas.find((c) => c.metodo === "rpc");
+    expect(rpc?.tabela).toBe("rpc:estender_mensalidade_prestador");
+    expect(rpc?.args[0]).toEqual({ p_usuario: ID, p_dias: 30 });
+  });
+
+  it("prestador: revogar manda p_dias nulo pela mesma função", async () => {
+    resposta = { data: [LINHA], error: null };
+
+    await repo.estenderMensalidadePrestador(ID, null);
+
+    const rpc = chamadas.find((c) => c.metodo === "rpc");
+    expect(rpc?.args[0]).toEqual({ p_usuario: ID, p_dias: null });
+  });
+
+  it("prestador: sem linha devolvida, a extensão foi para quem não tem perfil", async () => {
+    resposta = { data: [], error: null };
+
+    expect(await repo.estenderMensalidadePrestador(ID, 30)).toBe(false);
   });
 
   it("candidato: liga e desliga o gerador de currículo", async () => {
@@ -576,11 +619,7 @@ describe("gravação de perfil", () => {
   it("falha ao gravar não passa em silêncio", async () => {
     resposta = { data: null, error: { message: "conexão recusada" } };
     await expect(
-      repo.atualizarBasicos(ID, {
-        nomeCompleto: "X",
-        telefone: "66999110005",
-        bairro: null,
-      }),
+      repo.atualizarBasicos(ID, { telefone: "66999110005" }),
     ).rejects.toMatchObject({ codigo: "indisponivel" });
   });
 });
@@ -618,8 +657,118 @@ describe("cortes de sessão", () => {
     expect(chamadas.some((c) => c.metodo === "limit")).toBe(true);
   });
 
+  it("tem teto próprio e ordena do corte mais novo (#352)", async () => {
+    resposta = { data: [], error: null };
+    await repo.cortesDeSessao(7);
+
+    expect(chamadas.find((c) => c.metodo === "limit")?.args[0]).toBe(
+      TETO_DE_CORTES_DE_SESSAO,
+    );
+    const ordem = chamadas.find((c) => c.metodo === "order");
+    expect(ordem?.args[0]).toBe("sessoes_validas_desde");
+    expect(ordem?.args[1]).toEqual({ ascending: false });
+  });
+
+  it("chegar ao teto vai ao Sentry, e abaixo dele não faz barulho (#352)", async () => {
+    const erro = vi.spyOn(log, "erro").mockImplementation(() => {});
+    const linha = (i: number) => ({
+      id: `u${i}`,
+      sessoes_validas_desde: "2026-09-10T12:00:00.000Z",
+    });
+
+    resposta = { data: [linha(1)], error: null };
+    await repo.cortesDeSessao(7);
+    expect(erro).not.toHaveBeenCalled();
+
+    resposta = {
+      data: Array.from({ length: TETO_DE_CORTES_DE_SESSAO }, (_, i) =>
+        linha(i),
+      ),
+      error: null,
+    };
+    await repo.cortesDeSessao(7);
+    expect(erro).toHaveBeenCalledTimes(1);
+    erro.mockRestore();
+  });
+
+  it("a troca de papel grava o corte na mesma instrução (#352)", async () => {
+    await repo.atualizarPapel(
+      "11111111-1111-4111-8111-000000000001",
+      "prestador_servico",
+    );
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("usuarios");
+    const gravado = update?.args[0] as Record<string, unknown>;
+    expect(gravado.papel).toBe("prestador_servico");
+    expect(typeof gravado.sessoes_validas_desde).toBe("string");
+  });
+
   it("ninguém trocou a senha esta semana: lista vazia, não erro", async () => {
     resposta = { data: [], error: null };
     expect((await repo.cortesDeSessao(7)).size).toBe(0);
+  });
+});
+
+/**
+ * O teste grátis é um por conta (#392).
+ *
+ * A reivindicação é uma instrução só, com `is null` na condição: duas
+ * ativações simultâneas leriam as duas "não usou" se fosse ler e depois
+ * gravar.
+ */
+describe("teste grátis", () => {
+  const repo = new RepositorioPostgres();
+  const ID = "11111111-1111-4111-8111-000000000001";
+
+  beforeEach(() => {
+    chamadas.length = 0;
+  });
+
+  it("já usado: lê a coluna e responde verdadeiro", async () => {
+    resposta = {
+      data: { teste_gratis_usado_em: "2026-10-01T00:00:00Z" },
+      error: null,
+    };
+    expect(await repo.testeGratisJaUsado(ID)).toBe(true);
+    expect(chamadas.find((c) => c.metodo === "select")?.args[0]).toBe(
+      "teste_gratis_usado_em",
+    );
+  });
+
+  it("nunca usado, ou sem linha: falso", async () => {
+    resposta = { data: { teste_gratis_usado_em: null }, error: null };
+    expect(await repo.testeGratisJaUsado(ID)).toBe(false);
+    resposta = { data: null, error: null };
+    expect(await repo.testeGratisJaUsado(ID)).toBe(false);
+  });
+
+  it("reivindicar: uma instrução com is null, e devolve quem levou", async () => {
+    resposta = { data: { id: ID }, error: null };
+    expect(await repo.reivindicarTesteGratis(ID)).toBe(true);
+
+    const atualizacao = chamadas.find((c) => c.metodo === "update");
+    expect(atualizacao?.tabela).toBe("usuarios");
+    const gravado = atualizacao?.args[0] as Record<string, unknown>;
+    expect(typeof gravado.teste_gratis_usado_em).toBe("string");
+    expect(chamadas.find((c) => c.metodo === "is")?.args).toEqual([
+      "teste_gratis_usado_em",
+      null,
+    ]);
+  });
+
+  it("reivindicar quando já foi usado: zero linhas, falso", async () => {
+    resposta = { data: null, error: null };
+    expect(await repo.reivindicarTesteGratis(ID)).toBe(false);
+  });
+
+  it("falha no banco não passa em silêncio", async () => {
+    resposta = { data: null, error: { message: "conexão caiu" } };
+    await expect(repo.testeGratisJaUsado(ID)).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
+    await expect(repo.reivindicarTesteGratis(ID)).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
   });
 });

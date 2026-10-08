@@ -112,8 +112,6 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
   "avaliacao.criar": porJanela(5),
 
   // O limite de 10 ativas mora no banco; este contém a repetição.
-  "publicacao.criar": porJanela(15),
-  "publicacao.editar": porJanela(20),
   "publicacao.arquivar": porJanela(20),
   "publicacao.reativar": porJanela(20),
   "publicacao.publicar-trabalho": porJanela(15),

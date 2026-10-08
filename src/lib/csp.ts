@@ -40,6 +40,14 @@
  * ícones. `frame-ancestors 'none'` repete o X-Frame-Options para navegador
  * que já ignora o cabeçalho antigo.
  *
+ * `worker-src 'self' blob:` existe por causa da gravação de sessão do
+ * Sentry (#281), que comprime o que grava num worker criado a partir de uma
+ * URL `blob:`. Sem a diretiva, o navegador cai em `script-src`, recusa o
+ * worker e deixa um erro de console em **toda** página. A gravação não
+ * quebrava, só saía sem compressão. `blob:` fica só aqui, e não em
+ * `script-src`: criar um worker exige já estar executando script, então a
+ * permissão não abre porta nenhuma que o nonce feche.
+ *
  * `'unsafe-eval'` só em desenvolvimento: o React em modo de
  * desenvolvimento usa `eval` para reconstruir a pilha de chamada de erro
  * vinda do servidor, e sem ele todo `npm run dev` abre com um erro
@@ -67,6 +75,7 @@ export function politicaDeSeguranca(
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co https://*.ingest.sentry.io",
+    "worker-src 'self' blob:",
     "form-action 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

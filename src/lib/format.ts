@@ -121,10 +121,49 @@ export function formatPhone(value: string): string {
   return value;
 }
 
+/**
+ * O CNPJ como a Lupa o guarda e compara: só letras e números, em maiúscula.
+ *
+ * Desde julho de 2026 a Receita emite CNPJ alfanumérico (IN RFB 2.229/2024,
+ * #297): as 12 primeiras posições aceitam letras de A a Z, e as duas últimas,
+ * o dígito verificador, seguem numéricas. `onlyDigits` apagava as letras e
+ * fazia uma empresa legítima ler "CNPJ inválido".
+ *
+ * A maiúscula não é capricho: é o que faz "12abc34501de35" e
+ * "12ABC34501DE35" serem o mesmo CNPJ para a checagem de duplicidade, e o
+ * que a BrasilAPI espera — ela não converte.
+ *
+ * Aceita a entrada com ou sem pontuação, e por isso não valida nada: quem
+ * confere o formato e o dígito é `cnpjValido`.
+ */
+export function normalizarCnpj(value: string): string {
+  return value.replace(/[^0-9A-Za-z]/g, "").toUpperCase();
+}
+
+/** 12 posições de letra ou número e 2 dígitos verificadores numéricos. */
+export const FORMATO_CNPJ = /^[0-9A-Z]{12}\d{2}$/;
+
 export function formatCnpj(value: string): string {
-  const d = onlyDigits(value);
-  if (d.length !== 14) return value;
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  const c = normalizarCnpj(value);
+  if (c.length !== 14) return value;
+  return `${c.slice(0, 2)}.${c.slice(2, 5)}.${c.slice(5, 8)}/${c.slice(8, 12)}-${c.slice(12)}`;
+}
+
+/**
+ * Só deixa passar link http(s) para um `<a href>`.
+ *
+ * O cadastro e a edição já recusam outros esquemas (#354), mas o que foi
+ * gravado antes disso — ou escrito direto no banco — não passou por lá. A
+ * tela é a última porta: `javascript:` e `data:` não viram link aqui.
+ */
+export function linkExterno(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "http:" || protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

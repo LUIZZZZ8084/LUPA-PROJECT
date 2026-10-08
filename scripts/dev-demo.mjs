@@ -22,7 +22,7 @@ const filho = spawn("npx", ["next", "dev", "--port", porta], {
     // Vazio vence o arquivo: variável já presente no ambiente tem
     // precedência sobre `.env.local`, que é o que torna isto confiável.
     NEXT_PUBLIC_SUPABASE_URL: "",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+    SUPABASE_ANON_KEY: "",
     SUPABASE_SERVICE_ROLE_KEY: "",
     SESSION_SECRET:
       process.env.SESSION_SECRET ??

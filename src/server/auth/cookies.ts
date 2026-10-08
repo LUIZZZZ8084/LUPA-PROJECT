@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import type { Papel } from "./rbac";
 import { sessaoFoiRevogada } from "./revogacao";
 import {
@@ -61,4 +62,27 @@ export async function sessaoAtual(): Promise<Sessao | null> {
   if (!sessao) return null;
 
   return (await sessaoFoiRevogada(sessao)) ? null : sessao;
+}
+
+/**
+ * A sessão da requisição, ou o login (#330).
+ *
+ * Para as telas de produto que só existem para quem entrou. Elas chamavam
+ * `notFound()` quando `sessaoAtual()` voltava `null`, contando com o muro
+ * do `proxy.ts` para nunca chegar ali sem sessão. Só que o muro confere a
+ * assinatura do token, e não a revogação (#225), que mora aqui: quem
+ * trocou a senha num aparelho e abria o app no outro passava pelo muro com
+ * o token velho e lia "Não encontramos essa página" — e concluía que a
+ * conta tinha sumido.
+ *
+ * `destino` volta junto, para a pessoa terminar onde queria chegar, como
+ * o muro já faz.
+ *
+ * **Não é para área administrativa.** Lá a resposta continua 404 para
+ * todo mundo, porque mandar ao login confirmaria que a área existe.
+ */
+export async function sessaoOuEntrar(destino: string): Promise<Sessao> {
+  const sessao = await sessaoAtual();
+  if (!sessao) redirect(`/entrar?destino=${encodeURIComponent(destino)}`);
+  return sessao;
 }

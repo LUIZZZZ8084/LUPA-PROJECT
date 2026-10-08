@@ -40,8 +40,7 @@ describe("virar prestador", () => {
       papel: "candidato_clt",
       nomeCompleto: "Pessoa de Teste",
       telefone: "66999990000",
-      cidade: "Sinop",
-      bairro: "Centro",
+      cidade: "Sinop - MT",
       avatarUrl,
     });
 
@@ -125,13 +124,18 @@ describe("virar prestador", () => {
     expect(Object.keys(perfil ?? {})).not.toContain("cpf");
   });
 
-  it("nasce atendendo o próprio bairro", async () => {
+  /*
+   * Sem bairro (#321): o perfil que nasce da ativação não carrega área de
+   * atendimento nenhuma. Antes ele nascia atendendo o bairro da conta, e
+   * esse dado alimentava a ordem da busca.
+   */
+  it("o perfil não guarda bairro nenhum", async () => {
     const { usuario, sessao } = await criarCandidato("/foto.png");
 
     await virarPrestador(sessao, DADOS, COM_STORAGE);
 
     const perfil = await repo.perfilPrestador(usuario.id);
-    expect(perfil?.bairrosAtendidos).toEqual(["Centro"]);
+    expect(Object.keys(perfil ?? {})).not.toContain("bairrosAtendidos");
   });
 
   it("recusa CPF já usado por outro prestador", async () => {

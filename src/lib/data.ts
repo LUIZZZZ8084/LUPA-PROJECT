@@ -97,11 +97,7 @@ const desempateDePrestador = (a: ProviderListing, b: ProviderListing) => {
 
 const ordenarVagas = (jobs: JobListing[], perto: Origem | undefined) =>
   jobs.sort(
-    porProximidade(
-      perto,
-      (j) => ({ cidade: j.city, bairro: j.neighborhood }),
-      desempateDeVaga,
-    ),
+    porProximidade(perto, (j) => ({ cidade: j.city }), desempateDeVaga),
   );
 
 const ordenarPrestadores = (
@@ -109,15 +105,7 @@ const ordenarPrestadores = (
   perto: Origem | undefined,
 ) =>
   providers.sort(
-    porProximidade(
-      perto,
-      (p) => ({
-        cidade: p.city,
-        bairro: p.neighborhood,
-        atende: p.service_area,
-      }),
-      desempateDePrestador,
-    ),
+    porProximidade(perto, (p) => ({ cidade: p.city }), desempateDePrestador),
   );
 
 /**
@@ -217,6 +205,7 @@ function vagaDoMock(job: JobListing): Vaga {
     bairro: job.neighborhood,
     endereco: job.address,
     tipoContrato: job.contract_type,
+    modalidade: job.work_mode,
     salarioMin: job.salary_min,
     salarioMax: job.salary_max,
     habilidades: job.skills,
@@ -238,6 +227,7 @@ function jobListingDaVaga(vaga: Vaga): JobListing {
     neighborhood: vaga.bairro,
     address: vaga.endereco,
     contract_type: vaga.tipoContrato as JobListing["contract_type"],
+    work_mode: vaga.modalidade,
     salary_min: vaga.salarioMin,
     salary_max: vaga.salarioMax,
     skills: vaga.habilidades,
@@ -292,6 +282,7 @@ export async function getJobs(
       const chave = [
         "vagas",
         filters.city ?? "",
+        filters.uf ?? "",
         filters.category ?? "",
         filters.contract_type ?? "",
         filters.q ?? "",
@@ -311,6 +302,10 @@ export async function getJobs(
             .limit(TETO_BUSCA + 1);
 
           if (filters.city) query = query.eq("city", filters.city);
+          // A cidade é gravada com o estado ("Sinop - MT"), então filtrar
+          // por estado é olhar o fim do valor (#301). `uf` chega validado
+          // contra a lista de siglas — nunca texto livre da URL.
+          else if (filters.uf) query = query.like("city", `% - ${filters.uf}`);
           if (filters.category) query = query.eq("category", filters.category);
           if (filters.contract_type)
             query = query.eq("contract_type", filters.contract_type);
@@ -349,7 +344,7 @@ export async function getJobs(
        *
        * A linha extra existe só para responder "havia mais"; deixá-la
        * entrar na ordenação faria uma vaga aparecer ou sumir conforme o
-       * bairro de quem olha, o que é pior que cortar.
+       * cidade de quem olha, o que é pior que cortar.
        */
       const { itens, houveCorte } = recortar(
         (data ?? []) as unknown as JobListing[],
@@ -365,6 +360,7 @@ export async function getJobs(
       if (job.status !== "aberta") return false;
       if (vagaExpirada(job.expires_at)) return false;
       if (filters.city && job.city !== filters.city) return false;
+      if (filters.uf && !job.city.endsWith(` - ${filters.uf}`)) return false;
       if (filters.category && job.category !== filters.category) return false;
       if (filters.contract_type && job.contract_type !== filters.contract_type)
         return false;
@@ -486,6 +482,7 @@ export async function getProviders(
       const chave = [
         "prestadores",
         filters.city ?? "",
+        filters.uf ?? "",
         filters.category ?? "",
         String(filters.min_rating ?? ""),
         filters.q ?? "",
@@ -506,6 +503,10 @@ export async function getProviders(
             .limit(TETO_BUSCA + 1);
 
           if (filters.city) query = query.eq("city", filters.city);
+          // A cidade é gravada com o estado ("Sinop - MT"), então filtrar
+          // por estado é olhar o fim do valor (#301). `uf` chega validado
+          // contra a lista de siglas — nunca texto livre da URL.
+          else if (filters.uf) query = query.like("city", `% - ${filters.uf}`);
           if (filters.category)
             query = query.eq("category_slug", filters.category);
           if (filters.min_rating)
@@ -560,14 +561,12 @@ export async function getProviders(
     )
       return false;
     if (filters.city && p.city !== filters.city) return false;
+    if (filters.uf && !p.city.endsWith(` - ${filters.uf}`)) return false;
     if (filters.category && p.category.slug !== filters.category) return false;
     if (filters.min_rating && p.avg_rating < filters.min_rating) return false;
     if (
       filters.q &&
-      !matches(
-        [p.full_name, p.description ?? "", p.category.name, ...p.service_area],
-        filters.q,
-      )
+      !matches([p.full_name, p.description ?? "", p.category.name], filters.q)
     )
       return false;
     return true;
@@ -758,7 +757,6 @@ async function candidatoParaDemo(
     return {
       full_name: usuario.nomeCompleto,
       avatar_url: usuario.avatarUrl,
-      neighborhood: usuario.bairro,
       city: usuario.cidade,
       email: usuario.email,
       phone: usuario.telefone,
@@ -998,7 +996,6 @@ export interface CandidatoDisponivel {
   full_name: string;
   avatar_url: string | null;
   city: string;
-  neighborhood: string | null;
   email: string | null;
   phone: string | null;
   desired_area: string | null;
@@ -1040,7 +1037,6 @@ export async function getCandidatosDisponiveis(): Promise<
     full_name: usuario.nomeCompleto,
     avatar_url: usuario.avatarUrl,
     city: usuario.cidade,
-    neighborhood: usuario.bairro,
     email: usuario.email,
     phone: usuario.telefone,
     desired_area: perfil.areaDesejada,

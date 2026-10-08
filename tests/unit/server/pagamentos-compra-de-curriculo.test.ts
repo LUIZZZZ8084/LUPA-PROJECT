@@ -75,7 +75,7 @@ describe("comprar o gerador de currículo", () => {
       papel: "candidato_clt",
       nomeCompleto: "Candidato de Teste",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     await ctx.repoUsuarios.criarPerfilCandidato({
       usuarioId: usuario.id,

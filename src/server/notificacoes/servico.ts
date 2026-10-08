@@ -1,6 +1,7 @@
 import "server-only";
 
-import { ehCidadeAtendida, JOB_CATEGORIES } from "@/lib/constants";
+import { ehCidadeValida } from "@/lib/cidades/servidor";
+import { JOB_CATEGORIES } from "@/lib/constants";
 import { type Autenticado, exigirCapacidade } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
@@ -12,13 +13,13 @@ import type { InscricaoPush, PreferenciaNotificacao } from "./tipos";
  * Avisar quem procura, quando aparece o que ela procura (#48).
  *
  * Numa plataforma que saiu da busca do Google, ninguém chega sozinho: uma
- * vaga só é vista por quem resolver abrir o app naquele dia, e vaga boa em
- * Sinop some em dois dias. O push é o que devolve a pessoa ao app sem ela
- * ter de lembrar.
+ * vaga só é vista por quem resolver abrir o app naquele dia, e vaga boa
+ * some em dois dias. O push é o que devolve a pessoa ao app sem ela ter de
+ * lembrar.
  *
  * **Bairro ficou de fora**, e é decisão de 26/08/2026: não existe catálogo
- * de bairro para os 142 municípios de Mato Grosso, só para Sinop. Notificar
- * por bairro funcionaria bem numa cidade e mal nas outras 141.
+ * de bairro para os municípios do país. Desde a #321 nem a Lupa guarda o
+ * bairro de uma pessoa, então não haveria o que comparar.
  */
 
 /** Sem capacidade própria: qualquer conta com sessão escolhe ser avisada. */
@@ -47,9 +48,9 @@ export async function salvarPreferencia(
 ): Promise<void> {
   const autenticado = sessaoValida(sessao);
 
-  if (!ehCidadeAtendida(dados.cidade)) {
+  if (!ehCidadeValida(dados.cidade)) {
     throw erros.validacao([
-      { campo: "cidade", mensagem: "Escolha uma cidade de Mato Grosso." },
+      { campo: "cidade", mensagem: "Escolha o estado e a cidade." },
     ]);
   }
 

@@ -44,22 +44,22 @@ insert into usuarios
   (id, email, senha_hash, papel, nome_completo, telefone, cidade, bairro,
    avatar_url, telefone_verificado, doc_verificado, status_verificacao)
 values
-  ('11111111-1111-4111-8111-000000000001', 'joao@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'João Silva',        '66000000001', 'Sinop', 'Jardim Botânico',      '/avatares/prv-joao-silva.svg',       true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000002', 'carlos@teste.lupa',   '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Carlos Souza',      '66000000002', 'Sinop', 'Centro',               '/avatares/prv-carlos-souza.svg',     true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000003', 'marcos@teste.lupa',   '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Marcos Lima',       '66000000003', 'Sinop', 'Jardim das Palmeiras', '/avatares/prv-marcos-lima.svg',      true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000004', 'jose@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'José Moreira',      '66000000004', 'Sinop', 'Jardim Primavera',     '/avatares/prv-jose-moreira.svg',     true, false, 'em_analise'),
-  ('11111111-1111-4111-8111-000000000005', 'anapaula@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Ana Paula Ribeiro', '66000000005', 'Sinop', 'Jardim Celeste',       '/avatares/prv-ana-paula.svg',        true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000006', 'rosa@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Rosa Mendes',       '66000000006', 'Sinop', 'Menezes',              '/avatares/prv-rosa-mendes.svg',      true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000007', 'pedro@teste.lupa',    '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Pedro Alves',       '66000000007', 'Sinop', 'Boa Esperança',        '/avatares/prv-pedro-alves.svg',      true, false, 'em_analise'),
-  ('11111111-1111-4111-8111-000000000008', 'luciana@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Luciana Costa',     '66000000008', 'Sinop', 'Aquarela Brasil',      '/avatares/prv-luciana-costa.svg',    true, true,  'aprovado'),
-  ('11111111-1111-4111-8111-000000000009', 'antonio@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Antônio Ferreira',  '66000000009', 'Sinop', 'Setor Comercial',      '/avatares/prv-antonio-ferreira.svg', true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000001', 'joao@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'João Silva',        '66000000001', 'Sinop - MT', 'Jardim Botânico',      '/avatares/prv-joao-silva.svg',       true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000002', 'carlos@teste.lupa',   '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Carlos Souza',      '66000000002', 'Sinop - MT', 'Centro',               '/avatares/prv-carlos-souza.svg',     true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000003', 'marcos@teste.lupa',   '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Marcos Lima',       '66000000003', 'Sinop - MT', 'Jardim das Palmeiras', '/avatares/prv-marcos-lima.svg',      true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000004', 'jose@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'José Moreira',      '66000000004', 'Sinop - MT', 'Jardim Primavera',     '/avatares/prv-jose-moreira.svg',     true, false, 'em_analise'),
+  ('11111111-1111-4111-8111-000000000005', 'anapaula@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Ana Paula Ribeiro', '66000000005', 'Sinop - MT', 'Jardim Celeste',       '/avatares/prv-ana-paula.svg',        true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000006', 'rosa@teste.lupa',     '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Rosa Mendes',       '66000000006', 'Sinop - MT', 'Menezes',              '/avatares/prv-rosa-mendes.svg',      true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000007', 'pedro@teste.lupa',    '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Pedro Alves',       '66000000007', 'Sinop - MT', 'Boa Esperança',        '/avatares/prv-pedro-alves.svg',      true, false, 'em_analise'),
+  ('11111111-1111-4111-8111-000000000008', 'luciana@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Luciana Costa',     '66000000008', 'Sinop - MT', 'Aquarela Brasil',      '/avatares/prv-luciana-costa.svg',    true, true,  'aprovado'),
+  ('11111111-1111-4111-8111-000000000009', 'antonio@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'prestador_servico', 'Antônio Ferreira',  '66000000009', 'Sinop - MT', 'Setor Comercial',      '/avatares/prv-antonio-ferreira.svg', true, true,  'aprovado'),
 
-  ('22222222-2222-4222-8222-000000000001', 'agronorte@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Luiz Fernando', '6600000011', 'Sinop', 'Setor Industrial', '/avatares/cmp-agro-norte.svg',          true, true, 'aprovado'),
-  ('22222222-2222-4222-8222-000000000002', 'comercial@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Regina Alves',  '6600000012', 'Sinop', 'Centro',           '/avatares/cmp-comercial-sinop.svg',     true, true, 'aprovado'),
-  ('22222222-2222-4222-8222-000000000003', 'construcao@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Mário Becker',  '6600000013', 'Sinop', 'Setor Comercial',  '/avatares/cmp-casa-construcao.svg',     true, true, 'aprovado'),
+  ('22222222-2222-4222-8222-000000000001', 'agronorte@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Luiz Fernando', '6600000011', 'Sinop - MT', 'Setor Industrial', '/avatares/cmp-agro-norte.svg',          true, true, 'aprovado'),
+  ('22222222-2222-4222-8222-000000000002', 'comercial@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Regina Alves',  '6600000012', 'Sinop - MT', 'Centro',           '/avatares/cmp-comercial-sinop.svg',     true, true, 'aprovado'),
+  ('22222222-2222-4222-8222-000000000003', 'construcao@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'empresa', 'Mário Becker',  '6600000013', 'Sinop - MT', 'Setor Comercial',  '/avatares/cmp-casa-construcao.svg',     true, true, 'aprovado'),
 
-  ('33333333-3333-4333-8333-000000000001', 'everton@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'candidato_clt', 'Everton Rodrigues', '66000000021', 'Sinop', 'Jardim Primavera', '/avatares/cnd-everton-rodrigues.svg', true, false, 'pendente'),
-  ('33333333-3333-4333-8333-000000000002', 'simone@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'candidato_clt', 'Simone Batista',    '66000000022', 'Sinop', 'Menezes',          '/avatares/cnd-simone-batista.svg',    true, false, 'pendente');
+  ('33333333-3333-4333-8333-000000000001', 'everton@teste.lupa', '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'candidato_clt', 'Everton Rodrigues', '66000000021', 'Sinop - MT', 'Jardim Primavera', '/avatares/cnd-everton-rodrigues.svg', true, false, 'pendente'),
+  ('33333333-3333-4333-8333-000000000002', 'simone@teste.lupa',  '$argon2id$v=19$m=19456,t=2,p=1$c2VlZHNhbHQxMjM0NTY3OA$K1YvZ3hQb0JmRDRuUjd3TDJtQjR0RDZzRjloSzBhQzVlRzhqTjFwUTI', 'candidato_clt', 'Simone Batista',    '66000000022', 'Sinop - MT', 'Menezes',          '/avatares/cnd-simone-batista.svg',    true, false, 'pendente');
 
 -- ----------------------------------------------------------------------------
 -- Perfis de prestador
@@ -124,27 +124,27 @@ values
   ('44444444-4444-4444-8444-000000000001', '22222222-2222-4222-8222-000000000001',
    'Operador de Máquinas Agrícolas',
    E'Operação de colheitadeiras e tratores em lavoura de soja e milho.\n\nRequisitos: CNH categoria C, experiência comprovada, disponibilidade para trabalhar em fazenda durante a safra.\n\nOferecemos: alojamento, alimentação e adicional de safra.',
-   'Agronegócio', 'Sinop', 'Setor Industrial', 'CLT', 3200, 4200, now() - interval '2 hours', '2099-12-31'),
+   'Agronegócio', 'Sinop - MT', 'Setor Industrial', 'CLT', 3200, 4200, now() - interval '2 hours', '2099-12-31'),
 
   ('44444444-4444-4444-8444-000000000002', '22222222-2222-4222-8222-000000000002',
    'Auxiliar Administrativo',
    E'Rotinas administrativas do escritório: emissão de notas, contas a pagar e receber, atendimento e organização de documentos.\n\nRequisitos: ensino médio completo, pacote Office intermediário.\n\nHorário comercial. Vale-transporte e vale-refeição.',
-   'Administrativo', 'Sinop', 'Centro', 'CLT', 1800, 2200, now() - interval '4 hours', '2099-12-31'),
+   'Administrativo', 'Sinop - MT', 'Centro', 'CLT', 1800, 2200, now() - interval '4 hours', '2099-12-31'),
 
   ('44444444-4444-4444-8444-000000000003', '22222222-2222-4222-8222-000000000001',
    'Auxiliar de Produção',
    E'Apoio na linha de beneficiamento de grãos: abastecimento de máquinas, ensaque, paletização e limpeza do setor.\n\nRequisitos: ensino fundamental completo, disponibilidade para turnos.\n\nAdicional noturno e transporte fretado.',
-   'Indústria e Produção', 'Sinop', 'Setor Industrial', 'CLT', 1650, 1900, now() - interval '1 day', '2099-12-31'),
+   'Indústria e Produção', 'Sinop - MT', 'Setor Industrial', 'CLT', 1650, 1900, now() - interval '1 day', '2099-12-31'),
 
   ('44444444-4444-4444-8444-000000000004', '22222222-2222-4222-8222-000000000003',
    'Vendedor Interno — Material de Construção',
    E'Atendimento na loja, elaboração de orçamentos e acompanhamento de pedidos até a entrega.\n\nRequisitos: experiência em vendas no varejo.\n\nSalário fixo mais comissão, sem teto.',
-   'Comércio e Vendas', 'Sinop', 'Setor Comercial', 'CLT', 1600, null, now() - interval '6 hours', '2099-12-31'),
+   'Comércio e Vendas', 'Sinop - MT', 'Setor Comercial', 'CLT', 1600, null, now() - interval '6 hours', '2099-12-31'),
 
   ('44444444-4444-4444-8444-000000000005', '22222222-2222-4222-8222-000000000001',
    'Estágio em Agronomia',
    E'Acompanhamento de campo: monitoramento de pragas, coleta de amostras de solo e registro de dados.\n\nRequisitos: cursando a partir do 5º semestre, CNH B.\n\nBolsa-auxílio e possibilidade de efetivação.',
-   'Agronegócio', 'Sinop', 'Setor Industrial', 'Estágio', 1200, null, now() - interval '4 days', '2099-12-31');
+   'Agronegócio', 'Sinop - MT', 'Setor Industrial', 'Estágio', 1200, null, now() - interval '4 days', '2099-12-31');
 
 -- ----------------------------------------------------------------------------
 -- Candidaturas

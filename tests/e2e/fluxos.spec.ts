@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { ARQUIVO_SESSAO_EMPRESA, aguardarHidratacao } from "./helpers";
+import {
+  ARQUIVO_SESSAO_EMPRESA,
+  aguardarHidratacao,
+  cnpjAlfanumericoDeTeste,
+  cpfDeTeste,
+  escolherCidade,
+} from "./helpers";
 
 test.describe("busca de vagas", () => {
   test("filtra por categoria e mantém o filtro na URL", async ({ page }) => {
@@ -123,6 +129,33 @@ test.describe("navegação", () => {
 
     await nav.getByRole("link", { name: "Serviços" }).click();
     await expect(page).toHaveURL(/\/servicos/);
+  });
+
+  /**
+   * Os avisos de vaga a um toque (#288).
+   *
+   * Moravam no fim de "Editar perfil", depois do anúncio e do CNPJ, e
+   * ninguém os achava. No celular, que é onde a pessoa vai querer ligar.
+   */
+  test("o sininho leva aos avisos de vaga", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    const sino = page.getByRole("link", { name: "Avisos de vaga" });
+    await expect(sino).toBeVisible();
+    await sino.click();
+
+    await expect(page).toHaveURL(/\/avisos$/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Avisos de vaga" }),
+    ).toBeVisible();
+    await expect(sino).toHaveAttribute("aria-current", "page");
+  });
+
+  /** Dois lugares para a mesma escolha divergiriam na primeira mudança. */
+  test("os avisos saíram de Editar perfil", async ({ page }) => {
+    await page.goto("/perfil/editar");
+    await expect(page.getByText("Avisos de vaga nova")).toHaveCount(0);
   });
 
   test("página inexistente mostra o 404 do Lupa, não um erro cru", async ({
@@ -267,6 +300,17 @@ test.describe("área administrativa", () => {
     await page.goto("/admin/painel");
     await expect(page).not.toHaveTitle(/Painel/);
     await expect(page.getByText(/Não encontramos essa página/)).toBeVisible();
+    // O mesmo título de qualquer página que não existe (#303).
+    await expect(page).toHaveTitle("Página não encontrada · Lupa");
+  });
+
+  /**
+   * A aba de um link quebrado dizia o slogan da home (#303), e quem tinha
+   * várias abas abertas não achava qual era a que deu errado.
+   */
+  test("página inexistente diz isso na aba", async ({ page }) => {
+    await page.goto("/rota-que-nao-existe");
+    await expect(page).toHaveTitle("Página não encontrada · Lupa");
   });
 
   test("a rota de API devolve JSON, não HTML", async ({ request }) => {
@@ -310,6 +354,165 @@ test.describe("telas de autenticação", () => {
     await expect(
       page.getByRole("link", { name: "Vagas", exact: true }),
     ).toHaveCount(0);
+  });
+
+  /** Quem abre o link de cadastro vê na aba que conta vai criar (#303). */
+  test("a aba do cadastro diz que conta está sendo criada", async ({
+    page,
+  }) => {
+    await page.goto("/cadastro?tipo=empresa");
+    await expect(page).toHaveTitle("Criar conta de empresa · Lupa");
+    await page.goto("/cadastro?tipo=prestador_servico");
+    await expect(page).toHaveTitle(
+      "Criar conta de prestador de serviço · Lupa",
+    );
+  });
+});
+
+test.describe("cadastro que dá erro", () => {
+  test.use({
+    storageState: { cookies: [], origins: [] },
+    /*
+     * Origem própria para o limite de cadastro, que é de 5 tentativas por
+     * origem em 15 minutos e não tem multiplicador: a suíte já cria as
+     * contas dela a partir do mesmo endereço, e as duas tentativas deste
+     * teste em cada navegador estouravam o teto no meio da execução. O app
+     * lê a origem do `x-forwarded-for`, como em produção atrás da Vercel.
+     * O endereço é da faixa reservada para documentação (RFC 5737).
+     */
+    extraHTTPHeaders: { "x-forwarded-for": "203.0.113.91" },
+  });
+
+  /**
+   * Quem erra um campo corrige só aquele campo (#291).
+   *
+   * O formulário voltava inteiro em branco depois de qualquer erro, e a
+   * pessoa preenchia tudo de novo. Relato do Luiz em 25/09/2026. A senha de
+   * 6 caracteres prova junto a #290: o mínimo é 6, e a dica diz o mesmo.
+   */
+  test("guarda o que foi digitado e leva ao campo errado", async ({ page }) => {
+    await page.goto("/cadastro?tipo=candidato_clt");
+    await aguardarHidratacao(page, "form");
+
+    await expect(page.getByText("Mínimo de 6 caracteres.")).toBeVisible();
+
+    const email = `e2e-erro-${Date.now()}@teste.lupa`;
+    await page.getByLabel("Nome completo").fill("Pessoa de Teste");
+    await page.getByLabel("E-mail").fill(email);
+    await page.getByLabel("WhatsApp").fill("66999999999");
+    // Dígito verificador errado: o certo seria 12345678909.
+    await page.getByLabel("CPF").fill("12345678900");
+    await page.getByLabel("Área desejada").selectOption({ index: 1 });
+    await escolherCidade(page);
+    await page.getByLabel("Senha").fill("abc123");
+    await page.getByRole("button", { name: /criar conta/i }).click();
+
+    const cpf = page.getByLabel("CPF");
+    await expect(cpf).toHaveAttribute("aria-invalid", "true");
+    await expect(cpf).toBeFocused();
+
+    await expect(page.getByLabel("Nome completo")).toHaveValue(
+      "Pessoa de Teste",
+    );
+    await expect(page.getByLabel("E-mail")).toHaveValue(email);
+    await expect(page.getByLabel("WhatsApp")).toHaveValue("66999999999");
+    await expect(page.getByLabel("Área desejada")).not.toHaveValue("");
+    await expect(page.getByLabel("Senha")).toHaveValue("abc123");
+    // A cidade escolhida em dois passos também sobrevive ao erro (#301).
+    await expect(
+      page.getByRole("combobox", { name: "Cidade", exact: true }),
+    ).toHaveValue("Sinop - MT");
+    await expect(page.getByLabel("Nome completo")).not.toHaveAttribute(
+      "aria-invalid",
+    );
+
+    // Corrigido só o CPF, a conta sai.
+    await cpf.fill(cpfDeTeste());
+    await page.getByRole("button", { name: /criar conta/i }).click();
+    await expect(page.getByText(/Conta criada/i)).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
+  /** O navegador barra antes de enviar, sem ida ao servidor. */
+  test("senha com menos de 6 caracteres nem chega a sair", async ({ page }) => {
+    await page.goto("/cadastro?tipo=candidato_clt");
+    const senha = page.getByLabel("Senha");
+    await senha.fill("abc12");
+    expect(
+      await senha.evaluate(
+        (campo: HTMLInputElement) => campo.validity.tooShort,
+      ),
+    ).toBe(true);
+  });
+});
+
+test.describe("cadastro de empresa com CNPJ alfanumérico", () => {
+  test.use({
+    storageState: { cookies: [], origins: [] },
+    // Origem própria, pela mesma razão do cadastro que dá erro: o limite de
+    // cadastro é por origem e não tem multiplicador.
+    extraHTTPHeaders: { "x-forwarded-for": "203.0.113.92" },
+  });
+
+  /**
+   * Desde julho de 2026 a Receita emite CNPJ com letras (#297). O servidor
+   * já aceita; aqui se prova o caminho de quem digita: o campo deixa
+   * escrever letra, em minúscula e com pontuação, e a conta é criada.
+   */
+  test("aceita o CNPJ com letras, em minúscula e com pontuação", async ({
+    page,
+  }) => {
+    await page.goto("/cadastro?tipo=empresa");
+    await aguardarHidratacao(page, "form");
+
+    const cnpj = page.getByLabel("CNPJ");
+    // Sem teclado numérico: no celular ele não oferece letra nenhuma.
+    await expect(cnpj).not.toHaveAttribute("inputmode", "numeric");
+    await expect(cnpj).toHaveAttribute("autocapitalize", "characters");
+
+    const numero = cnpjAlfanumericoDeTeste();
+    const pontuado = `${numero.slice(0, 2)}.${numero.slice(2, 5)}.${numero.slice(5, 8)}/${numero.slice(8, 12)}-${numero.slice(12)}`;
+
+    await page.getByLabel("Nome do responsável").fill("Responsável de Teste");
+    await page.getByLabel("Nome da empresa").fill("Filial Nova Ltda");
+    await cnpj.fill(pontuado.toLowerCase());
+    await page.getByLabel("E-mail").fill(`e2e-alfa-${Date.now()}@teste.lupa`);
+    await page.getByLabel("WhatsApp").fill("66999999999");
+    await escolherCidade(page);
+    await page.getByLabel("Senha").fill("abc123");
+    await page.getByRole("button", { name: /criar conta/i }).click();
+
+    await expect(page.getByText(/Conta criada/i)).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
+  test("o dígito verificador errado continua sendo recusado", async ({
+    page,
+  }) => {
+    await page.goto("/cadastro?tipo=empresa");
+    await aguardarHidratacao(page, "form");
+
+    const numero = cnpjAlfanumericoDeTeste();
+    const errado = `${numero.slice(0, 13)}${(Number(numero[13]) + 1) % 10}`;
+
+    await page.getByLabel("Nome do responsável").fill("Responsável de Teste");
+    await page.getByLabel("Nome da empresa").fill("Filial Nova Ltda");
+    await page.getByLabel("CNPJ").fill(errado);
+    await page
+      .getByLabel("E-mail")
+      .fill(`e2e-alfa-ruim-${Date.now()}@teste.lupa`);
+    await page.getByLabel("WhatsApp").fill("66999999999");
+    await escolherCidade(page);
+    await page.getByLabel("Senha").fill("abc123");
+    await page.getByRole("button", { name: /criar conta/i }).click();
+
+    await expect(page.getByLabel("CNPJ")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await expect(page.getByText("CNPJ inválido.")).toBeVisible();
   });
 });
 

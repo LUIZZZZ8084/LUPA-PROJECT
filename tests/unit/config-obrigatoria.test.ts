@@ -11,14 +11,19 @@
  * `process.env` dentro de teste vaza para os vizinhos, e o que se quer
  * medir aqui é a decisão, não a leitura.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { conferirConfiguracaoDeProducao } from "@/server/config-obrigatoria";
 
 type Ambiente = Record<string, string | undefined>;
 
 const PRODUCAO_COMPLETA: Ambiente = {
   VERCEL_ENV: "production",
+  // Valor de teste, não segredo: 40 caracteres, acima do mínimo de 32.
+  SESSION_SECRET: "segredo-de-teste-com-quarenta-caracteres",
   NEXT_PUBLIC_APP_URL: "https://lupapp.com.br",
+  NEXT_PUBLIC_SUPABASE_URL: "https://exemplo.supabase.co",
+  SUPABASE_ANON_KEY: "chave-anonima",
+  SUPABASE_SERVICE_ROLE_KEY: "chave-de-servico",
   MERCADO_PAGO_ACCESS_TOKEN: "APP_USR-token",
   MERCADO_PAGO_WEBHOOK_SECRET: "segredo",
 };
@@ -51,6 +56,55 @@ describe("configuração obrigatória de produção", () => {
     expect(() =>
       conferirConfiguracaoDeProducao(semA("NEXT_PUBLIC_APP_URL")),
     ).toThrow(/NEXT_PUBLIC_APP_URL/);
+  });
+
+  /**
+   * O segredo da sessão (#271).
+   *
+   * Sem ele o site subia e ninguém entrava: `lerSessao` engole a recusa de
+   * `segredo()` e devolve "sem sessão", e o login falha com erro interno.
+   * A home abre, os crons rodam, e nada fica vermelho — a falha silenciosa
+   * que a #196 fechou para o webhook, na porta de entrada do app inteiro.
+   */
+  describe("segredo da sessão", () => {
+    it("sem ele, derruba", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao(semA("SESSION_SECRET")),
+      ).toThrow(/SESSION_SECRET/);
+    });
+
+    /**
+     * Presença não basta: `segredo()` recusa valor curto na hora de
+     * assinar, então um valor de 31 caracteres produz o mesmo site onde
+     * ninguém entra.
+     */
+    it("com menos de 32 caracteres, derruba e diz o mínimo", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          ...PRODUCAO_COMPLETA,
+          SESSION_SECRET: "a".repeat(31),
+        }),
+      ).toThrow(/SESSION_SECRET[\s\S]*32 caracteres/);
+    });
+
+    it("com exatamente 32, deixa subir", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          ...PRODUCAO_COMPLETA,
+          SESSION_SECRET: "a".repeat(32),
+        }),
+      ).not.toThrow();
+    });
+
+    /** Espaço colado junto não conta para o tamanho. */
+    it("espaço sobrando não completa o mínimo", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          ...PRODUCAO_COMPLETA,
+          SESSION_SECRET: `${"a".repeat(30)}   `,
+        }),
+      ).toThrow(/SESSION_SECRET/);
+    });
   });
 
   it("com cobrança ligada e sem o segredo do webhook, derruba", () => {
@@ -145,54 +199,61 @@ describe("configuração obrigatória de produção", () => {
   });
 
   /**
-   * A chave anônima ainda pelo nome publicável (#221).
+   * O banco (#279).
    *
-   * **Avisa, não derruba**, e a escolha é a mesma que este arquivo pesa em
-   * todo lugar: derrubar produção por causa de um *nome* de variável
-   * trocaria um risco hipotético por uma indisponibilidade real. O valor
-   * é o mesmo pelos dois nomes; o que muda é a promessa que o nome faz.
+   * Sem ele o app não quebra: entra em modo demonstração, que é o que
+   * permite rodá-lo sem infraestrutura. Em produção é o pior jeito de
+   * falhar — dado de exemplo servido como real, conta criada numa memória
+   * que some no próximo deploy, e nada vermelho. Esteve a um erro de
+   * digitação de acontecer em 23/09/2026, na troca do nome da chave.
    */
-  describe("nome da chave anônima", () => {
-    let avisos: string[];
-
-    beforeEach(() => {
-      avisos = [];
-      vi.spyOn(console, "warn").mockImplementation((...args: unknown[]) => {
-        avisos.push(args.join(" "));
+  describe("Supabase", () => {
+    for (const nome of [
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "SUPABASE_ANON_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+    ]) {
+      it(`sem ${nome}, derruba em vez de cair em demonstração`, () => {
+        expect(() => conferirConfiguracaoDeProducao(semA(nome))).toThrow(
+          new RegExp(nome),
+        );
       });
-    });
+    }
 
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    it("avisa quando só existe o nome com NEXT_PUBLIC_", () => {
-      conferirConfiguracaoDeProducao({
-        ...PRODUCAO_COMPLETA,
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: "chave",
-      });
-
-      expect(avisos.join(" ")).toMatch(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
-    });
-
-    it("cala quando o nome novo existe", () => {
-      conferirConfiguracaoDeProducao({
-        ...PRODUCAO_COMPLETA,
-        SUPABASE_ANON_KEY: "chave",
-        // Mesmo com a antiga ainda por lá, durante a transição.
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: "chave",
-      });
-
-      expect(avisos).toEqual([]);
+    it("a mensagem diz que o estrago é o modo demonstração", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao(semA("NEXT_PUBLIC_SUPABASE_URL")),
+      ).toThrow(/modo demonstração/);
     });
 
     /**
-     * Sem Supabase nenhum é o modo demonstração, não uma configuração
-     * errada. Avisar ali ensinaria a ignorar o aviso.
+     * O caso de quem pulou uma etapa da troca: só o nome antigo na Vercel.
+     * A mensagem tem de dizer que a variável existe, com o nome errado —
+     * "falta SUPABASE_ANON_KEY" sozinho mandaria a pessoa procurar uma
+     * chave que ela sabe que cadastrou.
      */
-    it("cala quando não há chave nenhuma", () => {
-      conferirConfiguracaoDeProducao(PRODUCAO_COMPLETA);
-      expect(avisos).toEqual([]);
+    it("só com o nome antigo, derruba e diz qual é o conserto", () => {
+      const { SUPABASE_ANON_KEY: _nova, ...resto } = PRODUCAO_COMPLETA;
+
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          ...resto,
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "chave-anonima",
+        }),
+      ).toThrow(/NEXT_PUBLIC_SUPABASE_ANON_KEY[\s\S]*nome antigo/);
+    });
+
+    /**
+     * Demonstração continua sendo requisito de negócio: é como preview, a
+     * suíte e2e e quem desenvolve sem credencial rodam o app inteiro.
+     */
+    it("em preview, pode rodar sem banco", () => {
+      expect(() =>
+        conferirConfiguracaoDeProducao({
+          VERCEL_ENV: "preview",
+          SESSION_SECRET: "segredo-de-teste-com-quarenta-caracteres",
+        }),
+      ).not.toThrow();
     });
   });
 });

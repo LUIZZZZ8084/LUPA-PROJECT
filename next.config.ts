@@ -40,10 +40,13 @@ const nextConfig: NextConfig = {
      * Sem isto, o Next recusa o corpo de qualquer Server Action acima de
      * 1 MB — o padrão do framework — antes mesmo de chegar em
      * `conferirArquivo` (`src/server/arquivos/regras.ts`), que promete até
-     * 2 MB de imagem e 5 MB de currículo. A rejeição do framework não passa
+     * 2 MB de imagem e 4 MB de currículo. A rejeição do framework não passa
      * pelo `try/catch` de `criarAcao`: a tela quebra em vez de mostrar
      * mensagem amigável. O valor cobre a maior regra com folga para o
      * envelope do multipart.
+     *
+     * Este número não é o teto de verdade: a Vercel corta o corpo em
+     * 4,5 MB antes (#324), e é por isso que nenhuma regra passa disso.
      */
     serverActions: { bodySizeLimit: "6mb" },
   },
@@ -69,6 +72,24 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          /*
+           * HSTS: força HTTPS e fecha o SSL-stripping na primeira visita
+           * (#350). Sem ele, a requisição inicial pode sair como HTTP e um
+           * atacante na rede a intercepta — e aqui passam senha, CPF/CNPJ e
+           * currículo. A Vercel serve HTTPS mas não manda este cabeçalho
+           * sozinha.
+           *
+           * Dois anos e `includeSubDomains`. `preload` fica de fora de
+           * propósito: entrar na lista dos navegadores é compromisso difícil
+           * de desfazer (força HTTPS em todo subdomínio por meses), e só vale
+           * quando houver certeza de que todo subdomínio de lupapp.com.br
+           * fala HTTPS. Navegador ignora o cabeçalho sobre HTTP, então ele é
+           * inofensivo em desenvolvimento.
+           */
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains",
+          },
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(self)",

@@ -12,6 +12,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ehAppError } from "@/server/errors";
+import { schemaBasico, schemaEmpresa } from "@/server/perfil/schemas";
 import {
   perfilParaEditar,
   salvarBasicos,
@@ -29,7 +30,7 @@ async function criar(papel: "candidato_clt" | "prestador_servico" | "empresa") {
     papel,
     nomeCompleto: "Pessoa de Teste",
     telefone: "66999110001",
-    cidade: "Sinop",
+    cidade: "Sinop - MT",
   });
   return u.id;
 }
@@ -85,34 +86,43 @@ describe("carregar o perfil para editar", () => {
 });
 
 describe("salvar os dados da conta", () => {
-  it("grava nome, telefone e bairro", async () => {
+  it("grava o telefone", async () => {
     const id = await criar("candidato_clt");
 
-    await salvarBasicos(id, {
-      nomeCompleto: "Ana Paula Ribeiro",
-      telefone: "66999110005",
-      bairro: "Centro",
-    });
+    await salvarBasicos(id, { telefone: "66999110005" });
 
     const u = await repo.porId(id);
-    expect(u?.nomeCompleto).toBe("Ana Paula Ribeiro");
     expect(u?.telefone).toBe("66999110005");
-    expect(u?.bairro).toBe("Centro");
   });
 
   it("não mexe no e-mail nem no papel", async () => {
     const id = await criar("candidato_clt");
     const antes = await repo.porId(id);
 
-    await salvarBasicos(id, {
-      nomeCompleto: "Outro Nome",
-      telefone: "66999110005",
-      bairro: null,
-    });
+    await salvarBasicos(id, { telefone: "66999110005" });
 
     const depois = await repo.porId(id);
     expect(depois?.email).toBe(antes?.email);
     expect(depois?.papel).toBe("candidato_clt");
+  });
+
+  /**
+   * O nome assina as avaliações, e quem o trocava a qualquer hora avaliava
+   * cada prestador com um nome diferente (#315). O caminho inteiro, do
+   * formulário ao banco: um `nomeCompleto` forjado passa pelo schema e não
+   * chega a lugar nenhum.
+   */
+  it("o nome não muda, nem com o campo forjado no formulário", async () => {
+    const id = await criar("candidato_clt");
+    const antes = await repo.porId(id);
+
+    const forjado = schemaBasico.parse({
+      nomeCompleto: "Nome Trocado",
+      telefone: "66999110005",
+    });
+    await salvarBasicos(id, forjado);
+
+    expect((await repo.porId(id))?.nomeCompleto).toBe(antes?.nomeCompleto);
   });
 });
 
@@ -154,7 +164,6 @@ describe("salvar o perfil do papel", () => {
       descricao: "Instalações elétricas residenciais.",
       precoInicial: 150,
       anosExperiencia: 7,
-      bairrosAtendidos: ["Centro"],
       instagram: null,
       facebook: null,
     });
@@ -174,7 +183,6 @@ describe("salvar o perfil do papel", () => {
       descricao: "Tentando virar prestador sem cadastro.",
       precoInicial: null,
       anosExperiencia: null,
-      bairrosAtendidos: [],
     } as never);
 
     expect(await repo.perfilPrestador(id)).toBeNull();
@@ -189,7 +197,6 @@ describe("salvar o perfil do papel", () => {
 
     await expect(
       salvarPerfilDoPapel(id, "empresa", {
-        razaoSocial: "Inventada Ltda.",
         setor: null,
         porte: null,
         site: null,
@@ -200,7 +207,7 @@ describe("salvar o perfil do papel", () => {
     ).rejects.toSatisfy((e) => ehAppError(e) && e.codigo === "nao_encontrado");
   });
 
-  it("empresa cadastrada grava e mantém o CNPJ", async () => {
+  it("empresa cadastrada grava e mantém o CNPJ e o nome", async () => {
     const id = await criar("empresa");
     await repo.criarPerfilEmpresa({
       usuarioId: id,
@@ -216,18 +223,25 @@ describe("salvar o perfil do papel", () => {
       plano: "trial",
     });
 
-    await salvarPerfilDoPapel(id, "empresa", {
-      razaoSocial: "Agro Norte S.A.",
-      setor: "Agronegócio",
-      porte: "Média",
-      site: null,
-      instagram: null,
-      facebook: null,
-      descricao: null,
-    });
+    await salvarPerfilDoPapel(
+      id,
+      "empresa",
+      schemaEmpresa.parse({
+        razaoSocial: "Nome Trocado S.A.",
+        setor: "Agronegócio",
+        porte: "Média",
+        site: "",
+        instagram: "",
+        facebook: "",
+        descricao: "",
+      }),
+    );
 
     const e = await repo.perfilEmpresa(id);
-    expect(e?.razaoSocial).toBe("Agro Norte S.A.");
+    expect(e?.setor).toBe("Agronegócio");
+    expect(e?.razaoSocial, "o nome não muda na edição (#315)").toBe(
+      "Agro Norte Ltda.",
+    );
     expect(e?.cnpj, "o CNPJ não pode mudar na edição").toBe("11222333000181");
   });
 

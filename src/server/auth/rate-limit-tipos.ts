@@ -29,6 +29,14 @@ export interface RepositorioLimite {
    * que deu certo é justamente a que custou.
    */
   registrarUso(chave: string, orcamento: Orcamento): Promise<Date | null>;
+
+  /**
+   * Apaga as janelas vencidas (#386). Antes morava dentro de
+   * `registrarFalha`, e sai de lá junto com o registro tardio da falha de
+   * login: sem isto, as linhas de quem errou a senha só seriam limpas
+   * quando alguém criasse uma conta.
+   */
+  limparVencidas(): Promise<void>;
 }
 
 /**
@@ -38,6 +46,20 @@ export interface RepositorioLimite {
  * esqueceu a senha: cinco tentativas é mais do que alguém erra de boa-fé,
  * e quinze minutos é curto o bastante para a pessoa não desistir do app.
  */
+/**
+ * O teto de conflitos no cadastro, por origem (#390).
+ *
+ * Conflito é a resposta "este e-mail, CPF ou CNPJ já existe": a pessoa que
+ * esqueceu que tinha conta erra uma ou duas vezes, e quem testa quem está na
+ * plataforma precisa de volume. Dez por janela deixa passar a primeira e
+ * barra a segunda. Quem cria conta com sucesso não passa por aqui — o limite
+ * de criação (`cadastro:<origem>`) segue como está.
+ */
+export const LIMITE_DE_CONFLITOS_NO_CADASTRO = {
+  chamadas: 10,
+  janelaSegundos: 15 * 60,
+};
+
 export const CONFIG_LIMITE = {
   JANELA_MS: 15 * 60 * 1000,
   MAX_TENTATIVAS: 5,

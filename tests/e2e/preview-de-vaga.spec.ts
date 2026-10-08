@@ -27,6 +27,7 @@ test.describe("revisão antes de publicar", () => {
     await page.getByLabel("Cargo").fill(CARGO);
     await page.getByLabel("Categoria").selectOption("Logística e Transporte");
     await page.getByLabel("Tipo de contrato").selectOption("CLT");
+    await page.getByLabel("Presencial").check();
     await page.getByLabel("Endereço").fill("Rua da Revisão, 500");
     await page.getByLabel("Salário de (R$)").fill("2200");
     await page.getByLabel("Descrição da vaga").fill(DESCRICAO);
@@ -82,6 +83,10 @@ test.describe("revisão antes de publicar", () => {
 
     await expect(revisao.getByRole("heading", { name: CARGO })).toBeVisible();
     await expect(revisao.getByText("Logística e Transporte")).toBeVisible();
+    await expect(
+      revisao.getByText("Presencial", { exact: true }),
+      "a modalidade escolhida aparece como selo (#300)",
+    ).toBeVisible();
     await expect(revisao.getByText("Rua da Revisão, 500")).toBeVisible();
     await expect(revisao.getByText(/A partir de.*2\.200/)).toBeVisible();
     await expect(revisao.getByText(/Conferência de carga/)).toBeVisible();
@@ -98,6 +103,7 @@ test.describe("revisão antes de publicar", () => {
 
     await expect(page.getByLabel("Cargo")).toHaveValue(CARGO);
     await expect(page.getByLabel("Descrição da vaga")).toHaveValue(DESCRICAO);
+    await expect(page.getByLabel("Presencial")).toBeChecked();
   });
 
   test("confirmar publica de verdade", async ({ page }) => {

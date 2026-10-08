@@ -138,6 +138,24 @@ describe("configuração de amostragem", () => {
 describe("bordas das expressões", () => {
   const limpar = (m: string) => scrubSensitiveData({ m }).m;
 
+  /*
+   * CNPJ alfanumérico (#297): só na forma com pontuação. Sem ela são 14
+   * caracteres de letra e número, iguais a um `trace_id` ou a um hash de
+   * commit, e máscara larga já corrompeu os dois (#275, #277).
+   */
+  it("CNPJ alfanumérico com pontuação é mascarado", () => {
+    expect(limpar("12.ABC.345/01DE-35")).toBe("[cnpj]");
+    expect(limpar("12.abc.345/01de-35")).toBe("[cnpj]");
+    expect(limpar("empresa 12.ABC.345/01DE-35 cadastrada")).toBe(
+      "empresa [cnpj] cadastrada",
+    );
+  });
+
+  it("o alfanumérico sem pontuação não é tocado: seria indistinguível de um identificador", () => {
+    expect(limpar("12ABC34501DE35")).toBe("12ABC34501DE35");
+    expect(limpar("d995dd12ab34ef")).toBe("d995dd12ab34ef");
+  });
+
   it("CNPJ é reconhecido antes de CPF — os 11 primeiros dígitos coincidem", () => {
     // Sem a ordem certa, "12.345.678/0001-90" viraria "[cpf]" + sobra.
     expect(limpar("12345678000190")).toBe("[cnpj]");
@@ -179,5 +197,217 @@ describe("bordas das expressões", () => {
 
   it("texto sem número atravessa intacto", () => {
     expect(limpar("falha ao gravar a vaga")).toBe("falha ao gravar a vaga");
+  });
+});
+
+/*
+ * O evento que dava voltas (#273).
+ *
+ * Em produção, toda transação amostrada terminava em `RangeError: Maximum
+ * call stack size exceeded` dentro desta função: o evento de transação
+ * carrega, em `sdkProcessingMetadata`, a instância de `Scope` do SDK em que
+ * o span nasceu — e ela aponta para si mesma. O SDK descartava a medição e
+ * mandava no lugar um erro interno, que não passa pelo `beforeSend` e sai
+ * sem máscara nenhuma.
+ */
+describe("ciclo e estado interno do SDK", () => {
+  it("objeto que aponta para si mesmo não estoura a pilha", () => {
+    const contexto: Record<string, unknown> = { obs: "ligar 66999110001" };
+    contexto.eu = contexto;
+
+    const limpo = scrubSensitiveData({ contexto }) as {
+      contexto: Record<string, unknown>;
+    };
+
+    expect(limpo.contexto.eu).toBe("[circular]");
+    // O resto do objeto continua passando pela máscara.
+    expect(limpo.contexto.obs).toBe("ligar [telefone]");
+  });
+
+  it("ciclo dentro de lista também para", () => {
+    const lista: unknown[] = ["66999110001"];
+    lista.push(lista);
+
+    expect(scrubSensitiveData(lista)).toEqual(["[telefone]", "[circular]"]);
+  });
+
+  /*
+   * Repetição não é ciclo. Guardar tudo que já foi visto, em vez de só o
+   * caminho atual, trocaria a segunda aparição por "[circular]" — e se a
+   * troca fosse para o valor cru, o telefone sairia na segunda.
+   */
+  it("o mesmo objeto em dois galhos é mascarado nos dois", () => {
+    const contato = { obs: "66999110001" };
+
+    expect(scrubSensitiveData({ a: contato, b: contato })).toEqual({
+      a: { obs: "[telefone]" },
+      b: { obs: "[telefone]" },
+    });
+  });
+
+  it("não percorre nem recria o estado interno do SDK", () => {
+    // O formato de `tracing/sentrySpan.js`, em `@sentry/core`.
+    const escopo: Record<string, unknown> = { _cliente: {} };
+    (escopo._cliente as Record<string, unknown>).escopo = escopo;
+    const metadata = {
+      capturedSpanScope: escopo,
+      capturedSpanIsolationScope: escopo,
+    };
+
+    const limpo = scrubSensitiveData({
+      type: "transaction",
+      transaction: "/vagas/:id",
+      extra: { telefone: "66999110001" },
+      sdkProcessingMetadata: metadata,
+    });
+
+    /*
+     * A mesma referência, e não uma cópia: o SDK ainda lê esse objeto
+     * depois do `beforeSendTransaction` (o contexto de amostragem sai
+     * dali), e o apaga antes de enviar — não há o que mascarar.
+     */
+    expect(limpo.sdkProcessingMetadata).toBe(metadata);
+    expect(limpo.sdkProcessingMetadata.capturedSpanScope).toBe(escopo);
+    expect(limpo.extra).toEqual({ telefone: "[removido]" });
+  });
+});
+
+/*
+ * Os identificadores de rastreio (#275).
+ *
+ * Um hexadecimal aleatório tem, com frequência, uma sequência de 10 ou 11
+ * dígitos — e a regra de telefone a trocava por `[telefone]`. O Sentry
+ * recusa a transação cujo `trace_id` não tem 32 caracteres hexadecimais:
+ * depois da #273, 2 de cada 3 voltavam como `invalid_transaction`.
+ */
+describe("identificadores de rastreio", () => {
+  // 19 + 10 dígitos seguidos + 3 = 32 caracteres hexadecimais.
+  const TRACE = "71624d67c92d40a1afa1234567890b94";
+  // 1 + 11 dígitos seguidos + 4 = 16.
+  const SPAN = "a12345678901bcde";
+
+  it("a regra de telefone pegaria estes identificadores", () => {
+    // O controle: sem a exceção, os dois seriam picotados.
+    expect(scrubSensitiveData({ texto: TRACE }).texto).toContain("[telefone]");
+    expect(scrubSensitiveData({ texto: SPAN }).texto).toContain("[telefone]");
+  });
+
+  it("uma transação no formato do SDK passa com os identificadores intactos", () => {
+    const limpo = scrubSensitiveData({
+      event_id: "0123456789a0123456789b0123456789",
+      contexts: {
+        trace: {
+          trace_id: TRACE,
+          span_id: SPAN,
+          data: { "sentry.previous_trace": `${TRACE}-${SPAN}-1` },
+          links: [{ trace_id: TRACE, span_id: SPAN }],
+        },
+      },
+      spans: [
+        {
+          trace_id: TRACE,
+          span_id: SPAN,
+          parent_span_id: SPAN,
+          description: "ligar 66999110001",
+        },
+      ],
+      // Como o SDK liga um fetch ao span em que ele aconteceu.
+      breadcrumbs: [{ category: "fetch", data: { __span: SPAN } }],
+    });
+
+    expect(limpo.event_id).toBe("0123456789a0123456789b0123456789");
+    expect(limpo.contexts.trace.trace_id).toBe(TRACE);
+    expect(limpo.contexts.trace.span_id).toBe(SPAN);
+    expect(limpo.contexts.trace.data["sentry.previous_trace"]).toBe(
+      `${TRACE}-${SPAN}-1`,
+    );
+    expect(limpo.contexts.trace.links[0]).toEqual({
+      trace_id: TRACE,
+      span_id: SPAN,
+    });
+    expect(limpo.spans[0].trace_id).toBe(TRACE);
+    expect(limpo.spans[0].parent_span_id).toBe(SPAN);
+    expect(limpo.breadcrumbs[0].data.__span).toBe(SPAN);
+    // O resto do mesmo evento continua passando pela máscara.
+    expect(limpo.spans[0].description).toBe("ligar [telefone]");
+  });
+
+  /*
+   * A exceção é do valor que o SDK gera, não do nome do campo. Um texto
+   * numa chave chamada `trace_id` é só texto, e continua mascarado.
+   */
+  it("chave de identificador com valor que não é hexadecimal é mascarada", () => {
+    expect(scrubSensitiveData({ trace_id: "ligar 66999110001" }).trace_id).toBe(
+      "ligar [telefone]",
+    );
+    expect(scrubSensitiveData({ span_id: "123.456.789-09" }).span_id).toBe(
+      "[cpf]",
+    );
+  });
+
+  /*
+   * O release é o hash do commit do deploy (#277). O de 23/09 começava com
+   * 14 dígitos, e a regra de CNPJ o trocava por "[cnpj]d995dd…": a
+   * transação era aceita, mas perdia a ligação com a versão.
+   */
+  it("o release com hash de commit passa intacto", () => {
+    const SHA = "50799703251002d995dd63da76b9683f0001da52";
+    expect(scrubSensitiveData({ texto: SHA }).texto).toContain("[cnpj]");
+    expect(scrubSensitiveData({ release: SHA }).release).toBe(SHA);
+  });
+
+  it("release que não é hash continua mascarado", () => {
+    expect(scrubSensitiveData({ release: "v1 66999110001" }).release).toBe(
+      "v1 [telefone]",
+    );
+  });
+
+  it("hexadecimal fora de uma chave de identificador continua mascarado", () => {
+    expect(scrubSensitiveData({ obs: TRACE }).obs).toContain("[telefone]");
+  });
+});
+
+describe("segredo em parâmetro de URL (#360)", () => {
+  /**
+   * O link de redefinir senha leva o token na query. A máscara por nome de
+   * chave não alcança: a chave é `url`, e o segredo está dentro do valor.
+   */
+  it("mascara o token na URL do pedido, na query e no nome da transação", () => {
+    const token = "Zk3-9_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789a";
+    const evento = {
+      request: {
+        url: `https://lupapp.com.br/redefinir-senha?token=${token}`,
+        query_string: `token=${token}&origem=email`,
+      },
+      transaction: `GET /redefinir-senha?x=1&token=${token}`,
+    };
+
+    const limpo = scrubSensitiveData(evento);
+    const texto = JSON.stringify(limpo);
+
+    expect(texto).not.toContain(token);
+    expect(limpo.request.url).toBe(
+      "https://lupapp.com.br/redefinir-senha?token=[removido]",
+    );
+    // O que não é segredo continua, senão o relatório perde utilidade.
+    expect(limpo.request.query_string).toBe("token=[removido]&origem=email");
+    expect(limpo.transaction).toBe("GET /redefinir-senha?x=1&token=[removido]");
+  });
+
+  it("não mexe em parâmetro comum nem em texto que só menciona token", () => {
+    const evento = {
+      url: "https://lupapp.com.br/vagas?q=token&cidade=Sinop%20-%20MT",
+      mensagem: "o token expirou, peça outro",
+    };
+    expect(scrubSensitiveData(evento)).toEqual(evento);
+  });
+
+  it("outros nomes de segredo na URL também saem", () => {
+    const limpo = scrubSensitiveData({
+      url: "https://x.test/cb?access_token=abc123&senha=x1&ok=1",
+    });
+    expect(limpo.url).toBe(
+      "https://x.test/cb?access_token=[removido]&senha=[removido]&ok=1",
+    );
   });
 });

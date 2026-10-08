@@ -87,6 +87,7 @@ drop type if exists tipo_pagamento cascade;
 drop type if exists status_publicacao cascade;
 drop type if exists plano_empresa cascade;
 drop type if exists status_candidatura cascade;
+drop type if exists modalidade_vaga cascade;
 drop type if exists status_vaga cascade;
 drop type if exists status_verificacao cascade;
 drop type if exists papel_usuario cascade;

@@ -44,6 +44,11 @@ create type status_verificacao as enum (
 
 create type status_vaga as enum ('aberta', 'fechada');
 
+-- Onde o trabalho acontece (#300). Com o app aberto ao Brasil inteiro, uma
+-- vaga home office em outra cidade interessa a quem está longe, e uma
+-- presencial não — sem isto, as duas pareciam iguais na busca.
+create type modalidade_vaga as enum ('presencial', 'home_office', 'hibrido');
+
 create type status_candidatura as enum (
   'enviada',
   'visualizada',
@@ -147,7 +152,21 @@ create table usuarios (
    */
   cpf                  text,
   telefone             text not null,
-  cidade               text not null default 'Sinop',
+  /*
+   * "Sinop - MT": a cidade vai com o estado, porque 232 nomes de município
+   * se repetem entre estados (#301). Sem padrão: um padrão aqui é a cidade
+   * de quem não escolheu nenhuma, e o app não tem mais cidade inicial.
+   */
+  cidade               text not null,
+  /*
+   * LEGADO (#321, decisao do Luiz em 01/10/2026): a aplicacao nao le nem
+   * grava mais esta coluna. O bairro de uma pessoa nao filtra nem ordena
+   * nada, e o cadastro e o perfil pedem so a cidade. Fica no banco porque
+   * apagar dado de producao e decisao do Luiz, e a coluna e inofensiva:
+   * `usuarios` nao tem grant para `anon`. Sai numa migracao futura, junto
+   * com as views que ainda a expoem (`provider_listings`,
+   * `company_applications`, `candidatos_disponiveis`, `metricas_por_local`).
+   */
   bairro               text,
   avatar_url           text,
   email_verificado     boolean not null default false,
@@ -175,6 +194,22 @@ create table usuarios (
    * que isso ja expirou sozinho — a tabela nao cresce com o tempo.
    */
   sessoes_validas_desde timestamptz,
+
+  /*
+   * Quando a pessoa usou o teste gratis da mensalidade de prestador (#392).
+   *
+   * O teste e um por conta: sem este registro, cancelar e assinar de novo
+   * criava outra assinatura e outra concessao, e quem repetisse o ciclo a
+   * cada 15 dias nunca pagava. A coluna mora em `usuarios`, e nao em
+   * `perfis_prestador`, de proposito: aquela tabela e lida pela chave
+   * anonima, e esta e uma informacao de cobranca que ninguem de fora tem
+   * motivo para ver.
+   *
+   * Nulo e o normal. E o preenchimento e atomico (`update ... where
+   * teste_gratis_usado_em is null`), para duas ativacoes simultaneas nao
+   * concederem o teste duas vezes.
+   */
+  teste_gratis_usado_em timestamptz,
 
   constraint email_com_formato check (position('@' in email) > 1),
   constraint telefone_so_digitos check (telefone ~ '^[0-9]{10,13}$')
@@ -290,6 +325,7 @@ create table perfis_prestador (
   descricao         text,
   preco_inicial     numeric(10,2),
   anos_experiencia  int,
+  /* LEGADO (#321): a aplicacao nao le nem grava mais — ver `usuarios.bairro`. */
   bairros_atendidos text[] not null default '{}',
   fotos_urls        text[] not null default '{}',
   instagram         text,
@@ -368,7 +404,7 @@ create table vagas (
   titulo        text not null,
   descricao     text not null,
   categoria     text,
-  cidade        text not null default 'Sinop',
+  cidade        text not null,
   bairro        text,
   /*
    * Rua, número, ponto de referência — texto livre, sem geocodificação.
@@ -383,6 +419,12 @@ create table vagas (
    */
   endereco      text,
   tipo_contrato text,
+  /*
+   * Presencial, home office ou híbrido (#300). Opcional na coluna, pelo
+   * mesmo motivo do endereço: vaga publicada antes deste campo existir
+   * continua válida e só não mostra o selo. A tela de publicação exige.
+   */
+  modalidade    modalidade_vaga,
   salario_min   numeric(10,2),
   salario_max   numeric(10,2),
 
@@ -1032,6 +1074,40 @@ as $$
 $$;
 
 
+-- A mesma conta da mensalidade de prestador, atômica no banco (#348).
+--
+-- Antes isto era um ler-modificar-gravar na aplicação
+-- (`estenderMensalidade`, em `src/server/prestadores/servico.ts`): lia a
+-- validade, calculava `max(agora, atual) + dias` em JS e gravava. Duas
+-- extensões concorrentes para o mesmo prestador leriam a mesma base e uma
+-- se perderia. A máquina de estado do pagamento serializava as chamadas, e
+-- por isso a corrida não acontecia na prática — mas depender de um
+-- invariante de outro módulo é o que esta função remove: a conta vive onde
+-- a corrida não existe, igual à do plano de vaga logo acima.
+--
+-- `p_dias is null` revoga, do mesmo jeito. A linha existe sempre que a
+-- pessoa é prestador; zero linhas devolvidas é "não tem perfil", e a
+-- aplicação traduz isso no 404 de sempre.
+create or replace function estender_mensalidade_prestador(
+  p_usuario uuid,
+  p_dias int
+)
+returns setof perfis_prestador language sql
+set search_path = public, pg_temp
+as $$
+  update perfis_prestador
+  set mensalidade_valida_ate = case
+    when p_dias is null then null
+    else greatest(
+      now(),
+      coalesce(mensalidade_valida_ate, now())
+    ) + make_interval(days => p_dias)
+  end
+  where usuario_id = p_usuario
+  returning *;
+$$;
+
+
 -- ============================================================================
 -- 9e. Assinaturas recorrentes
 --
@@ -1259,7 +1335,10 @@ select
     'facebook',     e.facebook
   ) as company,
   (select count(*) from candidaturas c where c.vaga_id = v.id) as applicant_count,
-  v.expira_em                 as expires_at
+  v.expira_em                 as expires_at,
+  -- Por último: `create or replace view` só aceita coluna nova no fim, e é
+  -- assim que `aplica-modalidade-vaga.sql` chega a um banco vivo (#300).
+  v.modalidade                as work_mode
 from vagas v
 join perfis_empresa e on e.usuario_id = v.empresa_id
 join usuarios u on u.id = e.usuario_id;

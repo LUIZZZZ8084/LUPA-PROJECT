@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { ehCidadeAtendida } from "@/lib/constants";
-import { onlyDigits } from "@/lib/format";
+import { ehCidadeValida } from "@/lib/cidades/servidor";
+import { SENHA_MINIMA } from "@/lib/constants";
+import { FORMATO_CNPJ, normalizarCnpj, onlyDigits } from "@/lib/format";
 import { type ErroCampo, erros } from "./errors";
 import { falha, ok, type Resultado } from "./result";
 
@@ -41,11 +42,24 @@ export function cpfValido(entrada: string): boolean {
   return digito(9, 10) === Number(d[9]) && digito(10, 11) === Number(d[10]);
 }
 
-/** CNPJ pelo dígito verificador, mesma lógica com os pesos do formato. */
+/**
+ * CNPJ pelo dígito verificador, numérico ou alfanumérico (#297).
+ *
+ * A conta é a mesma de sempre, módulo 11 com os mesmos pesos. A diferença
+ * do formato novo, que a Receita define na IN RFB 2.229/2024, é o valor de
+ * cada caractere: o código dele na tabela ASCII menos 48. Para os números
+ * isso dá o próprio número, então o CNPJ que já existe continua valendo
+ * sem tratamento à parte; a letra A vale 17, a B vale 18, e assim por
+ * diante.
+ *
+ * O exemplo da documentação da Receita, `12ABC34501DE35`, está nos testes.
+ */
 export function cnpjValido(entrada: string): boolean {
-  const d = onlyDigits(entrada);
-  if (d.length !== 14) return false;
-  if (/^(\d)\1{13}$/.test(d)) return false;
+  const c = normalizarCnpj(entrada);
+  if (!FORMATO_CNPJ.test(c)) return false;
+  if (/^(.)\1{13}$/.test(c)) return false;
+
+  const valor = (i: number) => c.charCodeAt(i) - 48;
 
   const digito = (ateIndice: number) => {
     const pesos =
@@ -53,12 +67,12 @@ export function cnpjValido(entrada: string): boolean {
         ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
         : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
     let soma = 0;
-    for (let i = 0; i < ateIndice; i++) soma += Number(d[i]) * pesos[i];
+    for (let i = 0; i < ateIndice; i++) soma += valor(i) * pesos[i];
     const resto = soma % 11;
     return resto < 2 ? 0 : 11 - resto;
   };
 
-  return digito(12) === Number(d[12]) && digito(13) === Number(d[13]);
+  return digito(12) === valor(12) && digito(13) === valor(13);
 }
 
 /**
@@ -88,15 +102,16 @@ export const zEmail = z
   .pipe(z.email("E-mail inválido."));
 
 /**
- * Senha: mínimo de 10 caracteres, sem exigir símbolo nem maiúscula.
+ * Senha: mínimo de `SENHA_MINIMA` caracteres, sem exigir símbolo nem
+ * maiúscula.
  *
  * Regra de composição empurra a pessoa para "Senha@123" e para o papelzinho
- * colado no monitor. Comprimento protege mais, e o público aqui inclui gente
- * digitando no celular. O teto de 200 evita ataque por senha gigante.
+ * colado no monitor. O público aqui inclui gente digitando no celular. O
+ * teto de 200 evita ataque por senha gigante.
  */
 export const zSenha = z
   .string()
-  .min(10, "Use pelo menos 10 caracteres.")
+  .min(SENHA_MINIMA, `Use pelo menos ${SENHA_MINIMA} caracteres.`)
   .max(200, "Senha longa demais.");
 
 export const zNome = z
@@ -112,7 +127,7 @@ export const zCelular = z
 
 export const zCnpj = z
   .string()
-  .transform(onlyDigits)
+  .transform(normalizarCnpj)
   .refine(cnpjValido, "CNPJ inválido.");
 
 /**
@@ -125,26 +140,26 @@ export const zCpf = z
   .refine(cpfValido, "CPF inválido.");
 
 /**
- * Cidade. Só município de Mato Grosso.
+ * Cidade: qualquer município do Brasil, no formato "Sinop - MT" (#301).
  *
  * A checagem é contra a lista do IBGE, e não um `z.string()` qualquer:
  * cidade digitada livre viraria "Sinop", "sinop" e "Sinop-MT" na mesma
  * base, e o filtro de cidade deixaria de agrupar — que é justamente o que
- * faz o app ser hiperlocal em vez de mais um mural de anúncios.
+ * faz a busca por perto funcionar em vez de virar mais um mural de
+ * anúncios. O estado faz parte do valor porque 232 nomes de município se
+ * repetem entre estados.
  */
 export const zCidade = z
-  .string()
+  .string({ error: "Escolha o estado e a cidade." })
   .trim()
-  .refine(ehCidadeAtendida, "Escolha uma cidade de Mato Grosso.");
+  .refine(ehCidadeValida, "Escolha o estado e a cidade.");
 
 /**
- * Bairro.
+ * Bairro da vaga — o único bairro que sobrou na Lupa (#321).
  *
- * Onde a cidade tem lista curada (Sinop), a interface oferece a lista; o
- * servidor não exige que o valor esteja nela. Exigir travaria o cadastro
- * de quem mora num bairro novo, e bairro novo aparece antes de qualquer
- * lista ser atualizada — em cidade que cresce como as do agro, aparece
- * todo ano.
+ * Texto livre e informativo: quem publica escreve o que quiser, e o
+ * servidor não exige lista nenhuma (não existe lista de bairro para o
+ * país, e bairro novo aparece antes de qualquer lista ser atualizada).
  *
  * O que o servidor garante é o que importa para o dado não apodrecer:
  * tamanho com limite e nada de string vazia disfarçada de bairro.

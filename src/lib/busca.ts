@@ -1,4 +1,5 @@
-import { ehCidadeAtendida } from "./constants";
+import { nomeDaCidade, type UF, UFS, ufDaCidade } from "./cidades";
+import { cidadesDaUf, ehCidadeValida } from "./cidades/servidor";
 
 /**
  * Leitura dos parâmetros de busca, compartilhada por `/vagas` e
@@ -28,7 +29,7 @@ export function umParametro(
 }
 
 /**
- * A cidade da URL, se for mesmo um município de MT.
+ * A cidade da URL, se for mesmo um município do Brasil ("Sinop - MT").
  *
  * A validação existe porque o valor vai para o título da página e para a
  * descrição. `?cidade=<script>` não executa nada — o React escapa —, mas
@@ -41,5 +42,67 @@ export function umParametro(
  */
 export function cidadeDaBusca(params: Parametros): string | undefined {
   const cidade = umParametro(params, "cidade");
-  return cidade && ehCidadeAtendida(cidade) ? cidade : undefined;
+  return cidade && ehCidadeValida(cidade) ? cidade : undefined;
+}
+
+/**
+ * O estado da URL, se for mesmo uma sigla de estado (#301).
+ *
+ * Mesma razão da cidade: o valor vai para o título e para o filtro, e
+ * sigla inventada não pode virar nem uma coisa nem outra.
+ */
+export function ufDaBusca(params: Parametros): UF | undefined {
+  const uf = umParametro(params, "uf")?.toUpperCase();
+  return UFS.find((u) => u.sigla === uf)?.sigla;
+}
+
+/**
+ * Estado e cidade da busca, coerentes entre si (#301).
+ *
+ * A cidade já traz o estado ("Sinop - MT"), então link antigo com só
+ * `?cidade=` continua achando o estado. E cidade de um estado com outro
+ * estado escolhido é descartada: o filtro nunca casaria, e a tela
+ * mostraria "nenhuma vaga" sem dizer por quê.
+ */
+export function lugarDaBusca(params: Parametros): {
+  uf?: UF;
+  cidade?: string;
+} {
+  const cidade = cidadeDaBusca(params);
+  const uf = ufDaBusca(params) ?? ufDaCidade(cidade) ?? undefined;
+  return {
+    uf,
+    cidade: cidade && ufDaCidade(cidade) === uf ? cidade : undefined,
+  };
+}
+
+/**
+ * Os filtros de lugar da barra de busca: estado e, escolhido o estado,
+ * as cidades dele.
+ *
+ * As cidades só entram com o estado escolhido. Sem isso, a página levaria
+ * 5.571 opções dentro do HTML a cada abertura — em 3G, para um filtro que
+ * quase ninguém abre.
+ */
+export function filtrosDeLugar(uf: UF | undefined) {
+  return [
+    {
+      key: "uf",
+      placeholder: "Todo o Brasil",
+      options: UFS.map((u) => ({ value: u.sigla, label: u.nome })),
+      limpa: ["cidade"],
+    },
+    ...(uf
+      ? [
+          {
+            key: "cidade",
+            placeholder: "Todas as cidades",
+            options: cidadesDaUf(uf).map((c) => ({
+              value: c,
+              label: nomeDaCidade(c),
+            })),
+          },
+        ]
+      : []),
+  ];
 }

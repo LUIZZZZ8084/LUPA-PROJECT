@@ -1,5 +1,6 @@
 import "server-only";
 
+import { erros } from "../errors";
 import { log } from "../logger";
 
 /**
@@ -34,6 +35,13 @@ export interface Email {
   assunto: string;
   /** Texto puro. Ver a nota sobre HTML abaixo. */
   corpo: string;
+  /**
+   * Para que serve este e-mail, para o log dizer qual fluxo parou.
+   *
+   * Existe para não ser preciso pôr o assunto, e muito menos o endereço,
+   * no registro da falha.
+   */
+  tipo: "recuperacao" | "verificacao_email" | "suporte";
 }
 
 export type ResultadoEnvio =
@@ -79,6 +87,7 @@ export async function enviarEmail(
 
     if (!resposta.ok) {
       const detalhe = await resposta.text().catch(() => "");
+      registrarFalha(email.tipo, resposta.status);
       return {
         ok: false,
         motivo: `O provedor de e-mail recusou o envio (${resposta.status}).`,
@@ -92,12 +101,46 @@ export async function enviarEmail(
      * senha é a lista de quem tem conta — a mesma informação que o login
      * se recusa a confirmar.
      */
-    log.info("e-mail enviado", { acao: "email.enviar" });
+    log.info("e-mail enviado", { acao: "email.enviar", tipo: email.tipo });
     return { ok: true };
   } catch {
+    registrarFalha(email.tipo, null);
     return {
       ok: false,
       motivo: "Não foi possível falar com o provedor de e-mail agora.",
     };
   }
+}
+
+/**
+ * Falha de envio vai para o Sentry, não só para o log (#326).
+ *
+ * Quem chama já registrava um `warn`, e `warn` não sai da Vercel: o envio
+ * podia parar por dias sem ninguém ver. É o caso concreto do plano grátis
+ * do Resend, que manda no máximo 100 e-mails por dia — num dia de
+ * lançamento, as confirmações de e-mail e as recuperações de senha param
+ * de sair, e a primeira notícia seria alguém sem conseguir entrar.
+ *
+ * Por `log.erro` com `indisponivel`, que é o único caminho que o logger
+ * manda ao Sentry. **Sem o endereço e sem o corpo da resposta**: o Resend
+ * pode ecoar o destinatário no erro, e a lista de quem pediu recuperação
+ * de senha é a lista de quem tem conta — o que o login se recusa a
+ * confirmar.
+ *
+ * O 429 ganha mensagem própria porque é o único caso com remédio na mão de
+ * quem opera: é cota, não defeito, e se resolve no plano do provedor.
+ */
+function registrarFalha(tipo: Email["tipo"], status: number | null) {
+  const detalhe =
+    status === 429
+      ? "Resend recusou por limite de envio (429): cota do plano ou excesso de pedidos"
+      : status === null
+        ? "Resend não respondeu: rede ou tempo esgotado"
+        : `Resend recusou o envio (${status})`;
+
+  log.erro(erros.indisponivel(detalhe), {
+    acao: "email.enviar",
+    tipo,
+    status,
+  });
 }

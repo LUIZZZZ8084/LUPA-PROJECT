@@ -27,7 +27,7 @@ function EmailLink({
     <a
       href={`mailto:${email}`}
       title={email}
-      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel-2 px-3 py-1.5 font-medium text-ink text-sm transition-colors hover:border-current"
+      className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-panel-2 px-3 py-1.5 font-medium text-ink text-sm transition-colors hover:border-current"
     >
       {icone}
       {rotulo}

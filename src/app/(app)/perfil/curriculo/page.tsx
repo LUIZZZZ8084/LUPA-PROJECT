@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonAnchor } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL } from "@/lib/format";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { geradorCurriculoLiberado } from "@/server/curriculo/servico";
 import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
@@ -23,8 +23,8 @@ const BENEFICIOS = [
 ];
 
 export default async function GeradorDeCurriculoPage() {
-  const sessao = await sessaoAtual();
-  if (!sessao || !pode(sessao.papel, "candidato:gerar_curriculo")) {
+  const sessao = await sessaoOuEntrar("/perfil/curriculo");
+  if (!pode(sessao.papel, "candidato:gerar_curriculo")) {
     notFound();
   }
 

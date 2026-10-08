@@ -1,19 +1,12 @@
 import { z } from "zod";
+import { JOB_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/constants";
 import {
-  CIDADE_INICIAL,
-  JOB_CATEGORIES,
-  MAX_BAIRROS_ATENDIDOS,
-  SERVICE_CATEGORIES,
-} from "@/lib/constants";
-import {
-  zBairro,
   zCelular,
   zCidade,
   zCnpj,
   zCpf,
   zEmail,
   zNome,
-  zNomeDeBairro,
   zSenha,
   zTexto,
 } from "../validation";
@@ -32,8 +25,12 @@ const base = {
   email: zEmail,
   senha: zSenha,
   telefone: zCelular,
-  cidade: zCidade.default(CIDADE_INICIAL),
-  bairro: zBairro,
+  /*
+   * Obrigatória e sem padrão (#301). O padrão era Sinop: quem não mexia no
+   * campo virava morador de Sinop sem saber, e com o país inteiro aberto
+   * esse palpite erra para quase todo mundo.
+   */
+  cidade: zCidade,
 };
 
 /**
@@ -93,13 +90,6 @@ export const schemaPrestador = z.object({
     .min(0)
     .max(70, "Confira os anos de experiência.")
     .optional(),
-  bairrosAtendidos: z
-    .union([z.string(), z.array(z.string())])
-    .transform((v) =>
-      (Array.isArray(v) ? v : [v]).map((b) => b.trim()).filter(Boolean),
-    )
-    .pipe(z.array(zNomeDeBairro).max(MAX_BAIRROS_ATENDIDOS))
-    .optional(),
 });
 
 /**
@@ -137,7 +127,7 @@ export const schemaEmpresa = z.object({
   setor: z.string().trim().max(80).optional(),
   porte: z.enum(["MEI", "Micro", "Pequena", "Média", "Grande"]).optional(),
   site: z
-    .union([z.url("Endereço de site inválido."), z.literal("")])
+    .union([z.httpUrl("Endereço de site inválido."), z.literal("")])
     .optional()
     .transform((v) => (v ? v : undefined)),
   descricao: zTexto(20, 2000, "A descrição").optional(),

@@ -23,9 +23,12 @@ vi.mock("next/cache", () => ({
   updateTag: () => {},
 }));
 
+let diasPedidos: number | null = null;
+
 vi.mock("@/server/repositories", () => ({
   repositorioUsuarios: () => ({
-    cortesDeSessao: async () => {
+    cortesDeSessao: async (dias: number) => {
+      diasPedidos = dias;
       if (explodir) throw new Error("banco fora do ar");
       return new Map(cortes);
     },
@@ -33,7 +36,12 @@ vi.mock("@/server/repositories", () => ({
 }));
 
 import { sessaoFoiRevogada } from "@/server/auth/revogacao";
-import type { Sessao } from "@/server/auth/session";
+import {
+  CONFIG_SESSAO,
+  lerSessao,
+  renovarSeNecessario,
+  type Sessao,
+} from "@/server/auth/session";
 
 const AGORA = Math.floor(Date.now() / 1000);
 
@@ -112,6 +120,44 @@ describe("revogação de sessão", () => {
 });
 
 /**
+ * Renovar não pode tirar ninguém da revogação (#323).
+ *
+ * A renovação roda no `proxy.ts`, que não tem banco e não confere o corte.
+ * Ela é segura só por duas razões, e cada uma tem o seu teste: o token
+ * renovado carrega o `iat` do login, e a lista de cortes alcança o token
+ * mais velho que a renovação consegue manter vivo.
+ */
+describe("renovação e revogação", () => {
+  beforeEach(() => {
+    cortes.clear();
+    explodir = false;
+    diasPedidos = null;
+  });
+
+  it("token revogado continua revogado depois de renovado", async () => {
+    const login = AGORA - 3 * 24 * 60 * 60;
+    cortes.set("u1", AGORA - 60);
+
+    const renovada = await renovarSeNecessario(
+      sessao({ emitidoEm: login, expiraEm: AGORA + 60 }),
+    );
+    const lida = await lerSessao(renovada?.token ?? "");
+
+    expect(lida).not.toBeNull();
+    expect(await sessaoFoiRevogada(lida as Sessao)).toBe(true);
+  });
+
+  it("a lista de cortes olha tão longe quanto a sessão mais velha vive", async () => {
+    await sessaoFoiRevogada(sessao());
+
+    expect(diasPedidos).not.toBeNull();
+    expect((diasPedidos ?? 0) * 24 * 60 * 60).toBeGreaterThanOrEqual(
+      CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS,
+    );
+  });
+});
+
+/**
  * A lista de cortes, nas duas implementações do repositório.
  *
  * O que se mede aqui é a janela: a lista traz só os últimos `dias`, e é
@@ -132,8 +178,7 @@ describe("a lista de cortes é curta por construção", () => {
       papel: "candidato_clt",
       nomeCompleto: "Alguém",
       telefone: "66999110012",
-      cidade: "Sinop",
-      bairro: null,
+      cidade: "Sinop - MT",
     });
 
     // Nada antes da troca: quem nunca trocou a senha não tem corte.
@@ -161,5 +206,39 @@ describe("a lista de cortes é curta por construção", () => {
     vi.setSystemTime(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000));
     expect((await repo.cortesDeSessao(7)).size).toBe(0);
     vi.useRealTimers();
+  });
+});
+
+describe("trocar o papel corta as sessões antigas (#352)", () => {
+  it("em memória, virar prestador entra na lista de cortes", async () => {
+    const { RepositorioMemoria } = await import(
+      "@/server/repositories/memoria"
+    );
+    const repo = new RepositorioMemoria();
+
+    const usuario = await repo.criar({
+      email: "papel@lupa.test",
+      senhaHash: "h",
+      papel: "candidato_clt",
+      nomeCompleto: "Alguém",
+      telefone: "66999110013",
+      cidade: "Sinop - MT",
+    });
+    expect((await repo.cortesDeSessao(7)).has(usuario.id)).toBe(false);
+
+    await repo.atualizarPapel(usuario.id, "prestador_servico");
+
+    // O token de candidato emitido antes da troca cai; o papel novo vale.
+    expect((await repo.cortesDeSessao(7)).has(usuario.id)).toBe(true);
+    expect((await repo.porId(usuario.id))?.papel).toBe("prestador_servico");
+  });
+
+  it("papel de quem não existe não cria corte", async () => {
+    const { RepositorioMemoria } = await import(
+      "@/server/repositories/memoria"
+    );
+    const repo = new RepositorioMemoria();
+    await repo.atualizarPapel("fantasma", "prestador_servico");
+    expect((await repo.cortesDeSessao(7)).size).toBe(0);
   });
 });

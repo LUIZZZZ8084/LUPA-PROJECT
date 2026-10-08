@@ -1,12 +1,12 @@
 /**
  * @vitest-environment node
  *
- * O app deixou de ser só de Sinop.
+ * O app atende o Brasil inteiro (#301).
  *
- * A promessa do AGENTS.md desde o V0 era "abrir outra cidade não deve
- * exigir migração de schema". Estes testes cobram a promessa: a lista de
- * municípios, a validação que decide quem entra, e o filtro que separa uma
- * cidade da outra.
+ * Começou em Sinop, abriu para Mato Grosso, e agora aceita qualquer
+ * município do país. Estes testes cobram as três coisas que fazem isso
+ * funcionar: a lista de municípios, a validação que decide quem entra, e
+ * o filtro que separa uma cidade — e um estado — do outro.
  */
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
@@ -16,146 +16,196 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser: async () => null,
 }));
 
-import {
-  bairrosDe,
-  CIDADE_INICIAL,
-  CIDADES,
-  ehCidadeAtendida,
-  rotuloDaCidade,
-} from "@/lib/constants";
+import { cidadeComUf, nomeDaCidade, UFS, ufDaCidade } from "@/lib/cidades";
+import { CARREGADORES } from "@/lib/cidades/indice";
+import { cidadesDaUf, ehCidadeValida } from "@/lib/cidades/servidor";
+import { CIDADES_POR_UF } from "@/lib/cidades/todas";
 import { getJobs, getProviders } from "@/lib/data";
 
-describe("municípios de Mato Grosso", () => {
+const todas = Object.values(CIDADES_POR_UF).flat();
+
+describe("municípios do Brasil", () => {
   /*
-   * O número é a conferência de que o arquivo gerado não foi truncado.
-   * MT tem 142 municípios desde 2025, quando Boa Esperança do Norte foi
-   * instalada. Se o IBGE criar outro, este teste falha e alguém roda
-   * `node scripts/gerar-cidades.mjs` — que é exatamente o lembrete que se
-   * quer.
+   * Os números são a conferência de que os arquivos gerados não foram
+   * truncados. Se o IBGE criar município, estes testes falham e alguém
+   * roda `node scripts/gerar-cidades.mjs` — que é exatamente o lembrete
+   * que se quer.
    */
-  it("são os 142 do estado", () => {
-    expect(CIDADES).toHaveLength(142);
+  it("são os 5.571 do país, nos 27 estados", () => {
+    expect(UFS).toHaveLength(27);
+    expect(todas).toHaveLength(5571);
+    expect(CIDADES_POR_UF.MT).toHaveLength(142);
   });
 
-  it("não tem nome repetido nem em branco", () => {
-    expect(new Set(CIDADES).size).toBe(CIDADES.length);
-    expect(CIDADES.every((c) => c.trim().length > 2)).toBe(true);
+  it("não tem nome repetido dentro de um estado, nem em branco", () => {
+    for (const [uf, nomes] of Object.entries(CIDADES_POR_UF)) {
+      expect(new Set(nomes).size, uf).toBe(nomes.length);
+      expect(
+        nomes.every((n) => n.trim().length > 1),
+        uf,
+      ).toBe(true);
+    }
   });
 
-  it("está em ordem alfabética de pt-BR — acento não vai para o fim", () => {
-    const ordenada = [...CIDADES].sort((a, b) => a.localeCompare(b, "pt-BR"));
-    expect(CIDADES).toEqual(ordenada);
+  it("cada estado está em ordem alfabética de pt-BR", () => {
+    for (const [uf, nomes] of Object.entries(CIDADES_POR_UF)) {
+      const ordenada = [...nomes].sort((a, b) => a.localeCompare(b, "pt-BR"));
+      expect(nomes, uf).toEqual(ordenada);
+    }
   });
 
   it("traz os nomes compostos inteiros, sem cortar no espaço", () => {
-    expect(CIDADES).toContain("Vila Bela da Santíssima Trindade");
-    expect(CIDADES).toContain("Lucas do Rio Verde");
-    expect(CIDADES).toContain("Campo Novo do Parecis");
+    expect(CIDADES_POR_UF.MT).toContain("Vila Bela da Santíssima Trindade");
+    expect(CIDADES_POR_UF.SP).toContain("São José do Rio Preto");
+    expect(CIDADES_POR_UF.RO).toContain("Alta Floresta D'Oeste");
   });
 
-  it("a cidade inicial continua sendo Sinop", () => {
-    expect(CIDADE_INICIAL).toBe("Sinop");
-    expect(CIDADES).toContain(CIDADE_INICIAL);
+  /*
+   * A razão de a cidade ser gravada com o estado. Se um dia isto voltar
+   * a dar zero, o formato pode até ser simplificado — mas não vai.
+   */
+  it("o nome sozinho não identifica a cidade: vários se repetem", () => {
+    const contagem = new Map<string, number>();
+    for (const n of todas) contagem.set(n, (contagem.get(n) ?? 0) + 1);
+    const repetidos = [...contagem.values()].filter((n) => n > 1);
+    expect(repetidos.length).toBeGreaterThan(200);
+    expect(contagem.get("Bom Jesus")).toBeGreaterThan(1);
+  });
+});
+
+/*
+ * O celular carrega as cidades de um estado por vez (#301). Cada
+ * carregador é um `import()` escrito pelo gerador, e um erro ali — AC
+ * apontando para o arquivo de AL — faria quem é do Acre ver as cidades de
+ * Alagoas, sem nada quebrar em lugar nenhum.
+ */
+describe("as cidades sob demanda, estado por estado", () => {
+  it("existe um carregador para cada estado, e só para eles", () => {
+    expect(Object.keys(CARREGADORES).sort()).toEqual(
+      UFS.map((u) => u.sigla).sort(),
+    );
+    expect(Object.keys(CIDADES_POR_UF).sort()).toEqual(
+      UFS.map((u) => u.sigla).sort(),
+    );
+  });
+
+  it("cada carregador traz exatamente as cidades do próprio estado", async () => {
+    for (const { sigla } of UFS) {
+      expect(await CARREGADORES[sigla](), sigla).toEqual(CIDADES_POR_UF[sigla]);
+    }
+  });
+});
+
+describe("o formato gravado: 'Cidade - UF'", () => {
+  it("monta e desmonta sem perder nada", () => {
+    expect(cidadeComUf("Sinop", "MT")).toBe("Sinop - MT");
+    expect(ufDaCidade("Sinop - MT")).toBe("MT");
+    expect(nomeDaCidade("Sinop - MT")).toBe("Sinop");
+  });
+
+  // "Mogi das Cruzes" não tem " - " — mas "Venha-Ver - RN" tem hífen.
+  it("o estado é o que vem depois do último ' - '", () => {
+    expect(ufDaCidade("Venha-Ver - RN")).toBe("RN");
+    expect(nomeDaCidade("Venha-Ver - RN")).toBe("Venha-Ver");
+  });
+
+  it("valor sem estado não inventa um", () => {
+    expect(ufDaCidade("Sinop")).toBeNull();
+    expect(ufDaCidade("Sinop - XX")).toBeNull();
+    expect(ufDaCidade(null)).toBeNull();
+    expect(nomeDaCidade("Sinop")).toBe("Sinop");
+  });
+
+  it("as cidades de um estado já vêm no formato gravado", () => {
+    expect(cidadesDaUf("MT")).toContain("Sinop - MT");
+    expect(cidadesDaUf("MT")).toHaveLength(142);
   });
 });
 
 describe("quem é aceito no cadastro", () => {
-  it("qualquer município de MT entra", () => {
-    for (const c of ["Sinop", "Cuiabá", "Sorriso", "Vera", "Alta Floresta"]) {
-      expect(ehCidadeAtendida(c), c).toBe(true);
+  it("qualquer município do Brasil entra, com o estado", () => {
+    for (const c of [
+      "Sinop - MT",
+      "Cuiabá - MT",
+      "São Paulo - SP",
+      "Porto Alegre - RS",
+      "Bom Jesus - PI",
+    ]) {
+      expect(ehCidadeValida(c), c).toBe(true);
     }
   });
 
   /*
-   * A comparação é exata de propósito. Aceitar "sinop" e "Sinop - MT"
-   * pareceria gentileza, mas encheria a base de três grafias da mesma
-   * cidade — e o filtro de cidade, que é o que faz o app ser hiperlocal,
-   * deixaria de agrupar.
+   * A comparação é exata de propósito. Aceitar "sinop" e "Sinop-MT"
+   * pareceria gentileza, mas encheria a base de grafias da mesma cidade
+   * — e o filtro de cidade deixaria de agrupar.
    */
   it("variação de grafia não entra", () => {
-    for (const c of ["sinop", "SINOP", "Sinop - MT", "Sinop ", ""]) {
-      expect(ehCidadeAtendida(c), JSON.stringify(c)).toBe(false);
+    for (const c of [
+      "sinop - mt",
+      "Sinop-MT",
+      "Sinop - MT ",
+      "SINOP - MT",
+      "",
+    ]) {
+      expect(ehCidadeValida(c), JSON.stringify(c)).toBe(false);
     }
   });
 
-  it("cidade de outro estado não entra", () => {
-    for (const c of ["Curitiba", "São Paulo", "Goiânia"]) {
-      expect(ehCidadeAtendida(c), c).toBe(false);
+  it("nome sem estado, ou com o estado errado, não entra", () => {
+    for (const c of ["Sinop", "Bom Jesus", "Sinop - SP", "Curitiba - MT"]) {
+      expect(ehCidadeValida(c), c).toBe(false);
     }
-  });
-
-  it("o rótulo mostra o estado junto", () => {
-    expect(rotuloDaCidade("Sorriso")).toBe("Sorriso - MT");
-  });
-});
-
-describe("bairro: lista onde existe, texto onde não existe", () => {
-  it("Sinop tem lista curada", () => {
-    expect(bairrosDe("Sinop").length).toBeGreaterThan(10);
-    expect(bairrosDe("Sinop")).toContain("Centro");
-  });
-
-  /*
-   * Não é falta: é a decisão. Manter bairro de 142 municípios não existe
-   * pronto em lugar nenhum e envelheceria sozinho. Onde não há curadoria,
-   * a tela pede texto — e o servidor aceita.
-   */
-  it("as outras cidades ficam sem lista, e isso é o combinado", () => {
-    for (const c of ["Cuiabá", "Sorriso", "Alta Floresta"]) {
-      expect(bairrosDe(c), c).toEqual([]);
-    }
-  });
-
-  it("cidade nula ou vazia não quebra", () => {
-    expect(bairrosDe(null)).toEqual([]);
-    expect(bairrosDe(undefined)).toEqual([]);
-    expect(bairrosDe("")).toEqual([]);
   });
 });
 
 /**
- * O que o critério de aceite da Issue #62 pede em uma frase: quem filtra
- * por uma cidade não vê a vaga da outra.
+ * Quem filtra por uma cidade não vê a vaga da outra (#62), e quem filtra
+ * por um estado não vê a vaga de outro (#301).
  */
-describe("o filtro de cidade separa de verdade", () => {
+describe("os filtros de lugar separam de verdade", () => {
   it("vaga de Sinop não aparece em outra cidade", async () => {
-    const emSinop = (await getJobs({ city: "Sinop" })).itens;
+    const emSinop = (await getJobs({ city: "Sinop - MT" })).itens;
     expect(emSinop.length).toBeGreaterThan(0);
 
-    const emSorriso = (await getJobs({ city: "Sorriso" })).itens;
+    const emSorriso = (await getJobs({ city: "Sorriso - MT" })).itens;
     const idsDeSorriso = new Set(emSorriso.map((j) => j.id));
 
     expect(emSinop.some((j) => idsDeSorriso.has(j.id))).toBe(false);
-    expect(emSorriso.every((j) => j.city === "Sorriso")).toBe(true);
+    expect(emSorriso.every((j) => j.city === "Sorriso - MT")).toBe(true);
   });
 
-  it("sem filtro de cidade, a busca cobre o estado inteiro", async () => {
-    const todas = (await getJobs()).itens;
-    const soSinop = (await getJobs({ city: "Sinop" })).itens;
-    expect(todas.length).toBeGreaterThanOrEqual(soSinop.length);
+  it("o filtro de estado pega todas as cidades dele, e só elas", async () => {
+    const emMt = (await getJobs({ uf: "MT" })).itens;
+    expect(emMt.length).toBeGreaterThan(0);
+    expect(emMt.every((j) => j.city.endsWith(" - MT"))).toBe(true);
+    expect((await getJobs({ uf: "SP" })).itens).toEqual([]);
+  });
+
+  it("sem filtro de lugar, a busca cobre o país inteiro", async () => {
+    const todasAsVagas = (await getJobs()).itens;
+    const soSinop = (await getJobs({ city: "Sinop - MT" })).itens;
+    expect(todasAsVagas.length).toBeGreaterThanOrEqual(soSinop.length);
   });
 
   it("vale igual para prestador", async () => {
-    const emSinop = (await getProviders({ city: "Sinop" })).itens;
-    expect(emSinop.every((p) => p.city === "Sinop")).toBe(true);
-    expect((await getProviders({ city: "Cuiabá" })).itens).toEqual([]);
+    const emSinop = (await getProviders({ city: "Sinop - MT" })).itens;
+    expect(emSinop.every((p) => p.city === "Sinop - MT")).toBe(true);
+    expect((await getProviders({ city: "Cuiabá - MT" })).itens).toEqual([]);
+    expect((await getProviders({ uf: "SP" })).itens).toEqual([]);
   });
 });
 
 /**
  * A regressão da Issue #76, travada no código-fonte.
  *
- * A camada de dados sempre esteve certa — `getJobs()` sem cidade devolve o
- * estado inteiro, e é o que a home consulta. Quem escondia a vaga era a
- * tela de busca, que preenchia a cidade com "Sinop" quando a URL não
- * trazia nenhuma. O resultado: vaga publicada em Sorriso aparecia nos
- * destaques da home e sumia de /vagas, e a empresa concluía que não tinha
- * publicado.
+ * A tela de busca preenchia a cidade com "Sinop" quando a URL não trazia
+ * nenhuma, e a vaga publicada em outra cidade sumia de /vagas enquanto
+ * aparecia nos destaques da home. Com o país inteiro aberto, o mesmo vale
+ * para o estado: sem nada na URL, a busca é do Brasil.
  *
  * jsdom não carrega rota do App Router, então a trava é sobre o texto do
- * arquivo — mesma escolha do contrato de layout em `cards.test.tsx`. O
- * caminho completo, no navegador, está em
- * `tests/e2e/vaga-de-outra-cidade.spec.ts`.
+ * arquivo — mesma escolha do contrato de layout em `cards.test.tsx`.
  */
 describe("contrato das telas de busca", () => {
   const telas = [
@@ -163,14 +213,14 @@ describe("contrato das telas de busca", () => {
     "src/app/(app)/servicos/(lista)/page.tsx",
   ];
 
-  it.each(telas)("%s não chuta cidade quando a URL não traz uma", (tela) => {
+  it.each(telas)("%s não chuta lugar quando a URL não traz um", (tela) => {
     const fonte = readFileSync(tela, "utf8");
     const semComentarios = fonte.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
 
-    // `single("cidade") ?? "..."` e `single("cidade") || "..."` — a leitura
-    // do parâmetro seguida de qualquer valor padrão.
+    // A leitura do parâmetro seguida de qualquer valor padrão.
     expect(semComentarios).not.toMatch(
-      /single\(\s*["']cidade["']\s*\)\s*(\?\?|\|\|)/,
+      /single\(\s*["'](cidade|uf)["']\s*\)\s*(\?\?|\|\|)/,
     );
+    expect(semComentarios).not.toMatch(/(uf|cidade)\s*(\?\?|\|\|)\s*["']/);
   });
 });

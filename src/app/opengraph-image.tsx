@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { LOGO_HORIZONTAL, NOME, simbolo } from "@/components/brand/marca";
 
 export const alt = "Lupa — Trabalho e profissionais perto de você";
 export const size = { width: 1200, height: 630 };
@@ -21,6 +22,12 @@ export const contentType = "image/png";
  * Esta rota precisa estar no matcher do `proxy.ts`: quem busca a imagem é o
  * servidor do WhatsApp, sem sessão, e o muro o mandaria para `/entrar`.
  */
+// A logo sobre o fundo escuro: as mesmas cores do tema escuro do app.
+const FUNDO = "#0b0f14";
+const TEXTO = "#f2f5f8";
+const ARO_DE = "#c8ee6a";
+const ARO_ATE = "#7fb02a";
+
 export default function ImagemDoLink() {
   return new ImageResponse(
     <div
@@ -31,34 +38,33 @@ export default function ImagemDoLink() {
         flexDirection: "column",
         justifyContent: "center",
         padding: "0 96px",
-        background: "#0b0f14",
-        color: "#f2f5f8",
+        background: FUNDO,
+        color: TEXTO,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-        <svg width="120" height="120" viewBox="0 0 48 48" fill="none">
-          <circle cx="21" cy="21" r="14" stroke="#a8d94a" strokeWidth="4" />
-          <line
-            x1="31"
-            y1="31"
-            x2="43"
-            y2="43"
-            stroke="#a8d94a"
-            strokeWidth="4"
-            strokeLinecap="round"
-          />
-          <path
-            d="M15 21 L19 25 L28 15"
-            stroke="#f2f5f8"
-            strokeWidth="2.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        <div style={{ fontSize: 96, fontWeight: 700, letterSpacing: -3 }}>
-          Lupa
-        </div>
-      </div>
+      <svg
+        width="420"
+        height="150"
+        viewBox={LOGO_HORIZONTAL.viewBox}
+        fill="none"
+        style={{ display: "flex" }}
+      >
+        <defs>
+          <linearGradient
+            id="aro"
+            gradientUnits="userSpaceOnUse"
+            x1="6"
+            y1="4"
+            x2="60"
+            y2="58"
+          >
+            <stop offset="0" stopColor={ARO_DE} />
+            <stop offset="1" stopColor={ARO_ATE} />
+          </linearGradient>
+        </defs>
+        {simbolo({ aro: "url(#aro)", disco: TEXTO, pessoa: FUNDO })}
+        <path d={NOME.d} fill={TEXTO} transform={LOGO_HORIZONTAL.nome} />
+      </svg>
 
       <div
         style={{
@@ -84,7 +90,7 @@ export default function ImagemDoLink() {
       </div>
 
       <div style={{ marginTop: 36, fontSize: 32, color: "#9aa7b4" }}>
-        Vagas e prestadores de serviço em Sinop e todo o Mato Grosso
+        Vagas e prestadores de serviço no Brasil inteiro
       </div>
     </div>,
     size,

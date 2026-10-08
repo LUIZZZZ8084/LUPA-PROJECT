@@ -9,6 +9,8 @@ import { LupaMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
+import { destinoSeguro } from "@/lib/destino";
 
 const inicial: EstadoFormulario = {};
 
@@ -25,25 +27,9 @@ function destino(papel: string | undefined): string {
   return "/";
 }
 
-/**
- * Só caminho interno é aceito como destino.
- *
- * O valor vem da URL, e a URL vem de fora. Sem esta checagem,
- * `/entrar?destino=https://outro-site` transformaria a tela de login num
- * trampolim: o golpista manda o link, a pessoa entra de verdade na Lupa e
- * é despejada num site que imita a Lupa pedindo a senha de novo.
- *
- * `//` no começo também sai — o navegador lê como protocolo relativo e
- * `//evil.com` vira um endereço externo.
- */
-function destinoSeguro(bruto: string | undefined): string | null {
-  if (!bruto) return null;
-  if (!bruto.startsWith("/") || bruto.startsWith("//")) return null;
-  return bruto;
-}
-
 export function SignInForm({ destino: pretendido }: { destino?: string }) {
   const [state, action, pending] = useActionState(entrarComEstado, inicial);
+  const envio = useEnvioQueNaoApaga(action, state);
   const router = useRouter();
 
   /**
@@ -55,13 +41,18 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
    * o formulário se redesenhava idêntico: para quem estava do outro lado,
    * "a caixa de login recarregou". A pessoa estava logada e não sabia.
    *
-   * A navegação é aqui, e não um `redirect()` na action, porque
-   * `criarAcao` captura toda exceção — inclusive o NEXT_REDIRECT, que é
-   * como o `redirect()` do Next funciona. Lá ele viraria mensagem de erro.
+   * A navegação é aqui, junto do destino que a tela já validou
+   * (`destinoSeguro`). Este comentário dizia que um `redirect()` na action
+   * seria engolido por `criarAcao`, e não seria: ela repassa `redirect()`
+   * e `notFound()` desde 21/08 (`ehControleDeFluxoDoNext`, em
+   * `src/server/action.ts`). A frase foi repetida no AGENTS.md e decidiu
+   * um desenho lá; corrigida nos dois na #334.
    */
   useEffect(() => {
     if (!state.ok) return;
-    router.replace(destinoSeguro(pretendido) ?? destino(state.papel));
+    router.replace(
+      destinoSeguro(pretendido, window.location.origin) ?? destino(state.papel),
+    );
   }, [state.ok, state.papel, pretendido, router]);
 
   return (
@@ -76,7 +67,7 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
         </p>
       </div>
 
-      <form action={action}>
+      <form action={action} {...envio}>
         <Panel className="space-y-5">
           <Field label="E-mail" required>
             <Input name="email" type="email" autoComplete="email" required />
@@ -129,7 +120,10 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
             senha perdia a conta, e o suporte também não tinha o que fazer.
           */}
           <p className="text-center text-muted text-xs">
-            <Link href="/esqueci-senha" className="underline hover:text-ink">
+            <Link
+              href="/esqueci-senha"
+              className="inline-flex min-h-11 items-center px-3 underline hover:text-ink"
+            >
               Esqueci minha senha
             </Link>
           </p>
@@ -140,7 +134,7 @@ export function SignInForm({ destino: pretendido }: { destino?: string }) {
         Ainda não tem conta?{" "}
         <Link
           href="/cadastro"
-          className="font-medium text-vagas hover:underline"
+          className="inline-flex min-h-11 items-center font-medium text-vagas hover:underline"
         >
           Criar conta gratuita
         </Link>

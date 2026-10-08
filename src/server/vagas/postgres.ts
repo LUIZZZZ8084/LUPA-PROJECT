@@ -3,6 +3,7 @@ import "server-only";
 import { daquiA } from "@/lib/format";
 import { TETO_DO_DONO } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
+import type { WorkMode } from "@/lib/types";
 import { erros } from "../errors";
 import type {
   DadosNovaVaga,
@@ -23,6 +24,7 @@ function paraVaga(linha: Record<string, unknown>): Vaga {
     bairro: (linha.bairro as string | null) ?? null,
     endereco: (linha.endereco as string | null) ?? null,
     tipoContrato: (linha.tipo_contrato as string | null) ?? null,
+    modalidade: (linha.modalidade as WorkMode | null) ?? null,
     salarioMin: (linha.salario_min as number | null) ?? null,
     salarioMax: (linha.salario_max as number | null) ?? null,
     habilidades: (linha.habilidades as string[] | null) ?? [],
@@ -100,6 +102,7 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
         bairro: dados.bairro ?? null,
         endereco: dados.endereco,
         tipo_contrato: dados.tipoContrato,
+        modalidade: dados.modalidade,
         salario_min: dados.salarioMin ?? null,
         salario_max: dados.salarioMax ?? null,
         habilidades: dados.habilidades ?? [],
@@ -152,6 +155,9 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
           : {}),
         ...(campos.tipoContrato !== undefined
           ? { tipo_contrato: campos.tipoContrato }
+          : {}),
+        ...(campos.modalidade !== undefined
+          ? { modalidade: campos.modalidade }
           : {}),
         ...(campos.salarioMin !== undefined
           ? { salario_min: campos.salarioMin }

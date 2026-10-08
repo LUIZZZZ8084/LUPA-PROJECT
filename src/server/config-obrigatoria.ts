@@ -41,6 +41,16 @@
  */
 type Ambiente = Record<string, string | undefined>;
 
+/**
+ * O tamanho mínimo do segredo que assina a sessão.
+ *
+ * Mora aqui, e não em `auth/session.ts`, porque este arquivo é carregado
+ * pela `instrumentation.ts` e não importa nada — trazer o módulo de sessão
+ * para a subida do processo arrastaria `jose` e o logger junto. A sessão
+ * importa daqui, e as duas regras são uma só.
+ */
+export const SEGREDO_DE_SESSAO_MINIMO = 32;
+
 interface Exigencia {
   nome: string;
   /** Por que ela é obrigatória, na voz de quem vai ler o deploy vermelho. */
@@ -52,11 +62,72 @@ interface Exigencia {
    * sentido onde existe cobrança de verdade.
    */
   exigida: (ambiente: Ambiente) => boolean;
+  /**
+   * Se o valor presente serve. Sem ela, qualquer valor não vazio serve.
+   *
+   * Existe para o segredo da sessão: um valor curto demais não é
+   * "configurado errado, mas funcionando" — `segredo()` o recusa na hora
+   * de assinar, e ninguém consegue entrar.
+   */
+  valida?: (valor: string) => boolean;
 }
 
 const sempre = () => true;
 
+/**
+ * O que produção diz quando uma variável do Supabase falta (#279).
+ *
+ * Sem banco, o app não quebra: ele entra em modo demonstração, que é o que
+ * permite rodá-lo sem infraestrutura. Em `lupapp.com.br` isso é o pior
+ * jeito de falhar — dado de exemplo servido como se fosse real, e conta
+ * criada numa memória que some no próximo deploy, sem nada ficar
+ * vermelho.
+ */
+const SEM_BANCO =
+  "sem ela o app não quebra: entra em modo demonstração, mostra os dados " +
+  "de exemplo como se fossem reais, e quem criar conta cria numa memória " +
+  "que some no próximo deploy";
+
 const EXIGENCIAS: Exigencia[] = [
+  {
+    nome: "NEXT_PUBLIC_SUPABASE_URL",
+    porque: `é o endereço do banco; ${SEM_BANCO}`,
+    exigida: sempre,
+  },
+  {
+    nome: "SUPABASE_ANON_KEY",
+    porque:
+      `é a chave anônima do banco; ${SEM_BANCO}. Se a Vercel ainda tem ` +
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY, é o nome antigo (#221): crie " +
+      "SUPABASE_ANON_KEY com o mesmo valor e apague a antiga",
+    exigida: sempre,
+  },
+  {
+    nome: "SUPABASE_SERVICE_ROLE_KEY",
+    porque:
+      "é a única chave que alcança a tabela de usuários. Sem ela, ninguém " +
+      "entra nem cria conta, e as telas que dependem dela mostram erro",
+    exigida: sempre,
+  },
+  {
+    nome: "SESSION_SECRET",
+    porque:
+      "é a chave que assina o login. Sem ela, ou com menos de " +
+      `${SEGREDO_DE_SESSAO_MINIMO} caracteres, o site abriria normalmente ` +
+      "e ninguém conseguiria entrar: toda sessão seria lida como " +
+      "inexistente, e o login falharia com erro interno. Gere uma com " +
+      "node -e \"console.log(require('crypto').randomBytes(48).toString('base64'))\" " +
+      "e cadastre como Secret",
+    exigida: sempre,
+    /*
+     * A mesma regra de `segredo()`, e não uma parecida (#271).
+     *
+     * Aquela função já recusava valor curto, só que tarde: na hora de
+     * assinar, com `lerSessao` engolindo a exceção em silêncio. Aqui a
+     * recusa acontece antes de atender alguém.
+     */
+    valida: (valor) => valor.length >= SEGREDO_DE_SESSAO_MINIMO,
+  },
   {
     nome: "NEXT_PUBLIC_APP_URL",
     porque:
@@ -96,9 +167,12 @@ export function conferirConfiguracaoDeProducao(
 ): void {
   if (ambiente.VERCEL_ENV !== "production") return;
 
-  const faltando = EXIGENCIAS.filter(
-    (e) => e.exigida(ambiente) && !ambiente[e.nome]?.trim(),
-  );
+  const faltando = EXIGENCIAS.filter((e) => {
+    if (!e.exigida(ambiente)) return false;
+    const valor = ambiente[e.nome]?.trim();
+    if (!valor) return true;
+    return e.valida ? !e.valida(valor) : false;
+  });
 
   /*
    * O multiplicador de limite é de suíte de teste, e em produção seria
@@ -116,39 +190,10 @@ export function conferirConfiguracaoDeProducao(
     );
   }
 
-  /*
-   * A chave anônima ainda pelo nome publicável (#221).
-   *
-   * Avisa, não derruba, e a diferença é a mesma que este arquivo já pesa
-   * em todo lugar: derrubar produção por causa de um **nome** de variável
-   * trocaria um risco hipotético por uma indisponibilidade real. O valor
-   * lido é o mesmo pelos dois nomes; o que muda é a promessa que o nome
-   * faz.
-   *
-   * `NEXT_PUBLIC_` manda o Next embutir o valor no bundle do navegador.
-   * Hoje isso não acontece porque nada no cliente importa `supabase/config`
-   * — e esse módulo agora é `server-only`, então passou a ser erro de
-   * build. O aviso existe para o nome sair da Vercel também, e não ficar
-   * de pé como armadilha para quem vier depois.
-   */
-  const soNomeAntigo =
-    !ambiente.SUPABASE_ANON_KEY?.trim() &&
-    Boolean(ambiente.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
-
-  if (soNomeAntigo) {
-    console.warn(
-      "[config] a chave anônima do Supabase ainda vem de " +
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY. O prefixo manda o Next embutir o " +
-        "valor no JavaScript do navegador, e quem a tiver lê telefone de " +
-        "todo prestador sem login. Crie SUPABASE_ANON_KEY na Vercel " +
-        "(Production) com o mesmo valor, apague a antiga e republique.",
-    );
-  }
-
   if (faltando.length === 0) return;
 
   throw new Error(
-    `Configuração obrigatória ausente em produção: ${faltando
+    `Configuração obrigatória ausente ou inválida em produção: ${faltando
       .map((e) => e.nome)
       .join(", ")}.\n\n${faltando
       .map((e) => `• ${e.nome} — ${e.porque}.`)

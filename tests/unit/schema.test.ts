@@ -28,8 +28,8 @@ async function criarUsuario(
   extras: { bairro?: string } = {},
 ) {
   const r = await db.query<{ id: string }>(
-    `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, bairro)
-     values ($1, $2, $3::papel_usuario, $4, $5, $6) returning id`,
+    `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, bairro, cidade)
+     values ($1, $2, $3::papel_usuario, $4, $5, $6, 'Sinop - MT') returning id`,
     [
       email,
       "$argon2id$v=19$m=19456,t=2,p=1$abc$def",
@@ -271,8 +271,8 @@ describe("regras que só existem no banco", () => {
   it("recusa telefone que não seja só dígitos", async () => {
     await expect(
       db.query(
-        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-         values ('mascara@teste.lupa', 'h', 'candidato_clt', 'X', '(66) 99911-0001')`,
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('mascara@teste.lupa', 'h', 'candidato_clt', 'X', '(66) 99911-0001', 'Sinop - MT')`,
       ),
     ).rejects.toThrow();
   });
@@ -280,8 +280,8 @@ describe("regras que só existem no banco", () => {
   it("recusa e-mail sem arroba", async () => {
     await expect(
       db.query(
-        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-         values ('semarroba', 'h', 'candidato_clt', 'X', '66999110001')`,
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('semarroba', 'h', 'candidato_clt', 'X', '66999110001', 'Sinop - MT')`,
       ),
     ).rejects.toThrow();
   });
@@ -296,8 +296,8 @@ describe("regras que só existem no banco", () => {
 
     await expect(
       db.query(
-        `insert into vagas (empresa_id, titulo, descricao, salario_min, salario_max)
-         values ($1, 'Cargo', 'Descrição', 5000, 2000)`,
+        `insert into vagas (empresa_id, titulo, descricao, salario_min, salario_max, cidade)
+         values ($1, 'Cargo', 'Descrição', 5000, 2000, 'Sinop - MT')`,
         [empresaId],
       ),
     ).rejects.toThrow();
@@ -311,8 +311,8 @@ describe("regras que só existem no banco", () => {
       [empresaId],
     );
     const vaga = await db.query<{ id: string }>(
-      `insert into vagas (empresa_id, titulo, descricao)
-       values ($1, 'Cargo', 'Descrição') returning id`,
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Cargo', 'Descrição', 'Sinop - MT') returning id`,
       [empresaId],
     );
     const candidatoId = await criarUsuario("candidato_clt", "cand@teste.lupa");
@@ -473,6 +473,103 @@ describe("limite de publicações, imposto pelo banco", () => {
   });
 });
 
+/**
+ * A mensalidade de prestador estendida pela função do banco (#348).
+ *
+ * A aritmética — `max(agora, prazo atual) + dias`, para quem renova antes de
+ * vencer não perder os dias já pagos — mora no `update`, e não numa leitura
+ * seguida de gravação na aplicação: é onde duas extensões concorrentes do
+ * mesmo prestador deixariam de se atropelar. O que se prova aqui é o
+ * comportamento da conta num Postgres de verdade; a mesma aritmética no
+ * caminho de memória (demonstração) é coberta por
+ * `prestadores-mensalidade.test.ts`.
+ *
+ * As datas são conferidas com margem, não por igualdade: entre a função
+ * rodar e o teste ler, passam milissegundos.
+ */
+describe("mensalidade de prestador, no banco", () => {
+  const UM_DIA_MS = 24 * 60 * 60 * 1000;
+
+  async function novoPrestador(email: string): Promise<string> {
+    const id = await criarUsuario("prestador_servico", email);
+    await db.query(
+      "insert into perfis_prestador (usuario_id, categoria_id) values ($1, 1)",
+      [id],
+    );
+    return id;
+  }
+
+  async function estender(id: string, dias: number | null) {
+    const r = await db.query<{ ate: string | null }>(
+      "select mensalidade_valida_ate as ate from estender_mensalidade_prestador($1, $2)",
+      [id, dias],
+    );
+    return r.rows;
+  }
+
+  function diasAPartirDeAgora(iso: string): number {
+    return (new Date(iso).getTime() - Date.now()) / UM_DIA_MS;
+  }
+
+  it("sem validade anterior, estende a partir de agora", async () => {
+    const id = await novoPrestador("prest-sem@teste.lupa");
+
+    const linhas = await estender(id, 30);
+
+    expect(linhas).toHaveLength(1);
+    const dias = diasAPartirDeAgora(linhas[0].ate as string);
+    expect(dias).toBeGreaterThan(29);
+    expect(dias).toBeLessThan(31);
+  });
+
+  it("renovar antes de vencer soma ao prazo que já valia", async () => {
+    const id = await novoPrestador("prest-futuro@teste.lupa");
+    await db.query(
+      "update perfis_prestador set mensalidade_valida_ate = now() + interval '10 days' where usuario_id = $1",
+      [id],
+    );
+
+    const linhas = await estender(id, 30);
+
+    // Soma aos 10 que já valiam: ~40, não ~30.
+    const dias = diasAPartirDeAgora(linhas[0].ate as string);
+    expect(dias).toBeGreaterThan(39);
+    expect(dias).toBeLessThan(41);
+  });
+
+  it("com a validade já vencida, estende a partir de agora", async () => {
+    const id = await novoPrestador("prest-vencido@teste.lupa");
+    await db.query(
+      "update perfis_prestador set mensalidade_valida_ate = now() - interval '5 days' where usuario_id = $1",
+      [id],
+    );
+
+    const linhas = await estender(id, 30);
+
+    const dias = diasAPartirDeAgora(linhas[0].ate as string);
+    expect(dias).toBeGreaterThan(29);
+    expect(dias).toBeLessThan(31);
+  });
+
+  it("p_dias nulo revoga a mensalidade", async () => {
+    const id = await novoPrestador("prest-revoga@teste.lupa");
+    await estender(id, 30);
+
+    const linhas = await estender(id, null);
+
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0].ate).toBeNull();
+  });
+
+  it("sem perfil de prestador, não devolve linha nenhuma", async () => {
+    const id = await criarUsuario("candidato_clt", "so-candidato@teste.lupa");
+
+    const linhas = await estender(id, 30);
+
+    expect(linhas).toHaveLength(0);
+  });
+});
+
 describe("views devolvem o formato que a aplicação espera", () => {
   it("provider_listings traz a categoria como objeto", async () => {
     const r = await db.query<{
@@ -519,8 +616,8 @@ describe("views devolvem o formato que a aplicação espera", () => {
       expira_em: string;
       criado_em: string;
     }>(
-      `insert into vagas (empresa_id, titulo, descricao)
-       values ($1, 'Teste de prazo', 'Descrição de teste para o prazo de expiração.')
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Teste de prazo', 'Descrição de teste para o prazo de expiração.', 'Sinop - MT')
        returning id, expira_em, criado_em`,
       [empresaId],
     );
@@ -551,9 +648,9 @@ describe("views devolvem o formato que a aplicação espera", () => {
    */
   it("job_listings diz se quem contrata é pessoa física, sem expor documento", async () => {
     await db.query(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf)
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf, cidade)
        values ('autonomo@lupa.test', 'h', 'prestador_servico', 'Quem Contrata',
-               '66999990009', '11144477735')`,
+               '66999990009', '11144477735', 'Sinop - MT')`,
     );
     await db.query(
       `insert into perfis_empresa (usuario_id, razao_social, cnpj)
@@ -564,7 +661,7 @@ describe("views devolvem o formato que a aplicação espera", () => {
       `insert into vagas (empresa_id, titulo, descricao, categoria, cidade,
                           tipo_contrato)
        select id, 'Ajudante de lavoura', 'Diária na colheita.', 'Agronegócio',
-              'Sinop', 'CLT'
+              'Sinop - MT', 'CLT'
          from usuarios where email = 'autonomo@lupa.test'`,
     );
 
@@ -750,15 +847,15 @@ describe("grants de anon e authenticated", () => {
 
   it("o CPF é único onde existe, e livre onde não existe", async () => {
     await db.query(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf)
-       values ('cpf1@lupa.test', 'h', 'prestador_servico', 'Um', '66999990001', '52998224725')`,
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf, cidade)
+       values ('cpf1@lupa.test', 'h', 'prestador_servico', 'Um', '66999990001', '52998224725', 'Sinop - MT')`,
     );
 
     // Segundo prestador com o mesmo documento não entra.
     await expect(
       db.query(
-        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf)
-         values ('cpf2@lupa.test', 'h', 'prestador_servico', 'Dois', '66999990002', '52998224725')`,
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cpf, cidade)
+         values ('cpf2@lupa.test', 'h', 'prestador_servico', 'Dois', '66999990002', '52998224725', 'Sinop - MT')`,
       ),
     ).rejects.toThrow();
 
@@ -767,9 +864,9 @@ describe("grants de anon e authenticated", () => {
      * esmagadora maioria das contas nunca vai ter CPF — não é prestador.
      */
     await db.query(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('semcpf1@lupa.test', 'h', 'candidato_clt', 'Três', '66999990003'),
-              ('semcpf2@lupa.test', 'h', 'candidato_clt', 'Quatro', '66999990004')`,
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('semcpf1@lupa.test', 'h', 'candidato_clt', 'Três', '66999990003', 'Sinop - MT'),
+              ('semcpf2@lupa.test', 'h', 'candidato_clt', 'Quatro', '66999990004', 'Sinop - MT')`,
     );
   });
 
@@ -997,8 +1094,8 @@ describe("contagem de visualizações", () => {
     await banco.exec(SCHEMA);
 
     const empresa = await banco.query<{ id: string }>(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('vis@teste.lupa', 'h', 'empresa', 'Empresa', '66000000001')
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('vis@teste.lupa', 'h', 'empresa', 'Empresa', '66000000001', 'Sinop - MT')
        returning id`,
     );
     await banco.query(
@@ -1007,8 +1104,8 @@ describe("contagem de visualizações", () => {
       [empresa.rows[0].id],
     );
     const vaga = await banco.query<{ id: string }>(
-      `insert into vagas (empresa_id, titulo, descricao)
-       values ($1, 'Cargo', 'Descrição') returning id`,
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Cargo', 'Descrição', 'Sinop - MT') returning id`,
       [empresa.rows[0].id],
     );
     vagaId = vaga.rows[0].id;
@@ -1100,8 +1197,8 @@ describe("habilidades da vaga", () => {
     await banco.exec(SCHEMA);
 
     const empresa = await banco.query<{ id: string }>(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('hab@teste.lupa', 'h', 'empresa', 'Empresa', '66000000001')
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('hab@teste.lupa', 'h', 'empresa', 'Empresa', '66000000001', 'Sinop - MT')
        returning id`,
     );
     empresaId = empresa.rows[0].id;
@@ -1119,7 +1216,7 @@ describe("habilidades da vaga", () => {
   it("nasce como lista vazia, não nula", async () => {
     const r = await banco.query<{ habilidades: string[] }>(
       `insert into vagas (empresa_id, titulo, descricao, cidade)
-       select usuario_id, 'Vaga sem habilidade', 'Descricao.', 'Sinop'
+       select usuario_id, 'Vaga sem habilidade', 'Descricao.', 'Sinop - MT'
          from perfis_empresa limit 1
        returning habilidades`,
     );
@@ -1130,7 +1227,7 @@ describe("habilidades da vaga", () => {
   it("guarda a lista como veio, sem mexer no texto", async () => {
     const r = await banco.query<{ habilidades: string[] }>(
       `insert into vagas (empresa_id, titulo, descricao, cidade, habilidades)
-       select usuario_id, 'Operador', 'Descricao.', 'Sinop',
+       select usuario_id, 'Operador', 'Descricao.', 'Sinop - MT',
               array['Colheitadeira', 'CNH D']
          from perfis_empresa limit 1
        returning habilidades`,
@@ -1173,8 +1270,8 @@ describe("candidatos disponíveis", () => {
       ["nao@teste.lupa", "Quem Nao Optou", false],
     ] as const) {
       const u = await banco.query<{ id: string }>(
-        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-         values ($1, 'h', 'candidato_clt', $2, '66000000001') returning id`,
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ($1, 'h', 'candidato_clt', $2, '66000000001', 'Sinop - MT') returning id`,
         [email, nome],
       );
       await banco.query(
@@ -1191,8 +1288,8 @@ describe("candidatos disponíveis", () => {
 
   it("nasce desligado — o padrão é o que protege", async () => {
     const u = await banco.query<{ id: string }>(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('padrao@teste.lupa', 'h', 'candidato_clt', 'Padrao', '66000000002')
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('padrao@teste.lupa', 'h', 'candidato_clt', 'Padrao', '66000000002', 'Sinop - MT')
        returning id`,
     );
     const r = await banco.query<{ visivel_para_empresas: boolean }>(
@@ -1736,8 +1833,8 @@ describe("corte de revogação de sessão", () => {
    */
   it("nasce nula, e a esmagadora maioria continua assim", async () => {
     const r = await banco.query<{ corte: string | null }>(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('corte@lupa.test', 'h', 'candidato_clt', 'Alguém', '66999110009')
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('corte@lupa.test', 'h', 'candidato_clt', 'Alguém', '66999110009', 'Sinop - MT')
        returning sessoes_validas_desde as corte`,
     );
     expect(r.rows[0].corte).toBeNull();
@@ -1769,11 +1866,11 @@ describe("corte de revogação de sessão", () => {
   it("a lista traz só os últimos sete dias", async () => {
     await banco.query(
       `insert into usuarios (email, senha_hash, papel, nome_completo, telefone,
-                             sessoes_validas_desde)
+                             sessoes_validas_desde, cidade)
        values ('recente@lupa.test', 'h', 'candidato_clt', 'Recente', '66999110010',
-               now() - interval '2 days'),
+               now() - interval '2 days', 'Sinop - MT'),
               ('antigo@lupa.test',  'h', 'candidato_clt', 'Antigo',  '66999110011',
-               now() - interval '30 days')`,
+               now() - interval '30 days', 'Sinop - MT')`,
     );
 
     const r = await banco.query<{ email: string }>(
@@ -1819,8 +1916,8 @@ describe("finalidade do token de uso único", () => {
     await banco.exec(SCHEMA);
 
     const r = await banco.query<{ id: string }>(
-      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone)
-       values ('token@lupa.test', 'h', 'candidato_clt', 'Alguém', '66999110013')
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('token@lupa.test', 'h', 'candidato_clt', 'Alguém', '66999110013', 'Sinop - MT')
        returning id`,
     );
     usuarioId = r.rows[0].id;
@@ -1887,5 +1984,298 @@ describe("finalidade do token de uso único", () => {
       "recuperacao",
       "verificacao_email",
     ]);
+  });
+});
+
+/**
+ * A limpeza dos dados de exemplo da produção (#302), executada de verdade.
+ *
+ * O script apaga por id, e o que precisa ser provado é o que o id não
+ * alcança: a conta real fica, e o que pendia das contas de exemplo vai
+ * junto pelas chaves estrangeiras — sem sobrar vaga órfã na busca.
+ */
+describe("aplica-remove-dados-de-exemplo.sql", () => {
+  let banco: PGlite;
+  const LIMPEZA = readFileSync(
+    join(process.cwd(), "supabase/aplica-remove-dados-de-exemplo.sql"),
+    "utf8",
+  );
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+    await banco.exec(
+      readFileSync(join(process.cwd(), "supabase/seed.sql"), "utf8"),
+    );
+
+    // Uma pessoa de verdade, que se candidatou a uma vaga de exemplo.
+    const real = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('real@teste.lupa', 'h', 'candidato_clt', 'Pessoa Real', '66999110001', 'Cuiabá - MT')
+       returning id`,
+    );
+    await banco.query(
+      `insert into candidaturas (vaga_id, candidato_id)
+       values ('44444444-4444-4444-8444-000000000002', $1)`,
+      [real.rows[0].id],
+    );
+
+    await banco.exec(LIMPEZA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  it("não sobra conta nem vaga de exemplo", async () => {
+    const contas = await banco.query<{ total: number }>(
+      `select count(*)::int as total from usuarios
+        where id::text like '11111111-%' or id::text like '22222222-%'
+           or id::text like '33333333-%'`,
+    );
+    const vagas = await banco.query<{ total: number }>(
+      "select count(*)::int as total from vagas",
+    );
+    expect(contas.rows[0].total).toBe(0);
+    expect(vagas.rows[0].total).toBe(0);
+  });
+
+  it("a conta real continua, e só perde a candidatura à vaga que sumiu", async () => {
+    const real = await banco.query<{ total: number }>(
+      "select count(*)::int as total from usuarios where email = 'real@teste.lupa'",
+    );
+    const candidaturas = await banco.query<{ total: number }>(
+      "select count(*)::int as total from candidaturas",
+    );
+    expect(real.rows[0].total).toBe(1);
+    expect(candidaturas.rows[0].total).toBe(0);
+  });
+
+  it("nada fica pendurado nas contas que saíram", async () => {
+    for (const tabela of [
+      "perfis_prestador",
+      "perfis_empresa",
+      "avaliacoes",
+      "publicacoes",
+      "pedidos_verificacao",
+    ]) {
+      const r = await banco.query<{ total: number }>(
+        `select count(*)::int as total from ${tabela}`,
+      );
+      expect(r.rows[0].total, tabela).toBe(0);
+    }
+  });
+
+  it("rodar de novo não quebra nem apaga mais nada", async () => {
+    await banco.exec(LIMPEZA);
+    const r = await banco.query<{ total: number }>(
+      "select count(*)::int as total from usuarios",
+    );
+    expect(r.rows[0].total).toBe(1);
+  });
+});
+
+/**
+ * A avaliação de empresa passa a levar o nome da empresa (#315).
+ *
+ * O script corrige o que já foi gravado com o nome do responsável. O que
+ * ele não pode tocar importa tanto quanto: a avaliação de pessoa física, a
+ * de empresa ainda sem perfil e a do seed, que não tem dono.
+ */
+describe("aplica-avaliacao-assinada-pela-empresa.sql", () => {
+  let banco: PGlite;
+  const SCRIPT = readFileSync(
+    join(process.cwd(), "supabase/aplica-avaliacao-assinada-pela-empresa.sql"),
+    "utf8",
+  );
+
+  async function conta(papel: string, email: string, nome: string) {
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ($1, 'h', $2::papel_usuario, $3, '66999110001', 'Sinop - MT')
+       returning id`,
+      [email, papel, nome],
+    );
+    return r.rows[0].id;
+  }
+
+  async function avaliar(
+    prestador: string,
+    avaliador: string | null,
+    nome: string,
+  ) {
+    await banco.query(
+      `insert into avaliacoes (prestador_id, avaliador_id, nome_avaliador, nota)
+       values ($1, $2, $3, 5)`,
+      [prestador, avaliador, nome],
+    );
+  }
+
+  async function nomes() {
+    const r = await banco.query<{ nome_avaliador: string }>(
+      "select nome_avaliador from avaliacoes order by nome_avaliador",
+    );
+    return r.rows.map((l) => l.nome_avaliador);
+  }
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+
+    const prestador = await conta(
+      "prestador_servico",
+      "p@teste.lupa",
+      "Prestador",
+    );
+    const empresa = await conta(
+      "empresa",
+      "e@teste.lupa",
+      "Responsável da Empresa",
+    );
+    const semPerfil = await conta(
+      "empresa",
+      "s@teste.lupa",
+      "Empresa Sem Perfil",
+    );
+    const pessoa = await conta(
+      "candidato_clt",
+      "c@teste.lupa",
+      "Pessoa Candidata",
+    );
+    await banco.query(
+      `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+       values ($1, 'Mercado Bom Preço', '11222333000181')`,
+      [empresa],
+    );
+
+    await avaliar(prestador, empresa, "Responsável da Empresa");
+    await avaliar(prestador, semPerfil, "Empresa Sem Perfil");
+    await avaliar(prestador, pessoa, "Pessoa Candidata");
+    await avaliar(prestador, null, "Avaliação do Seed");
+
+    await banco.exec(SCRIPT);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  it("a avaliação da empresa passa a levar o nome da empresa", async () => {
+    expect(await nomes()).toContain("Mercado Bom Preço");
+    expect(await nomes()).not.toContain("Responsável da Empresa");
+  });
+
+  it("pessoa, empresa sem perfil e seed ficam como estavam", async () => {
+    expect(await nomes()).toEqual(
+      expect.arrayContaining([
+        "Empresa Sem Perfil",
+        "Pessoa Candidata",
+        "Avaliação do Seed",
+      ]),
+    );
+  });
+
+  it("rodar de novo não muda nada", async () => {
+    const antes = await nomes();
+    await banco.exec(SCRIPT);
+    expect(await nomes()).toEqual(antes);
+  });
+});
+
+/**
+ * O teste grátis é um por conta (#392).
+ *
+ * A coluna mora em `usuarios` — fechada para a chave anônima —, e não em
+ * `perfis_prestador`, que ela lê. A reivindicação é uma instrução só, e é
+ * isso que impede duas ativações simultâneas de concederem o teste duas
+ * vezes.
+ */
+describe("teste_gratis_usado_em", () => {
+  let banco: PGlite;
+  const MIGRACAO = readFileSync(
+    join(process.cwd(), "supabase/aplica-teste-gratis-usado.sql"),
+    "utf8",
+  );
+
+  async function conta(email: string) {
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ($1, 'h', 'prestador_servico', 'Prestador', '66999110001', 'Sinop - MT')
+       returning id`,
+      [email],
+    );
+    return r.rows[0].id;
+  }
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  });
+
+  afterAll(async () => {
+    await banco.close();
+  });
+
+  it("conta nova nasce sem ter usado o teste", async () => {
+    const id = await conta("novo@teste.lupa");
+    const r = await banco.query<{ usado: string | null }>(
+      `select teste_gratis_usado_em as usado from usuarios where id = $1`,
+      [id],
+    );
+    expect(r.rows[0].usado).toBeNull();
+  });
+
+  /** A condição `is null` é o que faz a segunda reivindicação perder. */
+  it("a reivindicação é atômica: só a primeira leva o teste", async () => {
+    const id = await conta("reivindica@teste.lupa");
+    const reivindicar = () =>
+      banco.query(
+        `update usuarios set teste_gratis_usado_em = now()
+          where id = $1 and teste_gratis_usado_em is null
+          returning id`,
+        [id],
+      );
+
+    expect((await reivindicar()).rows).toHaveLength(1);
+    expect((await reivindicar()).rows).toHaveLength(0);
+  });
+
+  it("a chave anônima não alcança a coluna", async () => {
+    const r = await banco.query<{ tem: boolean }>(
+      `select has_column_privilege('anon', 'usuarios', 'teste_gratis_usado_em', 'SELECT') as tem`,
+    );
+    expect(r.rows[0].tem).toBe(false);
+  });
+
+  it("a migração é segura de rodar de novo e não preenche ninguém", async () => {
+    const id = await conta("migracao@teste.lupa");
+    await banco.exec(MIGRACAO);
+    await banco.exec(MIGRACAO);
+
+    const r = await banco.query<{ usado: string | null }>(
+      `select teste_gratis_usado_em as usado from usuarios where id = $1`,
+      [id],
+    );
+    // Sem preenchimento retroativo, de propósito: quem ainda não usou o
+    // teste mantém o direito a um.
+    expect(r.rows[0].usado).toBeNull();
+  });
+
+  it("a migração acrescenta a coluna a um banco que ainda não a tem", async () => {
+    const antigo = await PGlite.create();
+    try {
+      await antigo.exec(SCHEMA);
+      await antigo.exec(
+        `alter table usuarios drop column teste_gratis_usado_em`,
+      );
+      await antigo.exec(MIGRACAO);
+      const r = await antigo.query<{ coluna: string }>(
+        `select column_name as coluna from information_schema.columns
+          where table_name = 'usuarios' and column_name = 'teste_gratis_usado_em'`,
+      );
+      expect(r.rows).toHaveLength(1);
+    } finally {
+      await antigo.close();
+    }
   });
 });

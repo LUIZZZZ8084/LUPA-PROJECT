@@ -51,7 +51,7 @@ const VAGA = {
   id: "vaga-1",
   titulo: "Operador de colheitadeira",
   categoria: "Agronegócio",
-  cidade: "Sinop",
+  cidade: "Sinop - MT",
   empresaId: empresa.usuarioId,
 };
 
@@ -85,18 +85,18 @@ describe("avisos de vaga", () => {
   describe("preferência", () => {
     it("guarda cidade e categoria, e devolve na leitura", async () => {
       await salvarPreferencia(candidato, {
-        cidade: "Sinop",
+        cidade: "Sinop - MT",
         categoria: "Agronegócio",
       });
 
       expect(await preferenciaAtual(candidato)).toMatchObject({
-        cidade: "Sinop",
+        cidade: "Sinop - MT",
         categoria: "Agronegócio",
       });
     });
 
     /**
-     * Cidade livre viraria "Sinop", "sinop" e "Sinop-MT" na mesma base, e o
+     * Cidade livre viraria "Sinop - MT", "sinop" e "Sinop-MT" na mesma base, e o
      * casamento com a vaga deixaria de acontecer: a pessoa marcaria a
      * preferência e nunca receberia nada, sem saber por quê.
      */
@@ -113,7 +113,7 @@ describe("avisos de vaga", () => {
     it("categoria inventada é recusada", async () => {
       const erro = await capturar(() =>
         salvarPreferencia(candidato, {
-          cidade: "Sinop",
+          cidade: "Sinop - MT",
           categoria: "Astronauta",
         }),
       );
@@ -122,7 +122,7 @@ describe("avisos de vaga", () => {
 
     it("sem sessão é 401", async () => {
       const erro = await capturar(() =>
-        salvarPreferencia(null, { cidade: "Sinop", categoria: null }),
+        salvarPreferencia(null, { cidade: "Sinop - MT", categoria: null }),
       );
       expect(erro.codigo).toBe("nao_autenticado");
     });
@@ -130,17 +130,17 @@ describe("avisos de vaga", () => {
 
   describe("quem recebe", () => {
     it("quem pediu a cidade e a área recebe", async () => {
-      await ligar(candidato, "Sinop", "Agronegócio");
+      await ligar(candidato, "Sinop - MT", "Agronegócio");
 
       await avisarVagaNova(VAGA);
 
       expect(enviados).toHaveLength(1);
-      expect(enviados[0].titulo).toContain("Sinop");
+      expect(enviados[0].titulo).toContain("Sinop - MT");
     });
 
     /** Sem categoria escolhida, recebe tudo o que sai na cidade dela. */
     it("quem pediu a cidade inteira recebe qualquer área", async () => {
-      await ligar(candidato, "Sinop", null);
+      await ligar(candidato, "Sinop - MT", null);
 
       await avisarVagaNova(VAGA);
 
@@ -148,7 +148,7 @@ describe("avisos de vaga", () => {
     });
 
     it("quem pediu outra área não recebe", async () => {
-      await ligar(candidato, "Sinop", "Administrativo");
+      await ligar(candidato, "Sinop - MT", "Administrativo");
 
       await avisarVagaNova(VAGA);
 
@@ -156,7 +156,7 @@ describe("avisos de vaga", () => {
     });
 
     it("quem pediu outra cidade não recebe", async () => {
-      await ligar(candidato, "Sorriso", "Agronegócio");
+      await ligar(candidato, "Sorriso - MT", "Agronegócio");
 
       await avisarVagaNova(VAGA);
 
@@ -169,7 +169,7 @@ describe("avisos de vaga", () => {
      * própria vaga — e a conclusão dela é que o aviso está quebrado.
      */
     it("ninguém é avisado da própria vaga", async () => {
-      await ligar(empresa, "Sinop", "Agronegócio");
+      await ligar(empresa, "Sinop - MT", "Agronegócio");
 
       await avisarVagaNova(VAGA);
 
@@ -181,8 +181,8 @@ describe("avisos de vaga", () => {
      * área. Avisar mesmo assim ensinaria a ignorar o aviso.
      */
     it("vaga sem categoria alcança só quem pediu a cidade inteira", async () => {
-      await ligar(candidato, "Sinop", null);
-      await ligar(outro, "Sinop", "Agronegócio");
+      await ligar(candidato, "Sinop - MT", null);
+      await ligar(outro, "Sinop - MT", "Agronegócio");
 
       await avisarVagaNova({ ...VAGA, categoria: null });
 
@@ -193,7 +193,12 @@ describe("avisos de vaga", () => {
 
     /** Celular e computador: a pessoa quer ser avisada nos dois. */
     it("avisa todos os aparelhos da mesma pessoa", async () => {
-      await ligar(candidato, "Sinop", "Agronegócio", "https://push.exemplo/a");
+      await ligar(
+        candidato,
+        "Sinop - MT",
+        "Agronegócio",
+        "https://push.exemplo/a",
+      );
       await inscreverAparelho(candidato, {
         endpoint: "https://push.exemplo/b",
         p256dh: "chave",
@@ -215,7 +220,7 @@ describe("avisos de vaga", () => {
   it("aparelho que morreu sai da tabela", async () => {
     await ligar(
       candidato,
-      "Sinop",
+      "Sinop - MT",
       "Agronegócio",
       "https://push.exemplo/velho",
     );
@@ -232,7 +237,7 @@ describe("avisos de vaga", () => {
    * o dado que este projeto evita guardar.
    */
   it("desligar apaga a preferência e os aparelhos", async () => {
-    await ligar(candidato, "Sinop", "Agronegócio");
+    await ligar(candidato, "Sinop - MT", "Agronegócio");
 
     await desligarAvisos(candidato);
 

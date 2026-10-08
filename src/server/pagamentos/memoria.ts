@@ -45,8 +45,18 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
           p.criadoEm < janela.antesDe &&
           p.criadoEm > janela.depoisDe,
       )
-      .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm))
+      .sort(
+        (a, b) =>
+          a.atualizadoEm.localeCompare(b.atualizadoEm) ||
+          a.criadoEm.localeCompare(b.criadoEm),
+      )
       .slice(0, janela.maximo);
+  }
+
+  async marcarConferida(id: string): Promise<void> {
+    const atual = this.itens.get(id);
+    if (!atual || atual.status !== "pendente") return;
+    this.itens.set(id, { ...atual, atualizadoEm: new Date().toISOString() });
   }
 
   async porMpPaymentId(mpPaymentId: string): Promise<Pagamento | null> {
@@ -128,7 +138,14 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
     id: string,
     mpPaymentId: string | null,
   ): Promise<Pagamento | null> {
-    return this.mudarStatusSePendente(id, "aprovado", mpPaymentId);
+    // Mesma regra do Postgres (#358): a recusada de uma tentativa anterior
+    // não impede a aprovação da seguinte.
+    return this.mudarStatusSe(
+      id,
+      ["pendente", "rejeitado", "cancelado"],
+      "aprovado",
+      mpPaymentId,
+    );
   }
 
   async rejeitar(
@@ -136,6 +153,10 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
     mpPaymentId: string | null,
   ): Promise<Pagamento | null> {
     return this.mudarStatusSePendente(id, "rejeitado", mpPaymentId);
+  }
+
+  async reabrir(id: string): Promise<Pagamento | null> {
+    return this.mudarStatusSe(id, "aprovado", "pendente", null);
   }
 
   async cancelar(
@@ -164,13 +185,14 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
 
   private mudarStatusSe(
     id: string,
-    de: StatusPagamento,
+    de: StatusPagamento | readonly StatusPagamento[],
     para: StatusPagamento,
     mpPaymentId: string | null,
   ): Pagamento | null {
     const atual = this.itens.get(id);
     if (!atual) throw erros.naoEncontrado("Pagamento");
-    if (atual.status !== de) return null;
+    const origens = typeof de === "string" ? [de] : de;
+    if (!origens.includes(atual.status)) return null;
     const status = para;
 
     const novo: Pagamento = {

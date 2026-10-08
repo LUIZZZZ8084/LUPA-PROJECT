@@ -10,15 +10,16 @@ import {
   Ticket,
 } from "lucide-react";
 import { useActionState, useRef, useState, useTransition } from "react";
-import {
-  CampoBairro,
-  CampoCidade,
-  useCidade,
-} from "@/components/cidade-e-bairro";
+import { CampoCidade, useCidade } from "@/components/campo-cidade";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import { CONTRACT_TYPES, JOB_CATEGORIES } from "@/lib/constants";
+import {
+  CONTRACT_TYPES,
+  JOB_CATEGORIES,
+  WORK_MODE_LABELS,
+  WORK_MODES,
+} from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { AreaDeContratacao } from "./area";
 import { type EstadoVaga, publicarVagaComEstado } from "./nova-vaga-actions";
@@ -284,6 +285,39 @@ export function NewJobForm({
             </Field>
           </div>
 
+          {/*
+            Botões à vista, e não um select (#300): são só três opções, e a
+            escolha vira o selo que o candidato lê no card — ver as três de
+            uma vez deixa claro que existe a pergunta.
+          */}
+          <fieldset>
+            <legend className="mb-2 font-medium text-sm">
+              Modalidade <span className="text-danger">*</span>
+            </legend>
+            <div className="grid grid-cols-3 gap-2">
+              {WORK_MODES.map((modo) => (
+                <label
+                  key={modo}
+                  className="flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line px-2 py-2.5 text-center text-[13px] text-muted leading-tight transition-colors hover:border-line-soft has-[:checked]:border-empresas has-[:checked]:bg-empresas/8 has-[:checked]:text-ink"
+                >
+                  <input
+                    type="radio"
+                    name="modalidade"
+                    value={modo}
+                    required
+                    className="accent-empresas"
+                  />
+                  {WORK_MODE_LABELS[modo]}
+                </label>
+              ))}
+            </div>
+            {state.campos?.modalidade && (
+              <p className="mt-1.5 text-danger text-xs">
+                {state.campos.modalidade}
+              </p>
+            )}
+          </fieldset>
+
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <CampoCidade
               value={cidade}
@@ -291,11 +325,18 @@ export function NewJobForm({
               error={state.campos?.cidade}
               label="Cidade da vaga"
             />
-            <CampoBairro
-              key={cidade}
-              cidade={cidade}
+            {/*
+              Texto livre e opcional, só informativo (#321): aparece no
+              anúncio para quem decide se vai até lá, e não entra em filtro
+              nem em ordem de nada.
+            */}
+            <Field
+              label="Bairro"
               error={state.campos?.bairro}
-            />
+              hint="Opcional. Aparece só no anúncio da vaga."
+            >
+              <Input name="bairro" maxLength={60} placeholder="Centro" />
+            </Field>
           </div>
 
           <Field

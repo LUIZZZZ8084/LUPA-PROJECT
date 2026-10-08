@@ -18,8 +18,7 @@ const MINIMO: DadosCurriculo = {
   nomeCompleto: "Ana Souza",
   email: "ana@teste.lupa",
   telefone: "66999990000",
-  cidade: "Sinop",
-  bairro: null,
+  cidade: "Sinop - MT",
   areaDesejada: null,
   resumo: null,
   formacao: null,
@@ -29,7 +28,6 @@ const MINIMO: DadosCurriculo = {
 
 const COMPLETO: DadosCurriculo = {
   ...MINIMO,
-  bairro: "Centro",
   areaDesejada: "Agronegócio",
   resumo:
     "Motorista com dez anos de experiência em transporte de carga e operação de máquinas agrícolas.",

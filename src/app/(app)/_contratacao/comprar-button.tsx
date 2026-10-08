@@ -9,21 +9,28 @@ export function ComprarButton({
   tipo,
   rotulo,
   destaque,
+  compacto = false,
+  ariaLabel,
 }: {
   tipo: string;
   rotulo: string;
   destaque: boolean;
+  /** Botão do tamanho do texto, sem margem — para caber numa linha de lista. */
+  compacto?: boolean;
+  /** Nome acessível quando o rótulo visível se repete ("Comprar" três vezes). */
+  ariaLabel?: string;
 }) {
   const [pendente, comTransicao] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
 
   return (
-    <div className="mt-4">
+    <div className={compacto ? "flex-none" : "mt-4"}>
       <Button
         type="button"
         variant={destaque ? "empresas" : "outline"}
         size="sm"
-        className="w-full"
+        className={compacto ? undefined : "w-full"}
+        aria-label={ariaLabel}
         disabled={pendente}
         onClick={() => {
           setErro(null);

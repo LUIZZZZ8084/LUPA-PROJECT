@@ -1,4 +1,3 @@
-import { CIDADE_INICIAL } from "@/lib/constants";
 import { AppError, erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
@@ -9,7 +8,14 @@ import {
   gerarHash,
   precisaRehash,
 } from "./password";
-import { conferirLimite, registrarFalha, registrarSucesso } from "./rate-limit";
+import {
+  conferirLimite,
+  consumirOrcamento,
+  registrarFalha,
+  registrarSucesso,
+  reservarTentativa,
+} from "./rate-limit";
+import { LIMITE_DE_CONFLITOS_NO_CADASTRO } from "./rate-limit-tipos";
 import type { DadosCadastro, DadosLogin } from "./schemas";
 
 /**
@@ -44,6 +50,25 @@ export async function cadastrar(
   // Antes de qualquer trabalho: bloqueado não gasta Argon2 nem consulta.
   await conferirLimite(chave);
 
+  /*
+   * Quem testa se um e-mail, CPF ou CNPJ está cadastrado precisa de volume,
+   * e o limite acima só soma conta criada (#390). Os conflitos têm teto
+   * próprio, e origem já bloqueada por ele é recusada aqui, antes de
+   * qualquer consulta: senão continuaria perguntando e sendo respondida.
+   */
+  const chaveDeConflitos = `cadastro-conflito:${origem}`;
+  await conferirLimite(chaveDeConflitos);
+
+  /**
+   * Soma o conflito e devolve o erro para lançar. Passando do teto, quem
+   * lança é a recusa por excesso — o conflito deixa de ser dito, que é o
+   * ponto: a décima primeira pergunta não ganha resposta.
+   */
+  const conflito = async (mensagem: string, detalhe: string) => {
+    await consumirOrcamento(chaveDeConflitos, LIMITE_DE_CONFLITOS_NO_CADASTRO);
+    return erros.conflito(mensagem, detalhe);
+  };
+
   const jaExiste = await repo.porEmail(dados.email);
   if (jaExiste) {
     /*
@@ -51,7 +76,7 @@ export async function cadastrar(
      * pessoa fica tentando de novo sem entender. No login, o mesmo aviso
      * seria enumeração de contas; lá a mensagem é genérica.
      */
-    throw erros.conflito(
+    throw await conflito(
       "Já existe uma conta com este e-mail. Tente entrar.",
       "e-mail duplicado no cadastro",
     );
@@ -79,21 +104,21 @@ export async function cadastrar(
   }
 
   if (empresaViaCnpj && dados.cnpj && (await repo.cnpjEmUso(dados.cnpj))) {
-    throw erros.conflito(
+    throw await conflito(
       "Este CNPJ já está cadastrado. Entre com a conta existente.",
       "CNPJ duplicado",
     );
   }
 
   if (dados.papel !== "empresa" && (await repo.cpfEmUso(dados.cpf))) {
-    throw erros.conflito(
+    throw await conflito(
       "Este CPF já está cadastrado. Entre com a conta existente.",
       "CPF duplicado",
     );
   }
 
   if (empresaViaCpf && dados.cpf && (await repo.cpfEmUso(dados.cpf))) {
-    throw erros.conflito(
+    throw await conflito(
       "Este CPF já está cadastrado. Entre com a conta existente.",
       "CPF duplicado",
     );
@@ -108,8 +133,7 @@ export async function cadastrar(
     nomeCompleto: dados.nomeCompleto,
     cpf: dados.papel === "empresa" ? (dados.cpf ?? null) : dados.cpf,
     telefone: dados.telefone,
-    cidade: dados.cidade ?? CIDADE_INICIAL,
-    bairro: dados.bairro ?? null,
+    cidade: dados.cidade,
   });
 
   // O perfil específico do papel é criado junto: um usuário sem perfil
@@ -136,7 +160,6 @@ export async function cadastrar(
       descricao: dados.descricao,
       precoInicial: dados.precoInicial ?? null,
       anosExperiencia: dados.anosExperiencia ?? null,
-      bairrosAtendidos: dados.bairrosAtendidos ?? [],
       instagram: null,
       facebook: null,
       // MEI é declarado depois, em Editar perfil — o cadastro já pede CPF.
@@ -229,28 +252,35 @@ export async function entrar(dados: DadosLogin): Promise<UsuarioPublico> {
   // Antes de qualquer trabalho: se está bloqueado, não gasta Argon2.
   await conferirLimite(chave);
 
+  /*
+   * A tentativa é reservada aqui, de forma atômica, e não registrada depois
+   * da verificação (#386): requisições simultâneas passavam todas pela
+   * conferência acima antes de a primeira falha ser registrada, e o teto de
+   * 5 virava uma rajada. A falha, portanto, já está contada; o sucesso zera.
+   */
+  await reservarTentativa(chave);
+
   const usuario = await repo.porEmail(dados.email);
 
   if (!usuario) {
     await gastarTempoDeVerificacao(dados.senha);
-    await registrarFalha(chave);
     throw credenciaisInvalidas("e-mail não encontrado");
   }
 
   const confere = await conferirSenha(dados.senha, usuario.senhaHash);
 
   if (!confere) {
-    await registrarFalha(chave);
     throw credenciaisInvalidas("senha incorreta");
   }
 
   await registrarSucesso(chave);
 
   // Hash antigo é regravado com os parâmetros atuais, sem pedir troca de
-  // senha. Falha aqui não impede a entrada.
+  // senha e sem derrubar os outros aparelhos (#330): a senha é a mesma.
+  // Falha aqui não impede a entrada.
   if (precisaRehash(usuario.senhaHash)) {
     try {
-      await repo.atualizarSenhaHash(usuario.id, await gerarHash(dados.senha));
+      await repo.regravarHash(usuario.id, await gerarHash(dados.senha));
     } catch {
       log.warn("não foi possível regravar o hash", {
         acao: "auth.entrar",

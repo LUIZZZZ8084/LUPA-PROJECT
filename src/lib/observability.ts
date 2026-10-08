@@ -43,17 +43,92 @@ export const IGNORED_ERRORS = [
 ];
 
 /**
+ * Chaves que a máscara não percorre, porque nunca saem do processo.
+ *
+ * `sdkProcessingMetadata` é onde o SDK do Sentry guarda o próprio estado
+ * durante o processamento — num evento de transação, a instância de
+ * `Scope` em que o span nasceu, que aponta para si mesma. O SDK a apaga
+ * antes de montar o envelope (`createEventEnvelope`, em `@sentry/core`),
+ * então não há dado pessoal ali para mascarar. Percorrê-la custava toda a
+ * medição de desempenho (#273).
+ */
+const INTERNAS_DO_SDK = new Set(["sdkProcessingMetadata"]);
+
+/**
+ * Identificadores de rastreio do SDK, que a máscara não pode tocar (#275).
+ *
+ * São hexadecimais aleatórios, e um hexadecimal aleatório tem com
+ * frequência uma sequência de 10 ou 11 dígitos — que a regra de telefone
+ * trocava por `[telefone]`, deixando `71624d67c92d40a1afa[telefone]b94`
+ * no lugar do `trace_id`. O Sentry recusa a transação inteira quando o
+ * identificador não tem o formato certo: depois da #273, 2 de cada 3
+ * chegavam lá e voltavam como `invalid_transaction`.
+ *
+ * **As duas condições, e não uma.** A chave diz que o campo é um
+ * identificador; o formato garante que o valor é mesmo só hexadecimal. Um
+ * texto com telefone numa chave chamada `trace_id` continua mascarado — a
+ * exceção vale para o que o SDK gera, não para o nome do campo.
+ *
+ * **O `release` entrou pelo mesmo motivo (#277).** É o hash do commit do
+ * deploy, 40 caracteres hexadecimais, e o de 23/09 começava com 14
+ * dígitos: saía `[cnpj]d995dd…`. A transação era aceita, mas ficava sem
+ * ligação com o deploy — e é por release que o Sentry diz em que versão um
+ * erro apareceu. Depende do sorteio do hash, por isso passou por um deploy
+ * inteiro sem ninguém ver.
+ */
+const CHAVES_DE_RASTREIO =
+  /^(?:__span|(?:sentry\.)?(?:release|trace_id|span_id|parent_span_id|segment_id|event_id|replay_id|profile_id|previous_trace))$/;
+const FORMATO_DE_RASTREIO = /^[0-9a-f]{16,40}(?:-[0-9a-f]{16}(?:-[01])?)?$/i;
+
+/**
+ * Parâmetro de URL que carrega segredo (#360).
+ *
+ * O link de redefinir senha leva o token na query, e a URL aparece no evento
+ * (`request.url`, `query_string`, atributos de span). A máscara por nome de
+ * chave não alcança: a chave ali é `url`, e o segredo está dentro do valor.
+ * Pega no início do texto também, para `query_string`, que vem sem o `?`.
+ */
+const PARAMETRO_SECRETO =
+  /(^|[?&;\s])(token|access_token|refresh_token|api_key|apikey|secret|senha|password)=[^&#\s"']*/gi;
+
+/**
  * Remove dado pessoal antes do envio.
  *
  * O Lupa lida com telefone, CPF/CNPJ e documento. Nada disso pode sair para
  * um serviço de terceiro — é exigência da LGPD, não preferência.
+ *
+ * **Ciclo não derruba a máscara (#273).** Ela percorria o evento sem
+ * lembrar por onde já tinha passado, e o evento de transação carrega um
+ * objeto do SDK com referência circular: a função dava voltas até estourar
+ * a pilha. Uma exceção no `beforeSendTransaction` faz o SDK descartar a
+ * transação e mandar no lugar um erro interno, que **não passa pelo
+ * `beforeSend`** — então a quebra não só perdia a medição como produzia o
+ * único evento que sai sem máscara. Hoje o que já está sendo visitado vira
+ * `"[circular]"`: um objeto que contém a si mesmo não tem como ser
+ * serializado de qualquer forma.
  */
 export function scrubSensitiveData<T>(event: T): T {
   const CAMPOS_SENSIVEIS =
     /(phone|telefone|whatsapp|cpf|cnpj|documento|document|selfie|password|senha|token|secret|resume|curriculo)/i;
 
+  /*
+   * Só o caminho atual, não tudo que já foi visto: o mesmo objeto
+   * aparecendo em dois galhos do evento é repetição, não ciclo, e tem de
+   * ser mascarado nos dois.
+   */
+  const noCaminho = new WeakSet<object>();
+
   const limpar = (valor: unknown, chave?: string): unknown => {
     if (chave && CAMPOS_SENSIVEIS.test(chave)) return "[removido]";
+
+    if (
+      chave &&
+      typeof valor === "string" &&
+      CHAVES_DE_RASTREIO.test(chave) &&
+      FORMATO_DE_RASTREIO.test(valor)
+    ) {
+      return valor;
+    }
 
     if (typeof valor === "string") {
       /*
@@ -70,7 +145,24 @@ export function scrubSensitiveData<T>(event: T): T {
        */
       return (
         valor
-          // CNPJ, com ou sem máscara.
+          .replace(PARAMETRO_SECRETO, "$1$2=[removido]")
+          /*
+           * CNPJ alfanumérico, só na forma com pontuação (#297).
+           *
+           * Sem pontuação são 14 caracteres de letra e número, e isso é
+           * indistinguível de um `trace_id` ou de um hash de commit: a
+           * lição das duas transações descartadas (#275, #277) é que
+           * máscara larga corrompe identificador. Com ponto, barra e
+           * traço no lugar certo, não há o que confundir. O CNPJ é
+           * registro público, então o que sobra sem máscara é texto solto
+           * com o número corrido, e o campo chamado `cnpj` já é mascarado
+           * pelo nome da chave.
+           */
+          .replace(
+            /(?<![0-9A-Za-z])[0-9A-Z]{2}\.[0-9A-Z]{3}\.[0-9A-Z]{3}\/[0-9A-Z]{4}-\d{2}(?![0-9A-Za-z])/gi,
+            "[cnpj]",
+          )
+          // CNPJ numérico, com ou sem máscara.
           .replace(
             /(?<!\d)\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}(?!\d)/g,
             "[cnpj]",
@@ -98,18 +190,22 @@ export function scrubSensitiveData<T>(event: T): T {
       );
     }
 
-    if (Array.isArray(valor)) return valor.map((v) => limpar(v));
+    if (!valor || typeof valor !== "object") return valor;
+    if (noCaminho.has(valor)) return "[circular]";
 
-    if (valor && typeof valor === "object") {
+    noCaminho.add(valor);
+    try {
+      if (Array.isArray(valor)) return valor.map((v) => limpar(v));
+
       return Object.fromEntries(
         Object.entries(valor as Record<string, unknown>).map(([k, v]) => [
           k,
-          limpar(v, k),
+          INTERNAS_DO_SDK.has(k) ? v : limpar(v, k),
         ]),
       );
+    } finally {
+      noCaminho.delete(valor);
     }
-
-    return valor;
   };
 
   return limpar(event) as T;

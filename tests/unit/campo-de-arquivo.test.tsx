@@ -22,8 +22,7 @@ function montar(disponivel: boolean) {
     <CampoDeArquivo
       titulo="Foto de perfil"
       descricao="Aparece na busca."
-      formatos="JPG, PNG ou WEBP, até 2 MB"
-      accept="image/jpeg,image/png,image/webp"
+      especie="avatar"
       enviar={enviar}
       remover={async () => {}}
       disponivel={disponivel}
@@ -39,10 +38,15 @@ describe("com armazenamento disponível", () => {
     expect(screen.getByLabelText("Foto de perfil")).toBeTruthy();
   });
 
-  /** O `accept` não é visível; o limite precisa estar escrito. */
-  it("diz os formatos e o limite em palavras", () => {
+  /**
+   * O `accept` não é visível; o formato precisa estar escrito. E o texto
+   * diz que foto grande é reduzida (#325) — "até 2 MB" faria a pessoa
+   * desistir da foto do celular, que agora entra.
+   */
+  it("diz os formatos em palavras, e que foto grande é reduzida", () => {
     montar(true);
-    expect(screen.getByText(/JPG, PNG ou WEBP, até 2 MB/)).toBeTruthy();
+    expect(screen.getByText(/JPG, PNG ou WEBP/)).toBeTruthy();
+    expect(screen.getByText(/reduzida antes de enviar/)).toBeTruthy();
   });
 
   it("restringe o seletor aos formatos aceitos", () => {

@@ -47,7 +47,7 @@ function vaga(over: Record<string, unknown> = {}) {
     title: "Operador de Colheitadeira",
     description: "Safra de soja, turno diurno.",
     skills: ["Colheitadeira", "CNH D"],
-    city: "Sinop",
+    city: "Sinop - MT",
     neighborhood: "Setor Industrial",
     status: "aberta",
     ...over,
@@ -69,7 +69,7 @@ function candidatura(
     candidate: {
       full_name: `Pessoa ${id}`,
       avatar_url: null,
-      city: "Sinop",
+      city: "Sinop - MT",
       neighborhood: null,
       phone: "6600000001",
       skills,
@@ -87,7 +87,7 @@ function disponivel(
     id,
     full_name: `Disponível ${id}`,
     avatar_url: null,
-    city: "Sinop",
+    city: "Sinop - MT",
     neighborhood: null,
     email: `${id}@teste.lupa`,
     phone: "6600000002",
@@ -214,8 +214,8 @@ describe("a ordem, e o porquê dela", () => {
    */
   it("empate de habilidade desempata pelo mais perto do local da vaga", async () => {
     disponiveis = [
-      disponivel("longe", ["Colheitadeira"], { city: "Cuiabá" }),
-      disponivel("perto", ["Colheitadeira"], { city: "Sinop" }),
+      disponivel("longe", ["Colheitadeira"], { city: "Cuiabá - MT" }),
+      disponivel("perto", ["Colheitadeira"], { city: "Sinop - MT" }),
     ];
 
     const r = await recomendadosParaEmpresa(empresa);
@@ -232,10 +232,12 @@ describe("a ordem, e o porquê dela", () => {
   it("morar perto não passa na frente de quem casa mais", async () => {
     disponiveis = [
       disponivel("vizinho", ["Colheitadeira"], {
-        city: "Sinop",
+        city: "Sinop - MT",
         neighborhood: "Setor Industrial",
       }),
-      disponivel("distante", ["Colhedora", "Carteira D"], { city: "Cuiabá" }),
+      disponivel("distante", ["Colhedora", "Carteira D"], {
+        city: "Cuiabá - MT",
+      }),
     ];
 
     const r = await recomendadosParaEmpresa(empresa);
@@ -247,10 +249,10 @@ describe("a ordem, e o porquê dela", () => {
    * que contrata em Sorriso quer, na frente, quem está em Sorriso.
    */
   it("a distância é medida do local da vaga, não da empresa", async () => {
-    vagas["empresa-1"] = [vaga({ city: "Sorriso", neighborhood: null })];
+    vagas["empresa-1"] = [vaga({ city: "Sorriso - MT", neighborhood: null })];
     disponiveis = [
-      disponivel("deSinop", ["Colheitadeira"], { city: "Sinop" }),
-      disponivel("deSorriso", ["Colheitadeira"], { city: "Sorriso" }),
+      disponivel("deSinop", ["Colheitadeira"], { city: "Sinop - MT" }),
+      disponivel("deSorriso", ["Colheitadeira"], { city: "Sorriso - MT" }),
     ];
 
     const r = await recomendadosParaEmpresa(empresa);

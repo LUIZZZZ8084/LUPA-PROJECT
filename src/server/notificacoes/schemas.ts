@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { JOB_CATEGORIES } from "@/lib/constants";
 import { zCidade } from "../validation";
+import { endpointDePushPermitido } from "./endpoint";
 
 /**
  * Entrada das actions de aviso (#48).
@@ -28,7 +29,12 @@ export const schemaPreferencia = z.object({
  * caracteres.
  */
 export const schemaInscricao = z.object({
-  endpoint: z.url("Endereço de inscrição inválido.").max(1000),
+  endpoint: z
+    .url("Endereço de inscrição inválido.")
+    .max(1000)
+    .refine(endpointDePushPermitido, {
+      message: "Este navegador usa um serviço de aviso que a Lupa não aceita.",
+    }),
   p256dh: z.string().min(1).max(256),
   auth: z.string().min(1).max(256),
 });

@@ -3,6 +3,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CONFIG_LIMITE, limparLimites } from "@/server/auth/rate-limit";
+import { LIMITE_DE_CONFLITOS_NO_CADASTRO } from "@/server/auth/rate-limit-tipos";
 import { schemaCadastro, schemaLogin } from "@/server/auth/schemas";
 import { cadastrar, entrar, usuarioDaSessao } from "@/server/auth/servico";
 import { ehAppError } from "@/server/errors";
@@ -21,7 +22,7 @@ const candidato = {
   email: "everton@teste.lupa",
   senha: SENHA,
   telefone: "66999220001",
-  cidade: "Sinop" as const,
+  cidade: "Sinop - MT" as const,
   cpf: CPF_CANDIDATO,
   areaDesejada: "Agronegócio" as const,
 };
@@ -32,12 +33,11 @@ const prestador = {
   email: "joao@teste.lupa",
   senha: SENHA,
   telefone: "66999110001",
-  cidade: "Sinop" as const,
+  cidade: "Sinop - MT" as const,
   cpf: CPF_PRESTADOR,
   categoriaId: 1,
   descricao: "Instalações elétricas residenciais e comerciais em Sinop.",
   precoInicial: 150,
-  bairrosAtendidos: ["Centro", "Menezes"],
 };
 
 const empresa = {
@@ -46,7 +46,7 @@ const empresa = {
   email: "contato@agronorte.teste",
   senha: SENHA,
   telefone: "66999330001",
-  cidade: "Sinop" as const,
+  cidade: "Sinop - MT" as const,
   razaoSocial: "Agro Norte Ltda.",
   cnpj: "11222333000181",
   porte: "Média" as const,
@@ -217,12 +217,224 @@ describe("cadastro e login", () => {
       });
     });
 
+    /**
+     * Quem testa se um e-mail, CPF ou CNPJ está cadastrado precisa de
+     * volume, e o limite de criação só soma conta criada (#390). Os
+     * conflitos têm teto próprio: dez respondem, e a partir daí a pergunta
+     * deixa de ter resposta.
+     */
+    describe("teto de conflitos (#390)", () => {
+      const ORIGEM = "203.0.113.7";
+      const TETO = LIMITE_DE_CONFLITOS_NO_CADASTRO.chamadas;
+
+      it("os dez primeiros conflitos respondem e o seguinte é recusado por excesso", async () => {
+        await cadastrar(validarOk(candidato), ORIGEM);
+
+        for (let i = 0; i < TETO; i++) {
+          const e = await capturarErro(() =>
+            cadastrar(validarOk(candidato), ORIGEM),
+          );
+          expect(e.codigo).toBe("conflito");
+        }
+
+        const excesso = await capturarErro(() =>
+          cadastrar(validarOk(candidato), ORIGEM),
+        );
+        expect(excesso.codigo).toBe("muitas_tentativas");
+        expect(excesso.status).toBe(429);
+      });
+
+      it("origem bloqueada pelo teto não consulta mais nada, nem com dados novos", async () => {
+        await cadastrar(validarOk(candidato), ORIGEM);
+        for (let i = 0; i <= TETO; i++) {
+          await capturarErro(() => cadastrar(validarOk(candidato), ORIGEM));
+        }
+
+        // Dados que não existem: se consultasse, criaria a conta e diria
+        // com isso que eles estavam livres.
+        const livre = await capturarErro(() =>
+          cadastrar(
+            validarOk({
+              ...prestador,
+              email: "livre@teste.lupa",
+              cpf: "39053344705",
+            }),
+            ORIGEM,
+          ),
+        );
+        expect(livre.codigo).toBe("muitas_tentativas");
+        expect(await repo.porEmail("livre@teste.lupa")).toBeNull();
+      });
+
+      it("conflito de CPF e de CNPJ também gasta o teto", async () => {
+        await cadastrar(validarOk(prestador), ORIGEM);
+        await cadastrar(validarOk(empresa), ORIGEM);
+
+        for (let i = 0; i < TETO / 2; i++) {
+          await capturarErro(() =>
+            cadastrar(
+              validarOk({ ...prestador, email: `cpf${i}@teste.lupa` }),
+              ORIGEM,
+            ),
+          );
+          await capturarErro(() =>
+            cadastrar(
+              validarOk({ ...empresa, email: `cnpj${i}@teste.lupa` }),
+              ORIGEM,
+            ),
+          );
+        }
+
+        const excesso = await capturarErro(() =>
+          cadastrar(validarOk({ ...prestador, email: "x@teste.lupa" }), ORIGEM),
+        );
+        expect(excesso.codigo).toBe("muitas_tentativas");
+      });
+
+      it("outra origem não divide o teto", async () => {
+        await cadastrar(validarOk(candidato), ORIGEM);
+        for (let i = 0; i <= TETO; i++) {
+          await capturarErro(() => cadastrar(validarOk(candidato), ORIGEM));
+        }
+
+        const outra = await capturarErro(() =>
+          cadastrar(validarOk(candidato), "198.51.100.9"),
+        );
+        expect(outra.codigo).toBe("conflito");
+      });
+
+      it("conta criada com sucesso não gasta o teto de conflitos", async () => {
+        await cadastrar(validarOk(candidato), ORIGEM);
+        await cadastrar(validarOk(prestador), ORIGEM);
+
+        // Nenhum conflito até aqui: todos os dez ainda respondem.
+        for (let i = 0; i < TETO; i++) {
+          const e = await capturarErro(() =>
+            cadastrar(validarOk(candidato), ORIGEM),
+          );
+          expect(e.codigo).toBe("conflito");
+        }
+      });
+    });
+
     it("CNPJ repetido é recusado", async () => {
       await cadastrar(validarOk(empresa));
 
       await expect(
         cadastrar(validarOk({ ...empresa, email: "outro@agronorte.teste" })),
       ).rejects.toMatchObject({ codigo: "conflito" });
+    });
+
+    /*
+     * O CNPJ vale com e sem pontuação (#295).
+     *
+     * A pessoa cola do cartão do CNPJ ("11.222.333/0001-81") ou digita só os
+     * números, e no celular o teclado numérico nem oferece ponto e barra.
+     * As duas têm que chegar ao mesmo valor: se o cadastro guardasse o texto
+     * como veio, "com" e "sem" pontuação seriam dois CNPJs para a checagem
+     * de duplicidade, e a mesma empresa abriria duas contas.
+     */
+    describe("CNPJ com e sem pontuação", () => {
+      const formas = [
+        ["com pontuação", "11.222.333/0001-81"],
+        ["só números", "11222333000181"],
+        ["com espaços ao redor", "  11.222.333/0001-81  "],
+        ["com parte da pontuação", "11222333/0001-81"],
+        ["só com pontos", "11.222.333.0001.81"],
+      ] as const;
+
+      it.each(formas)("%s grava só os dígitos", async (_forma, cnpj) => {
+        const e = await cadastrar(validarOk({ ...empresa, cnpj }));
+
+        expect((await repo.perfilEmpresa(e.id))?.cnpj).toBe("11222333000181");
+      });
+
+      it("pontuado e depois só números: a segunda conta é recusada", async () => {
+        await cadastrar(validarOk({ ...empresa, cnpj: "11.222.333/0001-81" }));
+
+        await expect(
+          cadastrar(
+            validarOk({
+              ...empresa,
+              email: "outro@agronorte.teste",
+              cnpj: "11222333000181",
+            }),
+          ),
+        ).rejects.toMatchObject({ codigo: "conflito" });
+      });
+
+      it("só números e depois pontuado: a segunda conta é recusada", async () => {
+        await cadastrar(validarOk({ ...empresa, cnpj: "11222333000181" }));
+
+        await expect(
+          cadastrar(
+            validarOk({
+              ...empresa,
+              email: "outro@agronorte.teste",
+              cnpj: "11.222.333/0001-81",
+            }),
+          ),
+        ).rejects.toMatchObject({ codigo: "conflito" });
+      });
+
+      /*
+       * CNPJ alfanumérico (#297). O exemplo é o da documentação da Receita.
+       * Vale nas mesmas formas do numérico, e o valor guardado é um só —
+       * maiúscula, sem pontuação —, porque é ele que a checagem de duplicidade
+       * compara: "12abc…" e "12ABC…" abririam duas contas para uma empresa.
+       */
+      const ALFANUMERICAS = [
+        ["com pontuação", "12.ABC.345/01DE-35"],
+        ["sem pontuação", "12ABC34501DE35"],
+        ["em minúscula", "12abc34501de35"],
+        ["minúscula com pontuação", "12.abc.345/01de-35"],
+      ] as const;
+
+      it.each(ALFANUMERICAS)(
+        "alfanumérico %s grava em maiúscula, sem pontuação",
+        async (_forma, cnpj) => {
+          const e = await cadastrar(validarOk({ ...empresa, cnpj }));
+
+          expect((await repo.perfilEmpresa(e.id))?.cnpj).toBe("12ABC34501DE35");
+        },
+      );
+
+      it("alfanumérico em minúscula e depois em maiúscula: a segunda conta é recusada", async () => {
+        await cadastrar(validarOk({ ...empresa, cnpj: "12abc34501de35" }));
+
+        await expect(
+          cadastrar(
+            validarOk({
+              ...empresa,
+              email: "outro@agronorte.teste",
+              cnpj: "12.ABC.345/01DE-35",
+            }),
+          ),
+        ).rejects.toMatchObject({ codigo: "conflito" });
+      });
+
+      it("alfanumérico de dígito errado é recusado no cadastro", () => {
+        const r = validar(schemaCadastro, {
+          ...empresa,
+          cnpj: "12.ABC.345/01DE-36",
+        });
+
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.erro.campos?.some((c) => c.campo === "cnpj")).toBe(true);
+      });
+
+      /** A pontuação não afrouxa a conferência: o dígito errado continua errado. */
+      it("dígito errado é recusado também com pontuação", () => {
+        const r = validar(schemaCadastro, {
+          ...empresa,
+          cnpj: "11.222.333/0001-82",
+        });
+
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.erro.campos?.some((c) => c.campo === "cnpj")).toBe(true);
+      });
     });
 
     /**
@@ -351,6 +563,30 @@ describe("cadastro e login", () => {
       expect(usuario).not.toHaveProperty("senhaHash");
     });
 
+    /*
+     * Regravar o hash é a mesma senha com parâmetros novos (#330). Pela
+     * troca de senha, cada login derrubaria os outros aparelhos da pessoa
+     * no dia em que os parâmetros do Argon2 subissem.
+     */
+    it("hash antigo é regravado sem derrubar os outros aparelhos", async () => {
+      const { hash } = await import("@node-rs/argon2");
+      const usuario = await repo.porEmail(candidato.email);
+      const fraco = await hash(SENHA, {
+        algorithm: 2,
+        memoryCost: 4096,
+        timeCost: 1,
+        parallelism: 1,
+      });
+      await repo.regravarHash(usuario?.id ?? "", fraco);
+
+      await entrar(validarOkLogin({ email: candidato.email, senha: SENHA }));
+
+      const depois = await repo.porEmail(candidato.email);
+      expect(depois?.senhaHash).not.toBe(fraco);
+      expect(depois?.senhaHash).toContain("m=19456");
+      expect((await repo.cortesDeSessao(30)).size).toBe(0);
+    });
+
     it("registra o acesso", async () => {
       const antes = await repo.porEmail(candidato.email);
       expect(antes?.ultimoAcessoEm).toBeNull();
@@ -406,6 +642,44 @@ describe("cadastro e login", () => {
 
       expect(bloqueado.codigo).toBe("muitas_tentativas");
       expect(bloqueado.status).toBe(429);
+    });
+
+    /**
+     * Antes (#386) o login conferia o bloqueio, gastava o Argon2 e só então
+     * registrava a falha: requisições simultâneas passavam todas pela
+     * conferência antes de a primeira falha ser registrada, e o teto virava
+     * uma rajada do tamanho da concorrência.
+     */
+    it("rajada simultânea de senhas erradas: só o teto chega à verificação (#386)", async () => {
+      const RAJADA = 20;
+      const resultados = await Promise.all(
+        Array.from({ length: RAJADA }, () =>
+          capturarErro(() =>
+            entrar(
+              validarOkLogin({ email: candidato.email, senha: "errada!!!" }),
+            ),
+          ),
+        ),
+      );
+
+      const verificadas = resultados.filter(
+        (e) => e.codigo !== "muitas_tentativas",
+      );
+      const recusadas = resultados.filter(
+        (e) => e.codigo === "muitas_tentativas",
+      );
+
+      expect(verificadas).toHaveLength(CONFIG_LIMITE.MAX_TENTATIVAS);
+      expect(recusadas).toHaveLength(RAJADA - CONFIG_LIMITE.MAX_TENTATIVAS);
+    });
+
+    /**
+     * A reserva bloqueia pela janela (`registrarUso` usa um número só para
+     * as duas coisas). Se a configuração separar os dois, este teste avisa
+     * antes de o bloqueio mudar sem ninguém ter decidido.
+     */
+    it("a janela e o bloqueio do login valem o mesmo tempo (#386)", () => {
+      expect(CONFIG_LIMITE.BLOQUEIO_MS).toBe(CONFIG_LIMITE.JANELA_MS);
     });
 
     it("login bem-sucedido zera o contador", async () => {

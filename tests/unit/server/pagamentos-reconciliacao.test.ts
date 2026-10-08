@@ -221,6 +221,128 @@ describe("varredura de cobranças presas", () => {
   });
 
   /**
+   * A fila gira (#388). Checkout abandonado nunca sai de pendente; sem
+   * girar, as mesmas 50 voltavam em toda varredura e uma cobrança presa de
+   * verdade, criada depois delas, nunca era conferida.
+   */
+  it("abandonadas além do limite não impedem a presa de ser conferida (#388)", async () => {
+    const ABANDONADAS = 60; // acima do MAXIMO_POR_VARREDURA (50)
+    for (let i = 0; i < ABANDONADAS; i++) {
+      await ctx.repoPagamentos.criar({
+        usuarioId: `abandono-${i}`,
+        tipo: "empresa_vaga_avulsa",
+        valorCentavos: 2990,
+      });
+    }
+    const presa = await ctx.repoPagamentos.criar({
+      usuarioId: "empresa-1",
+      tipo: "empresa_vaga_avulsa",
+      valorCentavos: 2990,
+    });
+
+    // Só a presa tem pagamento aprovado no Mercado Pago.
+    const buscar = (async (url: string | URL) => {
+      const endereco = String(url);
+      const aprovado = {
+        id: "mp-presa",
+        status: "approved",
+        external_reference: presa.id,
+      };
+      if (endereco.includes("/v1/payments/search")) {
+        const referencia = new URL(endereco).searchParams.get(
+          "external_reference",
+        );
+        return Response.json({
+          results: referencia === presa.id ? [aprovado] : [],
+        });
+      }
+      return Response.json(aprovado);
+    }) as unknown as typeof fetch;
+
+    // Cada varredura acontece um pouco depois: a ordem da fila é por hora.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(Date.now() + 60_000);
+      const primeira = await ctx.servico.reconciliarPagamentosPendentes({
+        agora: new Date(Date.now() + 11 * 60_000),
+        buscar,
+      });
+      expect(primeira).toEqual({ vistas: 50, reconciliadas: 0 });
+      expect((await ctx.repoPagamentos.porId(presa.id))?.status).toBe(
+        "pendente",
+      );
+
+      vi.setSystemTime(Date.now() + 120_000);
+      const segunda = await ctx.servico.reconciliarPagamentosPendentes({
+        agora: new Date(Date.now() + 11 * 60_000),
+        buscar,
+      });
+      expect(segunda.reconciliadas).toBe(1);
+      expect((await ctx.repoPagamentos.porId(presa.id))?.status).toBe(
+        "aprovado",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /**
+   * "Não deu para perguntar" e "perguntei e não há nada" são respostas
+   * diferentes (#388): só a segunda conta como conferida.
+   */
+  it("a busca distingue falha de resultado vazio (#388)", async () => {
+    const { pagamentosPorReferencia } = await import(
+      "@/server/pagamentos/mercadopago"
+    );
+    const responde = (corpo: unknown, status = 200) =>
+      (async () => Response.json(corpo, { status })) as unknown as typeof fetch;
+
+    // Perguntou e não há nada: lista vazia.
+    expect(
+      await pagamentosPorReferencia("x", responde({ results: [] })),
+    ).toEqual([]);
+
+    // Não deu para perguntar: nulo, em qualquer das formas de falhar.
+    expect(await pagamentosPorReferencia("x", responde({}, 500))).toBeNull();
+    expect(await pagamentosPorReferencia("x", responde({ foo: 1 }))).toBeNull();
+    const caiu = (async () => {
+      throw new Error("sem rede");
+    }) as unknown as typeof fetch;
+    expect(await pagamentosPorReferencia("x", caiu)).toBeNull();
+  });
+
+  /**
+   * Erro na conferência não move a cobrança (#388): a próxima varredura
+   * tenta de novo, no mesmo lugar da fila.
+   */
+  it("erro na conferência não manda a cobrança para o fim da fila (#388)", async () => {
+    const cobranca = await ctx.repoPagamentos.criar({
+      usuarioId: "empresa-2",
+      tipo: "empresa_vaga_avulsa",
+      valorCentavos: 2990,
+    });
+    const antes = (await ctx.repoPagamentos.porId(cobranca.id))?.atualizadoEm;
+
+    const quebrado = (async () => {
+      throw new Error("Mercado Pago fora do ar");
+    }) as unknown as typeof fetch;
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(Date.now() + 60_000);
+      await ctx.servico.reconciliarPagamentosPendentes({
+        agora: new Date(Date.now() + 11 * 60_000),
+        buscar: quebrado,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect((await ctx.repoPagamentos.porId(cobranca.id))?.atualizadoEm).toBe(
+      antes,
+    );
+  });
+
+  /**
    * A carência existe para não competir com o webhook, que é o caminho
    * normal e chega em segundos.
    */

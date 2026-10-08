@@ -56,6 +56,47 @@ export { temMercadoPagoConfigurado };
  * mensalidade se estende é `src/server/prestadores/servico.ts`, não este
  * arquivo.
  */
+/**
+ * Aplica o efeito de uma cobrança que acabou de virar aprovada (#384).
+ *
+ * O status muda antes do efeito, e é essa ordem que garante que duas
+ * notificações simultâneas não apliquem o efeito duas vezes. O outro lado
+ * dela: se o efeito falhar — o banco soluçou, o perfil não existe —, a
+ * cobrança já estava `aprovado`, a notificação reenviada achava isso e
+ * pulava o efeito, e a varredura só olha cobranças pendentes. Quem pagou
+ * ficava sem o que comprou, e nada acusava.
+ *
+ * Por isso a falha devolve a cobrança a `pendente` antes de subir: o
+ * webhook que respondeu erro é reenviado pelo Mercado Pago, e a varredura
+ * a enxerga. A nova tentativa aprova e aplica de novo.
+ *
+ * O preço, aceito: se o efeito chegou a gravar e só a resposta se perdeu,
+ * a nova tentativa aplica de novo. Esse erro cai para o lado de quem pagou
+ * — e é visível, no Sentry e no saldo —, em vez de cair para o de quem não
+ * recebeu e não tem como saber.
+ */
+async function aplicarEfeitoOuReabrir(pagamento: Pagamento): Promise<void> {
+  try {
+    await aplicarEfeito(pagamento);
+  } catch (erro) {
+    log.erro(comoAppError(erro), {
+      acao: "pagamentos.efeito",
+      tipo: pagamento.tipo,
+      pagamentoId: pagamento.id,
+    });
+    try {
+      await repositorioPagamentos().reabrir(pagamento.id);
+    } catch (e) {
+      // Sem isto a cobrança fica aprovada e sem efeito: avisa em voz alta.
+      log.erro(comoAppError(e), {
+        acao: "pagamentos.reabrir",
+        pagamentoId: pagamento.id,
+      });
+    }
+    throw erro;
+  }
+}
+
 async function aplicarEfeito(pagamento: Pagamento): Promise<void> {
   switch (pagamento.tipo) {
     case "prestador_mensalidade":
@@ -300,7 +341,7 @@ export async function assinar(
       referenciaExterna: assinatura.id,
       emailPagador: usuario.email,
       urlRetorno: `${urlPublica()}/pagamento/retorno?assinatura=${assinatura.id}`,
-      diasTeste: diasDeTeste(tipo),
+      diasTeste: await diasDeTesteDisponiveis(sessao.usuarioId, tipo),
     },
     opcoes.buscar,
   );
@@ -595,6 +636,26 @@ function statusDaAssinatura(statusRemoto: string): StatusAssinatura | null {
 }
 
 /**
+ * Quantos dias de teste grátis esta pessoa ainda pode ter (#392).
+ *
+ * O teste é um por conta: quem já o usou recebe zero, assina sem
+ * `free_trial` e é cobrada na hora. Antes, cada assinatura nova que ficava
+ * ativa concedia 15 dias, e cancelar e assinar de novo repetia o ciclo — a
+ * pessoa nunca pagava e ficava na vitrine.
+ *
+ * A tela usa a mesma função, para o texto e o botão dizerem o que vai
+ * acontecer antes do clique, e não depois.
+ */
+export async function diasDeTesteDisponiveis(
+  usuarioId: string,
+  tipo: TipoPagamento,
+): Promise<number> {
+  const dias = diasDeTeste(tipo);
+  if (dias === 0) return 0;
+  return (await repositorioUsuarios().testeGratisJaUsado(usuarioId)) ? 0 : dias;
+}
+
+/**
  * Espelha aqui o estado da assinatura lá — tópico
  * `subscription_preapproval`.
  *
@@ -652,7 +713,21 @@ export async function confirmarAssinatura(
      */
     const dias = diasDeTeste(mudou.tipo);
     if (status === "ativa" && eraPendente && dias > 0) {
-      await estenderMensalidade(mudou.usuarioId, dias);
+      /*
+       * O teste é um por conta (#392), e a reivindicação é atômica: duas
+       * ativações simultâneas leriam as duas "não usou" e concederiam o
+       * teste duas vezes. Quem já o usou ativa a assinatura sem dias de
+       * teste — a primeira cobrança, que o Mercado Pago faz na hora porque
+       * a assinatura nasceu sem `free_trial`, estende a mensalidade.
+       */
+      if (await repositorioUsuarios().reivindicarTesteGratis(mudou.usuarioId)) {
+        await estenderMensalidade(mudou.usuarioId, dias);
+      } else {
+        log.info("assinatura ativada sem teste: a conta já usou o dela", {
+          acao: "pagamentos.confirmar_assinatura",
+          tipo: mudou.tipo,
+        });
+      }
     }
     log.info("assinatura mudou de estado", {
       acao: "pagamentos.confirmar_assinatura",
@@ -690,13 +765,23 @@ async function registrarParcela(
     mpPaymentId,
   });
 
-  // `null`: outro aviso já registrou esta mesma parcela.
-  if (!parcela) return;
+  let liquidada = parcela;
+  if (!liquidada) {
+    /*
+     * Outro aviso já registrou esta mesma parcela — a não ser que o efeito
+     * dela tenha falhado e a parcela tenha sido reaberta (#384): aí falta
+     * aprovar de novo e aplicar. Qualquer outro estado é "já resolvida".
+     */
+    const existente = await repo.porMpPaymentId(mpPaymentId);
+    if (existente?.status !== "pendente") return;
+    liquidada = await repo.aprovar(existente.id, mpPaymentId);
+    if (!liquidada) return;
+  }
 
   // Cobrou, logo está autorizada — mesmo que o aviso de autorização
   // ainda não tenha chegado, ou tenha se perdido.
   await repo.definirStatusAssinatura(assinatura.id, "ativa");
-  await aplicarEfeito(parcela);
+  await aplicarEfeitoOuReabrir(liquidada);
 
   log.info("parcela da assinatura registrada", {
     acao: "pagamentos.parcela",
@@ -753,6 +838,42 @@ export async function confirmarParcelaDaAssinatura(
  * por isso o status em si vem sempre de uma nova chamada à API, nunca do
  * corpo do POST.
  */
+/**
+ * O valor pago bate com o da cobrança? Se não, o Sentry fica sabendo
+ * (#331) — e a aprovação segue.
+ *
+ * Hoje não há como divergir: o valor sai da preferência que o próprio
+ * servidor cria, e ninguém altera uma preferência sem o nosso token. É
+ * defesa em profundidade, para o dia em que algo mudar — um cupom, uma
+ * promoção, um preço trocado no código e esquecido numa cobrança aberta.
+ *
+ * **Avisa e não barra, de propósito.** Barrar seria segurar o crédito de
+ * alguém que pagou de verdade por uma diferença de centavos, ou por um
+ * campo que o Mercado Pago passasse a preencher de outro jeito — e
+ * cobrança paga sem efeito é o defeito mais caro deste caminho, o mesmo
+ * da primeira venda (#196). Com o aviso, quem opera decide caso a caso, e
+ * o estorno está a um botão.
+ */
+function conferirValorPago(
+  pagamento: { id: string; valorCentavos: number },
+  remoto: PagamentoNoMercadoPago,
+) {
+  if (remoto.valorCentavos == null) return;
+  const moeda = remoto.moeda ?? "BRL";
+  if (remoto.valorCentavos === pagamento.valorCentavos && moeda === "BRL") {
+    return;
+  }
+
+  log.erro(erros.interno("valor pago diferente do valor da cobrança"), {
+    acao: "pagamentos.confirmar",
+    pagamentoId: pagamento.id,
+    mpPaymentId: remoto.id,
+    cobradoCentavos: pagamento.valorCentavos,
+    pagoCentavos: remoto.valorCentavos,
+    moeda,
+  });
+}
+
 export async function confirmarPagamento(
   mpPaymentId: string,
   buscar?: typeof fetch,
@@ -817,12 +938,13 @@ export async function confirmarPagamento(
   }
 
   if (infoRemota.status === "approved") {
+    conferirValorPago(pagamento, infoRemota);
     const aprovado = await repo.aprovar(pagamento.id, infoRemota.id);
     // `null`: outra notificação já tinha aprovado ou rejeitado antes —
     // o efeito já foi aplicado (ou nunca deveria ser), e reaplicar
     // dobraria o que a cobrança compra.
     if (aprovado) {
-      await aplicarEfeito(aprovado);
+      await aplicarEfeitoOuReabrir(aprovado);
       log.info("pagamento aprovado", {
         acao: "pagamentos.confirmar",
         tipo: pagamento.tipo,
@@ -1006,21 +1128,38 @@ export async function reconciliarPagamentosPendentes(
   for (const presa of presas) {
     try {
       const achados = await pagamentosPorReferencia(presa.id, opcoes.buscar);
-      const escolhido = escolherPagamento(achados);
-      if (!escolhido) continue;
+      // `null`: não deu para perguntar ao Mercado Pago. Não conta como
+      // conferida (#388): fica onde está e a próxima varredura tenta de novo.
+      if (achados === null) continue;
 
-      await confirmarPagamento(escolhido.id, opcoes.buscar);
+      const escolhido = escolherPagamento(achados);
+
+      if (escolhido) {
+        await confirmarPagamento(escolhido.id, opcoes.buscar);
+
+        /*
+         * Conta pelo que mudou no banco, não pelo que se tentou.
+         *
+         * `confirmarPagamento` pode não fazer nada — outra notificação
+         * chegou primeiro, ou o status remoto não pede mudança. Um contador
+         * de tentativas diria que a varredura resolveu vinte coisas numa
+         * noite em que ela não resolveu nenhuma.
+         */
+        const depois = await repo.porId(presa.id);
+        if (depois && depois.status !== "pendente") {
+          reconciliadas += 1;
+          continue;
+        }
+      }
 
       /*
-       * Conta pelo que mudou no banco, não pelo que se tentou.
-       *
-       * `confirmarPagamento` pode não fazer nada — outra notificação
-       * chegou primeiro, ou o status remoto não pede mudança. Um contador
-       * de tentativas diria que a varredura resolveu vinte coisas numa
-       * noite em que ela não resolveu nenhuma.
+       * Conferida e continua pendente — checkout abandonado, ou boleto e PIX
+       * ainda por pagar (#388). Vai para o fim da fila: sem isto ela voltava
+       * às mesmas 50 vagas em toda varredura e, com 50 dessas na frente, uma
+       * cobrança presa de verdade nunca era conferida. Em erro não se mexe:
+       * a próxima varredura tenta de novo.
        */
-      const depois = await repo.porId(presa.id);
-      if (depois && depois.status !== "pendente") reconciliadas += 1;
+      await repo.marcarConferida(presa.id);
     } catch (e) {
       log.erro(comoAppError(e), {
         acao: "pagamentos.reconciliar",

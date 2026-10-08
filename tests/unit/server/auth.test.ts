@@ -161,7 +161,7 @@ describe("sessão", () => {
     vi.useRealTimers();
   });
 
-  it("renova só quando falta pouco", async () => {
+  it("token de hoje não é renovado", async () => {
     const agora = Math.floor(Date.now() / 1000);
 
     const recente = {
@@ -171,16 +171,96 @@ describe("sessão", () => {
       emitidoEm: agora,
     };
     expect(await renovarSeNecessario(recente)).toBeNull();
+  });
 
-    const quaseVencendo = {
+  /**
+   * O caso da #323: quem abre o app a cada quatro dias.
+   *
+   * Com o limiar antigo (renovar faltando dois dias), no quarto dia ainda
+   * faltavam três, nada renovava, e no oitavo a pessoa estava deslogada
+   * mesmo usando o app a semana inteira.
+   */
+  it("token de quatro dias é renovado, por mais sete", async () => {
+    const agora = Math.floor(Date.now() / 1000);
+    const quatroDias = 4 * 24 * 60 * 60;
+
+    const sessao = {
       usuarioId: "u1",
       papel: "empresa" as Papel,
-      expiraEm: agora + 60,
-      emitidoEm: agora - CONFIG_SESSAO.VALIDADE_SEGUNDOS + 60,
+      expiraEm: agora + CONFIG_SESSAO.VALIDADE_SEGUNDOS - quatroDias,
+      emitidoEm: agora - quatroDias,
     };
-    const novo = await renovarSeNecessario(quaseVencendo);
-    expect(novo).toBeTruthy();
-    expect((await lerSessao(novo!))?.usuarioId).toBe("u1");
+    const novo = await renovarSeNecessario(sessao);
+
+    expect(novo?.expiraEm).toBe(agora + CONFIG_SESSAO.VALIDADE_SEGUNDOS);
+    const lida = await lerSessao(novo?.token ?? "");
+    expect(lida?.usuarioId).toBe("u1");
+    expect(lida?.papel).toBe("empresa");
+  });
+
+  /**
+   * O `iat` do login sobrevive à renovação.
+   *
+   * É ele que a revogação compara (#225). Um token novo com `iat` de agora
+   * nasceria depois do corte de quem trocou a senha — e o token roubado,
+   * renovado pelo próprio ladrão, voltaria a valer.
+   */
+  it("a renovação guarda a hora do login, não a de agora", async () => {
+    const agora = Math.floor(Date.now() / 1000);
+    const login = agora - 10 * 24 * 60 * 60;
+
+    const novo = await renovarSeNecessario({
+      usuarioId: "u1",
+      papel: "candidato_clt",
+      expiraEm: agora + 60,
+      emitidoEm: login,
+    });
+
+    expect((await lerSessao(novo?.token ?? ""))?.emitidoEm).toBe(login);
+  });
+
+  it("nenhuma sessão vai além de trinta dias desde o login", async () => {
+    const agora = Math.floor(Date.now() / 1000);
+    const dia = 24 * 60 * 60;
+    const login = agora - 27 * dia;
+
+    const novo = await renovarSeNecessario({
+      usuarioId: "u1",
+      papel: "candidato_clt",
+      expiraEm: agora + dia,
+      emitidoEm: login,
+    });
+
+    // Faltavam três dias para o teto: ganha até lá, e não os sete inteiros.
+    expect(novo?.expiraEm).toBe(login + CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS);
+  });
+
+  it("encostada no teto, a sessão não é renovada", async () => {
+    const agora = Math.floor(Date.now() / 1000);
+    const login = agora - CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS + 60;
+
+    expect(
+      await renovarSeNecessario({
+        usuarioId: "u1",
+        papel: "candidato_clt",
+        expiraEm: login + CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS,
+        emitidoEm: login,
+      }),
+    ).toBeNull();
+  });
+
+  /**
+   * O teto vale também para quem assina direto, e não só pela renovação:
+   * é a assinatura que decide o `exp`, e um `exp` além do teto passaria em
+   * `lerSessao` sem ninguém perceber.
+   */
+  it("assinar com um login antigo já nasce dentro do teto", async () => {
+    const agora = Math.floor(Date.now() / 1000);
+    const login = agora - 29 * 24 * 60 * 60;
+
+    const { expiraEm } = await assinarSessao("u1", "empresa", login);
+
+    expect(expiraEm).toBe(login + CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS);
   });
 
   it("o cookie é httpOnly e SameSite=Lax", () => {

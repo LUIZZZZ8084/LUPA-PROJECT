@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { repositorioPagamentos } from "@/server/pagamentos";
 import { RetornoDaCompra } from "./retorno-cliente";
 
@@ -24,14 +24,19 @@ export default async function RetornoPagamentoPage({
   searchParams: Promise<{ assinatura?: string; compra?: string }>;
 }) {
   const { assinatura: idAssinatura, compra: idCompra } = await searchParams;
-  const sessao = await sessaoAtual();
+  const sessao = await sessaoOuEntrar(
+    idAssinatura
+      ? `/pagamento/retorno?assinatura=${idAssinatura}`
+      : `/pagamento/retorno?compra=${idCompra ?? ""}`,
+  );
 
   const repo = repositorioPagamentos();
 
   /*
    * Mesma regra de "não encontrado" em vez de "sem permissão": id
-   * ausente, sessão ausente ou recurso de outra pessoa recebem o mesmo
-   * 404, sem confirmar qual dos três aconteceu.
+   * ausente ou recurso de outra pessoa recebem o mesmo 404, sem confirmar
+   * qual dos dois aconteceu. Sessão ausente vai ao login (#330), e volta
+   * aqui depois.
    */
   const alvo = idAssinatura
     ? await repo.assinaturaPorId(idAssinatura)
@@ -39,7 +44,7 @@ export default async function RetornoPagamentoPage({
       ? await repo.porId(idCompra)
       : null;
 
-  if (!sessao || !alvo || alvo.usuarioId !== sessao.usuarioId) {
+  if (!alvo || alvo.usuarioId !== sessao.usuarioId) {
     notFound();
   }
 

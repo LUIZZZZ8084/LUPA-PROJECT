@@ -1,5 +1,8 @@
 import "server-only";
 
+import { FORMATO_CNPJ, normalizarCnpj } from "@/lib/format";
+import { log } from "../logger";
+
 /**
  * Conferir um CNPJ na Receita, pela BrasilAPI.
  *
@@ -16,8 +19,19 @@ import "server-only";
  * abertos da Receita.
  */
 
-/** Onde a consulta vive. Sem chave, sem cabeçalho, sem conta. */
+/** Onde a consulta vive. Sem chave e sem conta. */
 const BASE = "https://brasilapi.com.br/api/cnpj/v1";
+
+/**
+ * Quem está perguntando (#318).
+ *
+ * Sem chave, mas não sem cabeçalho. O `fetch` do Node se apresenta como
+ * `node`, e a BrasilAPI recusa esse nome com 403 — qualquer CNPJ, de
+ * qualquer empresa. Como 403 caía em `indisponivel`, a tela dizia "Receita
+ * fora do ar" para todo mundo, e nada ficava vermelho: o teste injeta um
+ * `fetch` falso, que não liga para cabeçalho.
+ */
+const USER_AGENT = "Lupa/1.0 (+https://lupapp.com.br)";
 
 /**
  * Quanto se espera antes de desistir.
@@ -73,13 +87,13 @@ export async function consultarCnpj(
   cnpj: string,
   buscar: typeof fetch = fetch,
 ): Promise<ResultadoConsulta> {
-  const digitos = cnpj.replace(/\D/g, "");
-  if (digitos.length !== 14) return { tipo: "nao_encontrado" };
+  const normalizado = normalizarCnpj(cnpj);
+  if (!FORMATO_CNPJ.test(normalizado)) return { tipo: "nao_encontrado" };
 
   try {
-    const resposta = await buscar(`${BASE}/${digitos}`, {
+    const resposta = await buscar(`${BASE}/${normalizado}`, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { accept: "application/json" },
+      headers: { accept: "application/json", "user-agent": USER_AGENT },
       /*
        * Sem cache do Next. O que se pergunta é "esta empresa está ativa
        * hoje", e uma resposta guardada de semanas atrás responderia outra
@@ -89,7 +103,18 @@ export async function consultarCnpj(
     });
 
     if (resposta.status === 404) return { tipo: "nao_encontrado" };
-    if (!resposta.ok) return { tipo: "indisponivel" };
+    if (!resposta.ok) {
+      /*
+       * O status vai para o log. Para quem está na tela, fora do ar e
+       * recusado são a mesma coisa; para quem mantém o app, não — o 403 da
+       * #318 não deixava registro nenhum.
+       */
+      log.warn("BrasilAPI recusou a consulta de CNPJ", {
+        acao: "verificacao.cnpj-consulta",
+        status: resposta.status,
+      });
+      return { tipo: "indisponivel" };
+    }
 
     const dados = (await resposta.json()) as RespostaBrasilApi;
     const razaoSocial = texto(dados.razao_social);
@@ -105,7 +130,7 @@ export async function consultarCnpj(
     return {
       tipo: "encontrado",
       empresa: {
-        cnpj: digitos,
+        cnpj: normalizado,
         razaoSocial,
         situacao: situacao.toUpperCase(),
         uf: texto(dados.uf),

@@ -4,7 +4,7 @@
  * A validação da entrada dos avisos (#48).
  *
  * A cidade passa pela lista do IBGE, e não por um `z.string()` qualquer:
- * cidade livre viraria "Sinop", "sinop" e "Sinop-MT" na mesma base, e o
+ * cidade livre viraria "Sinop - MT", "sinop" e "Sinop-MT" na mesma base, e o
  * casamento com a vaga deixaria de acontecer. A pessoa marcaria a
  * preferência e nunca receberia nada, sem jeito de descobrir por quê.
  */
@@ -18,7 +18,7 @@ import { validar } from "@/server/validation";
 describe("preferência de aviso", () => {
   it("aceita cidade de Mato Grosso com área da lista", () => {
     const r = validar(schemaPreferencia, {
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       categoria: "Agronegócio",
     });
     expect(r.ok).toBe(true);
@@ -26,14 +26,19 @@ describe("preferência de aviso", () => {
 
   /** Vazio é "todas as áreas" — o padrão de quem quer tudo na cidade. */
   it("categoria vazia passa, e significa todas", () => {
-    const r = validar(schemaPreferencia, { cidade: "Sinop", categoria: "" });
+    const r = validar(schemaPreferencia, {
+      cidade: "Sinop - MT",
+      categoria: "",
+    });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.valor.categoria).toBe("");
   });
 
   it("sem categoria nenhuma também passa", () => {
-    expect(validar(schemaPreferencia, { cidade: "Sorriso" }).ok).toBe(true);
+    expect(validar(schemaPreferencia, { cidade: "Sorriso - MT" }).ok).toBe(
+      true,
+    );
   });
 
   it("cidade de outro estado é recusada", () => {
@@ -48,7 +53,7 @@ describe("preferência de aviso", () => {
 
   it("área fora da lista é recusada", () => {
     const r = validar(schemaPreferencia, {
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
       categoria: "Astronauta",
     });
     expect(r.ok).toBe(false);
@@ -72,6 +77,22 @@ describe("inscrição do aparelho", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("só aceita endereço dos serviços de push dos navegadores (#356)", () => {
+    for (const endpoint of [
+      "https://updates.push.services.mozilla.com/wpush/v2/abc",
+      "https://web.push.apple.com/QXl0abc",
+    ]) {
+      expect(validar(schemaInscricao, { ...valida, endpoint }).ok).toBe(true);
+    }
+    for (const endpoint of [
+      "https://push.exemplo/abc",
+      "https://169.254.169.254/latest",
+      "http://fcm.googleapis.com/fcm/send/abc",
+    ]) {
+      expect(validar(schemaInscricao, { ...valida, endpoint }).ok).toBe(false);
+    }
+  });
+
   it("chave vazia é recusada", () => {
     expect(validar(schemaInscricao, { ...valida, p256dh: "" }).ok).toBe(false);
     expect(validar(schemaInscricao, { ...valida, auth: "" }).ok).toBe(false);
@@ -84,7 +105,7 @@ describe("inscrição do aparelho", () => {
   it("endpoint absurdamente longo é recusado", () => {
     const r = validar(schemaInscricao, {
       ...valida,
-      endpoint: `https://push.exemplo/${"x".repeat(1200)}`,
+      endpoint: `https://fcm.googleapis.com/${"x".repeat(1200)}`,
     });
     expect(r.ok).toBe(false);
   });

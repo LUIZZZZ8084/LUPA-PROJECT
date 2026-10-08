@@ -1,15 +1,35 @@
 import { ArrowRight, Briefcase, Building2, Wrench } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
-import { ROLE_LABELS } from "@/lib/constants";
+import { PageShell, PageTitle } from "@/components/layout/page-shell";
 import type { Role } from "@/lib/types";
 import { SignUpForm } from "./form";
 
-export const metadata: Metadata = {
-  title: "Criar conta",
-  description: "Crie sua conta na Lupa como candidato, prestador ou empresa.",
+/*
+ * O título diz que conta está sendo criada (#303). As três telas de
+ * cadastro eram "Criar conta" na aba, e quem abre o link de cadastro de
+ * empresa recebido por WhatsApp precisa ver que está no lugar certo antes
+ * de ler a tela.
+ */
+const TITULO_POR_PAPEL: Record<Role, string> = {
+  candidato_clt: "Criar conta para procurar emprego",
+  prestador_servico: "Criar conta de prestador de serviço",
+  empresa: "Criar conta de empresa",
 };
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ tipo?: string | string[] }>;
+}): Promise<Metadata> {
+  const { tipo } = await searchParams;
+  const selecionado = Array.isArray(tipo) ? tipo[0] : tipo;
+
+  return {
+    title: isRole(selecionado) ? TITULO_POR_PAPEL[selecionado] : "Criar conta",
+    description: "Crie sua conta na Lupa como candidato, prestador ou empresa.",
+  };
+}
 
 const ROLES = [
   {
@@ -18,7 +38,7 @@ const ROLES = [
     tone: "vagas" as const,
     title: "Quero um emprego",
     description:
-      "Busque vagas CLT por bairro e categoria, e candidate-se em um toque.",
+      "Busque vagas por cidade e categoria, e candidate-se em um toque.",
   },
   {
     role: "prestador_servico" as const,
@@ -73,13 +93,14 @@ export default async function CadastroPage({
   const selected = Array.isArray(tipo) ? tipo[0] : tipo;
 
   if (isRole(selected)) {
+    /*
+     * O título e o "voltar" moram dentro do formulário: depois de criada a
+     * conta, "Leva menos de dois minutos" e "Escolher outro tipo de conta"
+     * deixam de ser verdade — e ocupavam o topo da tela que precisa caber
+     * inteira no celular (#299).
+     */
     return (
       <PageShell width="narrow">
-        <BackLink href="/cadastro" label="Escolher outro tipo de conta" />
-        <PageTitle
-          title={`Cadastro de ${ROLE_LABELS[selected].toLowerCase()}`}
-          description="Leva menos de dois minutos. Você completa o resto do perfil depois."
-        />
         <SignUpForm role={selected} />
       </PageShell>
     );

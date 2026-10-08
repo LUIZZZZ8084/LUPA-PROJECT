@@ -19,45 +19,38 @@ import {
 
 describe("dados da conta", () => {
   it("aceita o mínimo", () => {
-    const r = schemaBasico.safeParse({
-      nomeCompleto: "Ana Paula Ribeiro",
-      telefone: "66999110005",
-      bairro: "",
-    });
+    const r = schemaBasico.safeParse({ telefone: "66999110005" });
     expect(r.success).toBe(true);
-    expect(r.success && r.data.bairro).toBeNull();
   });
 
   it("recusa telefone que não é celular", () => {
-    const r = schemaBasico.safeParse({
-      nomeCompleto: "Ana",
-      telefone: "6635110001",
-      bairro: "",
-    });
+    const r = schemaBasico.safeParse({ telefone: "6635110001" });
     expect(r.success).toBe(false);
   });
 
   /*
-   * Bairro virou texto quando o app abriu para Mato Grosso inteiro. Enum
-   * exigiria a lista dos 142 municípios, que não existe pronta — e
-   * recusaria loteamento novo até em Sinop, onde a cidade cresce todo ano.
+   * Bairro de pessoa saiu (#321): não existe lista para o país e nada
+   * filtra por ele. Um `bairro` que ainda chegue — formulário em cache, ou
+   * alguém forjando — é descartado, não gravado.
    */
-  it("aceita bairro que não está em nenhuma lista curada", () => {
+  it("descarta bairro enviado no formulário", () => {
     const r = schemaBasico.safeParse({
-      nomeCompleto: "Ana Paula",
       telefone: "66999110005",
-      bairro: "Residencial Nova Fronteira",
+      bairro: "Centro",
     });
-    expect(r.success).toBe(true);
+    expect(r.success && Object.keys(r.data)).not.toContain("bairro");
   });
 
-  it("recusa bairro de uma letra — isso é engano de digitação", () => {
+  /**
+   * O nome não se edita (#315): ele assina as avaliações. Um
+   * `nomeCompleto` forjado no formulário é descartado, não gravado.
+   */
+  it("descarta o nome enviado no formulário", () => {
     const r = schemaBasico.safeParse({
-      nomeCompleto: "Ana Paula",
+      nomeCompleto: "Nome Trocado",
       telefone: "66999110005",
-      bairro: "X",
     });
-    expect(r.success).toBe(false);
+    expect(r.success && Object.keys(r.data)).not.toContain("nomeCompleto");
   });
 });
 
@@ -242,7 +235,6 @@ describe("anúncio do prestador", () => {
     descricao: "Instalações elétricas residenciais e comerciais em Sinop.",
     precoInicial: "",
     anosExperiencia: "",
-    bairrosAtendidos: [],
     instagram: "",
     facebook: "",
   };
@@ -292,19 +284,13 @@ describe("anúncio do prestador", () => {
     ).toBe(false);
   });
 
-  /** Um bairro só chega como string; vários, como lista. */
-  it("aceita um bairro ou vários", () => {
-    const um = schemaPrestador.safeParse({
-      ...base,
-      bairrosAtendidos: "Centro",
-    });
-    expect(um.success && um.data.bairrosAtendidos).toEqual(["Centro"]);
-
-    const varios = schemaPrestador.safeParse({
+  /** Área de atendimento por bairro saiu (#321): o que chegar é descartado. */
+  it("descarta bairros atendidos enviados no formulário", () => {
+    const r = schemaPrestador.safeParse({
       ...base,
       bairrosAtendidos: ["Centro", "Menezes"],
     });
-    expect(varios.success && varios.data.bairrosAtendidos).toHaveLength(2);
+    expect(r.success && Object.keys(r.data)).not.toContain("bairrosAtendidos");
   });
 
   it("instagram e facebook são opcionais", () => {
@@ -333,7 +319,6 @@ describe("anúncio do prestador", () => {
 
 describe("empresa", () => {
   const base = {
-    razaoSocial: "Agro Norte Ltda.",
     setor: "",
     porte: "",
     site: "",
@@ -342,7 +327,7 @@ describe("empresa", () => {
     descricao: "",
   };
 
-  it("aceita só a razão social", () => {
+  it("aceita tudo em branco", () => {
     const r = schemaEmpresa.safeParse(base);
     expect(r.success).toBe(true);
     expect(r.success && r.data.site).toBeNull();
@@ -352,6 +337,30 @@ describe("empresa", () => {
     expect(
       schemaEmpresa.safeParse({ ...base, site: "agronorte" }).success,
     ).toBe(false);
+  });
+
+  it.each([
+    ["javascript:alert(1)", "script"],
+    ["data:text/html,<b>x</b>", "data"],
+    ["ftp://agronorte.com.br", "ftp"],
+    ["file:///etc/passwd", "arquivo local"],
+  ])("recusa %s nos três campos de link (%s) (#354)", (url) => {
+    for (const campo of ["site", "instagram", "facebook"] as const) {
+      expect(
+        schemaEmpresa.safeParse({ ...base, [campo]: url }).success,
+        `${campo}: ${url}`,
+      ).toBe(false);
+    }
+  });
+
+  it("aceita http e https nos três campos de link (#354)", () => {
+    for (const campo of ["site", "instagram", "facebook"] as const) {
+      for (const url of ["http://exemplo.com.br", "https://exemplo.com.br/x"]) {
+        expect(schemaEmpresa.safeParse({ ...base, [campo]: url }).success).toBe(
+          true,
+        );
+      }
+    }
   });
 
   it("aceita site válido", () => {
@@ -382,6 +391,14 @@ describe("empresa", () => {
    */
   it("não tem campo de CNPJ", () => {
     expect(Object.keys(schemaEmpresa.shape)).not.toContain("cnpj");
+  });
+
+  /**
+   * Nem de nome (#315): ele assina as vagas e as avaliações da empresa, e
+   * só a conferência na Receita o troca.
+   */
+  it("não tem campo de nome", () => {
+    expect(Object.keys(schemaEmpresa.shape)).not.toContain("razaoSocial");
   });
 
   it("recusa porte fora da lista", () => {

@@ -49,21 +49,16 @@ import "server-only";
 export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 
 /**
- * A chave anônima, pelo nome novo — com o antigo ainda aceito.
+ * A chave anônima, só pelo nome novo (#279).
  *
- * O fallback existe por uma razão só, e ela é temporária: derrubar
- * produção por causa de um nome de variável seria trocar um risco
- * hipotético por uma indisponibilidade real. Enquanto só o nome antigo
- * estiver na Vercel, o app sobe normalmente e
- * `conferirConfiguracaoDeProducao` avisa no log.
+ * O nome antigo, com o prefixo `NEXT_PUBLIC_`, foi aceito como fallback
+ * enquanto a Vercel não era atualizada. A troca foi feita em 23/09/2026, e
+ * a segunda leitura saiu junto com o aviso de arranque que a cobrava.
  *
- * Quando `SUPABASE_ANON_KEY` existir em produção e o nome antigo for
- * apagado, esta segunda metade sai — e o teste que cobra o aviso sai
- * junto.
+ * Faltar esta variável em produção não cai mais em demonstração em
+ * silêncio: `conferirConfiguracaoDeProducao` recusa subir, e a mensagem
+ * diz se o que existe é o nome antigo.
  */
-export const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  "";
+export const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
 
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);

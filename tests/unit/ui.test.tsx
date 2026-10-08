@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge, Meta } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -56,6 +56,56 @@ describe("Avatar", () => {
     const img = screen.getByRole("img", { name: "João Silva" });
     expect(img).toHaveAttribute("src", "/foto.jpg");
     expect(img).toHaveAttribute("loading", "lazy");
+  });
+
+  /*
+   * Foto do Storage passa pelo otimizador (#267). Era `<img>` para todas, e
+   * uma foto de perfil de 1,9 MB chegava inteira ao celular para desenhar
+   * um círculo de 48 px — na vitrine, a cada abertura de `/servicos`.
+   */
+  describe("foto do Storage", () => {
+    const STORAGE = "https://projeto-teste.supabase.co";
+    const FOTO = `${STORAGE}/storage/v1/object/public/avatares/avatar/u1.jpg?v=1`;
+
+    afterEach(() => vi.unstubAllEnvs());
+
+    it("sai pelo otimizador, na largura do avatar", () => {
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", STORAGE);
+      render(<Avatar name="João Silva" src={FOTO} size="md" />);
+
+      const src =
+        screen.getByRole("img", { name: "João Silva" }).getAttribute("src") ??
+        "";
+      expect(src.startsWith("/_next/image?url=")).toBe(true);
+      expect(decodeURIComponent(src)).toContain(FOTO);
+      // Largura de avatar, não da foto enviada: o que o otimizador devolve
+      // é esta, em WebP.
+      const largura = Number(new URLSearchParams(src.split("?")[1]).get("w"));
+      expect(largura).toBeLessThanOrEqual(128);
+    });
+
+    it("de outro host continua em <img>, sem passar pelo otimizador", () => {
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", STORAGE);
+      const alheia = "https://outro-host.example/foto.jpg";
+      render(<Avatar name="João Silva" src={alheia} />);
+
+      // Fora do `remotePatterns`, o otimizador recusaria com 400 e a foto
+      // apareceria quebrada.
+      expect(screen.getByRole("img", { name: "João Silva" })).toHaveAttribute(
+        "src",
+        alheia,
+      );
+    });
+
+    it("sem Supabase configurado, nenhuma foto remota vai ao otimizador", () => {
+      vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+      render(<Avatar name="João Silva" src={FOTO} />);
+
+      expect(screen.getByRole("img", { name: "João Silva" })).toHaveAttribute(
+        "src",
+        FOTO,
+      );
+    });
   });
 });
 

@@ -16,9 +16,11 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { VerifiedMark } from "@/components/verified-badge";
+import { WORK_MODE_LABELS } from "@/lib/constants";
 import { getJobById, getRelatedJobs } from "@/lib/data";
 import {
   formatSalaryRange,
+  linkExterno,
   pluralize,
   timeAgo,
   vagaExpirada,
@@ -49,6 +51,14 @@ export default async function JobDetailPage({
   const { id } = await params;
   const job = await getJobById(id);
   if (!job) notFound();
+
+  // Só http(s) vira link (#354): o endereço pode ter sido gravado antes de a
+  // validação por esquema existir.
+  const redes = {
+    site: linkExterno(job.company.site),
+    instagram: linkExterno(job.company.instagram),
+    facebook: linkExterno(job.company.facebook),
+  };
 
   /*
    * A contagem sai por `after()`, depois da resposta: quem abriu a vaga
@@ -105,13 +115,11 @@ export default async function JobDetailPage({
               </p>
             )}
 
-            {(job.company.site ||
-              job.company.instagram ||
-              job.company.facebook) && (
+            {(redes.site || redes.instagram || redes.facebook) && (
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-                {job.company.site && (
+                {redes.site && (
                   <a
-                    href={job.company.site}
+                    href={redes.site}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
@@ -119,9 +127,9 @@ export default async function JobDetailPage({
                     Site
                   </a>
                 )}
-                {job.company.instagram && (
+                {redes.instagram && (
                   <a
-                    href={job.company.instagram}
+                    href={redes.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
@@ -129,9 +137,9 @@ export default async function JobDetailPage({
                     Instagram
                   </a>
                 )}
-                {job.company.facebook && (
+                {redes.facebook && (
                   <a
-                    href={job.company.facebook}
+                    href={redes.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
@@ -172,6 +180,9 @@ export default async function JobDetailPage({
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
           {job.category && <Badge tone="vagas">{job.category}</Badge>}
+          {job.work_mode && (
+            <Badge tone="outline">{WORK_MODE_LABELS[job.work_mode]}</Badge>
+          )}
           <Badge tone="outline">
             <Users size={11} />
             {pluralize(job.applicant_count, "candidato", "candidatos")}

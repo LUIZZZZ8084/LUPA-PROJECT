@@ -76,6 +76,7 @@ export async function receberMensagemDeSuporte(
       "",
       dados.mensagem,
     ].join("\n"),
+    tipo: "suporte",
   });
 
   /*

@@ -1,6 +1,7 @@
 import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import { after } from "next/server";
+import { AlternarBusca } from "@/components/alternar-busca";
 import { FilterBar } from "@/components/filter-bar";
 import { JobCard } from "@/components/job-card";
 import {
@@ -9,47 +10,41 @@ import {
   PageTitle,
 } from "@/components/layout/page-shell";
 import { ButtonLink } from "@/components/ui/button";
-import { cidadeDaBusca, umParametro } from "@/lib/busca";
-import {
-  CIDADES,
-  CONTRACT_TYPES,
-  ESTADO,
-  JOB_CATEGORIES,
-} from "@/lib/constants";
+import { filtrosDeLugar, lugarDaBusca, umParametro } from "@/lib/busca";
+import { UFS } from "@/lib/cidades";
+import { CONTRACT_TYPES, JOB_CATEGORIES } from "@/lib/constants";
 import { getJobs } from "@/lib/data";
 import { pluralize } from "@/lib/format";
 import { origemDoUsuario } from "@/server/auth/origem";
 import { contarBuscaSemResultado } from "@/server/buscas";
 
 /**
- * O título acompanha a cidade filtrada.
+ * O título acompanha o lugar filtrado.
  *
- * Fixo em "Sinop", ele anunciava Sinop para quem abria
- * `/vagas?cidade=Sorriso` — inclusive para o buscador e para quem
- * compartilha o link. A busca por cidade é o argumento do produto; a
- * página que responde "vagas em Sorriso" precisa se chamar assim.
- *
- * Sem cidade escolhida o título fala do estado, e Sinop fica na descrição,
- * que é onde o esforço de divulgação está.
+ * Fixo, ele anunciava um lugar para quem abria a busca de outro —
+ * inclusive para quem compartilha o link. A página que responde "vagas em
+ * Sorriso - MT" precisa se chamar assim. Sem lugar escolhido, a busca é do
+ * Brasil inteiro (#301), e o título não promete cidade nenhuma.
  */
 export async function generateMetadata({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<Metadata> {
-  const cidade = cidadeDaBusca(await searchParams);
+  const { uf, cidade } = lugarDaBusca(await searchParams);
+  const lugar = cidade ?? UFS.find((u) => u.sigla === uf)?.nome;
 
-  if (cidade) {
+  if (lugar) {
     return {
-      title: `Vagas de emprego em ${cidade}`,
-      description: `Vagas CLT, estágio e temporárias em ${cidade}-${ESTADO}, filtradas por categoria, bairro e tipo de contrato.`,
+      title: `Vagas de emprego em ${lugar}`,
+      description: `Vagas CLT, estágio e temporárias em ${lugar}, filtradas por categoria e tipo de contrato.`,
     };
   }
 
   return {
-    title: "Vagas de emprego em Mato Grosso",
+    title: "Vagas de emprego",
     description:
-      "Vagas CLT, estágio e temporárias nos 142 municípios de Mato Grosso, começando por Sinop. Filtre por cidade, categoria e tipo de contrato.",
+      "Vagas CLT, estágio e temporárias no Brasil inteiro, com o que está mais perto de você primeiro. Filtre por estado, cidade, categoria e tipo de contrato.",
   };
 }
 
@@ -62,27 +57,27 @@ export default async function VagasPage({
   const single = (key: string) => umParametro(params, key);
 
   /*
-   * Sem cidade na URL, a busca é do estado inteiro — não de Sinop.
+   * Sem lugar na URL, a busca é do Brasil inteiro — não de uma cidade
+   * padrão.
    *
-   * O `?? "Sinop"` sobrou de quando Sinop era a única cidade. Depois que os
-   * 142 municípios entraram, ele passou a esconder daqui toda vaga
-   * publicada fora de Sinop: a empresa via a vaga no painel e nos destaques
-   * da home — que consulta sem filtro nenhum — e não via na busca, o que
-   * parece vaga que não foi publicada.
-   *
-   * O chip do filtro já anuncia "Todo o MT" enquanto nada está escolhido.
-   * `undefined` aqui é o que faz a tela entregar o que ela promete.
+   * Um `?? "Sinop"` já viveu aqui, de quando Sinop era a única cidade, e
+   * escondia toda vaga publicada fora dela: a empresa via a vaga no painel
+   * e nos destaques da home e não via na busca (#76). O chip do filtro
+   * anuncia "Todo o Brasil" enquanto nada está escolhido, e `undefined` é o
+   * que faz a tela entregar o que ela promete.
    */
+  const lugar = lugarDaBusca(params);
   /*
    * Ordena, não filtra: o mais perto de quem está olhando vem primeiro, e
    * nada sai da lista por estar longe. Sem isso, quem é de Sinop abre a
-   * busca do estado inteiro e a primeira coisa que vê pode ser Cuiabá, a
-   * 500km — o oposto do que "hiperlocal" promete.
+   * busca do país inteiro e a primeira coisa que vê pode ser uma vaga no
+   * Rio Grande do Sul.
    */
   const perto = await origemDoUsuario();
 
   const filters = {
-    city: single("cidade"),
+    city: lugar.cidade,
+    uf: lugar.uf,
     category: single("categoria"),
     contract_type: single("tipo"),
     q: single("q"),
@@ -120,33 +115,37 @@ export default async function VagasPage({
    * de você" descreveria uma ordenação que já não decide quase nada.
    */
   const ordenadoPorProximidade = Boolean(perto && !filters.city);
+  const temFiltro = Boolean(
+    filters.uf || filters.category || filters.contract_type || filters.q,
+  );
 
   return (
     <PageShell>
       <PageTitle
         title="Vagas"
         accent="text-vagas"
-        description="Vagas de emprego em todo o Mato Grosso, direto de quem está contratando."
+        description="Vagas de emprego no Brasil inteiro, direto de quem está contratando."
+      />
+
+      <AlternarBusca
+        atual="vagas"
+        q={single("q")}
+        uf={lugar.uf}
+        cidade={lugar.cidade}
       />
 
       <FilterBar
         accent="vagas"
         searchPlaceholder="Buscar vaga, cargo ou empresa..."
         values={{
-          cidade: single("cidade"),
+          uf: lugar.uf,
+          cidade: lugar.cidade,
           categoria: single("categoria"),
           tipo: single("tipo"),
           q: single("q"),
         }}
         filters={[
-          {
-            key: "cidade",
-            placeholder: "Todo o MT",
-            options: CIDADES.map((c) => ({
-              value: c,
-              label: `${c} - ${ESTADO}`,
-            })),
-          },
+          ...filtrosDeLugar(lugar.uf),
           {
             key: "categoria",
             placeholder: "Categoria",
@@ -181,20 +180,32 @@ export default async function VagasPage({
       </p>
 
       {jobs.length === 0 ? (
-        <EmptyState
-          icon={<SearchX size={22} />}
-          title="Nenhuma vaga com esses filtros"
-          description="Tente remover um filtro, buscar por outro cargo, ou abrir para toda a região."
-          action={
-            <ButtonLink href="/vagas" variant="outline" size="sm">
-              Limpar busca
-            </ButtonLink>
-          }
-        />
+        /*
+         * Sem filtro nenhum, "remova um filtro" não ajuda: não há vaga
+         * nenhuma, e a frase precisa dizer isso (#302).
+         */
+        temFiltro ? (
+          <EmptyState
+            icon={<SearchX size={22} />}
+            title="Nenhuma vaga com esses filtros"
+            description="Tente remover um filtro, buscar por outro cargo, ou abrir para todo o Brasil."
+            action={
+              <ButtonLink href="/vagas" variant="outline" size="sm">
+                Limpar busca
+              </ButtonLink>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={<SearchX size={22} />}
+            title="Ainda não há vagas abertas"
+            description="As vagas aparecem aqui assim que alguém publica. Quem contrata publica pelo painel da empresa."
+          />
+        )
       ) : (
         <div className="stagger grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {jobs.map((job) => (
-            <JobCard key={job.id} job={job} perto={perto} />
+            <JobCard key={job.id} job={job} />
           ))}
         </div>
       )}

@@ -8,7 +8,7 @@ import {
   UserSearch,
 } from "lucide-react";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import {
   EmptyState,
   PageShell,
@@ -33,7 +33,7 @@ import {
   vagaExpirada,
   whatsappLink,
 } from "@/lib/format";
-import { sessaoAtual } from "@/server/auth/cookies";
+import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import {
   type MatchDaCandidatura,
@@ -92,7 +92,7 @@ export async function PainelDeContratacao({
 }: {
   area: AreaDeContratacao;
 }) {
-  const sessao = await sessaoAtual();
+  const sessao = await sessaoOuEntrar(area.base);
 
   /*
    * O painel é "minha empresa", e quem não tem empresa não tem painel.
@@ -109,7 +109,6 @@ export async function PainelDeContratacao({
    * propósito: ele enxerga tudo pelo `/admin/painel`, e uma empresa
    * própria é justamente o que ele não tem.
    */
-  if (!sessao) notFound();
 
   /*
    * Cada porta atende o próprio papel (#189).
@@ -495,7 +494,7 @@ export async function PainelDeContratacao({
                 className="flex flex-col gap-2 p-4 transition-colors hover:bg-panel-2 sm:flex-row sm:items-center sm:gap-3"
               >
                 {/*
-                  A linha inteira abre a ficha: nome, bairro e vaga não
+                  A linha inteira abre a ficha: nome e vaga não
                   bastam para decidir chamar alguém, e antes disto não
                   havia para onde clicar.
                 */}
@@ -514,9 +513,6 @@ export async function PainelDeContratacao({
                     </p>
                     <p className="truncate text-[11px] text-muted">
                       {app.job_title}
-                      {app.candidate.neighborhood
-                        ? ` · ${app.candidate.neighborhood}`
-                        : ""}
                       {` · ${timeAgo(app.created_at)}`}
                     </p>
                   </div>

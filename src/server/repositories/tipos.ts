@@ -32,7 +32,6 @@ export interface Usuario {
   cpf: string | null;
   telefone: string;
   cidade: string;
-  bairro: string | null;
   avatarUrl: string | null;
   emailVerificado: boolean;
   telefoneVerificado: boolean;
@@ -83,7 +82,6 @@ export interface DadosNovoUsuario {
   cpf?: string | null;
   telefone: string;
   cidade: string;
-  bairro?: string | null;
   avatarUrl?: string | null;
 }
 
@@ -113,7 +111,6 @@ export interface PerfilPrestador {
   descricao: string | null;
   precoInicial: number | null;
   anosExperiencia: number | null;
-  bairrosAtendidos: string[];
   instagram: string | null;
   facebook: string | null;
   /**
@@ -172,11 +169,15 @@ export interface PerfilCandidato {
    Edição de perfil
    ============================================================ */
 
-/** Campos que todo papel edita, guardados em `usuarios`. */
+/**
+ * Campos que todo papel edita, guardados em `usuarios`.
+ *
+ * O nome não está aqui (#315). Ele assina as avaliações, e quem podia
+ * trocá-lo a qualquer hora avaliava cada prestador com um nome diferente.
+ * Correção de nome é caso de suporte, como a cidade e o CNPJ.
+ */
 export interface EdicaoBasica {
-  nomeCompleto: string;
   telefone: string;
-  bairro: string | null;
 }
 
 export interface EdicaoCandidato {
@@ -194,7 +195,6 @@ export interface EdicaoPrestador {
   descricao: string;
   precoInicial: number | null;
   anosExperiencia: number | null;
-  bairrosAtendidos: string[];
   instagram: string | null;
   facebook: string | null;
 }
@@ -207,9 +207,11 @@ export interface EdicaoPrestador {
  * trocar depois permitiria cadastrar com um CNPJ válido, passar pela
  * verificação, e então virar outra empresa. Correção de CNPJ é caso de
  * suporte, com gente olhando.
+ *
+ * O nome também fica (#315): é ele que assina vaga e avaliação. Só a
+ * conferência na Receita o troca, por `definirRazaoSocialDaReceita`.
  */
 export interface EdicaoEmpresa {
-  razaoSocial: string;
   setor: string | null;
   porte: string | null;
   site: string | null;
@@ -234,6 +236,21 @@ export interface RepositorioUsuarios {
    * corrigida só numa (#142).
    */
   atualizarSenhaHash(id: string, senhaHash: string): Promise<void>;
+
+  /**
+   * Regrava o hash **da mesma senha** com os parâmetros atuais do Argon2.
+   *
+   * Existe só para `entrar()`, quando `precisaRehash` diz que o hash foi
+   * gerado com parâmetros antigos (#330). Não corta sessão nenhuma, e é
+   * esse o ponto: a senha não mudou, ninguém está sendo expulso. Com
+   * `atualizarSenhaHash` ali, o dia em que os parâmetros subissem cada
+   * login derrubaria os outros aparelhos da pessoa.
+   *
+   * **Nunca para troca de senha.** Troca de senha corta as sessões, e é
+   * `atualizarSenhaHash` que faz as duas coisas juntas — o aviso acima, da
+   * #142, continua valendo para ela.
+   */
+  regravarHash(id: string, senhaHash: string): Promise<void>;
 
   /**
    * Quem cortou as próprias sessões nos últimos `dias`, como epoch de
@@ -361,6 +378,43 @@ export interface RepositorioUsuarios {
   ): Promise<void>;
 
   /**
+   * Estende a mensalidade do prestador **de forma atômica** (#348).
+   *
+   * A conta — `max(agora, prazo atual) + dias`, para quem renova antes de
+   * vencer não perder os dias já pagos — acontece dentro de uma instrução
+   * do banco, e não lendo-computando-gravando na aplicação: duas extensões
+   * concorrentes para o mesmo prestador leriam a mesma base e uma se
+   * perderia. É o mesmo cuidado de `creditar_vaga` e da mensalidade do
+   * plano de vaga.
+   *
+   * `dias = null` revoga (o estorno tira a mensalidade na hora). Devolve
+   * `false` quando não há perfil de prestador — o serviço traduz isso no
+   * 404 de sempre.
+   */
+  estenderMensalidadePrestador(
+    usuarioId: string,
+    dias: number | null,
+  ): Promise<boolean>;
+
+  /**
+   * A pessoa já usou o teste grátis da mensalidade? (#392)
+   *
+   * Decide, ao criar a assinatura, se o Mercado Pago recebe `free_trial`: quem
+   * já usou assina e é cobrada na hora.
+   */
+  testeGratisJaUsado(usuarioId: string): Promise<boolean>;
+
+  /**
+   * Reivindica o teste grátis, de forma atômica (#392).
+   *
+   * Devolve `true` para quem o reivindicou agora e `false` se ele já tinha
+   * sido usado. É uma instrução só (`where teste_gratis_usado_em is null`), e
+   * não "lê, decide, grava": duas ativações simultâneas leriam as duas "não
+   * usou" e concederiam o teste duas vezes.
+   */
+  reivindicarTesteGratis(usuarioId: string): Promise<boolean>;
+
+  /**
    * Liga ou desliga o gerador de currículo (#47) — compra única, sem data
    * de validade para gravar, ao contrário da mensalidade.
    */
@@ -408,6 +462,17 @@ export interface RepositorioUsuarios {
     dados: EdicaoPrestador,
   ): Promise<void>;
   salvarPerfilEmpresa(usuarioId: string, dados: EdicaoEmpresa): Promise<void>;
+
+  /**
+   * A razão social oficial no lugar do nome digitado (#130), e a única
+   * troca de nome de empresa que existe (#315). As avaliações que a
+   * empresa já fez acompanham pela `renomearAvaliacoesDe`, que é de quem
+   * conhece a tabela de avaliações.
+   */
+  definirRazaoSocialDaReceita(
+    usuarioId: string,
+    razaoSocial: string,
+  ): Promise<void>;
 
   /* ---------- Arquivos ---------- */
 

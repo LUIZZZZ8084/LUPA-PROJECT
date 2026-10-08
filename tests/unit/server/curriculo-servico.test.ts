@@ -32,7 +32,7 @@ describe("gerarCurriculoDoCandidato", () => {
       papel: "candidato_clt",
       nomeCompleto: "Candidato de Teste",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     await repo.criarPerfilCandidato({
       usuarioId: candidato.id,
@@ -54,7 +54,7 @@ describe("gerarCurriculoDoCandidato", () => {
       papel: "prestador_servico",
       nomeCompleto: "Prestador de Teste",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     prestadorId = prestador.id;
   });
@@ -116,7 +116,7 @@ describe("geradorCurriculoLiberado", () => {
       papel: "candidato_clt",
       nomeCompleto: "Candidato de Teste",
       telefone: "66999990000",
-      cidade: "Sinop",
+      cidade: "Sinop - MT",
     });
     await repo.criarPerfilCandidato({
       usuarioId: candidato.id,

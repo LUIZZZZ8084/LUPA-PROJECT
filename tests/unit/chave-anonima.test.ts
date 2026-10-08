@@ -31,17 +31,14 @@ import { describe, expect, it } from "vitest";
 const raiz = (...partes: string[]) => join(process.cwd(), ...partes);
 
 /**
- * Os dois lugares onde o nome antigo tem função — e só eles.
+ * O único lugar onde o nome antigo ainda aparece (#279).
  *
- * `config.ts` o lê como fallback enquanto a Vercel não for atualizada;
- * `config-obrigatoria.ts` avisa no arranque enquanto esse fallback estiver
- * em uso. Quando a variável for renomeada lá, os dois saem e esta lista
- * fica vazia.
+ * A Vercel foi atualizada em 23/09/2026 e o fallback de `config.ts` saiu.
+ * Sobra a mensagem de `config-obrigatoria.ts`, que cita o nome antigo para
+ * dizer a quem lê o deploy vermelho que a variável existe, só que com o
+ * nome errado.
  */
-const PODEM_CITAR = [
-  "src/lib/supabase/config.ts",
-  "src/server/config-obrigatoria.ts",
-];
+const PODEM_CITAR = ["src/server/config-obrigatoria.ts"];
 
 function arquivosDe(dir: string): string[] {
   const achados: string[] = [];
@@ -73,21 +70,16 @@ describe("a chave anônima do Supabase", () => {
   });
 
   /**
-   * O nome antigo continua aceito de propósito, enquanto a Vercel não for
-   * atualizada — derrubar produção por causa de um nome de variável
-   * trocaria risco hipotético por indisponibilidade real.
-   *
-   * Este teste é o lembrete de que a linha é temporária: quando
-   * `SUPABASE_ANON_KEY` existir em produção e a antiga for apagada, o
-   * fallback sai, e é aqui que alguém percebe.
+   * O fallback era transitório e saiu (#279). Voltar a lê-lo reabriria o
+   * caminho pelo qual um `"use client"` embute a chave no bundle.
    */
-  it("ainda aceita o nome antigo, e isso é transitório", () => {
-    expect(config).toMatch(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+  it("não lê mais o nome antigo", () => {
+    expect(config).not.toMatch(/NEXT_PUBLIC_SUPABASE_ANON_KEY/);
   });
 
   /**
-   * O nome antigo só pode aparecer nos dois arquivos de servidor onde ele
-   * tem função: a leitura com fallback, e o aviso de arranque.
+   * O nome antigo só pode aparecer na mensagem de arranque, que o cita
+   * para explicar o conserto.
    *
    * `server-only` protege o **módulo**, não a **variável**. Um
    * `"use client"` que escreva
@@ -96,13 +88,14 @@ describe("a chave anônima do Supabase", () => {
    * bundle do navegador em silêncio. Quem o tiver lê `provider_listings`
    * inteira, com o telefone de cada prestador, sem login.
    *
-   * Renomear a variável na Vercel fecharia isto por construção, porque o
-   * Next só embute `NEXT_PUBLIC_*`. Enquanto o nome antigo existir, quem
-   * fecha é este teste. *Ele defende o esquecimento, não a fraude:* quem
-   * montar o nome por concatenação passa, e passaria por qualquer
+   * Na Vercel a variável foi renomeada em 23/09/2026 (#279), o que fecha
+   * isto por construção em produção: o Next só embute `NEXT_PUBLIC_*` que
+   * existe. O teste continua porque o `.env.local` de quem desenvolve pode
+   * ainda ter o nome antigo. *Ele defende o esquecimento, não a fraude:*
+   * quem montar o nome por concatenação passa, e passaria por qualquer
    * varredura de texto.
    */
-  it("o nome antigo não aparece fora dos dois arquivos de servidor", () => {
+  it("o nome antigo não aparece fora da mensagem de arranque", () => {
     const fora: string[] = [];
 
     for (const arquivo of arquivosDe(raiz("src"))) {
@@ -145,13 +138,15 @@ describe("a chave anônima do Supabase", () => {
   });
 
   /**
-   * A suíte e2e zerando só o nome antigo falaria com o banco de verdade
-   * pelo nome novo. Não é hipótese: o ajudante de login já criou 213 contas
-   * na base real quando essa proteção faltou.
+   * Quem roda sem banco precisa zerar o nome que o app lê. Zerar só o
+   * antigo falaria com o banco de verdade pelo novo — e não é hipótese: o
+   * ajudante de login já criou 213 contas na base real quando essa
+   * proteção faltou.
    */
-  it("a suíte e2e zera os dois nomes", () => {
-    const playwright = readFileSync(raiz("playwright.config.ts"), "utf8");
-    expect(playwright).toMatch(/SUPABASE_ANON_KEY:\s*""/);
-    expect(playwright).toMatch(/NEXT_PUBLIC_SUPABASE_ANON_KEY:\s*""/);
+  it("a suíte e2e e o modo demonstração local zeram o nome que o app lê", () => {
+    for (const arquivo of ["playwright.config.ts", "scripts/dev-demo.mjs"]) {
+      const texto = readFileSync(raiz(...arquivo.split("/")), "utf8");
+      expect(texto, arquivo).toMatch(/(?<!_)SUPABASE_ANON_KEY:\s*""/);
+    }
   });
 });
