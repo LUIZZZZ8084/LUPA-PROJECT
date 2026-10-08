@@ -557,6 +557,34 @@ create trigger avaliacoes_atualizam_nota
   after insert or update or delete on avaliacoes
   for each row execute function atualizar_nota_prestador();
 
+/*
+ * A avaliação de quem exclui a conta fica, e sem o nome (#235).
+ *
+ * Ela é informação do prestador, por isso `avaliador_id` é `on delete set
+ * null` e a linha sobrevive. Mas o nome é texto copiado em
+ * `nome_avaliador`, e sem isto continuaria lá depois de a pessoa pedir a
+ * exclusão — o contrário do que a Política de Privacidade promete. A conta
+ * é apagada pelo suporte, direto no banco, então a garantia mora aqui e
+ * não numa tela: `before delete`, porque depois do `set null` já não há
+ * como saber de quem era a avaliação.
+ */
+create or replace function anonimizar_avaliacoes_do_autor()
+returns trigger language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  update avaliacoes
+  set nome_avaliador = 'Conta excluída'
+  where avaliador_id = old.id;
+
+  return old;
+end;
+$$;
+
+create trigger usuarios_anonimizam_avaliacoes
+  before delete on usuarios
+  for each row execute function anonimizar_avaliacoes_do_autor();
+
 -- ============================================================================
 -- 8. Publicações de perfil
 -- ============================================================================

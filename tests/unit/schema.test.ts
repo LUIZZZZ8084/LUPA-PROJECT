@@ -2279,3 +2279,88 @@ describe("teste_gratis_usado_em", () => {
     }
   });
 });
+
+/**
+ * A avaliação de quem exclui a conta fica no perfil do prestador, e sem o
+ * nome de quem a escreveu (#235). É a promessa da Política de Privacidade,
+ * e a conta é excluída pelo suporte direto no banco — por isso a garantia
+ * mora num gatilho, testado aqui num Postgres de verdade.
+ */
+describe("excluir a conta tira o nome das avaliações que ela escreveu", () => {
+  let banco: PGlite;
+  let prestador: string;
+  let autor: string;
+  let outro: string;
+
+  async function conta(papel: string, email: string, nome: string) {
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ($1, 'h', $2::papel_usuario, $3, '66999110001', 'Sinop - MT')
+       returning id`,
+      [email, papel, nome],
+    );
+    return r.rows[0].id;
+  }
+
+  async function avaliacoes() {
+    const r = await banco.query<{
+      avaliador_id: string | null;
+      nome_avaliador: string;
+    }>(
+      "select avaliador_id, nome_avaliador from avaliacoes order by nome_avaliador",
+    );
+    return r.rows;
+  }
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+    prestador = await conta("prestador_servico", "p@teste.lupa", "Prestador");
+    autor = await conta("candidato_clt", "a@teste.lupa", "Ana Autora");
+    outro = await conta("candidato_clt", "o@teste.lupa", "Outra Pessoa");
+    for (const [id, nome] of [
+      [autor, "Ana Autora"],
+      [outro, "Outra Pessoa"],
+    ]) {
+      await banco.query(
+        `insert into avaliacoes (prestador_id, avaliador_id, nome_avaliador, nota)
+         values ($1, $2, $3, 5)`,
+        [prestador, id, nome],
+      );
+    }
+    await banco.query("delete from usuarios where id = $1", [autor]);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  it("a avaliação continua, sem dono e sem o nome", async () => {
+    expect(await avaliacoes()).toContainEqual({
+      avaliador_id: null,
+      nome_avaliador: "Conta excluída",
+    });
+    expect(JSON.stringify(await avaliacoes())).not.toContain("Ana Autora");
+    expect(await avaliacoes()).toHaveLength(2);
+  });
+
+  it("a avaliação de outra pessoa não muda", async () => {
+    expect(await avaliacoes()).toContainEqual({
+      avaliador_id: outro,
+      nome_avaliador: "Outra Pessoa",
+    });
+  });
+
+  it("o script de produção roda num banco que já tem o gatilho, e repete", async () => {
+    const script = readFileSync(
+      join(process.cwd(), "supabase/aplica-avaliacao-sem-nome-ao-excluir.sql"),
+      "utf8",
+    );
+    await banco.exec(script);
+    await banco.exec(script);
+    const r = await banco.query<{ total: number }>(
+      "select count(*)::int as total from pg_trigger where tgname = 'usuarios_anonimizam_avaliacoes'",
+    );
+    expect(r.rows[0].total).toBe(1);
+  });
+});
