@@ -451,6 +451,61 @@ describe("confirmarPagamento", () => {
     },
   );
 
+  /**
+   * O status muda antes do efeito (#384). Se o efeito falha, a cobrança
+   * volta a `pendente`, e o reenvio do webhook — ou a varredura — refaz.
+   * Sem isto, o reenvio achava a cobrança já aprovada e pulava o efeito.
+   */
+  it("efeito que falha reabre a cobrança, e o reenvio refaz uma vez só (#384)", async () => {
+    const pagamento = await cobrancaPendente();
+    const aprovada = respostaJson({
+      id: "mp-1",
+      status: "approved",
+      external_reference: pagamento.id,
+    });
+    const erro = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    estenderMensalidadeMock.mockRejectedValueOnce(new Error("banco soluçou"));
+    await expect(
+      ctx.servico.confirmarPagamento("mp-1", aprovada),
+    ).rejects.toThrow("banco soluçou");
+
+    // Voltou a pendente, e o erro foi ao log (Sentry) com o tipo da cobrança.
+    expect((await ctx.repo.porId(pagamento.id))?.status).toBe("pendente");
+    expect(erro.mock.calls.flat().join("")).toContain("pagamentos.efeito");
+
+    // O Mercado Pago reenvia: aprova de novo e aplica o efeito.
+    await ctx.servico.confirmarPagamento("mp-1", aprovada);
+    expect(estenderMensalidadeMock).toHaveBeenCalledTimes(2);
+    expect((await ctx.repo.porId(pagamento.id))?.status).toBe("aprovado");
+
+    // E um segundo reenvio já não aplica nada.
+    await ctx.servico.confirmarPagamento("mp-1", aprovada);
+    expect(estenderMensalidadeMock).toHaveBeenCalledTimes(2);
+    erro.mockRestore();
+  });
+
+  it("se nem reabrir der certo, o erro original sobe e o segundo vai ao log (#384)", async () => {
+    const pagamento = await cobrancaPendente();
+    const erro = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(ctx.repo, "reabrir").mockRejectedValueOnce(new Error("sem banco"));
+    estenderMensalidadeMock.mockRejectedValueOnce(new Error("efeito falhou"));
+
+    await expect(
+      ctx.servico.confirmarPagamento(
+        "mp-1",
+        respostaJson({
+          id: "mp-1",
+          status: "approved",
+          external_reference: pagamento.id,
+        }),
+      ),
+    ).rejects.toThrow("efeito falhou");
+
+    expect(erro.mock.calls.flat().join("")).toContain("pagamentos.reabrir");
+    erro.mockRestore();
+  });
+
   it("status pendente ou em processamento não muda nada ainda", async () => {
     const pagamento = await cobrancaPendente();
     const buscar = respostaJson({

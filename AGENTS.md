@@ -2169,6 +2169,22 @@ de recusa não desfaça uma aprovação. O dinheiro entrou, então a
 aprovação é a que manda. *Máquina de estados com estado terminal precisa
 perguntar se o terminal pode ser ultrapassado por uma prova melhor.*
 
+**Efeito que falha devolve a cobrança a `pendente` (#384).** O status
+muda antes do efeito, e é essa ordem que impede dois webhooks simultâneos
+de aplicarem o efeito duas vezes. O outro lado: se o efeito falhasse
+depois — o banco soluçou, o perfil não existia —, o reenvio do Mercado
+Pago achava a cobrança já `aprovado` e pulava o efeito, e a varredura só
+olha pendentes. Quem pagou ficava sem o que comprou, sem erro visível.
+Hoje `aplicarEfeitoOuReabrir` desfaz a aprovação (`reabrir`) antes de
+propagar o erro, que vai ao Sentry com o tipo e o id da cobrança; o
+reenvio e a varredura refazem. Vale também para a parcela da assinatura,
+que bate no índice único do `mp_payment_id` e agora, se a encontra
+reaberta, aprova de novo. O preço, aceito: se o efeito chegou a gravar e só
+a resposta se perdeu, a nova tentativa aplica de novo — erro para o lado de
+quem pagou, e visível, em vez de para o lado de quem não recebeu e não
+tem como saber. O teste grátis (`confirmarAssinatura`) segue com o mesmo
+buraco, registrado como pendência.
+
 **O cron recusa sem segredo em qualquer deploy da Vercel (#358).** Só
 `VERCEL_ENV === "production"` recusava; num preview a rota rodava aberta
 para qualquer GET, e um preview pode carregar a chave de serviço e o

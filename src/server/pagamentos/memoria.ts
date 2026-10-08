@@ -145,6 +145,10 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
     return this.mudarStatusSePendente(id, "rejeitado", mpPaymentId);
   }
 
+  async reabrir(id: string): Promise<Pagamento | null> {
+    return this.mudarStatusSe(id, "aprovado", "pendente", null);
+  }
+
   async cancelar(
     id: string,
     mpPaymentId: string | null,

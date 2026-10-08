@@ -215,6 +215,15 @@ export interface RepositorioPagamentos {
    */
   aprovar(id: string, mpPaymentId: string | null): Promise<Pagamento | null>;
   rejeitar(id: string, mpPaymentId: string | null): Promise<Pagamento | null>;
+  /**
+   * Devolve uma cobrança `aprovado` para `pendente` (#384).
+   *
+   * É o desfazer da aprovação quando o efeito dela não pôde ser aplicado:
+   * o status muda antes do efeito, e sem isto a notificação reenviada
+   * achava a cobrança já aprovada e pulava o efeito. Condicional como as
+   * outras trocas: `null` se ela não estava mais `aprovado`.
+   */
+  reabrir(id: string): Promise<Pagamento | null>;
 
   /** Cobrança que o comprador desistiu antes de pagar. */
   cancelar(id: string, mpPaymentId: string | null): Promise<Pagamento | null>;

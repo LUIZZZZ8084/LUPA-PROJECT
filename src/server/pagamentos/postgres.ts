@@ -224,6 +224,10 @@ export class RepositorioPagamentosPostgres implements RepositorioPagamentos {
     return mudarStatusSePendente(id, "rejeitado", mpPaymentId);
   }
 
+  async reabrir(id: string): Promise<Pagamento | null> {
+    return mudarStatusSe(id, "aprovado", "pendente", null);
+  }
+
   async cancelar(
     id: string,
     mpPaymentId: string | null,
