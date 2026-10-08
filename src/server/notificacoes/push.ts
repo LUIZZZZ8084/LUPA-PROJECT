@@ -2,6 +2,7 @@ import "server-only";
 
 import webpush from "web-push";
 import { log } from "../logger";
+import { endpointDePushPermitido } from "./endpoint";
 import type { InscricaoPush } from "./tipos";
 
 /**
@@ -12,6 +13,9 @@ import type { InscricaoPush } from "./tipos";
  * credencial. É a mesma divisão que `verificacao/cnpj.ts` faz com a
  * consulta à Receita.
  */
+
+/** Quanto esperar a resposta de um serviço de push. */
+const PRAZO_DO_ENVIO_MS = 10_000;
 
 const CHAVE_PUBLICA = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 const CHAVE_PRIVADA = process.env.VAPID_PRIVATE_KEY ?? "";
@@ -57,6 +61,19 @@ export async function enviarPush(
 ): Promise<boolean> {
   if (!pushConfigurado) return true;
 
+  /*
+   * Inscrição gravada antes da lista de serviços (#356), ou escrita direto
+   * no banco, não é tentada: o endereço é de quem se inscreveu. `false`
+   * apaga a linha pelo mesmo caminho do 404/410. O endereço não vai para o
+   * log, porque o caminho dele é o segredo da inscrição.
+   */
+  if (!endpointDePushPermitido(inscricao.endpoint)) {
+    log.warn("inscrição de push fora dos serviços conhecidos", {
+      acao: "notificacao.enviar",
+    });
+    return false;
+  }
+
   try {
     await webpush.sendNotification(
       {
@@ -64,6 +81,8 @@ export async function enviarPush(
         keys: { p256dh: inscricao.p256dh, auth: inscricao.auth },
       },
       JSON.stringify(aviso),
+      // Sem prazo, um serviço lento segura o envio inteiro (#356).
+      { timeout: PRAZO_DO_ENVIO_MS },
     );
     return true;
   } catch (e) {

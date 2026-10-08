@@ -127,7 +127,7 @@ export const schemaEmpresa = z.object({
   setor: z.string().trim().max(80).optional(),
   porte: z.enum(["MEI", "Micro", "Pequena", "Média", "Grande"]).optional(),
   site: z
-    .union([z.url("Endereço de site inválido."), z.literal("")])
+    .union([z.httpUrl("Endereço de site inválido."), z.literal("")])
     .optional()
     .transform((v) => (v ? v : undefined)),
   descricao: zTexto(20, 2000, "A descrição").optional(),

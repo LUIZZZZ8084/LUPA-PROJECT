@@ -462,6 +462,44 @@ describe("renovação automática", () => {
       expect(parcela?.valorCentavos).toBe(1990);
     });
 
+    /**
+     * A parcela é registrada antes do efeito, e o índice único nela é o que
+     * barra o aviso duplicado (#384). Efeito que falha reabre a parcela, e o
+     * reenvio — que bate no índice — precisa refazer em vez de pular.
+     */
+    it("efeito que falha reabre a parcela, e o reenvio refaz uma vez só (#384)", async () => {
+      await assinaturaPendente();
+      const erro = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      estender.mockRejectedValueOnce(new Error("banco soluçou"));
+      await expect(
+        ctx.servico.confirmarParcelaDaAssinatura(
+          "auth-1",
+          faturaCobrada("mp-100"),
+        ),
+      ).rejects.toThrow("banco soluçou");
+      expect((await ctx.repo.porMpPaymentId("mp-100"))?.status).toBe(
+        "pendente",
+      );
+
+      await ctx.servico.confirmarParcelaDaAssinatura(
+        "auth-1",
+        faturaCobrada("mp-100"),
+      );
+      expect(estender).toHaveBeenCalledTimes(2);
+      expect((await ctx.repo.porMpPaymentId("mp-100"))?.status).toBe(
+        "aprovado",
+      );
+
+      // Reenvio depois de resolvida: nada de novo.
+      await ctx.servico.confirmarParcelaDaAssinatura(
+        "auth-1",
+        faturaCobrada("mp-100"),
+      );
+      expect(estender).toHaveBeenCalledTimes(2);
+      erro.mockRestore();
+    });
+
     it("o mesmo aviso chegando duas vezes estende uma vez só", async () => {
       await assinaturaPendente();
 

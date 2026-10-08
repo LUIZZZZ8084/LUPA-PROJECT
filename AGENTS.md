@@ -758,6 +758,14 @@ endereço e sem o corpo da resposta do Resend**, que pode ecoar o
 destinatário: a regra do log de recuperação vale em dobro no momento em
 que mais se lê log.
 
+**O token na URL não vai ao Sentry (#360).** O link leva o token na
+query, e a URL entra no evento (`request.url`, `query_string`, atributos
+de span). A máscara por nome de chave não alcançava: a chave ali é `url`,
+e o segredo está dentro do valor. Hoje `scrubSensitiveData` também mascara
+`token=`, `senha=` e parecidos dentro de qualquer texto. O token é de uso
+único e vale uma hora, o que limita o dano, mas um evento que sai com ele
+é uma credencial num serviço de terceiro.
+
 **O e-mail é texto puro, sem HTML.** O público daqui abre e-mail no
 celular, e template com imagem e botão colorido é o formato que os
 provedores mais pontuam como promoção — justamente o e-mail que precisa
@@ -918,6 +926,19 @@ responde a um por requisição.*
 
 O preço novo, aceito: uma sessão revogada pode sobreviver até 60 segundos.
 
+**A lista tem teto próprio, e o teto avisa (#352).** Ela lia com o teto
+genérico das listas do dono, 200, sem ordem. Passando disso, quem ficou
+de fora era lido como "não revogado" — o erro silencioso de sempre. Hoje
+`TETO_DE_CORTES_DE_SESSAO` (5.000) é só contra crescimento sem fim, a
+consulta vem do corte mais novo para o mais velho, e atingir o teto
+registra erro no Sentry: passar dele pede paginar, não subir o número.
+
+**Trocar o papel também corta (#352).** O papel viaja no token, e
+`atualizarPapel` não gravava o corte: quem virava prestador ficava com o
+cookie de candidato válido nos outros aparelhos até vencer. Agora o corte
+vai na mesma instrução da troca, e a ação derruba o cache de revogações
+antes de reemitir a sessão — a ordem de sempre, o corte primeiro.
+
 **A leitura falha aberta**, e é o oposto do webhook de pagamento, de
 propósito. Lá, deixar passar confirmaria dinheiro que ninguém provou;
 aqui, recusar derrubaria **todo mundo** do app por causa de uma consulta
@@ -993,6 +1014,15 @@ porque só ele e o Paulinho operam a conta.
 (`exigirCapacidade`) e este registro é desta pessoa (`exigirDono`). Só a
 primeira deixaria qualquer empresa autenticada alcançar a vaga de outra
 trocando o id na URL.
+
+**Server action exportada é endpoint, e o muro não a guarda (#360).**
+`decideVerification` mora em `/admin` e não conferia quem chamava: o
+`proxy.ts` guarda a rota, não a chamada. Em produção ela não alcançava
+nada — usa a chave anônima, e a tabela está fechada para ela —, mas era
+a única ação que mudava dado sem checar a capacidade, e ficava a uma
+mudança de chave de ser a porta aberta. Hoje confere `admin:decidir_verificacao`
+antes de abrir qualquer cliente de banco. *Toda action confere a
+capacidade dentro dela, mesmo quando "só o admin vê a tela".*
 
 ### Arquivos: o caminho vem da sessão, nunca do nome enviado
 
@@ -1540,6 +1570,22 @@ cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se
 contém é adivinhação de senha; aqui o que se contém é a criação em si.
 
+**O limite de login reserva a tentativa antes do Argon2 (#386).** Ele
+conferia o bloqueio, gastava o Argon2 e só então registrava a falha:
+requisições simultâneas passavam todas pela conferência antes de a
+primeira falha ser registrada, e o teto de 5 virava uma rajada do tamanho
+da concorrência. Hoje `reservarTentativa` soma e responde na mesma
+instrução, pelo passo único que o resto do app já usava
+(`consumirOrcamento`), e com 20 tentativas simultâneas 5 chegam à
+verificação. `conferirLimite` continua vindo antes, para quem já está
+bloqueado ser recusado **sem somar** — senão insistir prolongaria o
+bloqueio da vítima. Vale para o login, a recuperação de senha e a
+confirmação de e-mail; o cadastro ficou de fora de propósito, porque
+contar toda tentativa dele muda a regra de produto (a pergunta do T2 no
+roadmap). *Dois `await` seguidos, conferir e depois registrar, é a forma
+de corrida mais comum que existe: a pergunta e a escrita têm de ser a
+mesma instrução.*
+
 **Captcha não vai existir, e isto é decisão, não espera.** Este parágrafo
 dizia "a hora de reavaliar é quando aparecer abuso real" — soava prudente e
 era adiamento. Decisão do Luiz em 14/09/2026: *"colocar captcha para
@@ -1701,6 +1747,32 @@ aviso seria uma lista de quem tem conta — que aqui significa **quem está
 procurando emprego**, informação que pode custar o emprego atual de alguém.
 O tempo de resposta também é igualado (`gastarTempoDeVerificacao`).
 
+**O cadastro revela o conflito, e o volume de conflitos tem teto (#390).**
+A revelação do e-mail é decisão antiga; CPF e CNPJ vão na mesma linha: a
+pessoa que esqueceu que tinha conta precisa saber qual dado bateu. O que
+faltava era limite: o de criação (`cadastro:<origem>`, 5 por 15 minutos)
+só soma conta criada, e quem testa se um dado está cadastrado precisa de
+volume, não de contas. Decisão do Luiz em 07/10/2026, entre quatro opções:
+conflito de e-mail, CPF ou CNPJ conta num teto próprio por origem
+(`cadastro-conflito:<origem>`, 10 por 15 minutos). Passado o teto a resposta
+é "muitas tentativas" em vez do conflito, e origem já bloqueada é recusada
+**antes** de qualquer consulta — senão continuaria perguntando e sendo
+respondida. Quem cria conta com sucesso não gasta esse teto.
+
+Recusadas, e por quê. *Mensagem única para CPF e CNPJ:* não esconde nada,
+porque quem varia só o documento sabe qual bateu, e piora a mensagem para
+quem só esqueceu. *Confirmar por e-mail antes de criar, com resposta
+igual:* fecha a enumeração de verdade, mas o cadastro deixa de ser
+imediato, passa a depender do provedor de e-mail (100 por dia no plano
+grátis do Resend) e contradiz a decisão de que o e-mail não bloqueia nada
+(#227) — reconsiderar só se o problema aparecer medido.
+
+O que este teto **não** faz: não impede quem usa muitos IPs, só encarece, e
+não resolve o CPF ser conferido só pelo dígito — qualquer CPF válido pode
+ser ocupado por quem não é o dono, e a correção disso é a verificação paga
+da #120. A chave aparece como linha própria no painel de pressão (a view
+agrupa pelo texto antes do primeiro `:`), sem mudança de SQL.
+
 ### Polling, não websocket, no painel do admin
 
 Conexão aberta em serverless exige um serviço à parte, com custo e mais uma
@@ -1780,6 +1852,18 @@ aviso ignorado não entrega nem a vaga certa.
 saber que alguém desinstalou ou trocou de telefone; o navegador não avisa
 ninguém. Qualquer outra falha não apaga nada: sumir com a inscrição de quem
 estava sem sinal é pior que deixar de avisar uma vez.
+
+**O endereço da inscrição só vale se for de um serviço de push (#356).**
+Ele vem do navegador de quem se inscreveu, e a cada vaga publicada o
+servidor faz uma requisição HTTPS para ele. Validar só que era uma URL
+deixava a pessoa escolher o destino. Hoje `endpointDePushPermitido`
+aceita FCM, Mozilla, Apple e WNS, só em `https`, sem usuário, senha ou
+porta — na inscrição e de novo no envio, porque linha gravada antes da
+regra não passou pela primeira. O que falha na segunda sai da tabela pelo
+mesmo caminho do 404/410, e o envio tem prazo de 10 s. O preço da lista
+fechada: um navegador com serviço fora dela não liga o aviso. *Lista de
+quem pode, e não de quem não pode: a segunda sempre deixa passar a
+próxima forma.*
 
 **Bairro ficou fora**, decisão de 26/08/2026: não existe catálogo de bairro
 para os municípios do país. Notificar por bairro funcionaria bem numa cidade
@@ -2145,6 +2229,41 @@ para aprovar, porque a guarda mora na própria instrução do banco. **O
 crédito sumiria de vez, por causa da ordem em que uma lista voltou.**
 Ordem que decide dinheiro não pode ser herdada da resposta de terceiro.
 
+**A mesma precedência vale no webhook, e não só na varredura (#358).** A
+varredura enxerga todas as tentativas de uma preferência de uma vez e
+escolhe a aprovada. O webhook recebe uma por notificação, e a recusada
+costuma chegar antes: `rejeitar` e `cancelar` fechavam a cobrança, e
+`aprovar` só partia de `pendente`, então a aprovação seguinte era
+descartada em silêncio — quem pagou ficava sem o que comprou. Hoje
+`aprovar` parte de `pendente`, `rejeitado` e `cancelado`, e as duas
+outras continuam partindo só de `pendente`, para que uma notícia atrasada
+de recusa não desfaça uma aprovação. O dinheiro entrou, então a
+aprovação é a que manda. *Máquina de estados com estado terminal precisa
+perguntar se o terminal pode ser ultrapassado por uma prova melhor.*
+
+**Efeito que falha devolve a cobrança a `pendente` (#384).** O status
+muda antes do efeito, e é essa ordem que impede dois webhooks simultâneos
+de aplicarem o efeito duas vezes. O outro lado: se o efeito falhasse
+depois — o banco soluçou, o perfil não existia —, o reenvio do Mercado
+Pago achava a cobrança já `aprovado` e pulava o efeito, e a varredura só
+olha pendentes. Quem pagou ficava sem o que comprou, sem erro visível.
+Hoje `aplicarEfeitoOuReabrir` desfaz a aprovação (`reabrir`) antes de
+propagar o erro, que vai ao Sentry com o tipo e o id da cobrança; o
+reenvio e a varredura refazem. Vale também para a parcela da assinatura,
+que bate no índice único do `mp_payment_id` e agora, se a encontra
+reaberta, aprova de novo. O preço, aceito: se o efeito chegou a gravar e só
+a resposta se perdeu, a nova tentativa aplica de novo — erro para o lado de
+quem pagou, e visível, em vez de para o lado de quem não recebeu e não
+tem como saber. O teste grátis (`confirmarAssinatura`) segue com o mesmo
+buraco, registrado como pendência.
+
+**O cron recusa sem segredo em qualquer deploy da Vercel (#358).** Só
+`VERCEL_ENV === "production"` recusava; num preview a rota rodava aberta
+para qualquer GET, e um preview pode carregar a chave de serviço e o
+token do Mercado Pago. Agora é `VERCEL` (qualquer deploy), e a comparação
+do segredo é em tempo constante. Fora da Vercel — dev local e suíte —
+continua rodando solta.
+
 **O que ainda pode virar dinheiro não se toca:** boleto em aberto e PIX
 não pago são `pending` lá também, e encerrar a cobrança ali tiraria de
 alguém uma compra que ele ainda pode concluir. E há janela dos dois lados
@@ -2157,6 +2276,22 @@ no matcher do `proxy.ts`, como `api/webhooks` já tinha entrado: o cron da
 Vercel faz um GET sem cookie, e o muro responderia 401 antes de a
 varredura existir. Seria o defeito do webhook de novo, e pior — **rede de
 proteção que nunca roda não deixa rastro de que não está rodando.**
+**A fila da varredura gira, e "não deu para perguntar" não conta como
+conferida (#388).** Ela pegava as 50 pendentes mais antigas. Checkout
+abandonado nunca sai de pendente e voltava às mesmas 50 vagas em toda
+varredura; com 50 dessas na frente, uma cobrança presa de verdade, criada
+depois, nunca era conferida. Hoje a ordem é por `atualizado_em` — que o
+banco já move por trigger, então sem coluna nova —, e uma cobrança
+conferida que continua pendente é marcada (`marcarConferida`) e vai para o
+fim. Para isso `pagamentosPorReferencia` passou a distinguir `null` (não
+deu para perguntar: rede, timeout, resposta torta) de `[]` (perguntei e
+não há nada): antes os dois eram lista vazia, e era seguro enquanto só
+importava o que fazer com o dinheiro, mas com a fila girando uma queda do
+Mercado Pago mandaria as cobranças examinadas para o fim sem ninguém tê-las
+conferido. Em erro nada se mexe, e a próxima varredura tenta de novo.
+*Quando a resposta ganha um segundo uso, confira se as duas causas que ela
+juntava ainda podem ser juntas.*
+
 **Cada domínio aplica o próprio efeito; `pagamentos` só aciona.**
 `aplicarEfeito`, em `src/server/pagamentos/servico.ts`, despacha por tipo
 para uma função do domínio certo — `estenderMensalidade`, em
@@ -2653,6 +2788,16 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
   não estava na URL. **Quando o alcance de uma listagem muda, procure os
   padrões deixados nas telas** — a camada de dados estava certa o tempo
   todo, e teste sobre ela passava verde com o bug em pé.
+
+- **`z.url()` do Zod 4 aceita qualquer esquema.** `javascript:alert(1)` e
+  `data:text/html,…` passam como "endereço válido" — o nome sugere web, e a
+  função só confere que é uma URL. Site, Instagram, Facebook e a imagem de
+  publicação usavam `z.url()` e acabam num `<a href>` ou `<img src>` que
+  qualquer conta logada vê (#354). Hoje o cadastro e a edição usam
+  `z.httpUrl()`, e a tela passa o que lê por `linkExterno` (`src/lib/format.ts`):
+  o que foi gravado antes da validação não vira `javascript:` num link.
+  *Validar na entrada não limpa o que já está no banco; a tela é a última
+  porta.*
 
 Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
 último em `tests/unit/cidades.test.ts` — os três varrem o código-fonte.

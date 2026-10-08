@@ -150,6 +150,23 @@ export function formatCnpj(value: string): string {
 }
 
 /**
+ * Só deixa passar link http(s) para um `<a href>`.
+ *
+ * O cadastro e a edição já recusam outros esquemas (#354), mas o que foi
+ * gravado antes disso — ou escrito direto no banco — não passou por lá. A
+ * tela é a última porta: `javascript:` e `data:` não viram link aqui.
+ */
+export function linkExterno(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "http:" || protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Deep link do WhatsApp com mensagem pré-preenchida.
  * Assume DDI 55 quando o número vem sem código de país.
  */

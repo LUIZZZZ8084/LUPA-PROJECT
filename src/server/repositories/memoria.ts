@@ -152,7 +152,12 @@ export class RepositorioMemoria implements RepositorioUsuarios {
 
   async atualizarPapel(id: string, papel: Papel): Promise<void> {
     const usuario = this.usuarios.get(id);
-    if (usuario) this.usuarios.set(id, { ...usuario, papel });
+    if (usuario) {
+      this.usuarios.set(id, { ...usuario, papel });
+      // Mesma regra do Postgres (#352): trocar o papel corta as sessões
+      // emitidas antes.
+      this.cortes.set(id, Date.now());
+    }
   }
 
   async registrarAcesso(id: string): Promise<void> {

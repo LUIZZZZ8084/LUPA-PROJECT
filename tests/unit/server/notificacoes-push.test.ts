@@ -27,7 +27,7 @@ vi.mock("web-push", () => ({
 
 const INSCRICAO = {
   usuarioId: "u1",
-  endpoint: "https://push.exemplo/abc",
+  endpoint: "https://fcm.googleapis.com/fcm/send/abc",
   p256dh: "chave",
   auth: "sal",
 };
@@ -56,6 +56,17 @@ describe("envio de push", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
+  });
+
+  it("endereço fora dos serviços de push não é tentado e a linha sai (#356)", async () => {
+    const resposta = await enviarPush(
+      { ...INSCRICAO, endpoint: "https://169.254.169.254/latest/meta-data" },
+      AVISO,
+    );
+
+    // `false` é o que faz quem chama apagar a inscrição.
+    expect(resposta).toBe(false);
+    expect(enviadas).toHaveLength(0);
   });
 
   it("manda o aviso como JSON para o aparelho", async () => {

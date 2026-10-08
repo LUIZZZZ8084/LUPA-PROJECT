@@ -366,3 +366,48 @@ describe("identificadores de rastreio", () => {
     expect(scrubSensitiveData({ obs: TRACE }).obs).toContain("[telefone]");
   });
 });
+
+describe("segredo em parâmetro de URL (#360)", () => {
+  /**
+   * O link de redefinir senha leva o token na query. A máscara por nome de
+   * chave não alcança: a chave é `url`, e o segredo está dentro do valor.
+   */
+  it("mascara o token na URL do pedido, na query e no nome da transação", () => {
+    const token = "Zk3-9_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789a";
+    const evento = {
+      request: {
+        url: `https://lupapp.com.br/redefinir-senha?token=${token}`,
+        query_string: `token=${token}&origem=email`,
+      },
+      transaction: `GET /redefinir-senha?x=1&token=${token}`,
+    };
+
+    const limpo = scrubSensitiveData(evento);
+    const texto = JSON.stringify(limpo);
+
+    expect(texto).not.toContain(token);
+    expect(limpo.request.url).toBe(
+      "https://lupapp.com.br/redefinir-senha?token=[removido]",
+    );
+    // O que não é segredo continua, senão o relatório perde utilidade.
+    expect(limpo.request.query_string).toBe("token=[removido]&origem=email");
+    expect(limpo.transaction).toBe("GET /redefinir-senha?x=1&token=[removido]");
+  });
+
+  it("não mexe em parâmetro comum nem em texto que só menciona token", () => {
+    const evento = {
+      url: "https://lupapp.com.br/vagas?q=token&cidade=Sinop%20-%20MT",
+      mensagem: "o token expirou, peça outro",
+    };
+    expect(scrubSensitiveData(evento)).toEqual(evento);
+  });
+
+  it("outros nomes de segredo na URL também saem", () => {
+    const limpo = scrubSensitiveData({
+      url: "https://x.test/cb?access_token=abc123&senha=x1&ok=1",
+    });
+    expect(limpo.url).toBe(
+      "https://x.test/cb?access_token=[removido]&senha=[removido]&ok=1",
+    );
+  });
+});

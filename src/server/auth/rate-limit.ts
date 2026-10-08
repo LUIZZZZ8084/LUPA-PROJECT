@@ -86,6 +86,9 @@ class RepositorioLimiteMemoria implements RepositorioLimite {
   async registrarSucesso(chave: string): Promise<void> {
     janelas.delete(chave);
   }
+
+  /** Em memória a limpeza é `limparAntigas`, a cada registro. */
+  async limparVencidas(): Promise<void> {}
   async registrarUso(
     chave: string,
     orcamento: Orcamento,
@@ -203,6 +206,30 @@ export function limparLimites(): void {
 
 export type { RepositorioLimite };
 export { CONFIG_LIMITE };
+
+/**
+ * Reserva uma tentativa **antes** do trabalho caro e recusa quando já
+ * passou do teto (#386).
+ *
+ * O login conferia o bloqueio, gastava o Argon2 e só então registrava a
+ * falha. Requisições simultâneas passavam todas pela conferência antes de a
+ * primeira falha ser registrada, e o teto de 5 virava uma rajada do tamanho
+ * da concorrência. Aqui a soma e a resposta são a mesma instrução, pelo
+ * mesmo passo único que o resto do app usa (`consumirOrcamento`): com 20
+ * tentativas simultâneas, 5 chegam à verificação.
+ *
+ * Quem **já está** bloqueado é recusado antes, por `conferirLimite`, sem
+ * somar: senão insistir prolongaria o bloqueio de quem é a vítima dele.
+ * O bloqueio dura a janela, e as duas valem 15 minutos
+ * (`CONFIG_LIMITE`, conferido em teste).
+ */
+export async function reservarTentativa(chave: string): Promise<void> {
+  await consumirOrcamento(chave, {
+    chamadas: MAX_TENTATIVAS,
+    janelaSegundos: JANELA_MS / 1000,
+  });
+  await repositorio().limparVencidas();
+}
 
 /**
  * Gasta uma chamada do orçamento da ação e recusa quando não cabe mais.

@@ -77,6 +77,22 @@ describe("inscrição do aparelho", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("só aceita endereço dos serviços de push dos navegadores (#356)", () => {
+    for (const endpoint of [
+      "https://updates.push.services.mozilla.com/wpush/v2/abc",
+      "https://web.push.apple.com/QXl0abc",
+    ]) {
+      expect(validar(schemaInscricao, { ...valida, endpoint }).ok).toBe(true);
+    }
+    for (const endpoint of [
+      "https://push.exemplo/abc",
+      "https://169.254.169.254/latest",
+      "http://fcm.googleapis.com/fcm/send/abc",
+    ]) {
+      expect(validar(schemaInscricao, { ...valida, endpoint }).ok).toBe(false);
+    }
+  });
+
   it("chave vazia é recusada", () => {
     expect(validar(schemaInscricao, { ...valida, p256dh: "" }).ok).toBe(false);
     expect(validar(schemaInscricao, { ...valida, auth: "" }).ok).toBe(false);
@@ -89,7 +105,7 @@ describe("inscrição do aparelho", () => {
   it("endpoint absurdamente longo é recusado", () => {
     const r = validar(schemaInscricao, {
       ...valida,
-      endpoint: `https://push.exemplo/${"x".repeat(1200)}`,
+      endpoint: `https://fcm.googleapis.com/${"x".repeat(1200)}`,
     });
     expect(r.ok).toBe(false);
   });

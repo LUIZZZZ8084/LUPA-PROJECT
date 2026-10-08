@@ -3,6 +3,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CONFIG_LIMITE, limparLimites } from "@/server/auth/rate-limit";
+import { LIMITE_DE_CONFLITOS_NO_CADASTRO } from "@/server/auth/rate-limit-tipos";
 import { schemaCadastro, schemaLogin } from "@/server/auth/schemas";
 import { cadastrar, entrar, usuarioDaSessao } from "@/server/auth/servico";
 import { ehAppError } from "@/server/errors";
@@ -213,6 +214,106 @@ describe("cadastro e login", () => {
       await expect(cadastrar(validarOk(candidato))).rejects.toMatchObject({
         codigo: "conflito",
         mensagem: expect.stringContaining("Tente entrar"),
+      });
+    });
+
+    /**
+     * Quem testa se um e-mail, CPF ou CNPJ está cadastrado precisa de
+     * volume, e o limite de criação só soma conta criada (#390). Os
+     * conflitos têm teto próprio: dez respondem, e a partir daí a pergunta
+     * deixa de ter resposta.
+     */
+    describe("teto de conflitos (#390)", () => {
+      const ORIGEM = "203.0.113.7";
+      const TETO = LIMITE_DE_CONFLITOS_NO_CADASTRO.chamadas;
+
+      it("os dez primeiros conflitos respondem e o seguinte é recusado por excesso", async () => {
+        await cadastrar(validarOk(candidato), ORIGEM);
+
+        for (let i = 0; i < TETO; i++) {
+          const e = await capturarErro(() =>
+            cadastrar(validarOk(candidato), ORIGEM),
+          );
+          expect(e.codigo).toBe("conflito");
+        }
+
+        const excesso = await capturarErro(() =>
+          cadastrar(validarOk(candidato), ORIGEM),
+        );
+        expect(excesso.codigo).toBe("muitas_tentativas");
+        expect(excesso.status).toBe(429);
+      });
+
+      it("origem bloqueada pelo teto não consulta mais nada, nem com dados novos", async () => {
+        await cadastrar(validarOk(candidato), ORIGEM);
+        for (let i = 0; i <= TETO; i++) {
+          await capturarErro(() => cadastrar(validarOk(candidato), ORIGEM));
+        }
+
+        // Dados que não existem: se consultasse, criaria a conta e diria
+        // com isso que eles estavam livres.
+        const livre = await capturarErro(() =>
+          cadastrar(
+            validarOk({
+              ...prestador,
+              email: "livre@teste.lupa",
+              cpf: "39053344705",
+            }),
+            ORIGEM,
+          ),
+        );
+        expect(livre.codigo).toBe("muitas_tentativas");
+        expect(await repo.porEmail("livre@teste.lupa")).toBeNull();
+      });
+
+      it("conflito de CPF e de CNPJ também gasta o teto", async () => {
+        await cadastrar(validarOk(prestador), ORIGEM);
+        await cadastrar(validarOk(empresa), ORIGEM);
+
+        for (let i = 0; i < TETO / 2; i++) {
+          await capturarErro(() =>
+            cadastrar(
+              validarOk({ ...prestador, email: `cpf${i}@teste.lupa` }),
+              ORIGEM,
+            ),
+          );
+          await capturarErro(() =>
+            cadastrar(
+              validarOk({ ...empresa, email: `cnpj${i}@teste.lupa` }),
+              ORIGEM,
+            ),
+          );
+        }
+
+        const excesso = await capturarErro(() =>
+          cadastrar(validarOk({ ...prestador, email: "x@teste.lupa" }), ORIGEM),
+        );
+        expect(excesso.codigo).toBe("muitas_tentativas");
+      });
+
+      it("outra origem não divide o teto", async () => {
+        await cadastrar(validarOk(candidato), ORIGEM);
+        for (let i = 0; i <= TETO; i++) {
+          await capturarErro(() => cadastrar(validarOk(candidato), ORIGEM));
+        }
+
+        const outra = await capturarErro(() =>
+          cadastrar(validarOk(candidato), "198.51.100.9"),
+        );
+        expect(outra.codigo).toBe("conflito");
+      });
+
+      it("conta criada com sucesso não gasta o teto de conflitos", async () => {
+        await cadastrar(validarOk(candidato), ORIGEM);
+        await cadastrar(validarOk(prestador), ORIGEM);
+
+        // Nenhum conflito até aqui: todos os dez ainda respondem.
+        for (let i = 0; i < TETO; i++) {
+          const e = await capturarErro(() =>
+            cadastrar(validarOk(candidato), ORIGEM),
+          );
+          expect(e.codigo).toBe("conflito");
+        }
       });
     });
 
@@ -541,6 +642,44 @@ describe("cadastro e login", () => {
 
       expect(bloqueado.codigo).toBe("muitas_tentativas");
       expect(bloqueado.status).toBe(429);
+    });
+
+    /**
+     * Antes (#386) o login conferia o bloqueio, gastava o Argon2 e só então
+     * registrava a falha: requisições simultâneas passavam todas pela
+     * conferência antes de a primeira falha ser registrada, e o teto virava
+     * uma rajada do tamanho da concorrência.
+     */
+    it("rajada simultânea de senhas erradas: só o teto chega à verificação (#386)", async () => {
+      const RAJADA = 20;
+      const resultados = await Promise.all(
+        Array.from({ length: RAJADA }, () =>
+          capturarErro(() =>
+            entrar(
+              validarOkLogin({ email: candidato.email, senha: "errada!!!" }),
+            ),
+          ),
+        ),
+      );
+
+      const verificadas = resultados.filter(
+        (e) => e.codigo !== "muitas_tentativas",
+      );
+      const recusadas = resultados.filter(
+        (e) => e.codigo === "muitas_tentativas",
+      );
+
+      expect(verificadas).toHaveLength(CONFIG_LIMITE.MAX_TENTATIVAS);
+      expect(recusadas).toHaveLength(RAJADA - CONFIG_LIMITE.MAX_TENTATIVAS);
+    });
+
+    /**
+     * A reserva bloqueia pela janela (`registrarUso` usa um número só para
+     * as duas coisas). Se a configuração separar os dois, este teste avisa
+     * antes de o bloqueio mudar sem ninguém ter decidido.
+     */
+    it("a janela e o bloqueio do login valem o mesmo tempo (#386)", () => {
+      expect(CONFIG_LIMITE.BLOQUEIO_MS).toBe(CONFIG_LIMITE.JANELA_MS);
     });
 
     it("login bem-sucedido zera o contador", async () => {

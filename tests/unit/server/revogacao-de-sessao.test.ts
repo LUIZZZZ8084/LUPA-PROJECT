@@ -208,3 +208,37 @@ describe("a lista de cortes é curta por construção", () => {
     vi.useRealTimers();
   });
 });
+
+describe("trocar o papel corta as sessões antigas (#352)", () => {
+  it("em memória, virar prestador entra na lista de cortes", async () => {
+    const { RepositorioMemoria } = await import(
+      "@/server/repositories/memoria"
+    );
+    const repo = new RepositorioMemoria();
+
+    const usuario = await repo.criar({
+      email: "papel@lupa.test",
+      senhaHash: "h",
+      papel: "candidato_clt",
+      nomeCompleto: "Alguém",
+      telefone: "66999110013",
+      cidade: "Sinop - MT",
+    });
+    expect((await repo.cortesDeSessao(7)).has(usuario.id)).toBe(false);
+
+    await repo.atualizarPapel(usuario.id, "prestador_servico");
+
+    // O token de candidato emitido antes da troca cai; o papel novo vale.
+    expect((await repo.cortesDeSessao(7)).has(usuario.id)).toBe(true);
+    expect((await repo.porId(usuario.id))?.papel).toBe("prestador_servico");
+  });
+
+  it("papel de quem não existe não cria corte", async () => {
+    const { RepositorioMemoria } = await import(
+      "@/server/repositories/memoria"
+    );
+    const repo = new RepositorioMemoria();
+    await repo.atualizarPapel("fantasma", "prestador_servico");
+    expect((await repo.cortesDeSessao(7)).size).toBe(0);
+  });
+});

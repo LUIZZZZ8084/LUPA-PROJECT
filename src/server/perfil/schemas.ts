@@ -24,14 +24,15 @@ const zOpcional = (max: number, oQue: string) =>
 
 /**
  * Link de rede social, opcional. Mesma forma do site: em branco vira
- * `null`; preenchido, precisa ser um endereço de verdade — meio caminho
- * entre recusar tudo que não seja URL e aceitar qualquer texto solto que
- * quebraria o link na hora de mostrar.
+ * `null`; preenchido, precisa ser um endereço http(s) de verdade — meio
+ * caminho entre recusar tudo que não seja URL e aceitar qualquer texto
+ * solto que quebraria o link na hora de mostrar. `z.httpUrl`, e não
+ * `z.url`: este aceita qualquer esquema, inclusive `javascript:` (#354).
  */
 const zLinkOpcional = (oQue: string) =>
   z.preprocess(
     vazioViraNulo,
-    z.union([z.url(`Endereço de ${oQue} inválido.`), z.null()]),
+    z.union([z.httpUrl(`Endereço de ${oQue} inválido.`), z.null()]),
   );
 
 /**

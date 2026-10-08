@@ -339,6 +339,30 @@ describe("empresa", () => {
     ).toBe(false);
   });
 
+  it.each([
+    ["javascript:alert(1)", "script"],
+    ["data:text/html,<b>x</b>", "data"],
+    ["ftp://agronorte.com.br", "ftp"],
+    ["file:///etc/passwd", "arquivo local"],
+  ])("recusa %s nos três campos de link (%s) (#354)", (url) => {
+    for (const campo of ["site", "instagram", "facebook"] as const) {
+      expect(
+        schemaEmpresa.safeParse({ ...base, [campo]: url }).success,
+        `${campo}: ${url}`,
+      ).toBe(false);
+    }
+  });
+
+  it("aceita http e https nos três campos de link (#354)", () => {
+    for (const campo of ["site", "instagram", "facebook"] as const) {
+      for (const url of ["http://exemplo.com.br", "https://exemplo.com.br/x"]) {
+        expect(schemaEmpresa.safeParse({ ...base, [campo]: url }).success).toBe(
+          true,
+        );
+      }
+    }
+  });
+
   it("aceita site válido", () => {
     const r = schemaEmpresa.safeParse({
       ...base,
