@@ -341,7 +341,7 @@ export async function assinar(
       referenciaExterna: assinatura.id,
       emailPagador: usuario.email,
       urlRetorno: `${urlPublica()}/pagamento/retorno?assinatura=${assinatura.id}`,
-      diasTeste: diasDeTeste(tipo),
+      diasTeste: await diasDeTesteDisponiveis(sessao.usuarioId, tipo),
     },
     opcoes.buscar,
   );
@@ -636,6 +636,26 @@ function statusDaAssinatura(statusRemoto: string): StatusAssinatura | null {
 }
 
 /**
+ * Quantos dias de teste grátis esta pessoa ainda pode ter (#392).
+ *
+ * O teste é um por conta: quem já o usou recebe zero, assina sem
+ * `free_trial` e é cobrada na hora. Antes, cada assinatura nova que ficava
+ * ativa concedia 15 dias, e cancelar e assinar de novo repetia o ciclo — a
+ * pessoa nunca pagava e ficava na vitrine.
+ *
+ * A tela usa a mesma função, para o texto e o botão dizerem o que vai
+ * acontecer antes do clique, e não depois.
+ */
+export async function diasDeTesteDisponiveis(
+  usuarioId: string,
+  tipo: TipoPagamento,
+): Promise<number> {
+  const dias = diasDeTeste(tipo);
+  if (dias === 0) return 0;
+  return (await repositorioUsuarios().testeGratisJaUsado(usuarioId)) ? 0 : dias;
+}
+
+/**
  * Espelha aqui o estado da assinatura lá — tópico
  * `subscription_preapproval`.
  *
@@ -693,7 +713,21 @@ export async function confirmarAssinatura(
      */
     const dias = diasDeTeste(mudou.tipo);
     if (status === "ativa" && eraPendente && dias > 0) {
-      await estenderMensalidade(mudou.usuarioId, dias);
+      /*
+       * O teste é um por conta (#392), e a reivindicação é atômica: duas
+       * ativações simultâneas leriam as duas "não usou" e concederiam o
+       * teste duas vezes. Quem já o usou ativa a assinatura sem dias de
+       * teste — a primeira cobrança, que o Mercado Pago faz na hora porque
+       * a assinatura nasceu sem `free_trial`, estende a mensalidade.
+       */
+      if (await repositorioUsuarios().reivindicarTesteGratis(mudou.usuarioId)) {
+        await estenderMensalidade(mudou.usuarioId, dias);
+      } else {
+        log.info("assinatura ativada sem teste: a conta já usou o dela", {
+          acao: "pagamentos.confirmar_assinatura",
+          tipo: mudou.tipo,
+        });
+      }
     }
     log.info("assinatura mudou de estado", {
       acao: "pagamentos.confirmar_assinatura",

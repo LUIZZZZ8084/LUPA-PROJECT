@@ -29,11 +29,25 @@ vi.mock("@/server/prestadores/servico", () => ({
  * O `preapproval` exige o e-mail de quem vai pagar, e ele sai do
  * repositório de usuários — não da sessão, que só carrega id e papel.
  */
+// O teste grátis é um por conta (#392): um estado mínimo para as duas
+// perguntas que o serviço faz ao repositório de usuários.
+const testes = vi.hoisted(() => ({ usados: new Set<string>() }));
+
 vi.mock("@/server/repositories", () => ({
   repositorioUsuarios: () => ({
     porId: async (id: string) => ({ id, email: "prestador@exemplo.com" }),
+    testeGratisJaUsado: async (id: string) => testes.usados.has(id),
+    reivindicarTesteGratis: async (id: string) => {
+      if (testes.usados.has(id)) return false;
+      testes.usados.add(id);
+      return true;
+    },
   }),
 }));
+
+beforeEach(() => {
+  testes.usados.clear();
+});
 
 const sessao: Autenticado = {
   usuarioId: "prestador-1",

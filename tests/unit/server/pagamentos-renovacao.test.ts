@@ -29,11 +29,25 @@ vi.mock("@/server/prestadores/servico", () => ({
   revogarMensalidade: (...args: [string]) => revogar(...args),
 }));
 
+// O teste grátis é um por conta (#392): um estado mínimo para as duas
+// perguntas que o serviço faz ao repositório de usuários.
+const testes = vi.hoisted(() => ({ usados: new Set<string>() }));
+
 vi.mock("@/server/repositories", () => ({
   repositorioUsuarios: () => ({
     porId: async (id: string) => ({ id, email: "prestador@exemplo.com" }),
+    testeGratisJaUsado: async (id: string) => testes.usados.has(id),
+    reivindicarTesteGratis: async (id: string) => {
+      if (testes.usados.has(id)) return false;
+      testes.usados.add(id);
+      return true;
+    },
   }),
 }));
+
+beforeEach(() => {
+  testes.usados.clear();
+});
 
 const sessao: Autenticado = {
   usuarioId: "prestador-1",
@@ -114,6 +128,114 @@ describe("renovação automática", () => {
       expect((await ctx.repo.assinaturaPorId(assinatura.id))?.status).toBe(
         "ativa",
       );
+    });
+
+    /**
+     * O teste é um por conta (#392). Antes, cada assinatura nova que ficava
+     * ativa concedia 15 dias, e cancelar e assinar de novo repetia o ciclo.
+     */
+    describe("teste grátis: um por conta (#392)", () => {
+      function capturando() {
+        const corpos: Array<Record<string, unknown>> = [];
+        const buscar = (async (_url: string | URL, init?: RequestInit) => {
+          if (init?.body) corpos.push(JSON.parse(String(init.body)));
+          return new Response(JSON.stringify(PREAPPROVAL), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }) as unknown as typeof fetch;
+        return { buscar, corpos };
+      }
+
+      const freeTrial = (corpo: Record<string, unknown> | undefined) =>
+        (corpo?.auto_recurring as Record<string, unknown> | undefined)
+          ?.free_trial;
+
+      it("a primeira assinatura da conta pede o teste ao Mercado Pago", async () => {
+        const { buscar, corpos } = capturando();
+        await ctx.servico.assinar(sessao, "prestador_mensalidade", { buscar });
+
+        expect(freeTrial(corpos[0])).toEqual({
+          frequency: 15,
+          frequency_type: "days",
+        });
+      });
+
+      it("quem já usou o teste assina sem free_trial: a cobrança sai na hora", async () => {
+        testes.usados.add(sessao.usuarioId);
+        const { buscar, corpos } = capturando();
+        await ctx.servico.assinar(sessao, "prestador_mensalidade", { buscar });
+
+        expect(freeTrial(corpos[0])).toBeUndefined();
+      });
+
+      it("ativar uma assinatura de quem já usou o teste não concede dias", async () => {
+        testes.usados.add(sessao.usuarioId);
+        const assinatura = await assinaturaPendente();
+
+        await ctx.servico.confirmarAssinatura(
+          "pre-1",
+          respostaJson({ id: "pre-1", status: "authorized" }),
+        );
+
+        expect((await ctx.repo.assinaturaPorId(assinatura.id))?.status).toBe(
+          "ativa",
+        );
+        expect(estender).not.toHaveBeenCalled();
+      });
+
+      it("o primeiro uso concede os dias e grava que a conta usou o teste", async () => {
+        expect(testes.usados.has(sessao.usuarioId)).toBe(false);
+        await assinaturaPendente();
+
+        await ctx.servico.confirmarAssinatura(
+          "pre-1",
+          respostaJson({ id: "pre-1", status: "authorized" }),
+        );
+
+        expect(estender).toHaveBeenCalledTimes(1);
+        expect(estender).toHaveBeenCalledWith(sessao.usuarioId, 15);
+        expect(testes.usados.has(sessao.usuarioId)).toBe(true);
+      });
+
+      /** O ciclo que a #392 fecha: usar o teste, cancelar, assinar de novo. */
+      it("cancelar e assinar de novo: a segunda assinatura nasce sem teste e não concede dias", async () => {
+        const primeira = await assinaturaPendente();
+        await ctx.servico.confirmarAssinatura(
+          "pre-1",
+          respostaJson({ id: "pre-1", status: "authorized" }),
+        );
+        expect(estender).toHaveBeenCalledTimes(1);
+
+        await ctx.repo.definirStatusAssinatura(primeira.id, "cancelada");
+
+        const { buscar, corpos } = capturando();
+        const { assinatura: segunda } = await ctx.servico.assinar(
+          sessao,
+          "prestador_mensalidade",
+          { buscar },
+        );
+        expect(segunda.id).not.toBe(primeira.id);
+        expect(freeTrial(corpos[0])).toBeUndefined();
+
+        await ctx.servico.confirmarAssinatura(
+          "pre-1",
+          respostaJson({ id: "pre-1", status: "authorized" }),
+        );
+        // Nenhum dia de teste a mais: a primeira cobrança é a que estende.
+        expect(estender).toHaveBeenCalledTimes(1);
+      });
+
+      /** A reivindicação é atômica: só uma das duas leva o teste. */
+      it("duas reivindicações simultâneas concedem o teste uma vez só", async () => {
+        const { repositorioUsuarios } = await import("@/server/repositories");
+        const resultados = await Promise.all(
+          Array.from({ length: 10 }, () =>
+            repositorioUsuarios().reivindicarTesteGratis(sessao.usuarioId),
+          ),
+        );
+        expect(resultados.filter(Boolean)).toHaveLength(1);
+      });
     });
 
     /**

@@ -38,6 +38,7 @@ function construtor(tabela: string) {
     "eq",
     "gte",
     "order",
+    "is",
     "limit",
     "insert",
     "update",
@@ -706,5 +707,68 @@ describe("cortes de sessão", () => {
   it("ninguém trocou a senha esta semana: lista vazia, não erro", async () => {
     resposta = { data: [], error: null };
     expect((await repo.cortesDeSessao(7)).size).toBe(0);
+  });
+});
+
+/**
+ * O teste grátis é um por conta (#392).
+ *
+ * A reivindicação é uma instrução só, com `is null` na condição: duas
+ * ativações simultâneas leriam as duas "não usou" se fosse ler e depois
+ * gravar.
+ */
+describe("teste grátis", () => {
+  const repo = new RepositorioPostgres();
+  const ID = "11111111-1111-4111-8111-000000000001";
+
+  beforeEach(() => {
+    chamadas.length = 0;
+  });
+
+  it("já usado: lê a coluna e responde verdadeiro", async () => {
+    resposta = {
+      data: { teste_gratis_usado_em: "2026-10-01T00:00:00Z" },
+      error: null,
+    };
+    expect(await repo.testeGratisJaUsado(ID)).toBe(true);
+    expect(chamadas.find((c) => c.metodo === "select")?.args[0]).toBe(
+      "teste_gratis_usado_em",
+    );
+  });
+
+  it("nunca usado, ou sem linha: falso", async () => {
+    resposta = { data: { teste_gratis_usado_em: null }, error: null };
+    expect(await repo.testeGratisJaUsado(ID)).toBe(false);
+    resposta = { data: null, error: null };
+    expect(await repo.testeGratisJaUsado(ID)).toBe(false);
+  });
+
+  it("reivindicar: uma instrução com is null, e devolve quem levou", async () => {
+    resposta = { data: { id: ID }, error: null };
+    expect(await repo.reivindicarTesteGratis(ID)).toBe(true);
+
+    const atualizacao = chamadas.find((c) => c.metodo === "update");
+    expect(atualizacao?.tabela).toBe("usuarios");
+    const gravado = atualizacao?.args[0] as Record<string, unknown>;
+    expect(typeof gravado.teste_gratis_usado_em).toBe("string");
+    expect(chamadas.find((c) => c.metodo === "is")?.args).toEqual([
+      "teste_gratis_usado_em",
+      null,
+    ]);
+  });
+
+  it("reivindicar quando já foi usado: zero linhas, falso", async () => {
+    resposta = { data: null, error: null };
+    expect(await repo.reivindicarTesteGratis(ID)).toBe(false);
+  });
+
+  it("falha no banco não passa em silêncio", async () => {
+    resposta = { data: null, error: { message: "conexão caiu" } };
+    await expect(repo.testeGratisJaUsado(ID)).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
+    await expect(repo.reivindicarTesteGratis(ID)).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
   });
 });

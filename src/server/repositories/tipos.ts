@@ -397,6 +397,24 @@ export interface RepositorioUsuarios {
   ): Promise<boolean>;
 
   /**
+   * A pessoa já usou o teste grátis da mensalidade? (#392)
+   *
+   * Decide, ao criar a assinatura, se o Mercado Pago recebe `free_trial`: quem
+   * já usou assina e é cobrada na hora.
+   */
+  testeGratisJaUsado(usuarioId: string): Promise<boolean>;
+
+  /**
+   * Reivindica o teste grátis, de forma atômica (#392).
+   *
+   * Devolve `true` para quem o reivindicou agora e `false` se ele já tinha
+   * sido usado. É uma instrução só (`where teste_gratis_usado_em is null`), e
+   * não "lê, decide, grava": duas ativações simultâneas leriam as duas "não
+   * usou" e concederiam o teste duas vezes.
+   */
+  reivindicarTesteGratis(usuarioId: string): Promise<boolean>;
+
+  /**
    * Liga ou desliga o gerador de currículo (#47) — compra única, sem data
    * de validade para gravar, ao contrário da mensalidade.
    */
