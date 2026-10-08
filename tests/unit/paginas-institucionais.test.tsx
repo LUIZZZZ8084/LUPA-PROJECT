@@ -177,6 +177,7 @@ describe("Política de Privacidade", () => {
       "Mercado Pago",
       "Resend",
       "BrasilAPI",
+      "Sentry",
     ]) {
       expect(screen.getByText(operador)).toBeInTheDocument();
     }
@@ -189,5 +190,47 @@ describe("Política de Privacidade", () => {
   it("promete não vender dado", () => {
     render(<PrivacidadePage />);
     expect(screen.getByText(/Não vendemos dado seu/)).toBeInTheDocument();
+  });
+
+  /**
+   * O texto acompanha o produto de hoje (#235). Escrito em setembro, ele
+   * ainda pedia bairro, dizia que só o prestador informa CPF e prometia
+   * corrigir qualquer dado pela edição do perfil — três coisas que
+   * deixaram de ser verdade (#321, cadastro com CPF, #315).
+   */
+  it("não promete o que o produto deixou de fazer", () => {
+    const { container } = render(<PrivacidadePage />);
+    const texto = container.textContent ?? "";
+
+    expect(texto).not.toMatch(/bairro/i);
+    expect(texto).toMatch(/De pessoa física, também o CPF/);
+    expect(texto).toMatch(/nome e cidade não se editam pela tela/);
+  });
+
+  /**
+   * "Sem o seu nome" é promessa que o banco cumpre: o gatilho
+   * `usuarios_anonimizam_avaliacoes`, testado em `schema.test.ts`.
+   */
+  it("diz que a avaliação de conta excluída fica sem o nome", () => {
+    const { container } = render(<PrivacidadePage />);
+    expect(container.textContent).toMatch(
+      /continua no perfil dela, sem o seu nome/,
+    );
+  });
+});
+
+describe("Termos de Uso, depois de setembro", () => {
+  it("vale para o Brasil inteiro, não só Mato Grosso (#301)", () => {
+    const { container } = render(<TermosPage />);
+    const texto = container.textContent ?? "";
+    expect(texto).not.toMatch(/Mato Grosso/);
+    expect(texto).toMatch(/em qualquer cidade do Brasil/);
+  });
+
+  it("diz que o nome não muda e que o teste grátis é um por conta", () => {
+    const { container } = render(<TermosPage />);
+    const texto = container.textContent ?? "";
+    expect(texto).toMatch(/não se altera pela tela/);
+    expect(texto).toMatch(/o teste vale uma vez por conta/);
   });
 });

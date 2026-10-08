@@ -8,7 +8,7 @@ import {
   REVISADO_EM,
 } from "@/lib/controlador";
 import { formatPrecoBRL } from "@/lib/format";
-import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
+import { DIAS_TESTE_GRATIS, PRECO_CENTAVOS } from "@/server/pagamentos/planos";
 import { Artigo, Bloco, Identificacao, Revisao } from "../_legal/estrutura";
 
 export const metadata: Metadata = {
@@ -78,7 +78,7 @@ export default function TermosPage() {
         <p>
           A Lupa é uma <strong>plataforma de divulgação e intermediação</strong>
           . Ela aproxima quem procura trabalho de quem oferece, e quem procura
-          um serviço de quem o presta, dentro de Mato Grosso.
+          um serviço de quem o presta, em qualquer cidade do Brasil.
         </p>
         <p>
           O que acontece depois desse encontro é entre as pessoas envolvidas. A
@@ -129,6 +129,12 @@ export default function TermosPage() {
         <p>
           Cada pessoa tem uma conta, e ela é pessoal. Você responde pelo que
           acontece nela, e deve nos avisar se suspeitar que alguém entrou.
+        </p>
+        <p>
+          O nome informado no cadastro — o seu, ou o da empresa — é o que
+          aparece no que você publica e nas avaliações que escreve, e não se
+          altera pela tela. Correção de nome, de cidade, de CPF ou do CNPJ de
+          empresa é feita pelo suporte.
         </p>
       </Artigo>
 
@@ -203,7 +209,9 @@ export default function TermosPage() {
             <li>
               <strong>Prestador</strong> — mensalidade de{" "}
               {preco(PRECO_CENTAVOS.prestador_mensalidade)}, que mantém o perfil
-              visível na busca de serviços.
+              visível na busca de serviços. A primeira assinatura de cada conta
+              começa com {DIAS_TESTE_GRATIS} dias grátis; o teste vale uma vez
+              por conta.
             </li>
             <li>
               <strong>Quem contrata</strong> — publicação de vaga a partir de{" "}

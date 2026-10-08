@@ -67,9 +67,9 @@ export default function PrivacidadePage() {
 
       <Artigo n={2} titulo="O que guardamos">
         <p>
-          <strong>De toda conta:</strong> nome, e-mail, telefone, cidade,
-          bairro, senha (guardada como hash, nunca em texto), foto de perfil se
-          você enviar, e a data do último acesso.
+          <strong>De toda conta:</strong> nome, e-mail, telefone, cidade, senha
+          (guardada como hash, nunca em texto), foto de perfil se você enviar, e
+          a data do último acesso. De pessoa física, também o CPF.
         </p>
         <p>
           <strong>De quem procura trabalho:</strong> área desejada, resumo,
@@ -78,8 +78,9 @@ export default function PrivacidadePage() {
         </p>
         <p>
           <strong>De quem presta serviço:</strong> categoria, descrição, preço
-          inicial, anos de experiência, bairros atendidos, fotos de trabalho,
-          redes sociais, CPF, e CNPJ com razão social se tiver.
+          inicial, anos de experiência, fotos de trabalho, redes sociais, CNPJ
+          com razão social se tiver, e a assinatura da mensalidade — inclusive
+          se o teste grátis da conta já foi usado.
         </p>
         <p>
           <strong>De quem contrata:</strong> razão social, CNPJ ou CPF, setor,
@@ -108,10 +109,11 @@ export default function PrivacidadePage() {
         <Bloco>
           <p className="font-semibold text-ink">Fica visível</p>
           <p className="mt-1">
-            Nome, foto, cidade e bairro, e o conteúdo do seu anúncio — se você é
-            prestador ou contrata. Avaliações recebidas. CNPJ e razão social,
-            que são registro público. O telefone do prestador, porque é por ele
-            que o contato acontece.
+            Nome, foto, cidade e o conteúdo do seu anúncio — se você é prestador
+            ou contrata. Avaliações recebidas, e o nome com que você assina as
+            que escreve (o da empresa, se a conta é de empresa). CNPJ e razão
+            social, que são registro público. O telefone do prestador, porque é
+            por ele que o contato acontece.
           </p>
           <p className="mt-3 font-semibold text-ink">Nunca fica visível</p>
           <p className="mt-1">
@@ -190,6 +192,18 @@ export default function PrivacidadePage() {
               <strong>BrasilAPI</strong> — consulta pública de CNPJ. Enviamos
               apenas o número consultado.
             </li>
+            <li>
+              <strong>Sentry</strong> — registro de erros da aplicação. Quando
+              uma tela falha, ele grava a sessão até ali, com todo texto e toda
+              imagem ocultados. Antes de sair daqui, CPF, CNPJ, telefone, senha
+              e token são mascarados.
+            </li>
+            <li>
+              <strong>Serviço de notificação do seu navegador</strong> (Google,
+              Mozilla, Apple ou Microsoft) — entrega o aviso de vaga, se você o
+              ligar. O conteúdo vai cifrado; o serviço só vê o endereço do
+              aparelho.
+            </li>
           </ul>
         </Bloco>
         <p>
@@ -238,10 +252,11 @@ export default function PrivacidadePage() {
             , ou use a página de Suporte. Respondemos em até 15 dias.
           </p>
           <p className="mt-2 text-xs text-muted">
-            Boa parte disso você faz sozinho: editar o perfil corrige dados,
-            desligar &quot;ser encontrado por empresas&quot; retira aquele
-            consentimento na hora, e desligar o aviso de vaga apaga junto a
-            preferência e os aparelhos registrados.
+            Boa parte disso você faz sozinho: editar o perfil corrige telefone,
+            anúncio e currículo — nome e cidade não se editam pela tela e se
+            corrigem pelo suporte —, desligar &quot;ser encontrado por
+            empresas&quot; retira aquele consentimento na hora, e desligar o
+            aviso de vaga apaga junto a preferência e os aparelhos registrados.
           </p>
         </Bloco>
       </Artigo>
