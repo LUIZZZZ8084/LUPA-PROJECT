@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { ASSUNTOS } from "@/server/suporte/tipos";
 import { type EstadoSuporte, enviarComEstado } from "./actions";
 
@@ -32,6 +33,9 @@ export function FormularioDeSuporte({
     enviarComEstado,
     {},
   );
+  // Quem escreve ao suporte costuma estar com pressa, e um campo errado não
+  // pode apagar a mensagem inteira (#291).
+  const envio = useEnvioQueNaoApaga(agir, estado);
 
   if (estado.ok) {
     return (
@@ -49,7 +53,7 @@ export function FormularioDeSuporte({
   }
 
   return (
-    <form action={agir} className="mt-5 space-y-4">
+    <form action={agir} {...envio} className="mt-5 space-y-4">
       <Field label="Seu nome" required error={estado.campos?.nome}>
         <Input
           name="nome"
