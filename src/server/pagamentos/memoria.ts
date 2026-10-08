@@ -45,8 +45,18 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
           p.criadoEm < janela.antesDe &&
           p.criadoEm > janela.depoisDe,
       )
-      .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm))
+      .sort(
+        (a, b) =>
+          a.atualizadoEm.localeCompare(b.atualizadoEm) ||
+          a.criadoEm.localeCompare(b.criadoEm),
+      )
       .slice(0, janela.maximo);
+  }
+
+  async marcarConferida(id: string): Promise<void> {
+    const atual = this.itens.get(id);
+    if (!atual || atual.status !== "pendente") return;
+    this.itens.set(id, { ...atual, atualizadoEm: new Date().toISOString() });
   }
 
   async porMpPaymentId(mpPaymentId: string): Promise<Pagamento | null> {

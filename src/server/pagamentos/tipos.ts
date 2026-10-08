@@ -161,6 +161,14 @@ export interface RepositorioPagamentos {
   }): Promise<Pagamento[]>;
 
   /**
+   * Marca uma cobrança pendente como conferida agora (#388), sem mudar o
+   * status. A varredura confere primeiro as que ficaram mais tempo sem
+   * conferência, e esta é a que manda uma cobrança já conferida — e ainda
+   * pendente, como um checkout abandonado — para o fim da fila.
+   */
+  marcarConferida(id: string): Promise<void>;
+
+  /**
    * A cobrança pelo id que o Mercado Pago usa, e não pelo nosso.
    *
    * É o que permite reconhecer uma parcela da recorrência quando o
