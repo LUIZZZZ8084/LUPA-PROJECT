@@ -5,6 +5,7 @@ import { derrubarCacheDePrestadores } from "@/lib/cache-de-listagem";
 import { criarAcao } from "@/server/action";
 import { temArmazenamento } from "@/server/arquivos/servico";
 import { criarSessao, sessaoAtual } from "@/server/auth/cookies";
+import { derrubarCacheDeRevogacoes } from "@/server/auth/revogacao";
 import { erros } from "@/server/errors";
 import { schemaAtivacaoPrestador } from "@/server/prestadores/schemas";
 import { virarPrestador } from "@/server/prestadores/servico";
@@ -32,6 +33,10 @@ export const ativarPrestador = criarAcao({
       temArmazenamento,
     });
 
+    // O corte já foi gravado com a troca de papel (#352). O cache dele dura
+    // 60 s e precisa cair antes da sessão nova, ou ela nasceria dentro da
+    // janela em que o corte ainda não é visto.
+    derrubarCacheDeRevogacoes();
     await criarSessao(sessao.usuarioId, papel);
 
     /*

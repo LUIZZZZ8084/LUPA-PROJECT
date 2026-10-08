@@ -37,6 +37,7 @@ function construtor(tabela: string) {
     "select",
     "eq",
     "gte",
+    "order",
     "limit",
     "insert",
     "update",
@@ -62,6 +63,8 @@ vi.mock("@/lib/supabase/service", () => ({
   }),
 }));
 
+import { TETO_DE_CORTES_DE_SESSAO } from "@/lib/limites-de-lista";
+import { log } from "@/server/logger";
 import { RepositorioPostgres } from "@/server/repositories/postgres";
 
 const LINHA = {
@@ -651,6 +654,53 @@ describe("cortes de sessão", () => {
     expect(filtro?.args[0]).toBe("sessoes_validas_desde");
 
     expect(chamadas.some((c) => c.metodo === "limit")).toBe(true);
+  });
+
+  it("tem teto próprio e ordena do corte mais novo (#352)", async () => {
+    resposta = { data: [], error: null };
+    await repo.cortesDeSessao(7);
+
+    expect(chamadas.find((c) => c.metodo === "limit")?.args[0]).toBe(
+      TETO_DE_CORTES_DE_SESSAO,
+    );
+    const ordem = chamadas.find((c) => c.metodo === "order");
+    expect(ordem?.args[0]).toBe("sessoes_validas_desde");
+    expect(ordem?.args[1]).toEqual({ ascending: false });
+  });
+
+  it("chegar ao teto vai ao Sentry, e abaixo dele não faz barulho (#352)", async () => {
+    const erro = vi.spyOn(log, "erro").mockImplementation(() => {});
+    const linha = (i: number) => ({
+      id: `u${i}`,
+      sessoes_validas_desde: "2026-09-10T12:00:00.000Z",
+    });
+
+    resposta = { data: [linha(1)], error: null };
+    await repo.cortesDeSessao(7);
+    expect(erro).not.toHaveBeenCalled();
+
+    resposta = {
+      data: Array.from({ length: TETO_DE_CORTES_DE_SESSAO }, (_, i) =>
+        linha(i),
+      ),
+      error: null,
+    };
+    await repo.cortesDeSessao(7);
+    expect(erro).toHaveBeenCalledTimes(1);
+    erro.mockRestore();
+  });
+
+  it("a troca de papel grava o corte na mesma instrução (#352)", async () => {
+    await repo.atualizarPapel(
+      "11111111-1111-4111-8111-000000000001",
+      "prestador_servico",
+    );
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("usuarios");
+    const gravado = update?.args[0] as Record<string, unknown>;
+    expect(gravado.papel).toBe("prestador_servico");
+    expect(typeof gravado.sessoes_validas_desde).toBe("string");
   });
 
   it("ninguém trocou a senha esta semana: lista vazia, não erro", async () => {

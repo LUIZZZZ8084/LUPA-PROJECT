@@ -918,6 +918,19 @@ responde a um por requisição.*
 
 O preço novo, aceito: uma sessão revogada pode sobreviver até 60 segundos.
 
+**A lista tem teto próprio, e o teto avisa (#352).** Ela lia com o teto
+genérico das listas do dono, 200, sem ordem. Passando disso, quem ficou
+de fora era lido como "não revogado" — o erro silencioso de sempre. Hoje
+`TETO_DE_CORTES_DE_SESSAO` (5.000) é só contra crescimento sem fim, a
+consulta vem do corte mais novo para o mais velho, e atingir o teto
+registra erro no Sentry: passar dele pede paginar, não subir o número.
+
+**Trocar o papel também corta (#352).** O papel viaja no token, e
+`atualizarPapel` não gravava o corte: quem virava prestador ficava com o
+cookie de candidato válido nos outros aparelhos até vencer. Agora o corte
+vai na mesma instrução da troca, e a ação derruba o cache de revogações
+antes de reemitir a sessão — a ordem de sempre, o corte primeiro.
+
 **A leitura falha aberta**, e é o oposto do webhook de pagamento, de
 propósito. Lá, deixar passar confirmaria dinheiro que ninguém provou;
 aqui, recusar derrubaria **todo mundo** do app por causa de uma consulta
