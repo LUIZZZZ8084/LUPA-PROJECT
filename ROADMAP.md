@@ -8,9 +8,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 08/10/2026.**
+**Última atualização: 09/10/2026.**
 
 ## Concluído
+
+Em 09/10/2026:
+
+- O cookie de sessão vira `__Host-lupa_sessao` em produção, e o token diz de
+  qual ambiente veio: o de um preview não vale mais em produção, mesmo com o
+  mesmo segredo. Todo mundo entra de novo uma vez —
+  [#408](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/408)
 
 Em 08/10/2026:
 

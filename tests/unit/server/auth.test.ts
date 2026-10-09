@@ -138,6 +138,64 @@ describe("sessão", () => {
     limparCacheDoSegredo();
   });
 
+  /*
+   * O mesmo segredo em preview e produção fazia o token de um valer no
+   * outro (#408), e o preview pode rodar em demonstração, onde qualquer um
+   * cria conta. A audiência carrega o ambiente.
+   */
+  it("token de outro ambiente da Vercel é recusado, mesmo com o mesmo segredo", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    const { token } = await assinarSessao("usuario-1", "admin");
+    expect(await lerSessao(token)).not.toBeNull();
+
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(await lerSessao(token)).toBeNull();
+
+    const deProducao = await assinarSessao("usuario-1", "admin");
+    expect(await lerSessao(deProducao.token)).not.toBeNull();
+    vi.unstubAllEnvs();
+    vi.stubEnv("SESSION_SECRET", "a".repeat(48));
+  });
+
+  it("fora da Vercel o ambiente é local, e o token de lá não vale em produção", async () => {
+    const { token } = await assinarSessao("usuario-1", "empresa");
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64url").toString(),
+    );
+    expect(payload.aud).toBe("lupa-app:local");
+
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(await lerSessao(token)).toBeNull();
+    vi.unstubAllEnvs();
+    vi.stubEnv("SESSION_SECRET", "a".repeat(48));
+  });
+
+  /*
+   * `__Host-` exige `Secure`, `Path=/` e nenhum `Domain` (#408). Se o
+   * nome levasse o prefixo sem essas três, o navegador recusaria o cookie e
+   * ninguém conseguiria entrar; se as três valessem sem o prefixo, um
+   * subdomínio poderia gravar uma sessão por cima.
+   */
+  it("em produção o cookie se chama __Host- e cumpre o que o prefixo exige", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.resetModules();
+    const { CONFIG_SESSAO: emProducao } = await import("@/server/auth/session");
+
+    expect(emProducao.NOME_COOKIE).toBe("__Host-lupa_sessao");
+    const opcoes = emProducao.opcoesDoCookie(60) as Record<string, unknown>;
+    expect(opcoes.secure).toBe(true);
+    expect(opcoes.path).toBe("/");
+    expect(opcoes).not.toHaveProperty("domain");
+
+    vi.stubEnv("NODE_ENV", "test");
+    vi.resetModules();
+  });
+
+  it("fora de produção o cookie não leva o prefixo, porque não é Secure", () => {
+    expect(CONFIG_SESSAO.NOME_COOKIE).toBe("lupa_sessao");
+    expect(CONFIG_SESSAO.opcoesDoCookie(60).secure).toBe(false);
+  });
+
   it("token vazio ou sem sentido devolve null, sem lançar", async () => {
     expect(await lerSessao("")).toBeNull();
     expect(await lerSessao("não.é.jwt")).toBeNull();
