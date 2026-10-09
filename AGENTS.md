@@ -939,6 +939,14 @@ responde a um por requisição.*
 
 O preço novo, aceito: uma sessão revogada pode sobreviver até 60 segundos.
 
+**E o corte tem botão próprio (#402).** "Sair dos outros aparelhos", no
+perfil, grava o mesmo corte sem trocar a senha — para quem esqueceu a conta
+aberta numa lan house e não desconfia de que alguém saiba a senha. A ordem
+é a da troca de senha: corte, cache derrubado, sessão nova para o aparelho
+onde se clicou. O outro aparelho não é mandado para `/entrar`: o proxy só
+vê que há cookie, e é a página, por `sessaoAtual()`, que o trata como
+deslogado.
+
 **A lista tem teto próprio, e o teto avisa (#352).** Ela lia com o teto
 genérico das listas do dono, 200, sem ordem. Passando disso, quem ficou
 de fora era lido como "não revogado" — o erro silencioso de sempre. Hoje

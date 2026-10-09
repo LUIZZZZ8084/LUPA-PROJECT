@@ -87,6 +87,7 @@ function porJanela(chamadas: number): Orcamento {
 export const ORCAMENTOS: Record<string, Orcamento> = {
   // Sair é barato, mas não precisa de rajada.
   "auth.sair": porJanela(20),
+  "auth.sair_dos_outros": porJanela(5),
 
   /*
    * Candidatar-se é o verbo mais usado do app, e por quem tem menos

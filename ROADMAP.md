@@ -14,6 +14,9 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 08/10/2026:
 
+- "Sair dos outros aparelhos" no perfil: corta as sessões dos outros
+  aparelhos sem trocar a senha, e mantém dentro o aparelho onde se clicou —
+  [#402](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/402)
 - A CSP deixa de liberar conexão com qualquer projeto Supabase: o
   navegador não fala com ele, e o curinga era destino pronto para um
   script injetado — [#400](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/400)

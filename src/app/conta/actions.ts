@@ -4,9 +4,18 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
 import { criarAcao } from "@/server/action";
-import { criarSessao, encerrarSessao } from "@/server/auth/cookies";
+import {
+  criarSessao,
+  encerrarSessao,
+  sessaoAtual,
+} from "@/server/auth/cookies";
+import { derrubarCacheDeRevogacoes } from "@/server/auth/revogacao";
 import { schemaCadastro, schemaLogin } from "@/server/auth/schemas";
-import { cadastrar, entrar } from "@/server/auth/servico";
+import {
+  cadastrar,
+  entrar,
+  sairDosOutrosAparelhos,
+} from "@/server/auth/servico";
 import { enviarVerificacaoDeEmail } from "@/server/auth/verificacao-email";
 import { origemDaRequisicao } from "@/server/origem-da-requisicao";
 import { urlPublica } from "@/server/url-publica";
@@ -90,6 +99,25 @@ export const sairDaConta = criarAcao({
     await encerrarSessao();
     revalidatePath("/", "layout");
     return { encerrada: true };
+  },
+});
+
+/**
+ * Corta as sessões dos outros aparelhos e mantém este dentro (#402).
+ *
+ * A ordem é a da troca de senha: o corte primeiro, o cache derrubado, e
+ * só então a sessão nova. Invertida, a pessoa seria deslogada do aparelho
+ * onde clicou.
+ */
+export const sairDosOutrosAparelhosAction = criarAcao({
+  nome: "auth.sair_dos_outros",
+  entrada: z.object({}),
+  executar: async () => {
+    const sessao = await sessaoAtual();
+    await sairDosOutrosAparelhos(sessao?.usuarioId ?? null);
+    derrubarCacheDeRevogacoes();
+    if (sessao) await criarSessao(sessao.usuarioId, sessao.papel);
+    return { cortadas: true };
   },
 });
 
