@@ -14,6 +14,10 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 08/10/2026:
 
+- Tokens de e-mail: abrir o link de confirmação não gasta mais o token (a
+  tela mostra um botão), e pedir um link novo aposenta o anterior, na
+  recuperação de senha e na confirmação —
+  [#398](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/398)
 - Os dez PRs da auditoria de 06/10 mergeados, e as seis áreas que tinham
   ficado sem leitura lidas: buckets públicos deixam de ser listáveis, saem
   duas actions mortas que aceitavam endereço de imagem, e o workflow declara

@@ -772,3 +772,53 @@ describe("teste grátis", () => {
     });
   });
 });
+
+/**
+ * Um token vivo por pessoa e finalidade (#398): o novo aposenta os
+ * anteriores **antes** de ser gravado, para o próprio token novo não
+ * cair no `update`.
+ */
+describe("token de recuperação", () => {
+  const repo = new RepositorioPostgres();
+  const ID = "11111111-1111-4111-8111-000000000001";
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    resposta = { data: null, error: null };
+  });
+
+  it("aposenta os anteriores da mesma finalidade, e depois grava", async () => {
+    await repo.criarTokenDeRecuperacao({
+      usuarioId: ID,
+      tokenHash: "hash-novo",
+      finalidade: "recuperacao",
+      expiraEm: "2026-10-08T13:00:00.000Z",
+    });
+
+    const metodos = chamadas.map((c) => c.metodo);
+    expect(metodos.indexOf("update")).toBeLessThan(metodos.indexOf("insert"));
+
+    const filtros = chamadas
+      .slice(0, metodos.indexOf("insert"))
+      .filter((c) => c.metodo === "eq" || c.metodo === "is")
+      .map((c) => c.args);
+    expect(filtros).toEqual([
+      ["usuario_id", ID],
+      ["finalidade", "recuperacao"],
+      ["usado_em", null],
+    ]);
+  });
+
+  it("falha ao aposentar não grava o token novo", async () => {
+    resposta = { data: null, error: { message: "conexão recusada" } };
+    await expect(
+      repo.criarTokenDeRecuperacao({
+        usuarioId: ID,
+        tokenHash: "hash-novo",
+        finalidade: "verificacao_email",
+        expiraEm: "2026-10-08T13:00:00.000Z",
+      }),
+    ).rejects.toMatchObject({ codigo: "indisponivel" });
+    expect(chamadas.some((c) => c.metodo === "insert")).toBe(false);
+  });
+});
