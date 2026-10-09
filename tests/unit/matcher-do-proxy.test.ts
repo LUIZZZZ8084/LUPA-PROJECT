@@ -47,12 +47,38 @@ describe("matcher do proxy", () => {
     },
   );
 
-  it.each(["/logo.png", "/fundo.webp", "/fonte.woff2"])(
-    "%s, arquivo estático, fica fora",
+  /*
+   * Sem âncora (#404), cada item era prefixo de texto: `icon` deixava
+   * `/iconografia` fora do muro. E a exclusão por extensão deixava
+   * qualquer caminho terminado em `.png` sem login e sem CSP.
+   */
+  it.each([
+    "/iconografia",
+    "/apple-icone",
+    "/avatares-de-alguem",
+    "/api/cronograma",
+    "/api/webhooks-falsos",
+    "/monitoramento",
+    "/banners",
+    "/vagas/abc.png",
+    "/perfil/foto.webp",
+    "/logo.svg",
+  ])(
+    "%s passa pelo proxy — não é item da lista, só começa como um",
     (caminho) => {
-      expect(casa(caminho)).toBe(false);
+      expect(casa(caminho)).toBe(true);
     },
   );
+
+  it.each([
+    "/avatares/cmp-agro-norte.svg",
+    "/banner/trabalhador-recortado-v2.webp",
+    "/_next/static/chunks/main.js",
+    "/_next/image",
+    "/favicon.ico",
+  ])("%s, arquivo estático, fica fora", (caminho) => {
+    expect(casa(caminho)).toBe(false);
+  });
 
   it.each(["/", "/vagas", "/perfil", "/admin", "/entrar"])(
     "%s passa pelo proxy",
