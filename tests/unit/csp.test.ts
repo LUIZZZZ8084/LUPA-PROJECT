@@ -73,6 +73,18 @@ describe("política de segurança", () => {
   });
 
   /**
+   * O navegador não fala com o Supabase (#400): nenhum componente de
+   * cliente cria cliente do Supabase, e toda consulta passa pelo servidor.
+   * Liberar `*.supabase.co`
+   * deixava um script injetado gravar num projeto Supabase de quem o
+   * injetou.
+   */
+  it("connect-src não libera o Supabase", () => {
+    const connect = diretiva(politicaDeSeguranca("n"), "connect-src");
+    expect(connect).not.toMatch(/supabase/);
+  });
+
+  /**
    * O worker da gravação de sessão do Sentry nasce de uma URL `blob:`
    * (#281). Sem `worker-src`, o navegador usa `script-src`, recusa o
    * worker e registra um erro de console em toda página de produção.

@@ -73,7 +73,9 @@ Conferi na `main` e não dupliquei:
 Nada disto virou PR. São pontos sem exploração conhecida, para agrupar quando
 alguém mexer nos módulos.
 
-- O `connect-src` da CSP aceita `*.supabase.co`; estreitar para o host do projeto.
+- ~~O `connect-src` da CSP aceita `*.supabase.co`; estreitar para o host do projeto.~~
+  Corrigido na #400, e mais que estreitado: o navegador não fala com o
+  Supabase, então o host saiu.
 - O cookie de sessão não tem o prefixo `__Host-`, e o logout só limpa o cookie.
   Uma ação "sair de todos os aparelhos" fecha isso.
 - O matcher do `proxy.ts` tem prefixos sem âncora (`icon`, `avatares`,
