@@ -82,8 +82,9 @@ alguém mexer nos módulos.
   pendente — trocar o nome do cookie desloga todo mundo uma vez.
 - O matcher do `proxy.ts` tem prefixos sem âncora (`icon`, `avatares`,
   `api/cron`) e exclui por extensão de arquivo.
-- `confirmarParcelaDaAssinatura` confia no status embutido na fatura em vez de
-  reler o pagamento.
+- ~~`confirmarParcelaDaAssinatura` confia no status embutido na fatura em vez de
+  reler o pagamento.~~ Corrigido na #405: status e valor vêm de
+  `/v1/payments/{id}`.
 - ~~Um token de recuperação antigo continua válido por uma hora quando se pede
   outro, e `/verificar-email` consome o token no GET, o que um antivírus de
   e-mail pode gastar.~~ Corrigido na #398: o token novo aposenta os
@@ -94,8 +95,9 @@ alguém mexer nos módulos.
   Confirmar na Vercel que são diferentes.
 - `CRON_SECRET` não está na lista de variáveis obrigatórias da subida, de
   propósito: exigir derrubaria o deploy se faltasse. A rota responde 503.
-- Se `estenderMensalidade` falhar depois de a reivindicação do teste grátis ser
-  gravada, o teste é gasto sem dar os dias. E não se sabe se o Mercado Pago
+- ~~Se `estenderMensalidade` falhar depois de a reivindicação do teste grátis ser
+  gravada, o teste é gasto sem dar os dias.~~ Corrigido na #406: a falha devolve
+  o teste e a assinatura a `pendente`. Segue sem resposta se o Mercado Pago
   barra teste repetido no mesmo cartão.
 
 ## Ordem de merge (seguida em 08/10)
