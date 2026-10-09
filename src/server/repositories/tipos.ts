@@ -278,6 +278,11 @@ export interface RepositorioUsuarios {
    *
    * Quem lesse a tabela poderia trocar a senha de qualquer conta; o valor
    * original só existe no e-mail que a pessoa recebeu.
+   *
+   * **E aposenta os anteriores** da mesma pessoa e finalidade (#398). Quem
+   * pede um link novo é porque o antigo se perdeu — ou foi parar onde não
+   * devia. Sem isso, o link de recuperação de uma hora atrás continuava
+   * trocando a senha depois de a pessoa ter pedido outro.
    */
   criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void>;
 

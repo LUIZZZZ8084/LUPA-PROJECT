@@ -73,7 +73,9 @@ Conferi na `main` e não dupliquei:
 Nada disto virou PR. São pontos sem exploração conhecida, para agrupar quando
 alguém mexer nos módulos.
 
-- O `connect-src` da CSP aceita `*.supabase.co`; estreitar para o host do projeto.
+- ~~O `connect-src` da CSP aceita `*.supabase.co`; estreitar para o host do projeto.~~
+  Corrigido na #400, e mais que estreitado: o navegador não fala com o
+  Supabase, então o host saiu.
 - O cookie de sessão não tem o prefixo `__Host-`, e o logout só limpa o cookie.
   Uma ação "sair de todos os aparelhos" fecha isso. **A segunda metade entrou
   na #402** ("Sair dos outros aparelhos", no perfil); o `__Host-` segue
@@ -82,9 +84,10 @@ alguém mexer nos módulos.
   `api/cron`) e exclui por extensão de arquivo.
 - `confirmarParcelaDaAssinatura` confia no status embutido na fatura em vez de
   reler o pagamento.
-- Um token de recuperação antigo continua válido por uma hora quando se pede
+- ~~Um token de recuperação antigo continua válido por uma hora quando se pede
   outro, e `/verificar-email` consome o token no GET, o que um antivírus de
-  e-mail pode gastar.
+  e-mail pode gastar.~~ Corrigido na #398: o token novo aposenta os
+  anteriores, e a confirmação é um botão.
 - A cota de 100 e-mails por dia do Resend tem limite só por origem: uma origem
   esgota a cota de todo mundo.
 - `SESSION_SECRET` igual em preview e produção aceitaria token de um no outro.

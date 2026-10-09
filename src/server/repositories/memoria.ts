@@ -126,6 +126,15 @@ export class RepositorioMemoria implements RepositorioUsuarios {
   }
 
   async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
+    for (const [hash, token] of this.tokensDeRecuperacao) {
+      if (
+        token.usuarioId === dados.usuarioId &&
+        token.finalidade === dados.finalidade &&
+        !token.usado
+      ) {
+        this.tokensDeRecuperacao.set(hash, { ...token, usado: true });
+      }
+    }
     this.tokensDeRecuperacao.set(dados.tokenHash, {
       usuarioId: dados.usuarioId,
       expiraEm: dados.expiraEm,

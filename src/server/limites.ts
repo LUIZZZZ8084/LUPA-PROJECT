@@ -168,4 +168,8 @@ export const SEM_ORCAMENTO: Record<string, string> = {
   "auth.redefinir_senha":
     "o token é gasto na mesma instrução que o valida, e vale uma vez só — " +
     "não há volume a conter depois disso.",
+  "auth.confirmar_email":
+    "mesma razão da redefinição de senha: o token é gasto na mesma " +
+    "instrução que o valida, e é um segredo de 256 bits — não há o que " +
+    "adivinhar, nem volume a conter (#398).",
 };

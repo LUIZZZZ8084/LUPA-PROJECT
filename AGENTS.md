@@ -826,6 +826,19 @@ nenhum provedor de terceiro pode decidir se alguém consegue criar conta
 aqui — a mesma razão que mantém a lista de municípios versionada em vez de
 buscada no IBGE em execução.
 
+**Um token vivo por pessoa e finalidade (#398).** Emitir um token marca os
+anteriores como usados, em `criarTokenDeRecuperacao`, nos dois
+repositórios. Quem pede outro link é porque o primeiro se perdeu, ou foi
+parar onde não devia: o de recuperação de uma hora atrás não pode
+continuar trocando a senha.
+
+**Abrir o link não confirma nada (#398).** A página mostra um botão, e só
+a action gasta o token. Filtro de e-mail corporativo e prévia de link
+abrem os endereços da mensagem antes da pessoa, e com o consumo na
+renderização o primeiro deles gastava o token — quem clicava depois lia
+"Este link não vale mais". Esta seção já defendeu o contrário ("pedir mais
+um clique seria cerimônia"), e estava errada sobre quem abre o link.
+
 **A tela de confirmação é aberta**, em `(auth)`, e isso não é descuido: a
 pessoa quase sempre clica no link do celular, que pode não ser o aparelho
 onde ela está logada. Exigir sessão mandaria quem confirmou para um login —
