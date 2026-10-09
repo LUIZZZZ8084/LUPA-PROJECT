@@ -88,8 +88,9 @@ alguém mexer nos módulos.
   outro, e `/verificar-email` consome o token no GET, o que um antivírus de
   e-mail pode gastar.~~ Corrigido na #398: o token novo aposenta os
   anteriores, e a confirmação é um botão.
-- A cota de 100 e-mails por dia do Resend tem limite só por origem: uma origem
-  esgota a cota de todo mundo.
+- ~~A cota de 100 e-mails por dia do Resend tem limite só por origem: uma origem
+  esgota a cota de todo mundo.~~ Corrigido na #407: 20 por origem e 5 por conta,
+  por dia.
 - `SESSION_SECRET` igual em preview e produção aceitaria token de um no outro.
   Confirmar na Vercel que são diferentes.
 - `CRON_SECRET` não está na lista de variáveis obrigatórias da subida, de

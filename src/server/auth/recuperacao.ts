@@ -5,6 +5,7 @@ import { enviarEmail, temEmailConfigurado } from "../email";
 import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
+import { cabeEmailParaConta, reservarEmailDaOrigem } from "./cota-de-email";
 import { gerarHash } from "./password";
 import { conferirLimite, reservarTentativa } from "./rate-limit";
 
@@ -119,6 +120,9 @@ export async function pedirRecuperacao(
   // Soma e responde na mesma instrução (#386): dois `await` seguidos
   // deixavam requisições simultâneas passarem todas do teto.
   await reservarTentativa(`recuperacao:${opcoes.origem}`);
+  // A cota do dia (#407): conta antes de saber se a conta existe, para o
+  // bloqueio não dizer quem tem.
+  await reservarEmailDaOrigem(opcoes.origem);
 
   const repo = repositorioUsuarios();
   const usuario = await repo.porEmail(email.trim().toLowerCase());
@@ -130,6 +134,20 @@ export async function pedirRecuperacao(
    */
   if (!usuario) {
     log.info("recuperação pedida para e-mail sem conta", {
+      acao: "auth.recuperar",
+    });
+    await esperarAtePiso(comecouEm, dormir);
+    return { ok: true };
+  }
+
+  /*
+   * A caixa desta pessoa já recebeu o bastante hoje (#407). A resposta é a
+   * mesma de quem recebeu: "muitas tentativas" só para quem tem conta seria
+   * a lista que a tela se recusa a dar. E nenhum token novo é emitido, então
+   * o último link enviado continua valendo.
+   */
+  if (!(await cabeEmailParaConta(usuario.id))) {
+    log.info("recuperação além da cota da conta, sem envio", {
       acao: "auth.recuperar",
     });
     await esperarAtePiso(comecouEm, dormir);

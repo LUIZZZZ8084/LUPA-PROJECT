@@ -758,6 +758,24 @@ endereço e sem o corpo da resposta do Resend**, que pode ecoar o
 destinatário: a regra do log de recuperação vale em dobro no momento em
 que mais se lê log.
 
+**E a cota do dia é dividida (#407).** Os 100 e-mails por dia do Resend
+são uma cota só para o app inteiro, e o limite de 5 em 15 minutos por
+origem deixava um mesmo IP mandar 480 por dia. Hoje há dois tetos diários
+por cima dele, em `src/server/auth/cota-de-email.ts`: 20 por origem,
+somando recuperação e confirmação, e 5 por conta de destino. O da origem
+conta todo pedido, exista a conta ou não — contando só os que enviam, o
+bloqueio chegaria mais cedo para quem testa e-mails com conta, e diria
+quais têm. O da conta, na recuperação, não muda a resposta: passa do teto,
+não envia, e responde o mesmo "se existe uma conta". Na confirmação a
+pessoa tem sessão, e a tela diz que passou da cota. Nos dois casos nenhum
+token novo é emitido, e o último link enviado continua valendo.
+
+Para a janela de um dia existir, o banco precisou guardar a janela de cada
+chave (`tentativas_de_acesso.janela_segundos`): a limpeza apagava toda
+linha com mais de uma hora que não estivesse bloqueada, e o contador
+diário recomeçava do zero. *Quando um mecanismo ganha uma janela mais
+longa, confira quem apaga as linhas dele.*
+
 **O token na URL não vai ao Sentry (#360).** O link leva o token na
 query, e a URL entra no evento (`request.url`, `query_string`, atributos
 de span). A máscara por nome de chave não alcançava: a chave ali é `url`,
