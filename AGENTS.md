@@ -990,6 +990,17 @@ reproduzir.
 Sem `SESSION_SECRET`, produção recusa subir. Segredo padrão versionado
 significa sessão de admin forjável por qualquer um que leia o repositório.
 
+**O token diz de qual ambiente veio, e o cookie é `__Host-` (#408).** A
+audiência era `lupa-app` em todo lugar: com o mesmo segredo em preview e
+produção, um token assinado num preview — que pode rodar em demonstração,
+onde qualquer um cria conta — valia em produção. Hoje ela é
+`lupa-app:<VERCEL_ENV>` (`local` fora da Vercel). E o cookie se chama
+`__Host-lupa_sessao` em produção: o navegador só aceita esse nome com
+`Secure`, `Path=/` e sem `Domain`, então nenhum subdomínio nem resposta em
+http grava uma sessão por cima da da pessoa. Fora de produção o nome fica
+sem prefixo, porque o cookie não é `Secure` e o navegador o recusaria. O
+custo, aceito em 09/10/2026: todo mundo entrou de novo uma vez.
+
 **Até a #271 esta frase era falsa.** A recusa morava só em `segredo()`,
 que roda quando alguém lê ou assina uma sessão — e `lerSessao` a chama
 dentro de um `try` que devolve `null`. Sem a variável o site subia, todo

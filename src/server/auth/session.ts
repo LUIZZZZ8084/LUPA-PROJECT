@@ -23,7 +23,41 @@ import { ehPapel, type Papel } from "./rbac";
  * sessão continua fora do banco; o que entrou foi uma data.
  */
 
-export const NOME_COOKIE = "lupa_sessao";
+/**
+ * `__Host-` onde o cookie é `Secure` (#408).
+ *
+ * O prefixo é uma regra do navegador, não nossa: cookie com esse nome só é
+ * aceito com `Secure`, `Path=/` e sem `Domain`. Sem ele, um subdomínio de
+ * `lupapp.com.br`, ou uma resposta em http antes de o HSTS valer, podia
+ * gravar um `lupa_sessao` para o domínio inteiro — e a pessoa navegaria na
+ * sessão de outro sem saber (fixação de sessão).
+ *
+ * Só em produção porque fora de HTTPS o cookie não é `Secure`
+ * (`opcoesDoCookie`), e o navegador recusaria o nome. A condição é a mesma
+ * do `secure`, para os dois não divergirem.
+ *
+ * Trocar o nome deslogou todo mundo uma vez, no deploy de 09/10/2026:
+ * o cookie antigo continua no navegador até vencer, e ninguém o lê.
+ */
+export const NOME_COOKIE =
+  process.env.NODE_ENV === "production" ? "__Host-lupa_sessao" : "lupa_sessao";
+
+/**
+ * A audiência do token diz de qual ambiente ele veio (#408).
+ *
+ * Era `lupa-app` em todo lugar. Com o mesmo `SESSION_SECRET` em preview e
+ * produção, um token assinado num deploy de preview valia em produção — e
+ * o preview pode rodar em modo demonstração, onde qualquer um cria conta,
+ * com o papel que quiser escrito no próprio token. Conferir na Vercel que
+ * os segredos são diferentes é o certo, e continua sendo; isto é o que
+ * segura o dia em que alguém copiar a variável de um ambiente para o
+ * outro.
+ *
+ * Fora da Vercel (`npm run dev`, a suíte) o ambiente é `local`.
+ */
+function audiencia(): string {
+  return `lupa-app:${process.env.VERCEL_ENV ?? "local"}`;
+}
 
 /**
  * Sete dias sem abrir o app, e a pessoa entra de novo.
@@ -150,7 +184,7 @@ export async function assinarSessao(
     .setIssuedAt(inicio)
     .setExpirationTime(expiraEm)
     .setIssuer("lupa")
-    .setAudience("lupa-app")
+    .setAudience(audiencia())
     .sign(segredo());
 
   return { token, expiraEm };
@@ -167,7 +201,7 @@ export async function lerSessao(token: string): Promise<Sessao | null> {
   try {
     const { payload } = await jwtVerify(token, segredo(), {
       issuer: "lupa",
-      audience: "lupa-app",
+      audience: audiencia(),
       algorithms: ["HS256"],
     });
 

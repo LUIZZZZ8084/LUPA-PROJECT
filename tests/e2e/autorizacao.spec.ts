@@ -27,7 +27,7 @@ import {
  * em vez de exercitá-lo: renomear o cookie passaria verde e derrubaria
  * toda sessão em produção. Mesma razão do CNPJ em `helpers.ts`.
  */
-const COOKIE_DE_SESSAO = "lupa_sessao";
+const COOKIE_DE_SESSAO = "__Host-lupa_sessao";
 
 /**
  * O que exige capacidade que o candidato não tem.
@@ -226,6 +226,9 @@ test.describe("o cookie de sessão", () => {
         // chegar à assinatura em vez de morrer antes, no formato.
         value: "eyJhbGciOiJIUzI1NiJ9.eyJwYXBlbCI6ImFkbWluIn0.assinatura-falsa",
         url: baseURL as string,
+        // `__Host-` (#408): sem `Secure` o navegador recusaria o cookie,
+        // e o teste passaria sem ter mandado token nenhum.
+        secure: true,
       },
     ]);
 
