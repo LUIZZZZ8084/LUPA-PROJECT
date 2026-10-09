@@ -533,10 +533,14 @@ Antes do lançamento, fora disso:
 - [ ] Termos de Uso, Política de Privacidade e página de suporte —
       [#235](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/235)
 
-      O texto está pronto no PR #236. Espera o CNPJ da PALU, a empresa por
-      trás da Lupa, para ter quem assina como controladora dos dados. É o
-      item mais sério da lista: o cadastro já diz "ao criar a conta você
-      concorda com os termos de uso", e a página ainda não existe.
+      O texto está pronto no PR #236, revisado em 08/10 contra o produto
+      de hoje (Brasil inteiro, sem bairro, nome travado, teste grátis um
+      por conta). Espera duas coisas: a razão social e o CNPJ da PALU, a
+      empresa por trás da Lupa, para ter quem assina como controladora dos
+      dados; e a leitura dos artigos 7 e 8 dos Termos pelo Luiz ou pelo
+      Paulinho. Enquanto não entrar, a `main` ainda diz no cadastro "ao
+      criar a conta você concorda com os termos de uso", de páginas que
+      não existem — o #236 também corrige isso.
 
       **O SQL do #236 já está em produção**, antes do merge: a tabela
       `mensagens_suporte` existe lá e não existe no `schema.sql` da `main`

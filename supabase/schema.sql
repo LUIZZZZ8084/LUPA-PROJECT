@@ -557,6 +557,34 @@ create trigger avaliacoes_atualizam_nota
   after insert or update or delete on avaliacoes
   for each row execute function atualizar_nota_prestador();
 
+/*
+ * A avaliação de quem exclui a conta fica, e sem o nome (#235).
+ *
+ * Ela é informação do prestador, por isso `avaliador_id` é `on delete set
+ * null` e a linha sobrevive. Mas o nome é texto copiado em
+ * `nome_avaliador`, e sem isto continuaria lá depois de a pessoa pedir a
+ * exclusão — o contrário do que a Política de Privacidade promete. A conta
+ * é apagada pelo suporte, direto no banco, então a garantia mora aqui e
+ * não numa tela: `before delete`, porque depois do `set null` já não há
+ * como saber de quem era a avaliação.
+ */
+create or replace function anonimizar_avaliacoes_do_autor()
+returns trigger language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  update avaliacoes
+  set nome_avaliador = 'Conta excluída'
+  where avaliador_id = old.id;
+
+  return old;
+end;
+$$;
+
+create trigger usuarios_anonimizam_avaliacoes
+  before delete on usuarios
+  for each row execute function anonimizar_avaliacoes_do_autor();
+
 -- ============================================================================
 -- 8. Publicações de perfil
 -- ============================================================================
@@ -747,6 +775,61 @@ as $$
    where primeira_em < now() - make_interval(secs => p_janela_segundos * 4)
      and (bloqueado_ate is null or bloqueado_ate < now());
 $$;
+
+-- ============================================================================
+-- 9b-bis. Mensagens de suporte (#235)
+--
+-- O canal de suporte por formulario existe porque o publico deste app abre
+-- o e-mail no celular e muitas vezes nao tem cliente de e-mail configurado.
+-- Mandar a pessoa "escrever para contato@" e mandar metade dela desistir.
+--
+-- **A linha e apagada junto com a conta.** `on delete cascade`, e nao `set
+-- null`: a mensagem carrega nome, e-mail e texto livre que a propria pessoa
+-- escreveu sobre a situacao dela. Guardar isso depois de ela pedir exclusao
+-- contradiria a Politica de Privacidade, que promete apagar o que
+-- identifica.
+--
+-- `usuario_id` e nulavel porque quem nao consegue entrar e justamente quem
+-- mais precisa do suporte — a pagina e aberta.
+--
+-- `respondida_em` existe para o admin saber o que ja tratou. Nao guarda a
+-- resposta: ela sai por e-mail, e copiar o texto para ca seria guardar a
+-- conversa inteira sem necessidade.
+-- ============================================================================
+
+create type assunto_suporte as enum (
+  'conta',
+  'pagamento',
+  'anuncio',
+  'privacidade',
+  'outro'
+);
+
+create table mensagens_suporte (
+  id            uuid primary key default gen_random_uuid(),
+  usuario_id    uuid references usuarios(id) on delete cascade,
+  nome          text not null,
+  email         text not null,
+  assunto       assunto_suporte not null,
+  mensagem      text not null,
+  criado_em     timestamptz not null default now(),
+  respondida_em timestamptz,
+
+  constraint mensagem_com_conteudo check (length(trim(mensagem)) between 10 and 4000),
+  constraint suporte_email_com_formato check (position('@' in email) > 1)
+);
+
+-- A chave estrangeira precisa de índice próprio: apagar uma conta varre a
+-- tabela para achar as mensagens dela. Faltou quando a tabela nasceu, e foi
+-- o advisor do Supabase que pegou; o teste "toda chave estrangeira tem
+-- índice", em schema.test.ts, é o que impede a próxima.
+create index mensagens_suporte_usuario_idx
+  on mensagens_suporte (usuario_id);
+
+-- A fila do admin le por data, e so o que ainda nao foi respondido.
+create index mensagens_suporte_abertas_idx
+  on mensagens_suporte (criado_em desc)
+  where respondida_em is null;
 
 -- ============================================================================
 -- 9c. Buscas que não acharam nada
@@ -1555,6 +1638,7 @@ alter table categorias_servico  enable row level security;
 alter table visualizacoes_vaga  enable row level security;
 alter table buscas_sem_resultado enable row level security;
 alter table tentativas_de_acesso enable row level security;
+alter table mensagens_suporte    enable row level security;
 
 /*
  * `usuarios` e `admins` ficam sem política nenhuma.
@@ -1640,6 +1724,10 @@ grant select on job_listings, provider_listings to anon, authenticated;
 -- arquivo confirma que não vaza.
 revoke select on visualizacoes_vaga            from anon, authenticated;
 revoke select on buscas_sem_resultado         from anon, authenticated;
+-- Guarda nome, e-mail e texto livre sobre a situacao de quem escreveu
+-- (#235). Nunca publica, nem para quem tem sessao: mensagem de suporte de
+-- outra pessoa nao e assunto de ninguem.
+revoke select on mensagens_suporte           from anon, authenticated;
 revoke select on tentativas_de_acesso         from anon, authenticated;
 revoke select on company_applications          from anon, authenticated;
 revoke select on candidate_applications        from anon, authenticated;

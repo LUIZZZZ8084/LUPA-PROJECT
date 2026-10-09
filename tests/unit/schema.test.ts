@@ -51,6 +51,45 @@ afterAll(async () => {
   await db?.close();
 });
 
+/*
+ * Toda chave estrangeira tem índice cobrindo.
+ *
+ * Postgres indexa a chave primária sozinho; a estrangeira, não. Sem índice,
+ * apagar ou mexer na linha **pai** varre a tabela filha inteira — e
+ * `on delete cascade` em `usuarios` é o caminho de toda exclusão de conta.
+ *
+ * A #210 corrigiu três à mão. A primeira tabela criada depois dela
+ * (`mensagens_suporte`) repetiu a omissão, e quem pegou foi o advisor do
+ * Supabase, em produção. Correção à mão é lista, e lista envelhece: este
+ * teste pergunta ao banco em vez de confiar em quem escreve a próxima
+ * tabela.
+ *
+ * "Cobrindo" é o índice cujas primeiras colunas são exatamente as da chave,
+ * na mesma ordem — é o que o planejador usa para achar os filhos.
+ */
+describe("toda chave estrangeira tem índice", () => {
+  it("nenhuma FK do schema público fica sem índice cobrindo", async () => {
+    const r = await db.query<{ tabela: string; restricao: string }>(`
+      select c.conrelid::regclass::text as tabela, c.conname as restricao
+        from pg_constraint c
+       where c.contype = 'f'
+         and c.connamespace = 'public'::regnamespace
+         and not exists (
+           select 1
+             from pg_index i
+            where i.indrelid = c.conrelid
+              and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] = c.conkey
+         )
+       order by 1, 2
+    `);
+
+    expect(
+      r.rows.map((l) => `${l.tabela} (${l.restricao})`),
+      "chave estrangeira sem índice — crie um que comece pelas colunas dela",
+    ).toEqual([]);
+  });
+});
+
 describe("schema.sql roda de uma vez num banco limpo", () => {
   it("cria todas as tabelas esperadas", async () => {
     const r = await db.query<{ table_name: string }>(
@@ -69,6 +108,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "carteiras_vaga",
       "categorias_servico",
       "inscricoes_push",
+      "mensagens_suporte",
       "pagamentos",
       "pedidos_verificacao",
       "perfis_candidato",
@@ -702,6 +742,12 @@ describe("grants de anon e authenticated", () => {
      * guarda as chaves que cifram a mensagem até o aparelho: quem as tiver
      * manda notificação em nome da Lupa.
      */
+    /*
+     * Guarda nome, e-mail e texto livre sobre a situação de quem escreveu
+     * (#235). Nunca pública, nem para quem tem sessão: mensagem de suporte
+     * de outra pessoa não é assunto de ninguém.
+     */
+    "mensagens_suporte",
     "preferencias_notificacao",
     "inscricoes_push",
     "company_applications",
@@ -978,7 +1024,8 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(20);
+    // 21 desde a #235, que acrescentou `mensagens_suporte`.
+    expect(tabelas.rows).toHaveLength(21);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -2230,5 +2277,90 @@ describe("teste_gratis_usado_em", () => {
     } finally {
       await antigo.close();
     }
+  });
+});
+
+/**
+ * A avaliação de quem exclui a conta fica no perfil do prestador, e sem o
+ * nome de quem a escreveu (#235). É a promessa da Política de Privacidade,
+ * e a conta é excluída pelo suporte direto no banco — por isso a garantia
+ * mora num gatilho, testado aqui num Postgres de verdade.
+ */
+describe("excluir a conta tira o nome das avaliações que ela escreveu", () => {
+  let banco: PGlite;
+  let prestador: string;
+  let autor: string;
+  let outro: string;
+
+  async function conta(papel: string, email: string, nome: string) {
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ($1, 'h', $2::papel_usuario, $3, '66999110001', 'Sinop - MT')
+       returning id`,
+      [email, papel, nome],
+    );
+    return r.rows[0].id;
+  }
+
+  async function avaliacoes() {
+    const r = await banco.query<{
+      avaliador_id: string | null;
+      nome_avaliador: string;
+    }>(
+      "select avaliador_id, nome_avaliador from avaliacoes order by nome_avaliador",
+    );
+    return r.rows;
+  }
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+    prestador = await conta("prestador_servico", "p@teste.lupa", "Prestador");
+    autor = await conta("candidato_clt", "a@teste.lupa", "Ana Autora");
+    outro = await conta("candidato_clt", "o@teste.lupa", "Outra Pessoa");
+    for (const [id, nome] of [
+      [autor, "Ana Autora"],
+      [outro, "Outra Pessoa"],
+    ]) {
+      await banco.query(
+        `insert into avaliacoes (prestador_id, avaliador_id, nome_avaliador, nota)
+         values ($1, $2, $3, 5)`,
+        [prestador, id, nome],
+      );
+    }
+    await banco.query("delete from usuarios where id = $1", [autor]);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  it("a avaliação continua, sem dono e sem o nome", async () => {
+    expect(await avaliacoes()).toContainEqual({
+      avaliador_id: null,
+      nome_avaliador: "Conta excluída",
+    });
+    expect(JSON.stringify(await avaliacoes())).not.toContain("Ana Autora");
+    expect(await avaliacoes()).toHaveLength(2);
+  });
+
+  it("a avaliação de outra pessoa não muda", async () => {
+    expect(await avaliacoes()).toContainEqual({
+      avaliador_id: outro,
+      nome_avaliador: "Outra Pessoa",
+    });
+  });
+
+  it("o script de produção roda num banco que já tem o gatilho, e repete", async () => {
+    const script = readFileSync(
+      join(process.cwd(), "supabase/aplica-avaliacao-sem-nome-ao-excluir.sql"),
+      "utf8",
+    );
+    await banco.exec(script);
+    await banco.exec(script);
+    const r = await banco.query<{ total: number }>(
+      "select count(*)::int as total from pg_trigger where tgname = 'usuarios_anonimizam_avaliacoes'",
+    );
+    expect(r.rows[0].total).toBe(1);
   });
 });
