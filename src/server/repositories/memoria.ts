@@ -112,6 +112,10 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     if (usuario) this.usuarios.set(id, { ...usuario, senhaHash });
   }
 
+  async cortarSessoes(id: string): Promise<void> {
+    if (this.usuarios.has(id)) this.cortes.set(id, Date.now());
+  }
+
   async cortesDeSessao(dias: number): Promise<Map<string, number>> {
     const desde = Date.now() - dias * 24 * 60 * 60 * 1000;
     const recentes = new Map<string, number>();

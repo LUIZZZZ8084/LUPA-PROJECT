@@ -167,6 +167,16 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     if (error) throw erros.indisponivel(`regravação de hash: ${error.message}`);
   }
 
+  async cortarSessoes(id: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({ sessoes_validas_desde: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) throw erros.indisponivel(`corte de sessões: ${error.message}`);
+  }
+
   async cortesDeSessao(dias: number): Promise<Map<string, number>> {
     const supabase = await cliente();
     const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);

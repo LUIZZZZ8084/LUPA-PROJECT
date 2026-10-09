@@ -772,3 +772,32 @@ describe("teste grátis", () => {
     });
   });
 });
+
+/** Sair dos outros aparelhos grava só o corte, e não a senha (#402). */
+describe("corte de sessões pelo dono", () => {
+  const repo = new RepositorioPostgres();
+  const ID = "11111111-1111-4111-8111-000000000001";
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    resposta = { data: null, error: null };
+  });
+
+  it("grava sessoes_validas_desde, e nada mais", async () => {
+    await repo.cortarSessoes(ID);
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("usuarios");
+    expect(Object.keys(update?.args[0] as object)).toEqual([
+      "sessoes_validas_desde",
+    ]);
+    expect(chamadas.find((c) => c.metodo === "eq")?.args).toEqual(["id", ID]);
+  });
+
+  it("falha ao gravar não passa em silêncio", async () => {
+    resposta = { data: null, error: { message: "conexão recusada" } };
+    await expect(repo.cortarSessoes(ID)).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
+  });
+});

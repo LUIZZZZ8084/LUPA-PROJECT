@@ -75,7 +75,9 @@ alguém mexer nos módulos.
 
 - O `connect-src` da CSP aceita `*.supabase.co`; estreitar para o host do projeto.
 - O cookie de sessão não tem o prefixo `__Host-`, e o logout só limpa o cookie.
-  Uma ação "sair de todos os aparelhos" fecha isso.
+  Uma ação "sair de todos os aparelhos" fecha isso. **A segunda metade entrou
+  na #402** ("Sair dos outros aparelhos", no perfil); o `__Host-` segue
+  pendente — trocar o nome do cookie desloga todo mundo uma vez.
 - O matcher do `proxy.ts` tem prefixos sem âncora (`icon`, `avatares`,
   `api/cron`) e exclui por extensão de arquivo.
 - `confirmarParcelaDaAssinatura` confia no status embutido na fatura em vez de

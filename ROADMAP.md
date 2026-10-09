@@ -14,6 +14,9 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 08/10/2026:
 
+- "Sair dos outros aparelhos" no perfil: corta as sessões dos outros
+  aparelhos sem trocar a senha, e mantém dentro o aparelho onde se clicou —
+  [#402](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/402)
 - Os dez PRs da auditoria de 06/10 mergeados, e as seis áreas que tinham
   ficado sem leitura lidas: buckets públicos deixam de ser listáveis, saem
   duas actions mortas que aceitavam endereço de imagem, e o workflow declara

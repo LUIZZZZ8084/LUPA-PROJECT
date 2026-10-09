@@ -264,6 +264,13 @@ export interface RepositorioUsuarios {
    */
   cortesDeSessao(dias: number): Promise<Map<string, number>>;
 
+  /**
+   * Corta as sessões da pessoa sem trocar a senha (#402) — "sair dos
+   * outros aparelhos". É o mesmo corte que a troca de senha e a de papel
+   * gravam; quem chama emite a sessão nova do aparelho atual **depois**.
+   */
+  cortarSessoes(id: string): Promise<void>;
+
   // ── Recuperação de senha (#174) ───────────────────────────────────────
 
   /**
