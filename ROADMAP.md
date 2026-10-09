@@ -8,9 +8,18 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 08/10/2026.**
+**Última atualização: 09/10/2026.**
 
 ## Concluído
+
+Em 09/10/2026:
+
+- A parcela da assinatura relê o pagamento em vez de confiar no resumo da
+  fatura: lida depois de um estorno, ela ainda dizia aprovado —
+  [#405](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/405)
+- Teste grátis que falha ao dar os dias é devolvido, e a assinatura volta a
+  pendente para o reenvio do webhook conceder de novo —
+  [#406](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/406)
 
 Em 08/10/2026:
 

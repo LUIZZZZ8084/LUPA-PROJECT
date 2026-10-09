@@ -762,12 +762,24 @@ describe("teste grátis", () => {
     expect(await repo.reivindicarTesteGratis(ID)).toBe(false);
   });
 
+  it("liberar devolve o teste: grava nulo, e só nesta conta (#406)", async () => {
+    await repo.liberarTesteGratis(ID);
+
+    const atualizacao = chamadas.find((c) => c.metodo === "update");
+    expect(atualizacao?.tabela).toBe("usuarios");
+    expect(atualizacao?.args[0]).toEqual({ teste_gratis_usado_em: null });
+    expect(chamadas.find((c) => c.metodo === "eq")?.args).toEqual(["id", ID]);
+  });
+
   it("falha no banco não passa em silêncio", async () => {
     resposta = { data: null, error: { message: "conexão caiu" } };
     await expect(repo.testeGratisJaUsado(ID)).rejects.toMatchObject({
       codigo: "indisponivel",
     });
     await expect(repo.reivindicarTesteGratis(ID)).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
+    await expect(repo.liberarTesteGratis(ID)).rejects.toMatchObject({
       codigo: "indisponivel",
     });
   });

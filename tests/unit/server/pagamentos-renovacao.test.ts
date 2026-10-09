@@ -42,6 +42,9 @@ vi.mock("@/server/repositories", () => ({
       testes.usados.add(id);
       return true;
     },
+    liberarTesteGratis: async (id: string) => {
+      testes.usados.delete(id);
+    },
   }),
 }));
 
@@ -69,14 +72,43 @@ const PREAPPROVAL = {
   status: "pending",
 };
 
-/** O que `GET /authorized_payments/{id}` devolve numa parcela cobrada. */
-function faturaCobrada(mpPaymentId: string) {
-  return respostaJson({
-    id: "auth-1",
-    preapproval_id: "pre-1",
-    transaction_amount: 19.9,
-    payment: { id: mpPaymentId, status: "approved" },
-  });
+/**
+ * O Mercado Pago de uma parcela: a fatura (`/authorized_payments/{id}`) e o
+ * pagamento que ela aponta (`/v1/payments/{id}`), cada um no seu endereço.
+ *
+ * Desde a #405 a decisão sai do pagamento, não do resumo dentro da fatura —
+ * por isso os dois podem divergir aqui, como divergem lá.
+ */
+function mercadoPagoDaParcela(
+  fatura: unknown,
+  pagamento: unknown,
+  statusDoPagamento = 200,
+) {
+  return (async (url: string | URL) => {
+    const ehFatura = String(url).includes("/authorized_payments/");
+    return new Response(JSON.stringify(ehFatura ? fatura : pagamento), {
+      status: ehFatura ? 200 : statusDoPagamento,
+      headers: { "content-type": "application/json" },
+    });
+  }) as unknown as typeof fetch;
+}
+
+/** Uma parcela cobrada: fatura e pagamento dizem `approved`. */
+function faturaCobrada(mpPaymentId: string, statusDoPagamento = "approved") {
+  return mercadoPagoDaParcela(
+    {
+      id: "auth-1",
+      preapproval_id: "pre-1",
+      transaction_amount: 19.9,
+      payment: { id: mpPaymentId, status: "approved" },
+    },
+    {
+      id: mpPaymentId,
+      status: statusDoPagamento,
+      transaction_amount: 19.9,
+      currency_id: "BRL",
+    },
+  );
 }
 
 async function carregar() {
@@ -235,6 +267,38 @@ describe("renovação automática", () => {
           ),
         );
         expect(resultados.filter(Boolean)).toHaveLength(1);
+      });
+
+      /*
+       * A reivindicação vem antes da extensão (#406). Se a extensão falha,
+       * o teste e a assinatura voltam ao que eram: senão o reenvio do
+       * webhook achava a assinatura ativa e o teste gasto, e a pessoa
+       * ficava sem os dias e sem direito a outro.
+       */
+      it("extensão que falha devolve o teste, e o reenvio concede uma vez só", async () => {
+        const assinatura = await assinaturaPendente();
+        const erro = vi.spyOn(console, "error").mockImplementation(() => {});
+        const aviso = respostaJson({ id: "pre-1", status: "authorized" });
+
+        estender.mockRejectedValueOnce(new Error("banco soluçou"));
+        await expect(
+          ctx.servico.confirmarAssinatura("pre-1", aviso),
+        ).rejects.toThrow("banco soluçou");
+
+        expect(testes.usados.has(sessao.usuarioId)).toBe(false);
+        expect((await ctx.repo.assinaturaPorId(assinatura.id))?.status).toBe(
+          "pendente",
+        );
+
+        await ctx.servico.confirmarAssinatura("pre-1", aviso);
+        expect(estender).toHaveBeenCalledTimes(2);
+        expect(estender).toHaveBeenLastCalledWith(sessao.usuarioId, 15);
+        expect(testes.usados.has(sessao.usuarioId)).toBe(true);
+
+        // Resolvido: o aviso repetido não concede de novo.
+        await ctx.servico.confirmarAssinatura("pre-1", aviso);
+        expect(estender).toHaveBeenCalledTimes(2);
+        erro.mockRestore();
       });
     });
 
@@ -536,14 +600,89 @@ describe("renovação automática", () => {
 
       await ctx.servico.confirmarParcelaDaAssinatura(
         "auth-1",
-        respostaJson({
-          id: "auth-1",
-          preapproval_id: "pre-1",
-          payment: { id: "mp-100", status: "rejected" },
-        }),
+        faturaCobrada("mp-100", "rejected"),
       );
 
       expect(estender).not.toHaveBeenCalled();
+    });
+
+    /*
+     * A fatura é um resumo (#405). Lida depois de um estorno, ou atrasada,
+     * ela ainda diz `approved` — e a mensalidade estendia por um pagamento
+     * que já não vale.
+     */
+    it("fatura dizendo approved com o pagamento já estornado não estende", async () => {
+      await assinaturaPendente();
+
+      await ctx.servico.confirmarParcelaDaAssinatura(
+        "auth-1",
+        faturaCobrada("mp-100", "refunded"),
+      );
+
+      expect(estender).not.toHaveBeenCalled();
+      expect(await ctx.repo.porMpPaymentId("mp-100")).toBeNull();
+    });
+
+    it("o resumo atrasado não segura a parcela: o pagamento aprovado estende", async () => {
+      await assinaturaPendente();
+
+      await ctx.servico.confirmarParcelaDaAssinatura(
+        "auth-1",
+        mercadoPagoDaParcela(
+          {
+            id: "auth-1",
+            preapproval_id: "pre-1",
+            payment: { id: "mp-100", status: "in_process" },
+          },
+          { id: "mp-100", status: "approved", transaction_amount: 19.9 },
+        ),
+      );
+
+      expect(estender).toHaveBeenCalledTimes(1);
+    });
+
+    it("pagamento que não volta da API é erro, para o aviso ser reenviado", async () => {
+      await assinaturaPendente();
+
+      await expect(
+        ctx.servico.confirmarParcelaDaAssinatura(
+          "auth-1",
+          mercadoPagoDaParcela(
+            {
+              id: "auth-1",
+              preapproval_id: "pre-1",
+              payment: { id: "mp-100", status: "approved" },
+            },
+            { mensagem: "fora do ar" },
+            503,
+          ),
+        ),
+      ).rejects.toMatchObject({ codigo: "indisponivel" });
+      expect(estender).not.toHaveBeenCalled();
+    });
+
+    it("o valor pago vem do pagamento, e a divergência vai ao Sentry (#331)", async () => {
+      await assinaturaPendente();
+      const erro = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await ctx.servico.confirmarParcelaDaAssinatura(
+        "auth-1",
+        mercadoPagoDaParcela(
+          {
+            id: "auth-1",
+            preapproval_id: "pre-1",
+            transaction_amount: 19.9,
+            payment: { id: "mp-100", status: "approved" },
+          },
+          { id: "mp-100", status: "approved", transaction_amount: 9.9 },
+        ),
+      );
+
+      expect((await ctx.repo.porMpPaymentId("mp-100"))?.valorCentavos).toBe(
+        990,
+      );
+      expect(erro).toHaveBeenCalled();
+      erro.mockRestore();
     });
 
     it("fatura ainda sem pagamento gerado não estende nada", async () => {

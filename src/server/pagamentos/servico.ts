@@ -656,6 +656,49 @@ export async function diasDeTesteDisponiveis(
 }
 
 /**
+ * Dá os dias do teste grátis, ou devolve tudo como estava (#406).
+ *
+ * O teste é reivindicado antes da extensão, e é essa ordem que impede duas
+ * ativações simultâneas de o concederem duas vezes (#392). O outro lado
+ * dela é o de `aplicarEfeitoOuReabrir` (#384): se a extensão falhasse
+ * depois, a assinatura ficava `ativa` e o teste marcado como usado. O
+ * reenvio do webhook achava a assinatura já ativa e não concedia nada — a
+ * pessoa perdia os dias e o direito a outro teste, sem nada acusar.
+ *
+ * Por isso a falha devolve o teste e a assinatura a `pendente` antes de
+ * subir. O webhook responde erro, o Mercado Pago reenvia, e a nova
+ * tentativa passa pela transição *pendente → ativa* de novo.
+ */
+async function concederTesteOuDesfazer(
+  assinatura: Assinatura,
+  dias: number,
+): Promise<void> {
+  try {
+    await estenderMensalidade(assinatura.usuarioId, dias);
+  } catch (erro) {
+    log.erro(comoAppError(erro), {
+      acao: "pagamentos.teste_gratis",
+      tipo: assinatura.tipo,
+      assinaturaId: assinatura.id,
+    });
+    try {
+      await repositorioUsuarios().liberarTesteGratis(assinatura.usuarioId);
+      await repositorioPagamentos().definirStatusAssinatura(
+        assinatura.id,
+        "pendente",
+      );
+    } catch (e) {
+      // Sem isto o teste fica gasto sem os dias: avisa em voz alta.
+      log.erro(comoAppError(e), {
+        acao: "pagamentos.teste_gratis_desfazer",
+        assinaturaId: assinatura.id,
+      });
+    }
+    throw erro;
+  }
+}
+
+/**
  * Espelha aqui o estado da assinatura lá — tópico
  * `subscription_preapproval`.
  *
@@ -721,7 +764,7 @@ export async function confirmarAssinatura(
        * a assinatura nasceu sem `free_trial`, estende a mensalidade.
        */
       if (await repositorioUsuarios().reivindicarTesteGratis(mudou.usuarioId)) {
-        await estenderMensalidade(mudou.usuarioId, dias);
+        await concederTesteOuDesfazer(mudou, dias);
       } else {
         log.info("assinatura ativada sem teste: a conta já usou o dela", {
           acao: "pagamentos.confirmar_assinatura",
@@ -796,6 +839,14 @@ async function registrarParcela(
  * fatura da assinatura, que por dentro carrega o pagamento. Consultar
  * `/v1/payments/{id}` com ele responderia 404, e a renovação nunca seria
  * registrada.
+ *
+ * **A fatura só diz qual é o pagamento; quem diz se ele vale é o
+ * pagamento (#405).** A decisão saía do `payment.status` embutido na
+ * fatura, um resumo — o único caminho de confirmação que não relia o
+ * registro do dinheiro. Um resumo atrasado, ou lido depois de um estorno,
+ * estenderia a mensalidade por um pagamento que já não vale. Hoje o
+ * status e o valor vêm de `/v1/payments/{id}`, como em
+ * `confirmarPagamento`, e o valor passa pela mesma conferência (#331).
  */
 export async function confirmarParcelaDaAssinatura(
   authorizedPaymentId: string,
@@ -806,9 +857,9 @@ export async function confirmarParcelaDaAssinatura(
     buscar,
   );
 
-  if (!parcela?.mpPaymentId || parcela.statusPagamento !== "approved") {
-    // Recusada ou ainda em processamento: o Mercado Pago avisa de novo
-    // quando o estado avançar, e um estorno chega pelo tópico `payment`.
+  if (!parcela?.mpPaymentId) {
+    // Fatura ainda sem pagamento gerado: o Mercado Pago avisa de novo
+    // quando a cobrança sair.
     return;
   }
 
@@ -823,10 +874,29 @@ export async function confirmarParcelaDaAssinatura(
     return;
   }
 
+  const pagamento = await consultarPagamento(parcela.mpPaymentId, buscar);
+  if (!pagamento) {
+    // Erro em vez de silêncio: o webhook responde 5xx, e o Mercado Pago
+    // reenvia. Sair quieto aqui perderia a renovação até a próxima.
+    throw erros.indisponivel(
+      "Mercado Pago não devolveu o pagamento da parcela",
+    );
+  }
+
+  if (pagamento.status !== "approved") {
+    // Recusada, em processamento ou já estornada. Estorno e chargeback
+    // chegam pelo tópico `payment`, que desfaz o que a parcela deu.
+    return;
+  }
+
+  conferirValorPago(
+    { id: assinatura.id, valorCentavos: assinatura.valorCentavos },
+    pagamento,
+  );
   await registrarParcela(
     assinatura,
-    parcela.mpPaymentId,
-    parcela.valorCentavos,
+    pagamento.id,
+    pagamento.valorCentavos ?? parcela.valorCentavos,
   );
 }
 
