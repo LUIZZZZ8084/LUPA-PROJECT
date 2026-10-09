@@ -8,9 +8,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 08/10/2026.**
+**Última atualização: 09/10/2026.**
 
 ## Concluído
+
+Em 09/10/2026:
+
+- A cota diária de e-mail é dividida: 20 por origem e 5 por conta de
+  destino, para um IP não gastar os 100 do Resend de todo mundo nem encher
+  a caixa de ninguém. Exige `aplica-cota-de-email.sql` (antes ou depois do
+  deploy) — [#407](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/407)
 
 Em 08/10/2026:
 
