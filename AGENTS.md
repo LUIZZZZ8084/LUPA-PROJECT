@@ -947,6 +947,18 @@ onde se clicou. O outro aparelho não é mandado para `/entrar`: o proxy só
 vê que há cookie, e é a página, por `sessaoAtual()`, que o trata como
 deslogado.
 
+**Reemitir sem senha não recomeça os trinta dias (#413).** A sessão nova
+desse botão precisa de `iat` novo — é o que a tira do corte gravado no
+mesmo clique —, e o teto contava do `iat`. Sem pedir senha, repetir o
+clique a cada poucas semanas mantinha o mesmo cookie vivo para sempre,
+que é o que o teto existe para impedir. Hoje o token guarda o login à
+parte (`lg`, lido como `Sessao.entrouEm`) sempre que ele difere do `iat`,
+e o teto conta dali; a renovação do proxy e a troca de papel o preservam.
+Quem prova a senha — entrar, cadastrar, redefinir — começa a contagem de
+novo. Token sem `lg` conta do `iat`, como sempre contou. *Dois relógios
+num token só: o que a revogação compara e o que o teto conta não precisam
+ser o mesmo, e confundi-los é o que fazia um dos dois mentir.*
+
 **A lista tem teto próprio, e o teto avisa (#352).** Ela lia com o teto
 genérico das listas do dono, 200, sem ordem. Passando disso, quem ficou
 de fora era lido como "não revogado" — o erro silencioso de sempre. Hoje
