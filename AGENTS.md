@@ -1614,6 +1614,20 @@ cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se
 contém é adivinhação de senha; aqui o que se contém é a criação em si.
 
+**E o número é do cadastro, não da senha (#415).** Eram os mesmos 5 a
+cada 15 minutos da tentativa de senha, e o IP do cadastro pode ser uma
+sala inteira: posto do SINE ou RH cadastrando gente no mesmo computador,
+feira de emprego no Wi-Fi do local, 4G atrás de CGNAT num pico de
+divulgação. A sexta pessoa lia "muitas tentativas" e desistia — o
+primeiro teto que um lançamento encontraria. Hoje são 20
+(`LIMITE_DE_CADASTROS_POR_ORIGEM`). O que segura o abuso que o número
+maior deixaria passar é o IPv6 agrupado pela rede /64
+(`agruparOrigem`, em `origem-da-requisicao.ts`): quem tem IPv6 escolhe
+qualquer endereço da própria rede, e pelo endereço cada troca era um teto
+novo — em todo teto por origem, não só no cadastro. Endereço que não se
+reconhece passa como veio: uma chave estranha limita uma pessoa, e um
+erro ali derrubaria o cadastro de todo mundo.
+
 **O limite de login reserva a tentativa antes do Argon2 (#386).** Ele
 conferia o bloqueio, gastava o Argon2 e só então registrava a falha:
 requisições simultâneas passavam todas pela conferência antes de a
