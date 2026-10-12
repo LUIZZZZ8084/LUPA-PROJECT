@@ -85,6 +85,7 @@ e repetível, ao lado do `schema.sql`:
 | [`supabase/aplica-avaliacao-assinada-pela-empresa.sql`](../supabase/aplica-avaliacao-assinada-pela-empresa.sql) | Uma vez, em banco criado antes da Issue #315 — antes ou depois do deploy, tanto faz |
 | [`supabase/aplica-storage-sem-listagem.sql`](../supabase/aplica-storage-sem-listagem.sql) | Uma vez, em banco criado antes da Issue #396 — tira a listagem dos buckets públicos; antes ou depois do deploy, tanto faz |
 | [`supabase/aplica-cota-de-email.sql`](../supabase/aplica-cota-de-email.sql) | Uma vez, em banco criado antes da Issue #407 — a limpeza passa a respeitar a janela diária da cota de e-mail; antes ou depois do deploy, tanto faz |
+| [`supabase/aplica-anon-sem-escrita.sql`](../supabase/aplica-anon-sem-escrita.sql) | Uma vez, em banco criado antes da Issue #421 — tira de `anon` e `authenticated` a escrita que o Supabase concede por padrão; a leitura pública fica; antes ou depois do deploy, tanto faz |
 
 Banco novo não precisa de nenhum deles: o `schema.sql` já traz tudo.
 
