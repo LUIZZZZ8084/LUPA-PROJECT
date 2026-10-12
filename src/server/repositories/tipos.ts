@@ -271,6 +271,20 @@ export interface RepositorioUsuarios {
    */
   cortarSessoes(id: string): Promise<void>;
 
+  /**
+   * Exclui a conta da pessoa (#423), numa transação só.
+   *
+   * Saem perfis, currículo, candidaturas, publicações, avaliações
+   * recebidas, avisos, aparelhos, tokens, créditos e pedidos de
+   * verificação. Nome, e-mail, telefone, CPF e senha são substituídos, e
+   * as sessões, cortadas. Pagamentos e assinaturas ficam, ligados à conta
+   * sem nome: são o histórico do caixa.
+   *
+   * Não cancela assinatura nem apaga arquivo: o serviço faz os dois, um
+   * antes e outro depois.
+   */
+  excluirConta(id: string): Promise<void>;
+
   // ── Recuperação de senha (#174) ───────────────────────────────────────
 
   /**

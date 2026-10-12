@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ExcluirConta } from "@/components/excluir-conta";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
 import {
   PerfilCandidato,
@@ -279,6 +280,17 @@ export default async function PerfilPage() {
             <SairButton />
             <SairDosOutrosButton />
           </div>
+
+          {/*
+            Excluir a conta (#423), direito do titular na LGPD. Por último,
+            separado dos dois "sair", e só para quem a matriz deixa: a conta
+            de administração não se exclui pela tela.
+          */}
+          {sessao && pode(sessao.papel, "conta:excluir") && (
+            <div className="mt-4 border-t border-line pt-4">
+              <ExcluirConta />
+            </div>
+          )}
         </Panel>
       ) : (
         <Panel className="mb-5 text-center">

@@ -20,6 +20,9 @@ const storage = vi.hoisted(() => ({
     opcoes: unknown;
   }[],
   remocoes: [] as { balde: string; caminhos: string[] }[],
+  listagens: [] as { balde: string; pasta: string }[],
+  arquivosNaPasta: [] as { name: string }[],
+  erroRemocao: null as { message: string } | null,
   erroUpload: null as { message: string } | null,
   erroAssinatura: null as { message: string } | null,
 }));
@@ -35,7 +38,11 @@ vi.mock("@/lib/supabase/service", () => ({
         },
         remove: async (caminhos: string[]) => {
           storage.remocoes.push({ balde, caminhos });
-          return { error: null };
+          return { error: storage.erroRemocao };
+        },
+        list: async (pasta: string) => {
+          storage.listagens.push({ balde, pasta });
+          return { data: storage.arquivosNaPasta, error: null };
         },
         getPublicUrl: (caminho: string) => ({
           data: { publicUrl: `https://cdn/${balde}/${caminho}` },
@@ -51,8 +58,13 @@ vi.mock("@/lib/supabase/service", () => ({
   }),
 }));
 
-const { enviarArquivo, removerArquivo, removerVersoesAnteriores, urlAssinada } =
-  await import("@/server/arquivos/servico");
+const {
+  apagarArquivosDaConta,
+  enviarArquivo,
+  removerArquivo,
+  removerVersoesAnteriores,
+  urlAssinada,
+} = await import("@/server/arquivos/servico");
 const { ehAppError } = await import("@/server/errors");
 
 const ID = "11111111-1111-4111-8111-000000000001";
@@ -85,6 +97,9 @@ async function foto(tipo: "image/jpeg" | "image/png" = "image/jpeg") {
 }
 
 beforeEach(() => {
+  storage.listagens.length = 0;
+  storage.arquivosNaPasta = [];
+  storage.erroRemocao = null;
   storage.uploads.length = 0;
   storage.remocoes.length = 0;
   storage.erroUpload = null;
@@ -290,5 +305,51 @@ describe("link assinado", () => {
   it("falha ao assinar devolve null", async () => {
     storage.erroAssinatura = { message: "objeto não encontrado" };
     expect(await urlAssinada(`curriculo/${ID}.pdf`)).toBeNull();
+  });
+});
+
+/**
+ * O que sai do Storage quando alguém exclui a conta (#423).
+ *
+ * Foto de perfil, logo e currículo têm caminho fixo por pessoa; as fotos do
+ * feed moram numa pasta com o id dela — inclusive as trocadas na edição,
+ * que ficam sem nada no banco apontando para elas.
+ */
+describe("apagarArquivosDaConta", () => {
+  it("apaga os de caminho fixo e tudo na pasta de fotos", async () => {
+    storage.arquivosNaPasta = [{ name: "a.webp" }, { name: "b.webp" }];
+
+    expect(await apagarArquivosDaConta(ID)).toBe(true);
+
+    const apagados = storage.remocoes.flatMap((r) =>
+      r.caminhos.map((c) => `${r.balde}:${c}`),
+    );
+    expect(apagados).toEqual(
+      expect.arrayContaining([
+        `avatares:avatar/${ID}.webp`,
+        `avatares:logo/${ID}.webp`,
+        `curriculos:curriculo/${ID}.pdf`,
+        `portfolio:trabalho/${ID}/a.webp`,
+        `portfolio:trabalho/${ID}/b.webp`,
+      ]),
+    );
+    expect(storage.listagens).toEqual([
+      { balde: "portfolio", pasta: `trabalho/${ID}` },
+    ]);
+  });
+
+  it("sem fotos no feed, não pede remoção vazia", async () => {
+    expect(await apagarArquivosDaConta(ID)).toBe(true);
+    expect(storage.remocoes.map((r) => r.balde)).toEqual([
+      "avatares",
+      "avatares",
+      "curriculos",
+    ]);
+  });
+
+  /** Quem chama avisa o Sentry: arquivo que sobra é dado sem dono. */
+  it("falha ao apagar devolve false", async () => {
+    storage.erroRemocao = { message: "bucket fora do ar" };
+    expect(await apagarArquivosDaConta(ID)).toBe(false);
   });
 });

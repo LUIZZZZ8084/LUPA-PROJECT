@@ -88,6 +88,8 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
   // Sair é barato, mas não precisa de rajada.
   "auth.sair": porJanela(20),
   "auth.sair_dos_outros": porJanela(5),
+  // Por baixo dele há o limite de tentativa de senha, por conta (#423).
+  "conta.excluir": porJanela(5),
 
   /*
    * Candidatar-se é o verbo mais usado do app, e por quem tem menos

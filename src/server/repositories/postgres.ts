@@ -177,6 +177,13 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     if (error) throw erros.indisponivel(`corte de sessões: ${error.message}`);
   }
 
+  /** Uma chamada só: a função faz tudo na mesma transação (#423). */
+  async excluirConta(id: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase.rpc("excluir_conta", { p_usuario: id });
+    if (error) throw erros.indisponivel(`exclusão de conta: ${error.message}`);
+  }
+
   async cortesDeSessao(dias: number): Promise<Map<string, number>> {
     const supabase = await cliente();
     const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);

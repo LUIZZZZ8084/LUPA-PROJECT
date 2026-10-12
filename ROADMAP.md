@@ -8,9 +8,18 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 09/10/2026.**
+**Última atualização: 12/10/2026.**
 
 ## Concluído
+
+Em 12/10/2026:
+
+- Excluir a própria conta pelo perfil (LGPD, art. 18): a conta é
+  anonimizada, a assinatura é cancelada antes, e saem perfis, currículo,
+  candidaturas, fotos e avisos; pagamentos ficam, sem dados pessoais —
+  [#423](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/423)
+- A `main` passou a exigir PR com tipos, testes, Playwright e roadmap
+  verdes; sem force-push
 
 Em 09/10/2026:
 
