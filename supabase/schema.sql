@@ -675,6 +675,10 @@ create table tentativas_de_acesso (
   tentativas    integer not null default 0,
   primeira_em   timestamptz not null default now(),
   bloqueado_ate timestamptz,
+  -- A janela com que a chave foi registrada (#407). A limpeza a respeita:
+  -- sem isto, a cota diária de e-mail era apagada depois de uma hora e
+  -- recomeçava do zero.
+  janela_segundos integer,
 
   constraint tentativas_nao_negativas check (tentativas >= 0)
 );
@@ -701,9 +705,10 @@ returns timestamptz
 language sql
 set search_path = public, pg_temp
 as $$
-  insert into tentativas_de_acesso (chave, tentativas, primeira_em)
-  values (p_chave, 1, now())
+  insert into tentativas_de_acesso (chave, tentativas, primeira_em, janela_segundos)
+  values (p_chave, 1, now(), p_janela_segundos)
   on conflict (chave) do update set
+    janela_segundos = p_janela_segundos,
     -- Janela vencida recomeça do 1; dentro da janela, soma.
     tentativas = case
       when now() - tentativas_de_acesso.primeira_em
@@ -737,6 +742,13 @@ $$;
  * cron, a alternativa seria a tabela crescer com toda chave vista uma vez
  * e nunca mais. Custa um `delete` por índice que quase sempre não apaga
  * nada.
+ *
+ * **Nenhuma linha sai antes de a própria janela vencer (#407).** O corte
+ * era só "quatro janelas de login", uma hora. Servia enquanto toda janela
+ * era de minutos; a cota diária de e-mail é de um dia, e era apagada aos
+ * 60 minutos sem ter batido no teto — quem mandasse um pouco abaixo dele a
+ * cada hora nunca era barrado. A primeira condição continua sendo a do
+ * índice; a segunda só poupa quem declarou janela mais longa.
  */
 create or replace function limpar_tentativas_vencidas(p_janela_segundos integer)
 returns void
@@ -745,6 +757,8 @@ set search_path = public, pg_temp
 as $$
   delete from tentativas_de_acesso
    where primeira_em < now() - make_interval(secs => p_janela_segundos * 4)
+     and (janela_segundos is null
+          or primeira_em < now() - make_interval(secs => janela_segundos))
      and (bloqueado_ate is null or bloqueado_ate < now());
 $$;
 

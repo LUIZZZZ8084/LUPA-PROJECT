@@ -28,6 +28,11 @@ Em 09/10/2026:
 - Teste grátis que falha ao dar os dias é devolvido, e a assinatura volta a
   pendente para o reenvio do webhook conceder de novo —
   [#406](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/406)
+- A cota diária de e-mail é dividida: por origem, separada entre
+  confirmação (20) e recuperação (10), e por conta de destino (3 por
+  origem, 10 no total), para um IP não gastar os 100 do Resend de todo
+  mundo, nem encher ou travar a caixa de ninguém. Pede
+  `aplica-cota-de-email.sql` (antes ou depois do deploy) — [#407](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/407)
 
 Em 08/10/2026:
 

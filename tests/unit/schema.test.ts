@@ -1498,6 +1498,38 @@ describe("limite de tentativas durável", () => {
     expect(r.rows.map((x) => x.chave)).toEqual(["presa"]);
   });
 
+  /*
+   * A cota diária de e-mail (#407) tem janela de um dia. A limpeza cortava
+   * em uma hora tudo que não estivesse bloqueado, e o contador recomeçava
+   * do zero — quem mandasse um pouco abaixo do teto a cada hora nunca era
+   * barrado.
+   */
+  it("a limpeza não apaga chave cuja própria janela ainda não venceu", async () => {
+    const DIA = 24 * 60 * 60;
+    for (const chave of ["email-origem:dia", "email-origem:venceu"]) {
+      await banco.query(`select registrar_falha_de_acesso($1, $2, $3, $4)`, [
+        chave,
+        DIA,
+        21,
+        DIA,
+      ]);
+    }
+    await banco.exec(
+      `update tentativas_de_acesso set primeira_em = now() - interval '3 hours'
+        where chave = 'email-origem:dia';
+       update tentativas_de_acesso set primeira_em = now() - interval '25 hours'
+        where chave = 'email-origem:venceu'`,
+    );
+
+    await banco.query(`select limpar_tentativas_vencidas($1)`, [JANELA]);
+
+    const r = await banco.query<{ chave: string; janela: number }>(
+      `select chave, janela_segundos as janela from tentativas_de_acesso
+        where chave like 'email-origem:%'`,
+    );
+    expect(r.rows).toEqual([{ chave: "email-origem:dia", janela: DIA }]);
+  });
+
   it("a chave anônima não lê", async () => {
     const r = await banco.query<{ tem_acesso: boolean }>(
       `select has_table_privilege('anon', 'tentativas_de_acesso', 'SELECT')
@@ -2133,6 +2165,41 @@ describe("aplica-avaliacao-assinada-pela-empresa.sql", () => {
     await banco.exec(SCRIPT);
     expect(await nomes()).toEqual(antes);
   });
+});
+
+/**
+ * A migração da cota de e-mail (#407) alcança um banco criado antes dela:
+ * a coluna entra, as duas funções passam a gravar e respeitar a janela, e
+ * rodar de novo não quebra nada.
+ */
+describe("aplica-cota-de-email.sql", () => {
+  const MIGRACAO = readFileSync(
+    join(process.cwd(), "supabase/aplica-cota-de-email.sql"),
+    "utf8",
+  );
+
+  it("roda num banco sem a coluna, e de novo, e a janela passa a ser gravada", async () => {
+    const banco = await PGlite.create();
+    try {
+      await banco.exec(SCHEMA);
+      await banco.exec(
+        "alter table tentativas_de_acesso drop column janela_segundos cascade",
+      );
+
+      await banco.exec(MIGRACAO);
+      await banco.exec(MIGRACAO);
+
+      await banco.query(
+        `select registrar_falha_de_acesso('x', 86400, 5, 86400)`,
+      );
+      const r = await banco.query<{ janela: number }>(
+        `select janela_segundos as janela from tentativas_de_acesso where chave = 'x'`,
+      );
+      expect(r.rows[0].janela).toBe(86400);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
 });
 
 /**
