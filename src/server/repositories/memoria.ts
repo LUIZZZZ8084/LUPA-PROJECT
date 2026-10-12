@@ -126,13 +126,13 @@ export class RepositorioMemoria implements RepositorioUsuarios {
   }
 
   async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
+    // Apaga os anteriores, usados ou não, como o Postgres (#419).
     for (const [hash, token] of this.tokensDeRecuperacao) {
       if (
         token.usuarioId === dados.usuarioId &&
-        token.finalidade === dados.finalidade &&
-        !token.usado
+        token.finalidade === dados.finalidade
       ) {
-        this.tokensDeRecuperacao.set(hash, { ...token, usado: true });
+        this.tokensDeRecuperacao.delete(hash);
       }
     }
     this.tokensDeRecuperacao.set(dados.tokenHash, {

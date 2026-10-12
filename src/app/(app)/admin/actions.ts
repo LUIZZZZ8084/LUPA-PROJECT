@@ -1,9 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { clienteDeServico } from "@/lib/supabase/service";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
+import { erros } from "@/server/errors";
+import { log } from "@/server/logger";
 
 export type ReviewDecision = "aprovado" | "reprovado";
 
@@ -31,8 +34,20 @@ export async function decideVerification(
     return { ok: false, error: "Sem permissão." };
   }
 
-  const supabase = await createClient();
-  if (!supabase) return { ok: true, demo: true };
+  if (!isSupabaseConfigured) return { ok: true, demo: true };
+
+  /*
+   * Chave de serviço (#419). Era o cliente da chave anônima, que não lê
+   * `pedidos_verificacao` nem grava em `usuarios` — as duas são fechadas
+   * para ela. Toda decisão respondia "Pedido não encontrado", e nada
+   * ficava vermelho porque nenhum pedido chegou à fila até hoje (#133). A
+   * página que lista a fila já lia com esta chave; a ação que decide
+   * ficou para trás.
+   */
+  const supabase = clienteDeServico();
+  if (!supabase) {
+    return { ok: false, error: "A chave de serviço não está configurada." };
+  }
 
   const { data: request, error: loadError } = await supabase
     .from("pedidos_verificacao")
@@ -59,14 +74,30 @@ export async function decideVerification(
       status_verificacao: decision,
       doc_verificado: decision === "aprovado",
     })
-    .eq("id", request.usuario_id);
+    .eq("id", String(request.usuario_id));
 
   // Retenção: as imagens só existem até a decisão.
   const paths = [request.documento_path, request.selfie_path].filter(
-    (p): p is string => Boolean(p),
+    (p): p is string => typeof p === "string" && p.length > 0,
   );
   if (paths.length > 0) {
-    await supabase.storage.from("verificacao").remove(paths);
+    /*
+     * Apagar é a obrigação de retenção, e falhar aqui não pode passar em
+     * silêncio: a decisão já foi gravada, e o documento ficaria no bucket
+     * sem que ninguém soubesse. Vai ao Sentry, sem os caminhos — eles
+     * começam pelo id da pessoa.
+     */
+    const { error: removeError } = await supabase.storage
+      .from("verificacao")
+      .remove(paths);
+    if (removeError) {
+      log.erro(
+        erros.indisponivel(
+          `documentos de verificação não apagados: ${removeError.message}`,
+        ),
+        { acao: "admin.decidir_verificacao", arquivos: paths.length },
+      );
+    }
   }
 
   revalidatePath("/admin");
