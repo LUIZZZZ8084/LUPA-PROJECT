@@ -18,7 +18,8 @@ import { repositorioUsuarios } from "../repositories";
  *
  * 1. **Senha.** Excluir é irreversível, e a sessão sozinha pode ser de um
  *    cookie roubado ou de um aparelho esquecido aberto. O limite é o do
- *    login, por conta: reservado antes do Argon2, para a rajada não passar.
+ *    login, pela mesma chave: reservado antes do Argon2, para a rajada não
+ *    passar, e somado às tentativas de entrar.
  * 2. **Assinatura.** Cancelada no Mercado Pago antes de tudo. Se o
  *    cancelamento falhar, nada é excluído: excluir primeiro deixaria a
  *    cobrança mensal correndo para alguém que não tem mais conta para
@@ -38,13 +39,18 @@ export async function excluirConta(
 ): Promise<void> {
   const quem = exigirCapacidade(sessao, "conta:excluir");
 
-  const chave = `excluir:${quem.usuarioId}`;
-  await conferirLimite(chave);
-  await reservarTentativa(chave);
-
   const repo = repositorioUsuarios();
   const usuario = await repo.porId(quem.usuarioId);
   if (!usuario) throw erros.naoEncontrado("Conta");
+
+  /*
+   * O mesmo limite do login, pela mesma chave (#425). Um limite próprio
+   * daria a quem tem o cookie de outra pessoa mais cinco tentativas de
+   * senha por janela, por fora das cinco do login.
+   */
+  const chave = `login:${usuario.email}`;
+  await conferirLimite(chave);
+  await reservarTentativa(chave);
 
   if (!(await conferirSenha(senha, usuario.senhaHash))) {
     throw erros.validacao([{ campo: "senha", mensagem: "Senha incorreta." }]);

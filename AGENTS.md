@@ -1223,7 +1223,9 @@ existir.
 
 **A ordem é a que deixa a pior falha recuperável**, em
 `src/server/conta/servico.ts`: a senha primeiro (a sessão pode ser de um
-aparelho esquecido aberto), com o limite do login; depois a assinatura,
+aparelho esquecido aberto), com o limite do login **pela mesma chave**
+(`login:<e-mail>`, #425) — um limite próprio daria a quem tem o cookie
+cinco tentativas de senha a mais por janela; depois a assinatura,
 cancelada no Mercado Pago — e, se o cancelamento falhar, **nada é
 excluído**, porque a cobrança continuaria para alguém sem conta para
 cancelá-la; depois o banco; e os arquivos por último, como em toda
@@ -1591,6 +1593,12 @@ de uma, e quem usa conexão compartilhada é justamente o público deste app.
 Como tudo é fechado por login, todo abuso carrega sessão — e quem não tem
 sessão cai no IP, que é o certo nas três de autenticação, onde a conta
 ainda não existe.
+
+**E o `GET` que mais gasta CPU também tem teto (#425).** `/api/curriculo`
+monta o PDF do zero a cada chamada, e o teto de `criarAcao` não alcança
+rota. `ORCAMENTO_DO_CURRICULO_PDF` mora fora de `ORCAMENTOS` porque lá só
+entra nome de action — há teste cobrando isso —, e é cobrado na rota antes
+de montar o documento, com a mesma chave que uma action teria.
 
 **A cobrança vem antes da validação**, e antes de qualquer trabalho: o que
 garante que a ação recusada não teve efeito nenhum, nem parcial. Teto que
