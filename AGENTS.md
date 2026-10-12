@@ -1194,6 +1194,48 @@ aplica é `supabase/aplica-limites-dos-buckets.sql`, rodado à mão.
 **Sem Supabase não há Storage.** A tela diz isso em vez de aceitar o envio
 e perder o arquivo — aceitar em silêncio faria a pessoa achar que salvou.
 
+### Excluir a própria conta, e o que fica depois (#423)
+
+Direito do titular na LGPD (art. 18, VI), e até 12/10/2026 não havia como
+— nem pela tela, nem por uma página que dissesse a quem pedir. Decisão do
+Luiz nesse dia: botão no perfil. Ele mora abaixo dos dois "sair", fechado
+até a pessoa pedir, e diz o que sai e o que fica **antes** do botão.
+
+**A conta é anonimizada, não apagada.** Apagar a linha de `usuarios`
+levaria junto, em cascata, `pagamentos` e `assinaturas` — o histórico do
+caixa que a #179 passou a registrar. A linha fica sem nada que identifique
+a pessoa: nome "Conta excluída", e-mail num domínio `.invalid` que ninguém
+recebe, telefone zerado, CPF nulo, uma senha que nenhum hash produz, e as
+sessões cortadas. E-mail e CPF ficam livres para uma conta nova.
+
+**Sai tudo o que é da pessoa**: perfis, currículo, candidaturas,
+publicações, avaliações recebidas, vagas (com as candidaturas a elas),
+avisos, aparelhos, tokens, créditos e pedidos de verificação. **Fica, sem
+nome, o que é de outra pessoa**: a avaliação que ela escreveu é reputação
+de quem foi avaliado, e continua com "Conta excluída" no lugar do nome —
+a mesma razão do `on delete set null` em `avaliador_id`.
+
+**Uma função só no banco** (`excluir_conta`), numa transação: metade
+excluída e metade não é o pior estado possível — a pessoa não entra mais
+e os dados continuam aqui. `mensagens_suporte` existe em produção e não
+no `schema.sql`, e por isso entra por `execute` condicionado à tabela
+existir.
+
+**A ordem é a que deixa a pior falha recuperável**, em
+`src/server/conta/servico.ts`: a senha primeiro (a sessão pode ser de um
+aparelho esquecido aberto), com o limite do login; depois a assinatura,
+cancelada no Mercado Pago — e, se o cancelamento falhar, **nada é
+excluído**, porque a cobrança continuaria para alguém sem conta para
+cancelá-la; depois o banco; e os arquivos por último, como em toda
+remoção do app. Arquivo que sobra é dado pessoal sem dono, e a falha vai
+ao Sentry.
+
+**O admin não se exclui pela tela** (`conta:excluir` não está no papel
+dele): a conta de administração é a que opera a ferramenta, e tirá-la do
+ar é caso de suporte. Em demonstração, o repositório em memória anonimiza
+a conta e o que ele mesmo guarda; o caminho que apaga tudo é o do banco, e
+é ele que o `schema.test.ts` exercita num Postgres de verdade.
+
 ### O que se edita depois, e o que nunca
 
 O cadastro pede o mínimo para a conta existir e a pessoa ser encontrada;

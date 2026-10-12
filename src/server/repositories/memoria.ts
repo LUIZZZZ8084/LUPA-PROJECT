@@ -116,6 +116,43 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     if (this.usuarios.has(id)) this.cortes.set(id, Date.now());
   }
 
+  /**
+   * O que este repositório guarda, como a função `excluir_conta` faz no
+   * Postgres (#423). As publicações, candidaturas e avisos moram noutros
+   * repositórios de demonstração e não são tocados aqui; o caminho que
+   * apaga tudo é o do banco, e é ele que o teste de schema exercita.
+   */
+  async excluirConta(id: string): Promise<void> {
+    const usuario = this.usuarios.get(id);
+    if (!usuario) return;
+
+    this.porEmailIndice.delete(usuario.email);
+    if (usuario.cpf) this.cpfs.delete(usuario.cpf);
+    this.empresas.delete(id);
+    this.prestadores.delete(id);
+    this.candidatos.delete(id);
+    for (const [hash, token] of this.tokensDeRecuperacao) {
+      if (token.usuarioId === id) this.tokensDeRecuperacao.delete(hash);
+    }
+
+    const email = `excluida-${id}@excluida.lupapp.invalid`;
+    this.usuarios.set(id, {
+      ...usuario,
+      email,
+      nomeCompleto: "Conta excluída",
+      telefone: "0000000000",
+      cpf: null,
+      avatarUrl: null,
+      senhaHash: "!conta-excluida",
+      emailVerificado: false,
+      telefoneVerificado: false,
+      docVerificado: false,
+      ultimoAcessoEm: null,
+    });
+    this.porEmailIndice.set(email, id);
+    this.cortes.set(id, Date.now());
+  }
+
   async cortesDeSessao(dias: number): Promise<Map<string, number>> {
     const desde = Date.now() - dias * 24 * 60 * 60 * 1000;
     const recentes = new Map<string, number>();

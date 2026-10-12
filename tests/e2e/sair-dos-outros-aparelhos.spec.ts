@@ -46,6 +46,16 @@ test.describe("sair dos outros aparelhos", () => {
       celular.getByRole("button", { name: "Sair da conta" }),
     ).toBeVisible();
 
+    /*
+     * O corte compara segundos, com `<` estrito (#225): a sessão emitida no
+     * mesmo segundo do corte continua valendo, de propósito — é o que
+     * mantém dentro o aparelho que acabou de reemitir a dele. O celular
+     * entrou há menos de um segundo, e numa máquina rápida o clique abaixo
+     * caía no mesmo segundo: o teste falhava uma vez a cada três, sem
+     * defeito nenhum. Espera-se a virada do segundo.
+     */
+    await page.waitForTimeout(1_100);
+
     // Daqui, sair dos outros.
     await page.goto("/perfil");
     await page

@@ -148,12 +148,13 @@ arquivo, e as correções têm teste.
 
 **Registrado, sem correção:**
 
-- **A `main` não tem proteção de branch.** Push direto e force-push são
+- ~~**A `main` não tem proteção de branch.** Push direto e force-push são
   aceitos, e cada push publica em produção; "tudo por PR com CI verde" é só
-  combinação. Ligar a proteção, exigindo os checks da CI, é configuração do
-  repositório, com o Luiz.
-- **Não há exclusão de conta pela tela.** Direito do titular na LGPD (art.
-  18). Fica para a página de privacidade (#235/#236) dizer como pedir.
+  combinação.~~ Ligada em 12/10, com o OK do Luiz: PR obrigatório, com
+  tipos, testes, Playwright e roadmap verdes, sem aprovação obrigatória,
+  sem force-push, valendo também para admin.
+- ~~**Não há exclusão de conta pela tela.** Direito do titular na LGPD (art.
+  18).~~ Corrigido na #423: botão no perfil, que anonimiza a conta.
 - ~~**A decisão do admin apaga documento de `verificacao` com a chave
   anônima**, que não tem policy de `delete` — a remoção falharia em
   silêncio. Sem efeito hoje: nenhum documento chega à fila (#133).~~

@@ -66,6 +66,7 @@ drop table if exists usuarios cascade;
 -- As funções dos triggers. Sobrevivem ao `drop table`, porque a função é
 -- do schema e não da tabela — é justamente o tipo de objeto órfão que faz
 -- a segunda execução do schema falhar de um jeito difícil de entender.
+drop function if exists excluir_conta(uuid) cascade;
 drop function if exists limpar_tentativas_vencidas(integer) cascade;
 drop function if exists registrar_falha_de_acesso(text, integer, integer, integer) cascade;
 drop function if exists registrar_busca_sem_resultado(text, text) cascade;

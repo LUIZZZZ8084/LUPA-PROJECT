@@ -2352,3 +2352,209 @@ describe("teste_gratis_usado_em", () => {
     }
   });
 });
+
+/**
+ * Excluir a própria conta (#423).
+ *
+ * Uma função só, para tudo acontecer na mesma transação. O que se prova
+ * aqui é o que sai, o que fica e o que fica sem nome — num Postgres de
+ * verdade, porque a regra mora nele.
+ */
+describe("excluir_conta", () => {
+  async function conta(papel: string, email: string) {
+    return criarUsuario(papel, email);
+  }
+
+  async function contar(sql: string, params: unknown[]) {
+    const r = await db.query<{ n: number }>(sql, params);
+    return Number(r.rows[0].n);
+  }
+
+  it("tira os dados da pessoa, guarda o caixa e libera o e-mail", async () => {
+    const pessoa = await conta("prestador_servico", "excluir@teste.lupa");
+    const outraEmpresa = await conta("empresa", "outra-empresa@teste.lupa");
+    const avaliado = await conta("prestador_servico", "avaliado@teste.lupa");
+    const candidato = await conta("candidato_clt", "candidato-x@teste.lupa");
+
+    await db.query("update usuarios set cpf = '39053344705' where id = $1", [
+      pessoa,
+    ]);
+    await db.query(
+      "insert into perfis_prestador (usuario_id, categoria_id) values ($1, 1), ($2, 1)",
+      [pessoa, avaliado],
+    );
+    // Contrata como pessoa física (#129): tem perfil de contratante e vaga.
+    await db.query(
+      "insert into perfis_empresa (usuario_id, razao_social, cnpj) values ($1, 'Pessoa', null), ($2, 'Outra', null)",
+      [pessoa, outraEmpresa],
+    );
+    const vagaDela = await db.query<{ id: string }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Ajudante', 'Descrição', 'Sinop - MT') returning id`,
+      [pessoa],
+    );
+    const vagaDeOutra = await db.query<{ id: string }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Motorista', 'Descrição', 'Sinop - MT') returning id`,
+      [outraEmpresa],
+    );
+    await db.query(
+      "insert into candidaturas (vaga_id, candidato_id) values ($1, $2), ($3, $2)",
+      [vagaDela.rows[0].id, candidato, vagaDeOutra.rows[0].id],
+    );
+    await db.query(
+      `insert into publicacoes (autor_id, titulo, corpo)
+       values ($1, 'Trabalho feito', 'Corpo com tamanho suficiente para o check.')`,
+      [pessoa],
+    );
+    // Uma avaliação recebida e uma escrita por ela.
+    await db.query(
+      `insert into avaliacoes (prestador_id, avaliador_id, nome_avaliador, nota)
+       values ($1, $2, 'Cliente', 5), ($2, $1, 'Pessoa Excluída', 4)`,
+      [pessoa, avaliado],
+    );
+    await db.query(
+      "insert into preferencias_notificacao (usuario_id, cidade) values ($1, 'Sinop - MT')",
+      [pessoa],
+    );
+    await db.query(
+      "insert into inscricoes_push (usuario_id, endpoint, p256dh, auth) values ($1, 'https://fcm.googleapis.com/x', 'k', 'a')",
+      [pessoa],
+    );
+    await db.query(
+      "insert into tokens_recuperacao (usuario_id, token_hash, expira_em) values ($1, 'hash-excluir', now() + interval '1 hour')",
+      [pessoa],
+    );
+    await db.query(
+      "insert into carteiras_vaga (usuario_id, creditos_vaga) values ($1, 3)",
+      [pessoa],
+    );
+    const assinatura = await db.query<{ id: string }>(
+      `insert into assinaturas (usuario_id, tipo, valor_centavos, status)
+       values ($1, 'prestador_mensalidade', 1990, 'cancelada') returning id`,
+      [pessoa],
+    );
+    await db.query(
+      `insert into pagamentos (usuario_id, tipo, valor_centavos, status, assinatura_id)
+       values ($1, 'prestador_mensalidade', 1990, 'aprovado', $2)`,
+      [pessoa, assinatura.rows[0].id],
+    );
+
+    await db.query("select excluir_conta($1)", [pessoa]);
+
+    for (const [tabela, coluna] of [
+      ["perfis_prestador", "usuario_id"],
+      ["perfis_empresa", "usuario_id"],
+      ["publicacoes", "autor_id"],
+      ["preferencias_notificacao", "usuario_id"],
+      ["inscricoes_push", "usuario_id"],
+      ["tokens_recuperacao", "usuario_id"],
+      ["carteiras_vaga", "usuario_id"],
+    ]) {
+      expect(
+        await contar(
+          `select count(*) as n from ${tabela} where ${coluna} = $1`,
+          [pessoa],
+        ),
+        tabela,
+      ).toBe(0);
+    }
+    // A vaga dela sai com as candidaturas; a de outra empresa fica.
+    expect(
+      await contar("select count(*) as n from vagas where empresa_id = $1", [
+        pessoa,
+      ]),
+    ).toBe(0);
+    expect(
+      await contar(
+        "select count(*) as n from candidaturas where candidato_id = $1",
+        [candidato],
+      ),
+    ).toBe(1);
+    // A avaliação recebida sai; a que ela escreveu fica, sem o nome.
+    expect(
+      await contar(
+        "select count(*) as n from avaliacoes where prestador_id = $1",
+        [pessoa],
+      ),
+    ).toBe(0);
+    const escrita = await db.query<{
+      avaliador_id: string | null;
+      nome_avaliador: string;
+    }>(
+      "select avaliador_id, nome_avaliador from avaliacoes where prestador_id = $1",
+      [avaliado],
+    );
+    expect(escrita.rows).toEqual([
+      { avaliador_id: null, nome_avaliador: "Conta excluída" },
+    ]);
+    // O caixa fica.
+    expect(
+      await contar(
+        "select count(*) as n from pagamentos where usuario_id = $1",
+        [pessoa],
+      ),
+    ).toBe(1);
+    expect(
+      await contar(
+        "select count(*) as n from assinaturas where usuario_id = $1",
+        [pessoa],
+      ),
+    ).toBe(1);
+
+    // A conta fica sem nada que identifique a pessoa, e sem sessão.
+    const u = await db.query<Record<string, unknown>>(
+      `select email, nome_completo, telefone, cpf, senha_hash,
+              sessoes_validas_desde is not null as cortada
+         from usuarios where id = $1`,
+      [pessoa],
+    );
+    expect(u.rows[0]).toMatchObject({
+      nome_completo: "Conta excluída",
+      telefone: "0000000000",
+      cpf: null,
+      cortada: true,
+    });
+    expect(String(u.rows[0].email)).not.toContain("excluir@teste.lupa");
+    expect(String(u.rows[0].senha_hash)).not.toMatch(/^\$argon2/);
+
+    // E-mail e CPF livres para uma conta nova.
+    const nova = await conta("candidato_clt", "excluir@teste.lupa");
+    await db.query("update usuarios set cpf = '39053344705' where id = $1", [
+      nova,
+    ]);
+    expect(nova).not.toBe(pessoa);
+  });
+
+  it("não mexe em quem não é a pessoa", async () => {
+    const pessoa = await conta("candidato_clt", "sai@teste.lupa");
+    const outra = await conta("candidato_clt", "fica@teste.lupa");
+    await db.query(
+      "insert into perfis_candidato (usuario_id) values ($1), ($2)",
+      [pessoa, outra],
+    );
+
+    await db.query("select excluir_conta($1)", [pessoa]);
+
+    expect(
+      await contar(
+        "select count(*) as n from perfis_candidato where usuario_id = $1",
+        [outra],
+      ),
+    ).toBe(1);
+    const r = await db.query<{ email: string }>(
+      "select email from usuarios where id = $1",
+      [outra],
+    );
+    expect(r.rows[0].email).toBe("fica@teste.lupa");
+  });
+
+  /** O script de produção é a mesma função, e roda de novo sem erro. */
+  it("aplica-exclusao-de-conta.sql roda num banco que já tem a função", async () => {
+    const script = readFileSync(
+      join(process.cwd(), "supabase/aplica-exclusao-de-conta.sql"),
+      "utf8",
+    );
+    await expect(db.exec(script)).resolves.toBeDefined();
+  });
+});
