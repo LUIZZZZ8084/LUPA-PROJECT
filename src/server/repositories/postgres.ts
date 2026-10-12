@@ -210,13 +210,18 @@ export class RepositorioPostgres implements RepositorioUsuarios {
   async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
     const supabase = await cliente();
 
-    // Um token vivo por pessoa e finalidade: o novo aposenta os anteriores.
+    /*
+     * Um token vivo por pessoa e finalidade: o novo apaga os anteriores,
+     * usados ou não (#419). Marcá-los como usados tirava o valor deles e
+     * os deixava na tabela para sempre; apagando, ela guarda no máximo um
+     * por pessoa e finalidade, e o link antigo deixa de valer do mesmo
+     * jeito.
+     */
     const aposentar = await supabase
       .from("tokens_recuperacao")
-      .update({ usado_em: new Date().toISOString() })
+      .delete()
       .eq("usuario_id", dados.usuarioId)
-      .eq("finalidade", dados.finalidade)
-      .is("usado_em", null);
+      .eq("finalidade", dados.finalidade);
     if (aposentar.error)
       throw erros.indisponivel(
         `token de recuperação: ${aposentar.error.message}`,

@@ -73,6 +73,13 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           /*
+           * Uma janela aberta a partir de outro site não alcança esta pela
+           * referência `window.opener`, e esta não alcança as que abre
+           * (#419). O app não abre nada que precise dela: o Mercado Pago é
+           * redirecionamento, e o WhatsApp é link comum.
+           */
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          /*
            * HSTS: força HTTPS e fecha o SSL-stripping na primeira visita
            * (#350). Sem ele, a requisição inicial pode sair como HTTP e um
            * atacante na rede a intercepta — e aqui passam senha, CPF/CNPJ e

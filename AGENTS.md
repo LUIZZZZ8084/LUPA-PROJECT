@@ -872,11 +872,13 @@ nenhum provedor de terceiro pode decidir se alguém consegue criar conta
 aqui — a mesma razão que mantém a lista de municípios versionada em vez de
 buscada no IBGE em execução.
 
-**Um token vivo por pessoa e finalidade (#398).** Emitir um token marca os
-anteriores como usados, em `criarTokenDeRecuperacao`, nos dois
-repositórios. Quem pede outro link é porque o primeiro se perdeu, ou foi
-parar onde não devia: o de recuperação de uma hora atrás não pode
-continuar trocando a senha.
+**Um token vivo por pessoa e finalidade (#398).** Emitir um token apaga os
+anteriores, em `criarTokenDeRecuperacao`, nos dois repositórios. Quem pede
+outro link é porque o primeiro se perdeu, ou foi parar onde não devia: o de
+recuperação de uma hora atrás não pode continuar trocando a senha. Até a
+#419 eles eram marcados como usados e ficavam na tabela para sempre;
+apagando, ela guarda no máximo um por pessoa e finalidade, sem rotina de
+limpeza.
 
 **Abrir o link não confirma nada (#398).** A página mostra um botão, e só
 a action gasta o token. Filtro de e-mail corporativo e prévia de link
@@ -1113,6 +1115,15 @@ a única ação que mudava dado sem checar a capacidade, e ficava a uma
 mudança de chave de ser a porta aberta. Hoje confere `admin:decidir_verificacao`
 antes de abrir qualquer cliente de banco. *Toda action confere a
 capacidade dentro dela, mesmo quando "só o admin vê a tela".*
+
+**E ela usa a chave de serviço (#419).** Usava o cliente da chave
+anônima, que não lê `pedidos_verificacao` nem grava em `usuarios`: toda
+decisão respondia "Pedido não encontrado", e ninguém viu porque nenhum
+pedido chegou à fila. A página que lista a fila já lia com a chave de
+serviço — a ação ao lado ficou para trás. Falha ao apagar documento e
+selfie, que é a obrigação de retenção, vai ao Sentry sem os caminhos.
+*Leitura e escrita da mesma tabela, em arquivos vizinhos, precisam da
+mesma chave; conferir uma não confere a outra.*
 
 ### Arquivos: o caminho vem da sessão, nunca do nome enviado
 

@@ -283,6 +283,9 @@ export interface RepositorioUsuarios {
    * pede um link novo é porque o antigo se perdeu — ou foi parar onde não
    * devia. Sem isso, o link de recuperação de uma hora atrás continuava
    * trocando a senha depois de a pessoa ter pedido outro.
+   *
+   * Aposentar é apagar (#419): marcá-los como usados os deixava na tabela
+   * para sempre. Assim ela guarda no máximo um por pessoa e finalidade.
    */
   criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void>;
 

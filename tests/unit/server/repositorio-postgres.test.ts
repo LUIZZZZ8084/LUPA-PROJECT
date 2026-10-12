@@ -43,6 +43,7 @@ function construtor(tabela: string) {
     "insert",
     "update",
     "upsert",
+    "delete",
   ]) {
     builder[metodo] = (...args: unknown[]) => {
       chamadas.push({ tabela, metodo, args });
@@ -815,9 +816,10 @@ describe("corte de sessões pelo dono", () => {
 });
 
 /**
- * Um token vivo por pessoa e finalidade (#398): o novo aposenta os
+ * Um token vivo por pessoa e finalidade (#398): o novo apaga os
  * anteriores **antes** de ser gravado, para o próprio token novo não
- * cair no `update`.
+ * cair no `delete`. Apagar, e não marcar como usado, é o que mantém a
+ * tabela em um por pessoa e finalidade (#419).
  */
 describe("token de recuperação", () => {
   const repo = new RepositorioPostgres();
@@ -828,7 +830,7 @@ describe("token de recuperação", () => {
     resposta = { data: null, error: null };
   });
 
-  it("aposenta os anteriores da mesma finalidade, e depois grava", async () => {
+  it("apaga os anteriores da mesma finalidade, e depois grava", async () => {
     await repo.criarTokenDeRecuperacao({
       usuarioId: ID,
       tokenHash: "hash-novo",
@@ -837,7 +839,8 @@ describe("token de recuperação", () => {
     });
 
     const metodos = chamadas.map((c) => c.metodo);
-    expect(metodos.indexOf("update")).toBeLessThan(metodos.indexOf("insert"));
+    expect(metodos).not.toContain("update");
+    expect(metodos.indexOf("delete")).toBeLessThan(metodos.indexOf("insert"));
 
     const filtros = chamadas
       .slice(0, metodos.indexOf("insert"))
@@ -846,11 +849,10 @@ describe("token de recuperação", () => {
     expect(filtros).toEqual([
       ["usuario_id", ID],
       ["finalidade", "recuperacao"],
-      ["usado_em", null],
     ]);
   });
 
-  it("falha ao aposentar não grava o token novo", async () => {
+  it("falha ao apagar os anteriores não grava o token novo", async () => {
     resposta = { data: null, error: { message: "conexão recusada" } };
     await expect(
       repo.criarTokenDeRecuperacao({

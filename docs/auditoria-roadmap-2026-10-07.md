@@ -151,11 +151,16 @@ arquivo, e as correções têm teste.
   repositório, com o Luiz.
 - **Não há exclusão de conta pela tela.** Direito do titular na LGPD (art.
   18). Fica para a página de privacidade (#235/#236) dizer como pedir.
-- **A decisão do admin apaga documento de `verificacao` com a chave
+- ~~**A decisão do admin apaga documento de `verificacao` com a chave
   anônima**, que não tem policy de `delete` — a remoção falharia em
-  silêncio. Sem efeito hoje: nenhum documento chega à fila (#133).
-- **`tokens_recuperacao` nunca é limpa.** Hash, usados ou vencidos; só
-  ocupam espaço.
+  silêncio. Sem efeito hoje: nenhum documento chega à fila (#133).~~
+  Corrigido na #419, e era maior: com a chave anônima a ação nem lia o
+  pedido. Usa a de serviço, e falha ao apagar vai ao Sentry.
+- ~~**`tokens_recuperacao` nunca é limpa.** Hash, usados ou vencidos; só
+  ocupam espaço.~~ Corrigido na #419: o token novo apaga os anteriores, e
+  a tabela guarda no máximo um por pessoa e finalidade.
+- ~~Falta `Cross-Origin-Opener-Policy`~~ (varredura de 12/10). Corrigido na
+  #419: `same-origin`.
 
 **Sem achado:** RLS das tabelas (todas ligadas, só policies de leitura),
 escrita por view (nenhuma é atualizável: todas têm `join` ou agregação),
