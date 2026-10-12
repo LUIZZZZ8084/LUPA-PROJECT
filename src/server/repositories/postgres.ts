@@ -520,6 +520,16 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     return data !== null;
   }
 
+  async liberarTesteGratis(usuarioId: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({ teste_gratis_usado_em: null })
+      .eq("id", usuarioId);
+
+    if (error) throw erros.indisponivel(`teste grátis: ${error.message}`);
+  }
+
   /**
    * Chama a função `estender_mensalidade_prestador` (#348): a conta
    * `max(agora, atual) + dias` acontece dentro do `update`, onde duas

@@ -403,12 +403,22 @@ export const config = {
      * ligado, antes de ele ligar. O túnel não é porta aberta: só repassa ao
      * Sentry, que confere se o destino é o projeto do DSN.
      *
-     * O ponto antes da extensão é literal (`\\.`) desde a #330. Sem o
-     * escape ele casava qualquer caractere, e todo caminho **terminado** em
-     * "png", "gif", "svg"… ficava fora do muro — `/vagas/acerto-gif`,
-     * `/perfil/png`. Hoje nenhuma rota tem texto livre no fim, e por isso
-     * não vazava nada; a primeira que tivesse herdaria o buraco.
+     * **Cada item vale para o caminho exato ou para o que vem depois de
+     * `/`** (#404). Sem a âncora, a lista era de prefixos de texto:
+     * `icon` deixava `/iconografia` fora do muro, `avatares` deixava
+     * `/avatares-de-alguem`, `api/cron` deixava `/api/cronograma`. Nenhuma
+     * dessas rotas existe, e por isso nada vazava; a primeira que existisse
+     * nasceria sem login e sem CSP, e nenhuma tela quebraria.
+     *
+     * **E não há mais exclusão por extensão.** Ela deixava fora qualquer
+     * caminho terminado em `.png`, `.svg`, `.webp`… em qualquer pasta —
+     * `/vagas/abc.png` respondia sem o cabeçalho de CSP. A #330 já tinha
+     * escapado o ponto; o problema que sobrou era o alcance. O que é
+     * estático de verdade mora em duas pastas de `public/`, `avatares` e
+     * `banner`, e entra por nome. Arquivo novo em `public/` vai numa
+     * delas ou ganha a própria linha aqui — fora disso, passa pelo muro,
+     * que é o lado seguro de errar.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|api/webhooks|api/cron|monitoring|icon|apple-icon|opengraph-image|avatares|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!(?:_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|robots\\.txt|sitemap\\.xml|api/webhooks|api/cron|monitoring|icon|apple-icon|opengraph-image|avatares|banner)(?:/|$)).*)",
   ],
 };

@@ -15,7 +15,7 @@ import {
  * aquele cliente ali não é uma ineficiência: é erro em tempo de execução.
  *
  * **E os cookies nunca fizeram diferença nestas consultas.** A Lupa não usa
- * Supabase Auth: a sessão é um JWT nosso (`lupa_sessao`), e a chave anônima
+ * Supabase Auth: a sessão é um JWT nosso (`__Host-lupa_sessao` em produção), e a chave anônima
  * alcança `job_listings` e `provider_listings` por `grant select ... to
  * anon`, não por sessão de ninguém. O cliente com cookie está lá por ser o
  * padrão do `@supabase/ssr`, e o que ele carrega é irrelevante para o
