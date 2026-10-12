@@ -27,7 +27,7 @@ import {
  * em vez de exercitá-lo: renomear o cookie passaria verde e derrubaria
  * toda sessão em produção. Mesma razão do CNPJ em `helpers.ts`.
  */
-const COOKIE_DE_SESSAO = "lupa_sessao";
+const COOKIE_DE_SESSAO = "__Host-lupa_sessao";
 
 /**
  * O que exige capacidade que o candidato não tem.
@@ -215,33 +215,38 @@ test.describe("o cookie de sessão", () => {
   });
 
   test("cookie adulterado é tratado como sem sessão, não como erro", async ({
-    browser,
+    playwright,
     baseURL,
   }) => {
-    const contexto = await browser.newContext();
-    await contexto.addCookies([
-      {
-        name: COOKIE_DE_SESSAO,
+    /*
+     * O cookie forjado vai no cabeçalho, e não por `addCookies` (#408).
+     * O nome `__Host-` exige `Secure`, e o Chrome recusa plantar cookie
+     * `Secure` para um endereço `http://` pelo protocolo de automação —
+     * mesmo aceitando o que o próprio servidor grava em 127.0.0.1. O que se
+     * testa é o servidor recebendo um token falso, e o cabeçalho é isso.
+     */
+    const api = await playwright.request.newContext({
+      baseURL,
+      extraHTTPHeaders: {
         // Três segmentos, como um JWT de verdade, para a verificação
         // chegar à assinatura em vez de morrer antes, no formato.
-        value: "eyJhbGciOiJIUzI1NiJ9.eyJwYXBlbCI6ImFkbWluIn0.assinatura-falsa",
-        url: baseURL as string,
+        cookie: `${COOKIE_DE_SESSAO}=eyJhbGciOiJIUzI1NiJ9.eyJwYXBlbCI6ImFkbWluIn0.assinatura-falsa`,
       },
-    ]);
+    });
 
-    const pagina = await contexto.newPage();
-    const resposta = await pagina.goto("/perfil");
+    const resposta = await api.get("/perfil", { maxRedirects: 0 });
 
     // Redireciona para o login, e não 500: assinatura inválida é caso
     // esperado, não exceção.
-    expect(pagina.url()).toContain("/entrar");
-    expect(resposta?.status()).toBeLessThan(500);
+    expect(resposta.status()).toBeGreaterThanOrEqual(300);
+    expect(resposta.status()).toBeLessThan(400);
+    expect(resposta.headers().location).toContain("/entrar");
 
     // E o papel forjado dentro do payload não vale nada.
-    const admin = await pagina.goto("/admin/painel");
-    expect(admin?.status()).not.toBe(200);
+    const admin = await api.get("/admin/painel", { maxRedirects: 0 });
+    expect(admin.status()).not.toBe(200);
 
-    await contexto.close();
+    await api.dispose();
   });
 });
 

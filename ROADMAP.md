@@ -14,6 +14,10 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 09/10/2026:
 
+- O cookie de sessão vira `__Host-lupa_sessao` em produção, e o token diz de
+  qual ambiente veio: o de um preview não vale mais em produção, mesmo com o
+  mesmo segredo. Todo mundo entra de novo uma vez —
+  [#408](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/408)
 - O matcher do proxy deixa de ter prefixos sem âncora e de excluir por
   extensão: `/iconografia` ou `/vagas/abc.png` passariam sem login e sem
   CSP. O estático entra por pasta (`avatares`, `banner`) —
