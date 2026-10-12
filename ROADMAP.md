@@ -8,9 +8,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 08/10/2026.**
+**Última atualização: 09/10/2026.**
 
 ## Concluído
+
+Em 09/10/2026:
+
+- O matcher do proxy deixa de ter prefixos sem âncora e de excluir por
+  extensão: `/iconografia` ou `/vagas/abc.png` passariam sem login e sem
+  CSP. O estático entra por pasta (`avatares`, `banner`) —
+  [#404](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/404)
 
 Em 08/10/2026:
 

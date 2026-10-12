@@ -80,8 +80,9 @@ alguém mexer nos módulos.
   Uma ação "sair de todos os aparelhos" fecha isso. **A segunda metade entrou
   na #402** ("Sair dos outros aparelhos", no perfil); o `__Host-` segue
   pendente — trocar o nome do cookie desloga todo mundo uma vez.
-- O matcher do `proxy.ts` tem prefixos sem âncora (`icon`, `avatares`,
-  `api/cron`) e exclui por extensão de arquivo.
+- ~~O matcher do `proxy.ts` tem prefixos sem âncora (`icon`, `avatares`,
+  `api/cron`) e exclui por extensão de arquivo.~~ Corrigido na #404: cada
+  item vale para o caminho exato ou depois de `/`, e o estático entra por pasta.
 - `confirmarParcelaDaAssinatura` confia no status embutido na fatura em vez de
   reler o pagamento.
 - ~~Um token de recuperação antigo continua válido por uma hora quando se pede
