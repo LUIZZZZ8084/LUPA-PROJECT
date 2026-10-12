@@ -97,6 +97,25 @@ export const ROTAS_PROFUNDAS_EMPRESA = [
  * é permitido, excluir em silêncio não.
  */
 export const ROTAS_NAO_VARRIDAS: Record<string, string> = {
+  /*
+   * As três institucionais (#235) ficam fora **enquanto** o controlador não
+   * estiver preenchido: até lá elas respondem 404 de propósito, e a
+   * varredura mediria a tela de erro dizendo que mede um documento legal.
+   *
+   * Esta exclusão é temporária por construção — sai junto com o CNPJ da
+   * PALU, e aí as três entram na varredura como páginas de texto longo,
+   * abertas e lidas no celular, que é onde contraste ruim e rolagem
+   * horizontal doem mais.
+   *
+   * O que cobre hoje: `suporte.test.ts` no serviço (gravação, envio, limite
+   * e o log que não reconstrói quem escreveu) e `paginas-institucionais.test.ts`
+   * no conteúdo — que os documentos não prometem o que o produto não faz.
+   */
+  "/termos":
+    "responde 404 até o controlador existir (PRONTO_PARA_PUBLICAR). Conteúdo coberto em paginas-institucionais.test.ts; entra na varredura quando o CNPJ for preenchido",
+  "/privacidade": "mesma razão de /termos, e mesma cobertura",
+  "/suporte":
+    "sobe junto com as outras duas, porque cita as duas em links — publicar antes deixaria dois 404 na página. O serviço é coberto em server/suporte.test.ts",
   "/admin":
     "sem sessão de admin responde 404, e a varredura mediria a página de erro dizendo que mede a fila de verificação. O 404 para anônimo é verificado em fluxos.spec.ts",
   "/admin/painel":

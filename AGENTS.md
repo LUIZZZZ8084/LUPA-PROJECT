@@ -203,6 +203,13 @@ de uma empresa grava o nome da empresa, não o do responsável — a seção
 envelhece porque o nome deixou de ser editável; a única troca que sobrou,
 a da Receita, leva junto as avaliações já feitas (`renomearAvaliacoesDe`).
 
+**E quem exclui a conta sai do comentário (#235).** A avaliação continua no
+perfil do prestador — é informação dele —, mas o gatilho
+`usuarios_anonimizam_avaliacoes` troca o nome por "Conta excluída" antes de
+a conta sair. É o que a Política de Privacidade promete, e a exclusão é
+feita pelo suporte direto no banco: por isso a garantia mora no banco, e não
+numa tela que o suporte não usa.
+
 **A confirmação é renderizada pelo servidor.** A action revalida a rota,
 e a revalidação desmonta o formulário levando junto o "enviado" que ele
 mostrava: quem avaliava via o formulário sumir, sem confirmação nenhuma.
