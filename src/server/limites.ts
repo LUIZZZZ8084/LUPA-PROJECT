@@ -151,6 +151,17 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
  * de fora, e confundir as duas foi o que deixou a fila de verificação
  * prometendo uma tela que nunca existiu.
  */
+/**
+ * Quantos currículos em PDF uma pessoa gera por janela (#425).
+ *
+ * Mora fora de `ORCAMENTOS` porque não é server action: é o `GET` de
+ * `/api/curriculo`, que o teto de `criarAcao` não alcança. E é o pedido
+ * mais caro de CPU do app — o documento é montado do zero a cada chamada.
+ * Dez cabem em quem ajusta o perfil e baixa de novo para conferir; quem
+ * passa disso está chamando em laço.
+ */
+export const ORCAMENTO_DO_CURRICULO_PDF = porJanela(10);
+
 export const SEM_ORCAMENTO: Record<string, string> = {
   "auth.entrar":
     "tem limite próprio, por e-mail, em `rate-limit.ts` — e a regra lá é " +

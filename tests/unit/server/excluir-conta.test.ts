@@ -15,6 +15,7 @@ vi.mock("@/lib/supabase/config", () => ({ isSupabaseConfigured: false }));
 import { gerarHash } from "@/server/auth/password";
 import { limparLimites } from "@/server/auth/rate-limit";
 import type { Autenticado, Papel } from "@/server/auth/rbac";
+import { entrar } from "@/server/auth/servico";
 import { excluirConta } from "@/server/conta/servico";
 import { ehAppError } from "@/server/errors";
 import {
@@ -110,6 +111,26 @@ describe("excluir a própria conta", () => {
       );
     }
     expect(codigos).toContain("muitas_tentativas");
+  });
+
+  /*
+   * O limite é o do login, pela mesma chave (#425): quem tem o cookie de
+   * outra pessoa não ganha tentativas a mais de senha por este caminho.
+   */
+  it("tentativas de login erradas contam contra a exclusão", async () => {
+    const sessao = await conta("candidato_clt");
+    for (let i = 0; i < 5; i++) {
+      await entrar({ email: "pessoa@teste.lupa", senha: `errada-${i}` }).catch(
+        () => {},
+      );
+    }
+
+    await expect(excluirConta(sessao, SENHA)).rejects.toSatisfy(
+      (e) => codigo(e) === "muitas_tentativas",
+    );
+    expect((await repo.porId(sessao.usuarioId))?.nomeCompleto).toBe(
+      "Pessoa de Teste",
+    );
   });
 
   it("com a senha, a conta fica sem nada que identifique a pessoa", async () => {

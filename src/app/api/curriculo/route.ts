@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { consumirOrcamento } from "@/server/auth/rate-limit";
 import { gerarCurriculoDoCandidato } from "@/server/curriculo/servico";
 import { comoAppError } from "@/server/errors";
+import { ORCAMENTO_DO_CURRICULO_PDF } from "@/server/limites";
 import { cronometro, log, novoRequestId } from "@/server/logger";
 
 /**
@@ -22,6 +24,17 @@ export async function GET() {
 
   try {
     const sessao = await sessaoAtual();
+    /*
+     * O teto vem antes de montar o PDF (#425): é o pedido mais caro de CPU
+     * do app, e o de `criarAcao` não alcança um `GET`. Sem sessão não há
+     * o que contar — o serviço recusa na linha seguinte.
+     */
+    if (sessao) {
+      await consumirOrcamento(
+        `acao:curriculo.gerar:u:${sessao.usuarioId}`,
+        ORCAMENTO_DO_CURRICULO_PDF,
+      );
+    }
     const pdf = await gerarCurriculoDoCandidato(sessao);
 
     log.info("currículo gerado", {
