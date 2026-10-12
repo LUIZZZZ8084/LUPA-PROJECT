@@ -216,8 +216,11 @@ roadmap verdes, sem force-push (12/10, com o OK do Luiz).
 - Não há caminho para tomar a conta de alguém só com o cookie: a senha só
   muda pelo link do e-mail, o e-mail não se edita, e excluir pede a senha.
 
-**De fora desta rodada:** os erros do Sentry, porque a extensão do navegador
-logado estava desconectada.
+**Sentry**, conferido no fim do dia, depois de a extensão do navegador
+reconectar: nenhum problema em aberto, e 7 erros em 30 dias, todos
+resolvidos, o último de 23/09. A integração está viva (chegaram registros de
+desempenho nas últimas 24 horas), e o erro de servidor do teste manual de
+23/09 chegou com o CPF mascarado — a falta de erro não é o Sentry desligado.
 
 **O que não é código e continua aberto:** os planos pagos que a meta de 10
 mil pessoas exige (Resend, Vercel Pro, Supabase Pro). O aviso de vaga nova
