@@ -48,6 +48,23 @@ const QUALIDADE = 80;
 export const TIPO_REDUZIDO = "image/webp";
 
 /**
+ * Quantos pixels uma foto pode declarar (#427).
+ *
+ * Sem isto vale o padrão do `sharp`, perto de 268 milhões: um PNG liso de
+ * 784 KB declara 16 mil por 16 mil pixels. Medido em 12/10/2026, ele é
+ * reduzido em menos de meio segundo, com pico de uns 190 MB de memória — o
+ * libvips decodifica em fluxo, e a função não cai. É endurecimento, não
+ * conserto: o teto divide esse pior caso por cinco, e o que se paga em
+ * CPU é cota da Vercel.
+ *
+ * Cinquenta milhões cobrem a câmera de celular comum (até 50 MP), e a foto
+ * acima de 2 MB já chega reduzida pelo próprio aparelho (#325). O `sharp`
+ * lê só o cabeçalho para saber o tamanho, então a recusa não decodifica
+ * nada.
+ */
+export const LIMITE_DE_PIXELS = 50_000_000;
+
+/**
  * O formato de verdade, pelos primeiros bytes (#368).
  *
  * `conferirArquivo` olha o tipo que o navegador **declarou**, e qualquer
@@ -117,7 +134,7 @@ export async function reduzirImagem(
   const { default: sharp } = await import("sharp");
 
   try {
-    const saida = await sharp(bytes)
+    const saida = await sharp(bytes, { limitInputPixels: LIMITE_DE_PIXELS })
       /*
        * Aplica a orientação do EXIF antes de o EXIF sair. Sem isto, a foto
        * tirada com o celular em pé fica deitada: o arquivo guarda os pixels
