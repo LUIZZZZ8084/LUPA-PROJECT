@@ -280,6 +280,10 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     return true;
   }
 
+  async liberarTesteGratis(usuarioId: string): Promise<void> {
+    this.testesGratisUsados.delete(usuarioId);
+  }
+
   /**
    * A mesma conta da função SQL (#348), em JS. Aqui o ler-computar-gravar é
    * seguro porque a demonstração roda num processo só, sem a concorrência

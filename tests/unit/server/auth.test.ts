@@ -138,6 +138,64 @@ describe("sessão", () => {
     limparCacheDoSegredo();
   });
 
+  /*
+   * O mesmo segredo em preview e produção fazia o token de um valer no
+   * outro (#408), e o preview pode rodar em demonstração, onde qualquer um
+   * cria conta. A audiência carrega o ambiente.
+   */
+  it("token de outro ambiente da Vercel é recusado, mesmo com o mesmo segredo", async () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    const { token } = await assinarSessao("usuario-1", "admin");
+    expect(await lerSessao(token)).not.toBeNull();
+
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(await lerSessao(token)).toBeNull();
+
+    const deProducao = await assinarSessao("usuario-1", "admin");
+    expect(await lerSessao(deProducao.token)).not.toBeNull();
+    vi.unstubAllEnvs();
+    vi.stubEnv("SESSION_SECRET", "a".repeat(48));
+  });
+
+  it("fora da Vercel o ambiente é local, e o token de lá não vale em produção", async () => {
+    const { token } = await assinarSessao("usuario-1", "empresa");
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64url").toString(),
+    );
+    expect(payload.aud).toBe("lupa-app:local");
+
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(await lerSessao(token)).toBeNull();
+    vi.unstubAllEnvs();
+    vi.stubEnv("SESSION_SECRET", "a".repeat(48));
+  });
+
+  /*
+   * `__Host-` exige `Secure`, `Path=/` e nenhum `Domain` (#408). Se o
+   * nome levasse o prefixo sem essas três, o navegador recusaria o cookie e
+   * ninguém conseguiria entrar; se as três valessem sem o prefixo, um
+   * subdomínio poderia gravar uma sessão por cima.
+   */
+  it("em produção o cookie se chama __Host- e cumpre o que o prefixo exige", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.resetModules();
+    const { CONFIG_SESSAO: emProducao } = await import("@/server/auth/session");
+
+    expect(emProducao.NOME_COOKIE).toBe("__Host-lupa_sessao");
+    const opcoes = emProducao.opcoesDoCookie(60) as Record<string, unknown>;
+    expect(opcoes.secure).toBe(true);
+    expect(opcoes.path).toBe("/");
+    expect(opcoes).not.toHaveProperty("domain");
+
+    vi.stubEnv("NODE_ENV", "test");
+    vi.resetModules();
+  });
+
+  it("fora de produção o cookie não leva o prefixo, porque não é Secure", () => {
+    expect(CONFIG_SESSAO.NOME_COOKIE).toBe("lupa_sessao");
+    expect(CONFIG_SESSAO.opcoesDoCookie(60).secure).toBe(false);
+  });
+
   it("token vazio ou sem sentido devolve null, sem lançar", async () => {
     expect(await lerSessao("")).toBeNull();
     expect(await lerSessao("não.é.jwt")).toBeNull();
@@ -261,6 +319,67 @@ describe("sessão", () => {
     const { expiraEm } = await assinarSessao("u1", "empresa", login);
 
     expect(expiraEm).toBe(login + CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS);
+  });
+
+  /**
+   * Reemitir sem senha não recomeça os trinta dias (#413).
+   *
+   * Sair dos outros aparelhos e virar prestador precisam de `iat` novo,
+   * para escapar do corte gravado na mesma ação. Se o teto também contasse
+   * dali, repetir a ação manteria a mesma sessão viva para sempre.
+   */
+  it("reemitir com o login antigo mantém o teto do login", async () => {
+    const agora = Math.floor(Date.now() / 1000);
+    const login = agora - 29 * 24 * 60 * 60;
+
+    const { token, expiraEm } = await assinarSessao(
+      "u1",
+      "empresa",
+      undefined,
+      login,
+    );
+    const lida = await lerSessao(token);
+
+    expect(expiraEm).toBe(login + CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS);
+    expect(lida?.emitidoEm).toBeGreaterThanOrEqual(agora);
+    expect(lida?.entrouEm).toBe(login);
+  });
+
+  it("renovar uma sessão reemitida conta o teto do login, não do iat", async () => {
+    const agora = Math.floor(Date.now() / 1000);
+    const dia = 24 * 60 * 60;
+    const login = agora - 27 * dia;
+    const reemitida = agora - 2 * dia;
+
+    const novo = await renovarSeNecessario({
+      usuarioId: "u1",
+      papel: "empresa",
+      expiraEm: agora + dia,
+      emitidoEm: reemitida,
+      entrouEm: login,
+    });
+    const lida = await lerSessao(novo?.token ?? "");
+
+    expect(novo?.expiraEm).toBe(login + CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS);
+    // O `iat` continua o da reemissão: é ele que a revogação compara.
+    expect(lida?.emitidoEm).toBe(reemitida);
+    expect(lida?.entrouEm).toBe(login);
+  });
+
+  it("um login depois do iat não estica o teto", async () => {
+    const agora = Math.floor(Date.now() / 1000);
+    const login = agora - 29 * 24 * 60 * 60;
+
+    const { expiraEm } = await assinarSessao("u1", "empresa", login, agora);
+
+    expect(expiraEm).toBe(login + CONFIG_SESSAO.DURACAO_MAXIMA_SEGUNDOS);
+  });
+
+  it("token de login comum lê o login no próprio iat", async () => {
+    const { token } = await assinarSessao("u1", "empresa");
+    const lida = await lerSessao(token);
+
+    expect(lida?.entrouEm).toBe(lida?.emitidoEm);
   });
 
   it("o cookie é httpOnly e SameSite=Lax", () => {

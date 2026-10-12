@@ -11,11 +11,14 @@ import {
 import {
   conferirLimite,
   consumirOrcamento,
-  registrarFalha,
   registrarSucesso,
   reservarTentativa,
+  somarUso,
 } from "./rate-limit";
-import { LIMITE_DE_CONFLITOS_NO_CADASTRO } from "./rate-limit-tipos";
+import {
+  LIMITE_DE_CADASTROS_POR_ORIGEM,
+  LIMITE_DE_CONFLITOS_NO_CADASTRO,
+} from "./rate-limit-tipos";
 import type { DadosCadastro, DadosLogin } from "./schemas";
 
 /**
@@ -231,8 +234,11 @@ export async function cadastrar(
    * de senha, então sucesso zera o contador; aqui o que se contém é a
    * criação em si, e zerar a cada conta criada deixaria o limite inútil
    * justamente contra quem consegue criar.
+   *
+   * O teto é o do cadastro, não o da senha (#415): a origem aqui é um IP,
+   * e um IP pode ser uma sala inteira.
    */
-  await registrarFalha(chave);
+  await somarUso(chave, LIMITE_DE_CADASTROS_POR_ORIGEM);
 
   return semSenha(usuario);
 }

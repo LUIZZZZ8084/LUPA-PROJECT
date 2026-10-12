@@ -8,9 +8,26 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 08/10/2026.**
+**Última atualização: 09/10/2026.**
 
 ## Concluído
+
+Em 09/10/2026:
+
+- O cookie de sessão vira `__Host-lupa_sessao` em produção, e o token diz de
+  qual ambiente veio: o de um preview não vale mais em produção, mesmo com o
+  mesmo segredo. Todo mundo entra de novo uma vez —
+  [#408](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/408)
+- O matcher do proxy deixa de ter prefixos sem âncora e de excluir por
+  extensão: `/iconografia` ou `/vagas/abc.png` passariam sem login e sem
+  CSP. O estático entra por pasta (`avatares`, `banner`) —
+  [#404](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/404)
+- A parcela da assinatura relê o pagamento em vez de confiar no resumo da
+  fatura: lida depois de um estorno, ela ainda dizia aprovado —
+  [#405](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/405)
+- Teste grátis que falha ao dar os dias é devolvido, e a assinatura volta a
+  pendente para o reenvio do webhook conceder de novo —
+  [#406](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/406)
 
 Em 08/10/2026:
 
