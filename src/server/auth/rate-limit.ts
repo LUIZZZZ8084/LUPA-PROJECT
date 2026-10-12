@@ -245,6 +245,25 @@ export async function reservarTentativa(chave: string): Promise<void> {
  * quem errou de boa-fé o custo é a janela, que é curta justamente por
  * isso.
  */
+/**
+ * Soma um uso **já feito**, sem recusar este (#415).
+ *
+ * Para o cadastro, que confere o bloqueio antes (`conferirLimite`) e só
+ * conta a conta criada: recusar depois de criar seria a mensagem de erro
+ * para quem acabou de conseguir. O bloqueio fica gravado e quem chega em
+ * seguida o encontra. O `- 1` faz `chamadas` continuar dizendo quantas
+ * passam: a que completa o teto é a última aceita, não a primeira recusada.
+ */
+export async function somarUso(
+  chave: string,
+  orcamento: Orcamento,
+): Promise<void> {
+  await repositorio().registrarUso(chave, {
+    ...orcamento,
+    chamadas: orcamento.chamadas - 1,
+  });
+}
+
 export async function consumirOrcamento(
   chave: string,
   orcamento: Orcamento,

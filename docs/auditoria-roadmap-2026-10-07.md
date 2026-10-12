@@ -78,12 +78,14 @@ alguém mexer nos módulos.
   Supabase, então o host saiu.
 - O cookie de sessão não tem o prefixo `__Host-`, e o logout só limpa o cookie.
   Uma ação "sair de todos os aparelhos" fecha isso. **A segunda metade entrou
-  na #402** ("Sair dos outros aparelhos", no perfil); o `__Host-` segue
-  pendente — trocar o nome do cookie desloga todo mundo uma vez.
-- O matcher do `proxy.ts` tem prefixos sem âncora (`icon`, `avatares`,
-  `api/cron`) e exclui por extensão de arquivo.
-- `confirmarParcelaDaAssinatura` confia no status embutido na fatura em vez de
-  reler o pagamento.
+  na #402** ("Sair dos outros aparelhos", no perfil), e o `__Host-` na #408,
+  com o custo de deslogar todo mundo uma vez.
+- ~~O matcher do `proxy.ts` tem prefixos sem âncora (`icon`, `avatares`,
+  `api/cron`) e exclui por extensão de arquivo.~~ Corrigido na #404: cada
+  item vale para o caminho exato ou depois de `/`, e o estático entra por pasta.
+- ~~`confirmarParcelaDaAssinatura` confia no status embutido na fatura em vez de
+  reler o pagamento.~~ Corrigido na #405: status e valor vêm de
+  `/v1/payments/{id}`.
 - ~~Um token de recuperação antigo continua válido por uma hora quando se pede
   outro, e `/verificar-email` consome o token no GET, o que um antivírus de
   e-mail pode gastar.~~ Corrigido na #398: o token novo aposenta os
@@ -92,11 +94,14 @@ alguém mexer nos módulos.
   esgota a cota de todo mundo.~~ Corrigido na #407: 20 por origem e 5 por conta,
   por dia.
 - `SESSION_SECRET` igual em preview e produção aceitaria token de um no outro.
-  Confirmar na Vercel que são diferentes.
+  Desde a #408 a audiência do token carrega o ambiente, e o de preview não vale
+  em produção mesmo com o segredo igual. Conferir na Vercel continua sendo o
+  certo.
 - `CRON_SECRET` não está na lista de variáveis obrigatórias da subida, de
   propósito: exigir derrubaria o deploy se faltasse. A rota responde 503.
-- Se `estenderMensalidade` falhar depois de a reivindicação do teste grátis ser
-  gravada, o teste é gasto sem dar os dias. E não se sabe se o Mercado Pago
+- ~~Se `estenderMensalidade` falhar depois de a reivindicação do teste grátis ser
+  gravada, o teste é gasto sem dar os dias.~~ Corrigido na #406: a falha devolve
+  o teste e a assinatura a `pendente`. Segue sem resposta se o Mercado Pago
   barra teste repetido no mesmo cartão.
 
 ## Ordem de merge (seguida em 08/10)

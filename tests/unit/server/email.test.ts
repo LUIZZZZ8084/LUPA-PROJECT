@@ -146,6 +146,13 @@ describe("enviarEmail", () => {
  * Sentry. O envio podia parar por dias. O que se cobra aqui é a linha que
  * o logger manda ao Sentry: nível `error`, código `indisponivel`.
  */
+/** O nível de cada linha que o logger escreveu em `console.error`. */
+function niveis(saida: { mock: { calls: unknown[][] } }): string[] {
+  return saida.mock.calls.map(
+    ([linha]) => (JSON.parse(String(linha)) as { nivel: string }).nivel,
+  );
+}
+
 describe("enviarEmail, quando falha", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -183,6 +190,55 @@ describe("enviarEmail, quando falha", () => {
 
     expect(linha.nivel).toBe("error");
     expect(String(linha.mensagem)).toMatch(/limite de envio/);
+  });
+
+  /**
+   * Num dia de lançamento acima da cota do Resend, cada cadastro era um
+   * evento no Sentry, e a cota dele acabava junto (#417).
+   */
+  it("a cota estourada avisa o Sentry uma vez por janela", async () => {
+    vi.stubEnv("RESEND_API_KEY", "chave-de-teste");
+    vi.stubEnv("EMAIL_REMETENTE", "Lupa <nao-responda@lupapp.com.br>");
+    const { enviarEmail } = await carregar();
+    const saida = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cota = respostaJson({ message: "rate" }, 429);
+
+    for (let i = 0; i < 5; i++) await enviarEmail(EMAIL, cota);
+
+    expect(niveis(saida)).toEqual(["error", "warn", "warn", "warn", "warn"]);
+  });
+
+  it("passada a janela, a cota avisa de novo", async () => {
+    vi.stubEnv("RESEND_API_KEY", "chave-de-teste");
+    vi.stubEnv("EMAIL_REMETENTE", "Lupa <nao-responda@lupapp.com.br>");
+    const { enviarEmail } = await carregar();
+    const saida = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cota = respostaJson({ message: "rate" }, 429);
+
+    vi.useFakeTimers();
+    try {
+      await enviarEmail(EMAIL, cota);
+      vi.setSystemTime(Date.now() + 16 * 60 * 1000);
+      await enviarEmail(EMAIL, cota);
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(niveis(saida)).toEqual(["error", "error"]);
+  });
+
+  /** O que não é cota é defeito, e cada um importa. */
+  it("falha que não é cota avisa toda vez", async () => {
+    vi.stubEnv("RESEND_API_KEY", "chave-de-teste");
+    vi.stubEnv("EMAIL_REMETENTE", "Lupa <nao-responda@lupapp.com.br>");
+    const { enviarEmail } = await carregar();
+    const saida = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    for (let i = 0; i < 3; i++) {
+      await enviarEmail(EMAIL, respostaJson({ message: "boom" }, 500));
+    }
+
+    expect(niveis(saida)).toEqual(["error", "error", "error"]);
   });
 
   it("rede fora do ar também vira erro", async () => {

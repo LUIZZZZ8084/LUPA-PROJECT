@@ -3,7 +3,10 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CONFIG_LIMITE, limparLimites } from "@/server/auth/rate-limit";
-import { LIMITE_DE_CONFLITOS_NO_CADASTRO } from "@/server/auth/rate-limit-tipos";
+import {
+  LIMITE_DE_CADASTROS_POR_ORIGEM,
+  LIMITE_DE_CONFLITOS_NO_CADASTRO,
+} from "@/server/auth/rate-limit-tipos";
 import { schemaCadastro, schemaLogin } from "@/server/auth/schemas";
 import { cadastrar, entrar, usuarioDaSessao } from "@/server/auth/servico";
 import { ehAppError } from "@/server/errors";
@@ -811,8 +814,10 @@ describe("limite de tentativas no cadastro", () => {
     return { ...candidato, email: `pessoa${n}@teste.lupa`, cpf: cpfDeTeste(n) };
   }
 
+  const TETO = LIMITE_DE_CADASTROS_POR_ORIGEM.chamadas;
+
   it("contas seguidas da mesma origem acabam bloqueadas", async () => {
-    for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS; i++) {
+    for (let i = 0; i < TETO; i++) {
       await cadastrar(conta(i), "203.0.113.7");
     }
 
@@ -821,9 +826,22 @@ describe("limite de tentativas no cadastro", () => {
     );
   });
 
+  /**
+   * Um posto de atendimento cadastra mais de cinco pessoas sem travar
+   * (#415). Era o mesmo 5 da tentativa de senha, e a sexta pessoa da sala
+   * desistia.
+   */
+  it("uma sala cheia cadastra pelo mesmo IP", async () => {
+    expect(TETO).toBeGreaterThan(CONFIG_LIMITE.MAX_TENTATIVAS);
+    for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS + 5; i++) {
+      const u = await cadastrar(conta(i), "203.0.113.8");
+      expect(u.email).toBe(`pessoa${i}@teste.lupa`);
+    }
+  });
+
   /** Bloquear uma origem não pode derrubar o cadastro de todo mundo. */
   it("outra origem continua livre", async () => {
-    for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS; i++) {
+    for (let i = 0; i < TETO; i++) {
       await cadastrar(conta(i), "203.0.113.7");
     }
 
@@ -836,7 +854,7 @@ describe("limite de tentativas no cadastro", () => {
    * é adivinhação de senha; aqui o que se contém é a criação em si.
    */
   it("o sucesso conta para o limite, senão ele não conteria nada", async () => {
-    for (let i = 0; i < CONFIG_LIMITE.MAX_TENTATIVAS; i++) {
+    for (let i = 0; i < TETO; i++) {
       await cadastrar(conta(i), "203.0.113.9");
     }
 

@@ -55,6 +55,23 @@ export interface RepositorioLimite {
  * barra a segunda. Quem cria conta com sucesso não passa por aqui — o limite
  * de criação (`cadastro:<origem>`) segue como está.
  */
+/**
+ * Contas criadas por origem a cada 15 minutos (#415).
+ *
+ * Era o mesmo 5 da tentativa de senha, e o cadastro não tem sessão: a chave
+ * é o IP, e muita gente de boa-fé divide um. Posto do SINE ou RH de empresa
+ * cadastrando gente no mesmo computador, feira de emprego no Wi-Fi do local,
+ * 4G atrás de CGNAT num pico de divulgação — a sexta pessoa lia "muitas
+ * tentativas" e desistia. Vinte cobre uma sala cheia num quarto de hora sem
+ * abrir a porta para conta falsa em escala: quem cria em massa de um lugar
+ * só continua limitado a oitenta por hora, e o IPv6 agora é agrupado pela
+ * rede (`agruparOrigem`), então trocar de endereço não renova o teto.
+ */
+export const LIMITE_DE_CADASTROS_POR_ORIGEM = {
+  chamadas: 20,
+  janelaSegundos: 15 * 60,
+};
+
 export const LIMITE_DE_CONFLITOS_NO_CADASTRO = {
   chamadas: 10,
   janelaSegundos: 15 * 60,
