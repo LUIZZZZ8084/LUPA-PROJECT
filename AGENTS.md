@@ -758,6 +758,17 @@ endereço e sem o corpo da resposta do Resend**, que pode ecoar o
 destinatário: a regra do log de recuperação vale em dobro no momento em
 que mais se lê log.
 
+**Mas a cota avisa uma vez por janela, não a cada e-mail (#417).** Cota
+estourada é o mesmo fato repetido em todo cadastro dali em diante, e cada
+repetição virava um evento: um dia de lançamento acima dos 100 do Resend
+gastava a cota do Sentry, e o erro de pagamento que viesse depois não
+chegava a ninguém. O primeiro 429 vai ao Sentry; os seguintes, por 15
+minutos, ficam no log comum. É por instância — cada função fria avisa de
+novo —, e basta: o que importa é saber, não contar. O que não é cota
+continua indo toda vez, porque cada um é um defeito. *Alarme que dispara a
+cada repetição do mesmo fato gasta o canal por onde chegaria o próximo
+fato.*
+
 **O token na URL não vai ao Sentry (#360).** O link leva o token na
 query, e a URL entra no evento (`request.url`, `query_string`, atributos
 de span). A máscara por nome de chave não alcançava: a chave ali é `url`,
