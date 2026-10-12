@@ -1,4 +1,4 @@
-# Roadmap da auditoria de código (06/10/2026, estado de 08/10)
+# Roadmap da auditoria de código (06/10/2026, estado de 12/10)
 
 Leitura de código da Lupa com o roteiro da skill de auditoria da Cloudflare:
 quatro agentes de reconhecimento e caçadores por área. Esta página junta o que
@@ -11,6 +11,11 @@ abaixo, depois de rodarem juntos num branch local (`verify` e e2e inteiros
 verdes), e o SQL do #393 rodou antes. As seis áreas que tinham ficado sem
 leitura foram lidas: o resultado está em "Segunda leitura", no fim, e as
 correções na #396.
+
+**Atualização de 12/10.** Terceira rodada, em "Terceira rodada", antes de
+"Como foi feito": revisão dos PRs que entraram desde 08/10, prontidão para
+receber mais de 10 mil pessoas, logs de produção e mais nove correções, todas
+mergeadas e no ar. Nada desta página está esperando decisão.
 
 **Resumo.** Treze pontos viraram correção, em dez pull requests, todos com
 teste. Nada ficou esperando
@@ -174,6 +179,49 @@ contra a lista de siglas, termo gravado com 2 a 80 caracteres), CSP (nonce,
 `frame-ancestors`, `object-src`, `base-uri` e `form-action` travados;
 imagem remota só do host do Supabase no otimizador), push (inscrição por
 `endpoint`, que só o navegador conhece) e segredos no repositório.
+
+## Terceira rodada (12/10)
+
+Leitura direta, sem agentes. Nada foi enviado a produção para testar: a
+varredura de páginas rodou num servidor local em modo demonstração, e no
+banco de produção só se leu (a não ser os quatro SQL abaixo, rodados com o
+OK do Luiz).
+
+**Corrigido e mergeado:**
+
+| PR | Issue | O que corrige |
+|---|---|---|
+| #414 | #413 | Reemitir a sessão sem senha não recomeça os 30 dias do teto. |
+| #416 | #415 | Cadastro aceita 20 contas por IP a cada 15 minutos (era 5: um posto de atendimento travava na sexta pessoa), e IPv6 é agrupado pela rede /64 em todo teto por origem. |
+| #418 | #417 | Cota estourada do Resend avisa o Sentry uma vez por janela, em vez de gastar a cota dele num dia de lançamento. |
+| #411 | #407 | Cota diária de e-mail (do Paulinho), ajustada: por origem e por fluxo, e por conta e origem, para ninguém gastar a cota de outra pessoa. SQL rodado. |
+| #420 | #419 | Decisão do admin com a chave de serviço; tokens antigos apagados; `Cross-Origin-Opener-Policy`. |
+| #422 | #421 | A chave anônima perde a escrita que o Supabase concede por padrão (32 relações). SQL rodado. |
+| #424 | #423 | Excluir a própria conta pelo perfil (LGPD). SQL rodado. |
+| #426 | #425 | A senha de excluir conta gasta o limite do login; o PDF do currículo tem teto. |
+| #428 | #427 | Teto de pixels na foto. Medido antes: o pior caso não derrubava a função (0,4 s, 190 MB); é endurecimento. |
+
+**Configuração:** a `main` passou a exigir PR com tipos, testes, Playwright e
+roadmap verdes, sem force-push (12/10, com o OK do Luiz).
+
+**Conferido sem achado:**
+- e2e inteiro na `main`: 578 passaram, nenhuma falha.
+- Varredura logada, como candidato e como empresa: nenhuma página carrega
+  hash, chave, CPF ou token; vaga com HTML e script no texto não executa.
+- Rotas de API conferem o dono antes de responder.
+- Logs de produção do Supabase, 24 horas: nenhum erro na borda nem no
+  Postgres.
+- `npm audit`: as oito vulnerabilidades são de ferramentas de
+  desenvolvimento; as dependências de produção estão limpas.
+- Não há caminho para tomar a conta de alguém só com o cookie: a senha só
+  muda pelo link do e-mail, o e-mail não se edita, e excluir pede a senha.
+
+**De fora desta rodada:** os erros do Sentry, porque a extensão do navegador
+logado estava desconectada.
+
+**O que não é código e continua aberto:** os planos pagos que a meta de 10
+mil pessoas exige (Resend, Vercel Pro, Supabase Pro). O aviso de vaga nova
+chega a até 500 pessoas por vaga; passar disso pede fila de envio.
 
 ## Como foi feito
 
