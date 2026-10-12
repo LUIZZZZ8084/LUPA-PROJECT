@@ -1720,3 +1720,19 @@ revoke select on pagamentos       from anon, authenticated;
 revoke select on assinaturas      from anon, authenticated;
 revoke select on carteiras_vaga   from anon, authenticated;
 revoke select on tokens_recuperacao from anon, authenticated;
+
+/*
+ * E a escrita, em tudo (#421). O Supabase concede a `anon` e
+ * `authenticated` insert, update, delete, truncate, references e trigger em
+ * toda tabela e view do schema público, e a aplicação nunca escreve com
+ * essas chaves — toda escrita passa pela de serviço. O RLS sem policy de
+ * escrita já barra; isto é a segunda camada, como o `revoke select` acima é
+ * para a leitura. O `alter default privileges` cobre as tabelas criadas
+ * depois. Em banco existente: `aplica-anon-sem-escrita.sql`.
+ */
+revoke insert, update, delete, truncate, references, trigger
+  on all tables in schema public from anon, authenticated;
+
+alter default privileges in schema public
+  revoke insert, update, delete, truncate, references, trigger
+  on tables from anon, authenticated;

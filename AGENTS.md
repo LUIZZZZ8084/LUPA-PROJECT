@@ -2948,6 +2948,16 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   produção** — e, quando a resposta é "não", teste o artefato que viaja
   para produção, não o comportamento local.
 
+  **E a escrita ficou de fora por um mês (#421).** O mesmo padrão do
+  Supabase concede `insert`, `update`, `delete` e `truncate` a `anon` e
+  `authenticated` em toda tabela e view, e o schema só revogava o
+  `select`: em produção eram 32 relações graváveis pela chave anônima,
+  barradas só pelo RLS sem policy de escrita. A aplicação nunca escreve
+  com essa chave, então o `revoke` no fim do `schema.sql` não muda nada
+  para ela — é a segunda camada que já existia para a leitura. O teste
+  concede tudo, como o Supabase, roda `aplica-anon-sem-escrita.sql` por
+  cima numa transação e confere que sobrou só o `select` público.
+
 - **Repositório em memória numa variável de módulo não atravessa
   bundles.** Server action e route handler viram bundles diferentes no
   build de produção, e cada um recebe a própria cópia do módulo — logo, o

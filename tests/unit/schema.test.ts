@@ -773,6 +773,59 @@ describe("grants de anon e authenticated", () => {
   });
 
   /**
+   * E a escrita (#421). Mesma lição das varreduras de leitura: no PGlite
+   * ninguém concedeu nada, e perguntar ao banco limpo passaria sem revoke
+   * nenhum. Aqui se reproduz o padrão do Supabase — tudo concedido às duas
+   * chaves — e o script de produção roda por cima, numa transação que
+   * volta atrás no fim.
+   */
+  it("o script de produção tira a escrita e mantém a leitura pública", async () => {
+    const script = readFileSync(
+      join(process.cwd(), "supabase/aplica-anon-sem-escrita.sql"),
+      "utf8",
+    );
+    await db.exec("begin");
+    try {
+      await db.exec(
+        "grant all on all tables in schema public to anon, authenticated;",
+      );
+      await db.exec(script);
+
+      const escrita = await db.query<{ relacao: string; privilegio: string }>(
+        `select c.relname as relacao, p.privilegio
+           from pg_class c
+           join pg_namespace n on n.oid = c.relnamespace
+           cross join unnest(array['INSERT','UPDATE','DELETE','TRUNCATE',
+                                   'REFERENCES','TRIGGER']) as p(privilegio)
+          where n.nspname = 'public'
+            and c.relkind in ('r', 'v', 'm')
+            and (has_table_privilege('anon', c.oid, p.privilegio)
+                 or has_table_privilege('authenticated', c.oid, p.privilegio))`,
+      );
+      expect(escrita.rows).toEqual([]);
+
+      for (const nome of PUBLICAS_DE_PROPOSITO) {
+        const leitura = await db.query<{ le: boolean }>(
+          `select has_table_privilege('anon', $1, 'SELECT') as le`,
+          [nome],
+        );
+        expect(leitura.rows[0].le, `anon deixou de ler ${nome}`).toBe(true);
+      }
+    } finally {
+      await db.exec("rollback");
+    }
+  });
+
+  it("schema.sql revoga a escrita das duas chaves em tudo", () => {
+    expect(SCHEMA).toMatch(
+      /revoke\s+insert,\s*update,\s*delete,\s*truncate,\s*references,\s*trigger\s+on\s+all\s+tables\s+in\s+schema\s+public\s+from\s+anon,\s*authenticated/i,
+    );
+    expect(SCHEMA).toMatch(
+      /alter\s+default\s+privileges\s+in\s+schema\s+public\s+revoke\s+insert/i,
+    );
+  });
+
+  /**
    * O CPF é o documento de quem oferece serviço, e mora em `usuarios`.
    *
    * O lugar simétrico ao CNPJ seria `perfis_prestador` — e é justamente

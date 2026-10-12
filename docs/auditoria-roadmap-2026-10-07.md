@@ -97,6 +97,9 @@ alguém mexer nos módulos.
   Desde a #408 a audiência do token carrega o ambiente, e o de preview não vale
   em produção mesmo com o segredo igual. Conferir na Vercel continua sendo o
   certo.
+- ~~A chave anônima tem `insert`, `update`, `delete` e `truncate` em todas as
+  32 relações do schema público~~ (varredura de 12/10, no banco de produção).
+  Corrigido na #421: o RLS já barrava, e o `revoke` é a segunda camada.
 - `CRON_SECRET` não está na lista de variáveis obrigatórias da subida, de
   propósito: exigir derrubaria o deploy se faltasse. A rota responde 503.
 - ~~Se `estenderMensalidade` falhar depois de a reivindicação do teste grátis ser
