@@ -760,15 +760,32 @@ que mais se lê log.
 
 **E a cota do dia é dividida (#407).** Os 100 e-mails por dia do Resend
 são uma cota só para o app inteiro, e o limite de 5 em 15 minutos por
-origem deixava um mesmo IP mandar 480 por dia. Hoje há dois tetos diários
-por cima dele, em `src/server/auth/cota-de-email.ts`: 20 por origem,
-somando recuperação e confirmação, e 5 por conta de destino. O da origem
-conta todo pedido, exista a conta ou não — contando só os que enviam, o
-bloqueio chegaria mais cedo para quem testa e-mails com conta, e diria
-quais têm. O da conta, na recuperação, não muda a resposta: passa do teto,
-não envia, e responde o mesmo "se existe uma conta". Na confirmação a
+origem deixava um mesmo IP mandar 480 por dia. Hoje há tetos diários por
+cima dele, em `src/server/auth/cota-de-email.ts`: por origem, **separado
+por fluxo** (20 confirmações e 10 recuperações), e por conta de destino. O
+da origem conta todo pedido, exista a conta ou não — contando só os que
+enviam, o bloqueio chegaria mais cedo para quem testa e-mails com conta, e
+diria quais têm. O da conta, na recuperação, não muda a resposta: passa do
+teto, não envia, e responde o mesmo "se existe uma conta". Na confirmação a
 pessoa tem sessão, e a tela diz que passou da cota. Nos dois casos nenhum
 token novo é emitido, e o último link enviado continua valendo.
+
+**A cota é de quem recebe, e quem pede não pode gastá-la toda.** A
+primeira versão contava 5 por conta, de qualquer lugar: cinco pedidos com o
+e-mail de alguém deixavam essa pessoa um dia sem recuperar a senha, lendo
+"enviamos" sem receber nada. Hoje são 3 por conta **e** origem, e 10 por
+conta somando as origens — o par vem antes, então o que passa dele não
+gasta o total. Travar a caixa de alguém de propósito passa a pedir quatro
+origens. E os dois fluxos não dividem o balde da origem porque um IP de
+operadora móvel, num dia de divulgação, gastava a cota com confirmações de
+cadastro, e a recuperação passava a recusar quem nunca tinha pedido nada.
+*Teto que protege uma pessoa não pode ser gasto por outra: confira quem
+paga a conta antes de escolher a chave.*
+
+O bloqueio dura até a janela vencer, contada do primeiro pedido, porque
+quem decide é só `consumirOrcamento`. Conferir antes, como o login faz,
+seria pior aqui: `conferirLimite` lê `bloqueado_ate`, que cada pedido
+acima do teto empurra para frente.
 
 Para a janela de um dia existir, o banco precisou guardar a janela de cada
 chave (`tentativas_de_acesso.janela_segundos`): a limpeza apagava toda

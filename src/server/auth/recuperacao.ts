@@ -122,7 +122,7 @@ export async function pedirRecuperacao(
   await reservarTentativa(`recuperacao:${opcoes.origem}`);
   // A cota do dia (#407): conta antes de saber se a conta existe, para o
   // bloqueio não dizer quem tem.
-  await reservarEmailDaOrigem(opcoes.origem);
+  await reservarEmailDaOrigem("recuperacao", opcoes.origem);
 
   const repo = repositorioUsuarios();
   const usuario = await repo.porEmail(email.trim().toLowerCase());
@@ -146,7 +146,7 @@ export async function pedirRecuperacao(
    * a lista que a tela se recusa a dar. E nenhum token novo é emitido, então
    * o último link enviado continua valendo.
    */
-  if (!(await cabeEmailParaConta(usuario.id))) {
+  if (!(await cabeEmailParaConta(usuario.id, opcoes.origem))) {
     log.info("recuperação além da cota da conta, sem envio", {
       acao: "auth.recuperar",
     });

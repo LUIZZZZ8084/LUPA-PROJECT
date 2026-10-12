@@ -102,7 +102,7 @@ export async function enviarVerificacaoDeEmail(
 
   await conferirLimite(`verificacao:${opcoes.origem}`);
   await reservarTentativa(`verificacao:${opcoes.origem}`);
-  await reservarEmailDaOrigem(opcoes.origem);
+  await reservarEmailDaOrigem("verificacao", opcoes.origem);
 
   const repo = repositorioUsuarios();
   const usuario = await repo.porId(usuarioId);
@@ -116,7 +116,7 @@ export async function enviarVerificacaoDeEmail(
    * Aqui a pessoa tem sessão e o endereço é dela: dizer que passou da cota
    * não revela nada (#407). Sem token novo, o último link continua valendo.
    */
-  if (!(await cabeEmailParaConta(usuario.id))) {
+  if (!(await cabeEmailParaConta(usuario.id, opcoes.origem))) {
     return {
       ok: false,
       motivo:

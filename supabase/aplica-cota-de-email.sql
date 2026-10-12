@@ -4,8 +4,8 @@
 -- O Resend gratis manda 100 e-mails por dia, uma cota so para o app
 -- inteiro. A recuperacao de senha e a confirmacao de e-mail tinham limite
 -- so de 5 em 15 minutos por origem: ate 480 envios por dia do mesmo IP.
--- O codigo novo soma dois tetos diarios em `tentativas_de_acesso`: um por
--- origem e um por conta de destino.
+-- O codigo novo soma tetos diarios em `tentativas_de_acesso`: por origem
+-- (um por fluxo) e por conta de destino.
 --
 -- O banco precisa saber a janela de cada chave, porque a limpeza apagava
 -- toda linha com mais de uma hora que nao estivesse bloqueada. Com janela

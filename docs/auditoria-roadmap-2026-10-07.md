@@ -91,8 +91,8 @@ alguém mexer nos módulos.
   e-mail pode gastar.~~ Corrigido na #398: o token novo aposenta os
   anteriores, e a confirmação é um botão.
 - ~~A cota de 100 e-mails por dia do Resend tem limite só por origem: uma origem
-  esgota a cota de todo mundo.~~ Corrigido na #407: 20 por origem e 5 por conta,
-  por dia.
+  esgota a cota de todo mundo.~~ Corrigido na #407: por dia, 20 confirmações e
+  10 recuperações por origem, e 3 por conta e origem, 10 por conta.
 - `SESSION_SECRET` igual em preview e produção aceitaria token de um no outro.
   Desde a #408 a audiência do token carrega o ambiente, e o de preview não vale
   em produção mesmo com o segredo igual. Conferir na Vercel continua sendo o

@@ -7,9 +7,11 @@
  * limite só de 5 em 15 minutos por origem, um mesmo IP mandava até 480 por
  * dia: esgotava a cota de todo mundo, e enchia a caixa de quem ele quisesse.
  *
- * O que se prova aqui são os dois tetos novos e o cuidado da recuperação:
+ * O que se prova aqui são os tetos novos e o cuidado da recuperação:
  * passar do teto da conta não muda a resposta, senão a tela diria quem tem
- * conta.
+ * conta. E, desde o ajuste do #411, que ninguém gasta a cota de outra
+ * pessoa: nem quem pede pelo e-mail dela de um lugar só, nem quem se
+ * cadastra no mesmo IP.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -160,6 +162,26 @@ describe("cota diária de e-mail", () => {
       expect(enviados).toHaveLength(COTA_DE_EMAIL.POR_CONTA.chamadas);
     });
 
+    /*
+     * A cota é de quem recebe, e era gasta por quem pede: cinco pedidos com
+     * o e-mail da Maria, de qualquer lugar, a deixavam um dia sem recuperar
+     * a senha. Com a origem na chave, quem pede por ela gasta só a parte
+     * dele.
+     */
+    it("quem pede pelo e-mail de outra pessoa gasta só a parte dele", async () => {
+      const { chamadas } = COTA_DE_EMAIL.POR_CONTA_E_ORIGEM;
+      for (let i = 0; i < chamadas + 2; i++) {
+        await recuperar("maria@teste.lupa", "203.0.113.66");
+      }
+      expect(enviados).toHaveLength(chamadas);
+
+      vi.advanceTimersByTime(QUINZE_MINUTOS_E_POUCO);
+      expect(await recuperar("maria@teste.lupa", "198.51.100.20")).toEqual({
+        ok: true,
+      });
+      expect(enviados).toHaveLength(chamadas + 1);
+    });
+
     it("no dia seguinte a conta volta a receber", async () => {
       for (let i = 0; i < COTA_DE_EMAIL.POR_CONTA.chamadas; i++) {
         await recuperar("maria@teste.lupa", `10.0.7.${i}`);
@@ -174,11 +196,35 @@ describe("cota diária de e-mail", () => {
   describe("por origem", () => {
     /** Avança o relógio a cada quatro pedidos, abaixo do limite de 15 min. */
     async function gastarCotaDaOrigem(origem: string) {
-      for (let i = 0; i < COTA_DE_EMAIL.POR_ORIGEM.chamadas; i++) {
+      for (let i = 0; i < COTA_DE_EMAIL.POR_ORIGEM.recuperacao.chamadas; i++) {
         if (i % 4 === 0) vi.advanceTimersByTime(QUINZE_MINUTOS_E_POUCO);
         await recuperar(`pessoa${i}@teste.lupa`, origem);
       }
       vi.advanceTimersByTime(QUINZE_MINUTOS_E_POUCO);
+    }
+
+    /** Uma conta nova por confirmação, como num dia de cadastros. */
+    async function confirmarCadastros(origem: string, quantos: number) {
+      const resultados = [];
+      for (let i = 0; i < quantos; i++) {
+        if (i % 4 === 0) vi.advanceTimersByTime(QUINZE_MINUTOS_E_POUCO);
+        const nova = await repo.criar({
+          email: `cadastro${i}@teste.lupa`,
+          senhaHash: "h",
+          papel: "candidato_clt",
+          nomeCompleto: "Pessoa Nova",
+          telefone: "66999990001",
+          cidade: "Sinop - MT",
+        });
+        resultados.push(
+          await enviarVerificacaoDeEmail(nova.id, {
+            urlBase: URL_BASE,
+            origem,
+          }).catch((e: { codigo?: string }) => e.codigo),
+        );
+      }
+      vi.advanceTimersByTime(QUINZE_MINUTOS_E_POUCO);
+      return resultados;
     }
 
     /*
@@ -195,15 +241,35 @@ describe("cota diária de e-mail", () => {
       expect(enviados).toHaveLength(0);
     });
 
-    it("a confirmação de e-mail gasta a mesma cota da origem", async () => {
-      await gastarCotaDaOrigem("198.51.100.8");
+    /*
+     * O caso do IP de operadora num dia de divulgação (#411): muita gente se
+     * cadastra atrás do mesmo endereço, e cada cadastro manda uma
+     * confirmação. Somando os dois fluxos, a recuperação passava a recusar
+     * quem nunca tinha pedido nada.
+     */
+    it("um dia de cadastros no mesmo IP não tira a recuperação de ninguém", async () => {
+      await confirmarCadastros(
+        "198.51.100.8",
+        COTA_DE_EMAIL.POR_ORIGEM.verificacao.chamadas,
+      );
 
-      await expect(
-        enviarVerificacaoDeEmail(usuarioId, {
-          urlBase: URL_BASE,
-          origem: "198.51.100.8",
-        }),
-      ).rejects.toMatchObject({ codigo: "muitas_tentativas" });
+      expect(await recuperar("maria@teste.lupa", "198.51.100.8")).toEqual({
+        ok: true,
+      });
+      expect(enviados.at(-1)?.corpo).toMatch(/redefinir-senha/);
+    });
+
+    it("a confirmação tem teto próprio por origem", async () => {
+      const { chamadas } = COTA_DE_EMAIL.POR_ORIGEM.verificacao;
+      const resultados = await confirmarCadastros(
+        "198.51.100.11",
+        chamadas + 1,
+      );
+
+      expect(resultados.slice(0, chamadas)).toEqual(
+        Array(chamadas).fill({ ok: true }),
+      );
+      expect(resultados.at(-1)).toBe("muitas_tentativas");
     });
 
     it("uma origem no teto não tira a cota das outras", async () => {
