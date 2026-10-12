@@ -2160,6 +2160,14 @@ carrega o pagamento por dentro — consultar `/v1/payments/{id}` com o id
 dela responde 404, e a renovação nunca é registrada. Cada um tem a própria
 rota de leitura, e o despacho está no route handler.
 
+**A fatura só diz qual é o pagamento (#405).** A parcela decidia pelo
+`payment.status` embutido nela — um resumo, e o único caminho de
+confirmação que não relia o registro do dinheiro. Lida depois de um
+estorno, ela ainda dizia `approved`. Hoje a fatura serve para achar a
+assinatura e o id do pagamento; status e valor vêm de `/v1/payments/{id}`,
+e o valor passa pela conferência da #331. Se o pagamento não volta da
+API, é erro: o webhook responde 5xx e o Mercado Pago reenvia.
+
 **A parcela é registrada por dois caminhos, e isso é deliberado.** Os
 tópicos são marcados **à mão** no painel do Mercado Pago, e uma renovação
 que só funciona se alguém lembrou de marcar a caixa certa falha em
@@ -2275,8 +2283,8 @@ que bate no índice único do `mp_payment_id` e agora, se a encontra
 reaberta, aprova de novo. O preço, aceito: se o efeito chegou a gravar e só
 a resposta se perdeu, a nova tentativa aplica de novo — erro para o lado de
 quem pagou, e visível, em vez de para o lado de quem não recebeu e não
-tem como saber. O teste grátis (`confirmarAssinatura`) segue com o mesmo
-buraco, registrado como pendência.
+tem como saber. O teste grátis (`confirmarAssinatura`) tinha o mesmo
+buraco, fechado na #406 — ver "O teste grátis é um por conta".
 
 **O cron recusa sem segredo em qualquer deploy da Vercel (#358).** Só
 `VERCEL_ENV === "production"` recusava; num preview a rota rodava aberta
@@ -2406,12 +2414,16 @@ ficaria implícita, dependente do que "zerar a validade" significar amanhã.
 *Aceitar e acompanhar*: custo zero e sem assinante hoje, mas o dia em que
 houver o primeiro o buraco já estará aberto.
 
-O que continua aberto. Se `estenderMensalidade` falhar depois de a
-reivindicação ter sido gravada, o teste é gasto sem dar os dias — o mesmo
-tipo de buraco do efeito que falha depois do status (#384), e a nova
-tentativa do webhook não refaz, porque a assinatura já está ativa. E não
-sabemos se o Mercado Pago barra teste repetido no mesmo cartão: isso não
-está no nosso código.
+**Extensão que falha devolve o teste (#406).** A reivindicação vem antes
+dos dias, e é essa ordem que barra a concessão dupla. O outro lado era o
+buraco da #384: se `estenderMensalidade` falhasse depois, a assinatura
+ficava ativa e o teste gasto, e o reenvio do webhook não refazia nada.
+Hoje `concederTesteOuDesfazer` libera o teste
+(`liberarTesteGratis`) e devolve a assinatura a `pendente` antes de
+subir o erro; o reenvio passa pela transição *pendente → ativa* de novo.
+
+O que continua aberto: não sabemos se o Mercado Pago barra teste repetido
+no mesmo cartão. Isso não está no nosso código.
 
 **A vitrine só mostra quem está com a mensalidade em dia**, mesma família
 de regra que `doc_verified`: o filtro mora em `getProviders`

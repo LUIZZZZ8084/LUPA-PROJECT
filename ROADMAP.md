@@ -18,6 +18,12 @@ Em 09/10/2026:
   extensão: `/iconografia` ou `/vagas/abc.png` passariam sem login e sem
   CSP. O estático entra por pasta (`avatares`, `banner`) —
   [#404](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/404)
+- A parcela da assinatura relê o pagamento em vez de confiar no resumo da
+  fatura: lida depois de um estorno, ela ainda dizia aprovado —
+  [#405](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/405)
+- Teste grátis que falha ao dar os dias é devolvido, e a assinatura volta a
+  pendente para o reenvio do webhook conceder de novo —
+  [#406](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/406)
 
 Em 08/10/2026:
 
