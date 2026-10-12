@@ -19,11 +19,20 @@ import {
  * existe dentro de uma requisição.
  */
 
+/**
+ * Grava a sessão nova no cookie.
+ *
+ * `entrouEm` é para reemitir sem senha (#413): sair dos outros aparelhos e
+ * virar prestador passam o login da sessão que já existia, e o teto de
+ * trinta dias continua contado dele. Quem acabou de provar a senha — entrar,
+ * cadastrar, redefinir — não passa nada, e a contagem começa agora.
+ */
 export async function criarSessao(
   usuarioId: string,
   papel: Papel,
+  entrouEm?: number,
 ): Promise<void> {
-  const { token } = await assinarSessao(usuarioId, papel);
+  const { token } = await assinarSessao(usuarioId, papel, undefined, entrouEm);
   const jar = await cookies();
   jar.set(
     CONFIG_SESSAO.NOME_COOKIE,

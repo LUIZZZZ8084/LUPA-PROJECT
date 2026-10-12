@@ -116,7 +116,12 @@ export const sairDosOutrosAparelhosAction = criarAcao({
     const sessao = await sessaoAtual();
     await sairDosOutrosAparelhos(sessao?.usuarioId ?? null);
     derrubarCacheDeRevogacoes();
-    if (sessao) await criarSessao(sessao.usuarioId, sessao.papel);
+    // Sem senha, então sem teto novo: o login continua o da sessão que
+    // clicou (#413). Repetir a ação não pode manter um cookie vivo para
+    // sempre.
+    if (sessao) {
+      await criarSessao(sessao.usuarioId, sessao.papel, sessao.entrouEm);
+    }
     return { cortadas: true };
   },
 });
