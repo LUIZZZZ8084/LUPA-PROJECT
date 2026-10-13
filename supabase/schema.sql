@@ -425,6 +425,19 @@ create table vagas (
    * continua válida e só não mostra o selo. A tela de publicação exige.
    */
   modalidade    modalidade_vaga,
+  /*
+   * Vaga para pessoa com deficiência (#456). A empresa responde na hora de
+   * publicar, e a busca filtra por isto.
+   *
+   * `not null default false`, ao contrário da modalidade: aqui o valor
+   * neutro existe e é verdadeiro para o que já foi publicado — vaga antiga
+   * não era para PCD —, então não há linha "sem resposta" para tratar. A
+   * tela é que exige a escolha explícita em vaga nova.
+   *
+   * É só da vaga. A Lupa não guarda se o candidato é PCD: é dado de saúde,
+   * e o filtro funciona sem isso.
+   */
+  para_pcd      boolean not null default false,
   salario_min   numeric(10,2),
   salario_max   numeric(10,2),
 
@@ -1488,7 +1501,9 @@ select
   v.expira_em                 as expires_at,
   -- Por último: `create or replace view` só aceita coluna nova no fim, e é
   -- assim que `aplica-modalidade-vaga.sql` chega a um banco vivo (#300).
-  v.modalidade                as work_mode
+  v.modalidade                as work_mode,
+  -- E depois dela, pela mesma regra (#456): coluna nova só no fim.
+  v.para_pcd                  as for_pcd
 from vagas v
 join perfis_empresa e on e.usuario_id = v.empresa_id
 join usuarios u on u.id = e.usuario_id;

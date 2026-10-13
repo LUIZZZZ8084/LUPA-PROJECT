@@ -108,6 +108,12 @@ export const WORK_MODE_LABELS: Record<WorkMode, string> = {
 
 export const WORK_MODES = Object.keys(WORK_MODE_LABELS) as WorkMode[];
 
+/**
+ * O selo da vaga para pessoa com deficiência (#456). Num lugar só: o card,
+ * a página, a revisão e o filtro dizem a mesma coisa.
+ */
+export const ROTULO_PCD = "Vaga para PCD";
+
 export const ROLE_LABELS = {
   candidato_clt: "Candidato",
   prestador_servico: "Prestador de serviço",

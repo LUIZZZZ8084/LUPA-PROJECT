@@ -50,6 +50,7 @@ const DADOS = {
   cidade: "Sinop - MT",
   tipoContrato: "CLT",
   modalidade: "presencial" as const,
+  paraPcd: false,
   endereco: "Av. das Itaúbas, 1200",
 };
 

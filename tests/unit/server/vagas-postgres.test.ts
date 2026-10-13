@@ -63,6 +63,7 @@ const LINHA = {
   endereco: null,
   tipo_contrato: "CLT",
   modalidade: "presencial" as const,
+  para_pcd: false,
   salario_min: null,
   salario_max: null,
   habilidades: ["Colheitadeira"],
@@ -95,6 +96,7 @@ describe("RepositorioVagasPostgres", () => {
       endereco: null,
       tipoContrato: LINHA.tipo_contrato,
       modalidade: LINHA.modalidade,
+      paraPcd: false,
       salarioMin: null,
       salarioMax: null,
       habilidades: ["Colheitadeira"],
@@ -112,6 +114,40 @@ describe("RepositorioVagasPostgres", () => {
     expect(await repo.porId("nao-e-uuid")).toBeNull();
   });
 
+  /*
+   * `para_pcd` é `not null default false` (#456): o que sai do banco é
+   * sempre booleano, e o que entra vai na coluna certa.
+   */
+  it("traduz para_pcd para o campo da aplicação", async () => {
+    resposta = { data: { ...LINHA, para_pcd: true }, error: null };
+    expect((await repo.porId(LINHA.id))?.paraPcd).toBe(true);
+
+    resposta = { data: { ...LINHA, para_pcd: false }, error: null };
+    expect((await repo.porId(LINHA.id))?.paraPcd).toBe(false);
+  });
+
+  it("criar grava para_pcd, e atualizar só quando vier", async () => {
+    resposta = { data: LINHA, error: null };
+    await repo.criar({
+      empresaId: LINHA.empresa_id,
+      titulo: LINHA.titulo,
+      descricao: LINHA.descricao,
+      categoria: LINHA.categoria,
+      cidade: LINHA.cidade,
+      tipoContrato: LINHA.tipo_contrato,
+      modalidade: LINHA.modalidade,
+      paraPcd: true,
+      endereco: "Rua A, 1",
+    });
+    const insert = chamadas.find((c) => c.metodo === "insert");
+    expect(insert?.args[0]).toMatchObject({ para_pcd: true });
+
+    chamadas.length = 0;
+    await repo.atualizar(LINHA.id, { titulo: "Outro cargo" });
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.args[0]).not.toHaveProperty("para_pcd");
+  });
+
   it("criar grava em português", async () => {
     resposta = { data: LINHA, error: null };
     await repo.criar({
@@ -122,6 +158,7 @@ describe("RepositorioVagasPostgres", () => {
       cidade: LINHA.cidade,
       tipoContrato: LINHA.tipo_contrato,
       modalidade: LINHA.modalidade,
+      paraPcd: false,
       endereco: "Av. das Itaúbas, 1200",
     });
 
@@ -130,6 +167,7 @@ describe("RepositorioVagasPostgres", () => {
       empresa_id: LINHA.empresa_id,
       tipo_contrato: LINHA.tipo_contrato,
       modalidade: LINHA.modalidade,
+      para_pcd: false,
     });
   });
 
@@ -147,6 +185,7 @@ describe("RepositorioVagasPostgres", () => {
         cidade: LINHA.cidade,
         tipoContrato: LINHA.tipo_contrato,
         modalidade: LINHA.modalidade,
+        paraPcd: false,
         endereco: "Av. das Itaúbas, 1200",
       }),
     ).rejects.toMatchObject({ codigo: "conflito" });
@@ -340,6 +379,7 @@ describe("nenhum campo de edição se perde no caminho", () => {
     habilidades: ["Empilhadeira"],
     tipoContrato: "CLT",
     modalidade: "presencial" as const,
+    paraPcd: false,
     salarioMin: 2000,
     salarioMax: 3000,
   };

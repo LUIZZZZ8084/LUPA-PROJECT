@@ -52,6 +52,7 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
       endereco: dados.endereco,
       tipoContrato: dados.tipoContrato,
       modalidade: dados.modalidade,
+      paraPcd: dados.paraPcd,
       salarioMin: dados.salarioMin ?? null,
       salarioMax: dados.salarioMax ?? null,
       habilidades: dados.habilidades ?? [],
