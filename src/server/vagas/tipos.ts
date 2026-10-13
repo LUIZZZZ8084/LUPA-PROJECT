@@ -26,6 +26,8 @@ export interface Vaga {
   /** Presencial, home office ou híbrido (#300). `null` em vaga publicada
    * antes deste campo existir. */
   modalidade: WorkMode | null;
+  /** Vaga para pessoa com deficiência (#456). Antiga é `false`. */
+  paraPcd: boolean;
   salarioMin: number | null;
   salarioMax: number | null;
   habilidades: string[];
@@ -46,6 +48,7 @@ export interface DadosNovaVaga {
   endereco: string;
   tipoContrato: string;
   modalidade: WorkMode;
+  paraPcd: boolean;
   salarioMin?: number | null;
   salarioMax?: number | null;
   habilidades?: string[];
@@ -63,6 +66,7 @@ export type EdicaoVaga = Partial<
     | "habilidades"
     | "tipoContrato"
     | "modalidade"
+    | "paraPcd"
     | "salarioMin"
     | "salarioMax"
   >

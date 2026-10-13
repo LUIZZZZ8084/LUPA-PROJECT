@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { VerifiedMark } from "@/components/verified-badge";
-import { WORK_MODE_LABELS } from "@/lib/constants";
+import { ROTULO_PCD, WORK_MODE_LABELS } from "@/lib/constants";
 import { formatSalaryRange, timeAgo } from "@/lib/format";
 import type { JobListing } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -86,6 +86,7 @@ export function JobCard({
           {job.work_mode && (
             <Badge tone="outline">{WORK_MODE_LABELS[job.work_mode]}</Badge>
           )}
+          {job.for_pcd && <Badge tone="vagas">{ROTULO_PCD}</Badge>}
           <span>{timeAgo(job.created_at)}</span>
         </div>
       </div>

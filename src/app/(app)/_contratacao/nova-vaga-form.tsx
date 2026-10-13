@@ -318,6 +318,50 @@ export function NewJobForm({
             )}
           </fieldset>
 
+          {/*
+            Obrigatória e sem resposta de antemão (#456): quem procura
+            filtra por isto, e uma vaga que "não respondeu" não é nem sim
+            nem não. São só duas opções, à vista, como a modalidade.
+          */}
+          <fieldset>
+            <legend className="mb-1 font-medium text-sm">
+              Esta vaga é para pessoa com deficiência (PCD){" "}
+              <span className="text-danger">*</span>
+            </legend>
+            <p className="mb-2 text-faint text-xs">
+              Diga &ldquo;Sim&rdquo; se a vaga é destinada a PCD, como as das
+              cotas da Lei 8.213/91. Ela ganha um selo e aparece no filtro de
+              quem procura.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["sim", "Sim, é para PCD"],
+                  ["nao", "Não é para PCD"],
+                ] as const
+              ).map(([valor, rotulo]) => (
+                <label
+                  key={valor}
+                  className="flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line px-2 py-2.5 text-center text-[13px] text-muted leading-tight transition-colors hover:border-line-soft has-[:checked]:border-empresas has-[:checked]:bg-empresas/8 has-[:checked]:text-ink"
+                >
+                  <input
+                    type="radio"
+                    name="paraPcd"
+                    value={valor}
+                    required
+                    className="accent-empresas"
+                  />
+                  {rotulo}
+                </label>
+              ))}
+            </div>
+            {state.campos?.paraPcd && (
+              <p className="mt-1.5 text-danger text-xs">
+                {state.campos.paraPcd}
+              </p>
+            )}
+          </fieldset>
+
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <CampoCidade
               value={cidade}

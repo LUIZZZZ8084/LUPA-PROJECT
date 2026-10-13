@@ -68,6 +68,15 @@ export const camposVaga = {
     ["presencial", "home_office", "hibrido"],
     "Escolha se é presencial, home office ou híbrido.",
   ),
+  /*
+   * Obrigatória e sem resposta de antemão (#456): a empresa diz se a vaga
+   * é para pessoa com deficiência (PCD), e quem procura filtra por isso.
+   * Chega como "sim" ou "nao" porque um checkbox desmarcado é ausência —
+   * e ausência não é resposta.
+   */
+  paraPcd: z
+    .enum(["sim", "nao"], "Diga se a vaga é para pessoa com deficiência (PCD).")
+    .transform((v) => v === "sim"),
   bairro: zBairro,
   /*
    * Aditivo ao bairro, não substituto: informa onde é de verdade — rua,

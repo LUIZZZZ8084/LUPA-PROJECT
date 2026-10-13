@@ -17,6 +17,10 @@ Em 13/10/2026:
 - Mais áreas de vaga (de 21 para 36) e mais profissões de prestador (de 17
   para 50) —
   [#457](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/457)
+- Vaga para PCD: a empresa informa ao publicar, a vaga ganha selo e a busca
+  ganha o filtro. Vaga por sexo ficou de fora, por decisão, pelo risco da CLT
+  art. 373-A —
+  [#456](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/456)
 - "Apagar de vez" um trabalho guardado, com a foto: arquivado, o arquivo
   seguia no ar pelo endereço —
   [#454](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/454)

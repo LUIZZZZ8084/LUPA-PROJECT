@@ -15,6 +15,7 @@ const DADOS = {
   cidade: "Sinop - MT",
   tipoContrato: "CLT",
   modalidade: "presencial" as const,
+  paraPcd: "nao",
   endereco: "Av. das Itaúbas, 1200",
 };
 
@@ -67,6 +68,35 @@ describe("schemaNovaVaga", () => {
       !r.success && r.error.issues.some((i) => i.path[0] === "modalidade"),
     ).toBe(true);
   });
+
+  /*
+   * A pergunta do PCD (#456) é obrigatória e não tem resposta de antemão:
+   * "sim" e "nao" chegam do formulário, e ausência não é "não".
+   */
+  it("exige a resposta sobre PCD", () => {
+    const { paraPcd: _, ...semResposta } = DADOS;
+    const r = schemaNovaVaga.safeParse(semResposta);
+    expect(r.success).toBe(false);
+    expect(
+      !r.success && r.error.issues.some((i) => i.path[0] === "paraPcd"),
+    ).toBe(true);
+  });
+
+  it("'sim' e 'nao' viram booleano", () => {
+    const sim = schemaNovaVaga.safeParse({ ...DADOS, paraPcd: "sim" });
+    const nao = schemaNovaVaga.safeParse({ ...DADOS, paraPcd: "nao" });
+    expect(sim.success && sim.data.paraPcd).toBe(true);
+    expect(nao.success && nao.data.paraPcd).toBe(false);
+  });
+
+  it.each(["", "talvez", "true", "on", "SIM"])(
+    "recusa %j: só sim ou não, e escrito certo",
+    (paraPcd) => {
+      expect(schemaNovaVaga.safeParse({ ...DADOS, paraPcd }).success).toBe(
+        false,
+      );
+    },
+  );
 
   it("aceita as três modalidades, e nada além delas", () => {
     for (const modalidade of ["presencial", "home_office", "hibrido"]) {

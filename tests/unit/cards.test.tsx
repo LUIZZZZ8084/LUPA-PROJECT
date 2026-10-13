@@ -49,6 +49,16 @@ describe("JobCard", () => {
     expect(screen.getByText("Home office")).toBeInTheDocument();
   });
 
+  /** A vaga para PCD ganha o selo no card (#456). */
+  it("vaga para PCD mostra o selo, e a que não é não mostra", () => {
+    const { unmount } = render(<JobCard job={{ ...job, for_pcd: true }} />);
+    expect(screen.getByText("Vaga para PCD")).toBeInTheDocument();
+    unmount();
+
+    render(<JobCard job={{ ...job, for_pcd: false }} />);
+    expect(screen.queryByText("Vaga para PCD")).not.toBeInTheDocument();
+  });
+
   /** Vaga publicada antes do campo existir não ganha selo inventado. */
   it("vaga sem modalidade não mostra selo nenhum", () => {
     render(<JobCard job={{ ...job, work_mode: null }} />);

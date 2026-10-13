@@ -1497,6 +1497,47 @@ escolhe.
 que a busca por categoria compara: trocar "Comércio e Vendas" por outra
 grafia esconderia do filtro tudo que já foi publicado sob a antiga.
 
+### Vaga para PCD, e a vaga por sexo que não existe (#456)
+
+Pedido do Luiz em 13/10/2026: a empresa informa ao publicar se a vaga é para
+pessoa com deficiência (PCD), e a busca filtra por isso. Quem tem a vaga —
+inclusive para cumprir a cota da Lei 8.213/91, art. 93 — não tinha onde
+dizer, e quem procura não tinha como achar.
+
+**A resposta é obrigatória e não tem valor marcado de antemão.** Dois
+rádios, "Sim, é para PCD" e "Não é para PCD", como a modalidade (#300): um
+padrão marcado faria a resposta sair sem ninguém ter respondido, e o filtro
+passaria a prometer o que ninguém conferiu. Chega do formulário como `"sim"`
+ou `"nao"`, porque checkbox desmarcado é ausência, e ausência não é
+resposta.
+
+**No banco é `boolean not null default false`**, ao contrário da modalidade,
+que é opcional. Aqui o valor neutro existe e é verdadeiro para tudo que já
+foi publicado — vaga antiga não era para PCD —, então não há linha "sem
+resposta" para tratar. A coluna entra por último em `job_listings`, pela
+regra do `create or replace view`, e `aplica-vaga-pcd.sql` roda **antes do
+deploy**: o `insert` passa a mandar `para_pcd`.
+
+**O filtro entra na chave do cache da listagem.** É do que se pergunta, e
+ficar de fora serviria a lista de todas as vagas a quem pediu só as de PCD —
+pelo cache, sem erro nenhum. `?pcd=sim` é o único valor que filtra; qualquer
+outro é "todas as vagas", e não um filtro que nunca casa.
+
+**A Lupa não guarda se o candidato é PCD.** É dado de saúde, e o filtro
+funciona sem isso: quem procura filtra, quem tem a vaga responde. Se um dia
+o perfil do candidato pedir isso, é decisão nova, com a LGPD à frente.
+
+**Vaga só para mulher ou só para homem não existe, de propósito.** O pedido
+veio junto, e o Luiz decidiu deixar tudo geral depois de ver o risco: a CLT
+(art. 373-A) proíbe anúncio de emprego com referência a sexo, salvo quando a
+natureza da atividade exigir isso pública e notoriamente — e abre exceção
+para medidas que corrijam a desigualdade de acesso da mulher —, e a Lei
+9.029/95 pune a discriminação na contratação. Uma plataforma que oferece o
+campo oferece a infração. Não é parecer jurídico: se a pergunta voltar,
+**um advogado lê junto com os Termos de Uso (#235)** antes de qualquer
+campo. A alternativa que se avaliou foi "só mulheres e geral", com o motivo
+escrito, para a vaga afirmativa.
+
 ### Estágio da candidatura: o nome depende de quem lê
 
 Os cinco estágios (`enviada`, `visualizada`, `entrevista`, `aprovada`,
