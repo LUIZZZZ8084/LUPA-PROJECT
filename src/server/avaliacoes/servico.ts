@@ -117,6 +117,23 @@ export async function avaliarPrestador(
     const supabase = clienteDeServico();
     if (!supabase) throw erros.indisponivel("cliente de banco");
 
+    /*
+     * Só se avalia quem é prestador (#439). A chave estrangeira aponta para
+     * `usuarios`, e a avaliação gravada na conta de um candidato não
+     * aparecia em lugar nenhum — até ele virar prestador, quando passava a
+     * contar na nota dele. Id sem forma de UUID volta 22P02, e a resposta é
+     * a mesma de "não existe".
+     */
+    const { data: perfil, error: erroPerfil } = await supabase
+      .from("perfis_prestador")
+      .select("usuario_id")
+      .eq("usuario_id", dados.prestadorId)
+      .maybeSingle();
+    if (erroPerfil && erroPerfil.code !== "22P02") {
+      throw erros.indisponivel(`perfil avaliado: ${erroPerfil.message}`);
+    }
+    if (!perfil) throw erros.naoEncontrado("Prestador");
+
     const { error } = await supabase.from("avaliacoes").insert({
       prestador_id: dados.prestadorId,
       avaliador_id: autenticado.usuarioId,
