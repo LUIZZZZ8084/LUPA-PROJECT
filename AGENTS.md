@@ -1238,6 +1238,46 @@ ar é caso de suporte. Em demonstração, o repositório em memória anonimiza
 a conta e o que ele mesmo guarda; o caminho que apaga tudo é o do banco, e
 é ele que o `schema.test.ts` exercita num Postgres de verdade.
 
+### Denunciar vaga e avaliação, e só o admin decide (#435)
+
+A Lupa não tinha como alguém avisar "esta vaga pede pix para marcar
+entrevista" nem "esta avaliação é de quem nunca foi atendido". Golpe de
+taxa é o risco que o CNPJ obrigatório existe para conter, e nada dentro
+do app levava o aviso até o admin. Decisão do Luiz em 13/10/2026:
+denúncia por qualquer conta com sessão, e um painel em `/admin`.
+
+**Nada sai do ar sozinho.** Ocultar depois de N denúncias seria mais
+rápido contra golpe, e daria a um concorrente o botão de derrubar o
+anúncio de outro — três contas bastariam. Quem decide é o admin, por
+`decidir_denuncia`, numa transação: tirar do ar **encerra** a vaga (o
+mesmo estado de quando o dono encerra) ou **apaga** a avaliação (a nota
+sai da média pelo trigger de sempre), e fecha as denúncias daquele alvo.
+
+**O denunciante nunca aparece para o denunciado.** A tabela é fechada
+para `anon` e `authenticated`, e só o painel do admin a lê, com a chave de
+serviço. A tela diz isso depois do envio, porque é o que faz alguém
+denunciar o patrão da cidade pequena.
+
+**Uma aberta por pessoa e alvo, no banco.** O índice único parcial é o
+que impede dez cliques da mesma pessoa de parecerem dez pessoas — a
+checagem da aplicação não segura dois envios simultâneos. Depois da
+decisão a pessoa pode denunciar de novo: a vaga pode ter mudado.
+
+**O dono não denuncia o que é dele, e o admin não denuncia.** O admin
+decide; denunciar a própria vaga não faz sentido, porque encerrá-la é um
+botão. O prestador denuncia avaliação do próprio perfil — avaliação
+falsa contra ele é o caso mais provável.
+
+**O alvo que some leva a denúncia aberta.** Quando a conta do dono é
+excluída (#423), a vaga e as avaliações do perfil vão junto; um trigger
+apaga as denúncias **abertas** delas, senão o painel mostraria algo que
+ninguém abre. As decididas ficam, como registro — e por isso
+`decidir_denuncia` fecha as denúncias **antes** de apagar a avaliação.
+
+**O botão é discreto, e fechado até a pessoa pedir.** Um botão vermelho em
+toda vaga ensinaria a desconfiar de todas. É um link pequeno ao fim da
+vaga e de cada avaliação; o formulário só abre no clique.
+
 ### O que se edita depois, e o que nunca
 
 O cadastro pede o mínimo para a conta existir e a pessoa ser encontrada;
@@ -3147,6 +3187,14 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   colorido e botão `danger` na mesma tela (#144). **Toda cor que serve de
   texto E de fundo tingido de si mesma precisa ser conferida contra as
   duas combinações — a mais clara das duas é a que decide.**
+
+  **E contra o fundo do quadro onde ela mora (#435).** `--color-danger`
+  passava sobre o selo em branco e reprovava com o mesmo selo sobre
+  `panel-2` (4,30:1): o botão de perigo dos formulários de excluir conta e
+  de denunciar mora num quadro `bg-panel-2`, e os dois ficam fechados até
+  o clique — a varredura das rotas nunca os via abertos. Hoje os dois
+  specs rodam o axe com o formulário aberto. *Formulário que só abre no
+  clique precisa ser varrido aberto.*
 
 - **`setState` no corpo de um efeito é reprovado mesmo quando o motivo é
   legítimo.** `AlternarTema` nascia com estado `null` porque o servidor

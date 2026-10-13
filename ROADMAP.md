@@ -14,6 +14,10 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 13/10/2026:
 
+- Denunciar vaga e avaliação, e um painel no admin para tirar do ar ou
+  descartar: nada sai do ar sozinho, e o denunciado não sabe quem
+  denunciou —
+  [#435](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/435)
 - A busca de candidatos fica só para empresa com CNPJ conferido na Receita,
   com teto de 30 perfis abertos por dia: ninguém colhe em série o WhatsApp
   de quem pediu para ser encontrado —
