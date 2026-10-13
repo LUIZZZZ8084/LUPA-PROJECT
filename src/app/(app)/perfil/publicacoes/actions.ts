@@ -5,6 +5,7 @@ import { z } from "zod";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import {
+  apagarPublicacao,
   arquivarPublicacao,
   editarTrabalho,
   publicarTrabalho,
@@ -121,6 +122,28 @@ export const arquivar = criarAcao({
     return { id: publicacao.id, status: publicacao.status };
   },
 });
+
+/**
+ * Apagar de vez um trabalho guardado (#454). O serviço confere o dono e
+ * que ele já está fora do feed; a tela pede confirmação antes.
+ */
+export const apagarDeVez = criarAcao({
+  nome: "publicacao.apagar",
+  entrada: z.object({ id: zId }),
+  executar: async ({ id }) => {
+    await apagarPublicacao(await sessaoAtual(), id);
+    revalidatePath("/perfil/publicacoes");
+    revalidarVitrines();
+    return { id };
+  },
+});
+
+export async function apagarDeVezComEstado(
+  _anterior: EstadoPublicacao,
+  formData: FormData,
+): Promise<EstadoPublicacao> {
+  return paraEstado(await apagarDeVez(formData));
+}
 
 export const reativar = criarAcao({
   nome: "publicacao.reativar",

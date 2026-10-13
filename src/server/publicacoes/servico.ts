@@ -1,4 +1,8 @@
-import { enviarArquivo, temArmazenamento } from "../arquivos/servico";
+import {
+  apagarFotoDeTrabalho,
+  enviarArquivo,
+  temArmazenamento,
+} from "../arquivos/servico";
 import { type Autenticado, exigirCapacidade, exigirDono } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
@@ -175,6 +179,50 @@ export async function editarPublicacao(
   exigirDono(autenticado, atual.autorId, "Publicação");
 
   return repositorioPublicacoes().atualizar(id, campos);
+}
+
+/**
+ * Apagar de vez um trabalho guardado, com a foto (#454).
+ *
+ * "Remover" arquiva, e o arquivo continua no bucket público, acessível
+ * pelo endereço, para poder voltar. Isto é para quando a foto precisa
+ * deixar de existir. Só o trabalho guardado se apaga: o primeiro passo
+ * continua sendo tirá-lo do perfil, que é o que a pessoa quer na maioria
+ * das vezes, e dois passos são o que segura o clique errado.
+ *
+ * O registro primeiro, o arquivo depois — na remoção, a ordem de sempre se
+ * inverte. O arquivo só sai se for da pasta do próprio autor; se ficar,
+ * vai ao Sentry, porque foto que a pessoa apagou continuaria no ar.
+ */
+export async function apagarPublicacao(
+  sessao: Autenticado | null,
+  id: string,
+): Promise<void> {
+  const autenticado = exigirCapacidade(sessao, "publicacao:apagar_propria");
+  const repo = repositorioPublicacoes();
+
+  const atual = await repo.porId(id);
+  if (!atual) throw erros.naoEncontrado("Publicação");
+  exigirDono(autenticado, atual.autorId, "Publicação");
+
+  if (atual.status !== "arquivada") {
+    const mensagem = "Tire do perfil antes de apagar de vez.";
+    throw erros.validacao([{ campo: "id", mensagem }], mensagem);
+  }
+
+  await repo.apagar(id);
+
+  if (!(await apagarFotoDeTrabalho(atual.autorId, atual.imagemUrl))) {
+    log.erro(erros.indisponivel("foto apagada pelo dono ficou no Storage"), {
+      acao: "publicacao.apagar",
+      publicacaoId: id,
+    });
+  }
+
+  log.info("publicação apagada pelo dono", {
+    acao: "publicacao.apagar",
+    papel: autenticado.papel,
+  });
 }
 
 export async function arquivarPublicacao(
