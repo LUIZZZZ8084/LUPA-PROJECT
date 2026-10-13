@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { entrarComoTeste, SENHA_DE_TESTE } from "./helpers";
 
@@ -31,6 +32,15 @@ test.describe("excluir a própria conta", () => {
     // Fechado até a pessoa pedir.
     await expect(page.getByLabel("Sua senha")).toHaveCount(0);
     await page.getByRole("button", { name: "Excluir minha conta" }).click();
+
+    // Aberto, ele também passa no contraste: a varredura das rotas só vê
+    // o botão fechado, e o botão de perigo sobre `panel-2` reprovava
+    // (4,30:1) até a #435.
+    const { violations } = await new AxeBuilder({ page })
+      .include("form")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(violations.map((v) => v.id)).toEqual([]);
 
     // Senha errada: nada é excluído, e o campo diz o que errou.
     await page.getByLabel("Sua senha").fill("senha-que-nao-e");

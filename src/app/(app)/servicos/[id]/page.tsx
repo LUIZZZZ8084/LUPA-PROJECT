@@ -339,6 +339,13 @@ export default async function ProviderPage({
         avgRating={provider.avg_rating}
         reviewCount={provider.review_count}
         breakdown={breakdown}
+        denunciaDe={
+          // O próprio prestador também denuncia: avaliação falsa contra ele
+          // é o caso mais provável (#435).
+          sessao && pode(sessao.papel, "denuncia:criar")
+            ? provider.profile_id
+            : undefined
+        }
       />
 
       {similar.length > 0 && (

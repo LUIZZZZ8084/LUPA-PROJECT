@@ -1,3 +1,4 @@
+import { Denunciar } from "@/components/denunciar";
 import { Avatar } from "@/components/ui/avatar";
 import { Panel } from "@/components/ui/card";
 import { Stars } from "@/components/ui/stars";
@@ -16,11 +17,17 @@ export function ReviewsPanel({
   avgRating,
   reviewCount,
   breakdown,
+  denunciaDe,
 }: {
   reviews: Review[];
   avgRating: number;
   reviewCount: number;
   breakdown: Record<number, number>;
+  /**
+   * O perfil de onde as avaliações vêm, quando quem olha pode denunciar
+   * (#435). Sem ele, o botão não aparece.
+   */
+  denunciaDe?: string;
 }) {
   return (
     <Panel className="mt-5">
@@ -88,6 +95,15 @@ export function ReviewsPanel({
                       <p className="mt-1.5 text-sm leading-relaxed text-muted">
                         {review.comment}
                       </p>
+                    )}
+                    {denunciaDe && (
+                      <div className="mt-2">
+                        <Denunciar
+                          alvo="avaliacao"
+                          alvoId={review.id}
+                          prestadorId={denunciaDe}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>

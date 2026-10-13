@@ -1286,6 +1286,119 @@ end;
 $$;
 
 -- ============================================================================
+-- 9y. Denúncias (#435)
+--
+-- Vaga golpista e avaliação abusiva chegam ao admin por aqui, e só ele
+-- decide: nada sai do ar sozinho. A tabela é fechada para as chaves
+-- anônima e autenticada (revoke lá embaixo); quem escreve e lê é a chave
+-- de serviço, e o denunciante nunca aparece para o denunciado.
+-- ============================================================================
+
+create type alvo_denuncia as enum ('vaga', 'avaliacao');
+create type motivo_denuncia as enum ('golpe', 'falsa', 'ofensiva', 'outro');
+create type status_denuncia as enum ('aberta', 'procedente', 'descartada');
+
+create table denuncias (
+  id             uuid primary key default gen_random_uuid(),
+  alvo           alvo_denuncia not null,
+  alvo_id        uuid not null,
+  -- Para a avaliação, de quem é o perfil onde ela aparece: é o caminho que
+  -- o admin abre para ver o contexto. Nulo na vaga, cujo id já é o caminho.
+  prestador_id   uuid references usuarios(id) on delete cascade,
+  -- `set null`: a conta anonimizada não é apagada (#423), mas se um dia
+  -- for, a denúncia que ela fez continua valendo como sinal.
+  denunciante_id uuid references usuarios(id) on delete set null,
+  motivo         motivo_denuncia not null,
+  detalhe        text check (detalhe is null or char_length(detalhe) <= 500),
+  status         status_denuncia not null default 'aberta',
+  criada_em      timestamptz not null default now(),
+  decidida_em    timestamptz
+);
+
+-- Uma denúncia aberta por pessoa e por alvo: a segunda não soma nada, e
+-- dez cliques da mesma pessoa não podem parecer dez pessoas.
+create unique index denuncias_uma_aberta_por_pessoa
+  on denuncias (alvo, alvo_id, denunciante_id)
+  where status = 'aberta' and denunciante_id is not null;
+
+create index denuncias_abertas_idx
+  on denuncias (criada_em)
+  where status = 'aberta';
+
+create index denuncias_denunciante_idx on denuncias (denunciante_id);
+
+alter table denuncias enable row level security;
+
+-- Tirar do ar e fechar as denúncias do mesmo alvo numa transação só:
+-- metade feita seria a vaga fora do ar com a denúncia ainda aberta no
+-- painel, ou o contrário — a denúncia fechada com a vaga no ar.
+create or replace function decidir_denuncia(
+  p_alvo        alvo_denuncia,
+  p_alvo_id     uuid,
+  p_tirar_do_ar boolean
+)
+returns integer
+language plpgsql
+set search_path = public, pg_temp
+as $$
+declare
+  fechadas integer;
+begin
+  -- As denúncias primeiro: apagar a avaliação antes levaria junto as
+  -- abertas, pelo trigger logo abaixo, e a decisão não ficaria registrada.
+  update denuncias
+     set status = case when p_tirar_do_ar
+                       then 'procedente'::status_denuncia
+                       else 'descartada'::status_denuncia end,
+         decidida_em = now()
+   where alvo = p_alvo
+     and alvo_id = p_alvo_id
+     and status = 'aberta';
+
+  get diagnostics fechadas = row_count;
+
+  if p_tirar_do_ar then
+    if p_alvo = 'vaga' then
+      update vagas set status = 'fechada' where id = p_alvo_id;
+    else
+      -- O trigger de `avaliacoes` recalcula a nota do prestador.
+      delete from avaliacoes where id = p_alvo_id;
+    end if;
+  end if;
+
+  return fechadas;
+end;
+$$;
+
+-- O alvo sumiu — a conta do dono foi excluída (#423), e a vaga e as
+-- avaliações do perfil foram junto —, e a denúncia aberta sumiria com ele:
+-- sem isso o painel mostraria algo que ninguém consegue mais abrir. As já
+-- decididas ficam, como registro.
+create or replace function denuncias_somem_com_o_alvo()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  delete from denuncias
+   where alvo = tg_argv[0]::alvo_denuncia
+     and alvo_id = old.id
+     and status = 'aberta';
+  return old;
+end;
+$$;
+
+drop trigger if exists denuncias_da_vaga on vagas;
+create trigger denuncias_da_vaga
+  after delete on vagas
+  for each row execute function denuncias_somem_com_o_alvo('vaga');
+
+drop trigger if exists denuncias_da_avaliacao on avaliacoes;
+create trigger denuncias_da_avaliacao
+  after delete on avaliacoes
+  for each row execute function denuncias_somem_com_o_alvo('avaliacao');
+
+-- ============================================================================
 -- 10. Views que a aplicação consulta
 --
 -- `security_invoker = false` de propósito: as views rodam com a permissão do
@@ -1787,6 +1900,9 @@ revoke select on pagamentos       from anon, authenticated;
 revoke select on assinaturas      from anon, authenticated;
 revoke select on carteiras_vaga   from anon, authenticated;
 revoke select on tokens_recuperacao from anon, authenticated;
+
+-- Denúncia diz quem denunciou quem (#435): só a chave de serviço.
+revoke select on denuncias from anon, authenticated;
 
 /*
  * E a escrita, em tudo (#421). O Supabase concede a `anon` e

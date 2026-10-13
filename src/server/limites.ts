@@ -90,6 +90,10 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
   "auth.sair_dos_outros": porJanela(5),
   // Por baixo dele há o limite de tentativa de senha, por conta (#423).
   "conta.excluir": porJanela(5),
+  // Denunciar é raro; quem denuncia em rajada está usando o botão contra alguém.
+  "denuncia.criar": porJanela(5),
+  // O admin decide em lote quando a fila acumula.
+  "denuncia.decidir": porJanela(60),
 
   /*
    * Candidatar-se é o verbo mais usado do app, e por quem tem menos
