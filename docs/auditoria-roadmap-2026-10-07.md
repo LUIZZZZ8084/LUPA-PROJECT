@@ -226,6 +226,32 @@ desempenho nas últimas 24 horas), e o erro de servidor do teste manual de
 mil pessoas exige (Resend, Vercel Pro, Supabase Pro). O aviso de vaga nova
 chega a até 500 pessoas por vaga; passar disso pede fila de envio.
 
+## Quarta rodada (13/10)
+
+Leitura direta, sem agentes. Abuso de regra de negócio e as últimas portas
+de redirecionamento. Os SQL foram rodados com o OK do Luiz.
+
+| PR | Issue | O que corrige |
+|---|---|---|
+| #434 | #433 | A busca de candidatos fica só para empresa com CNPJ conferido, com teto de 30 perfis abertos por dia: ninguém colhe em série o WhatsApp de quem pediu para ser encontrado. |
+| #436 | #435 | Denúncia de vaga e de avaliação, com decisão do admin; nada sai do ar sozinho. A cor de perigo reprovava o contraste sobre `panel-2`, inclusive no excluir conta. SQL rodado. |
+| #438 | #437 | O destino do login conferia a URL que entrava e não o caminho que devolvia: uma forma passava e, relida pelo navegador, levava para outro domínio depois do login. Confirmado no navegador antes da correção. |
+
+**Conferido sem achado:**
+- O JSON-LD da home e o script do tema são texto fixo, sem dado de quem usa.
+- As rotas de API que recebem id (`/api/pagamentos/[id]`,
+  `/api/assinaturas/[id]`) conferem o dono e respondem 404 a quem não é;
+  `/api/admin/metricas` responde 404 a quem não é admin.
+- **Advisor do Supabase**, de segurança e de desempenho. As duas views
+  `security definer` (`job_listings`, `provider_listings`) são o desenho: a
+  janela pública e controlada sobre tabelas fechadas, com o teste de schema
+  cobrando as colunas. As 15 tabelas com RLS e sem policy são as fechadas, de
+  propósito. Os 11 índices sem uso servem caminhos raros (exclusão de conta,
+  fila do admin, avisos).
+- O boletim de outubro do Supabase não pede ação. A cobrança de logs por uso
+  tem carência garantida até o começo de 2027 para a organização, criada
+  antes de 25/09/2026.
+
 ## Como foi feito
 
 - Leitura de código. Nada do app foi executado e nada foi enviado a produção.
