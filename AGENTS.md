@@ -203,6 +203,14 @@ de uma empresa grava o nome da empresa, não o do responsável — a seção
 envelhece porque o nome deixou de ser editável; a única troca que sobrou,
 a da Receita, leva junto as avaliações já feitas (`renomearAvaliacoesDe`).
 
+**Só se avalia quem é prestador (#439).** A chave estrangeira aponta para
+`usuarios`, não para `perfis_prestador`, e o serviço não conferia: dava
+para gravar avaliação na conta de um candidato, que não aparecia em lugar
+nenhum até ele virar prestador — e aí passava a contar na nota dele. Hoje
+o caminho com banco confere o perfil antes de gravar. Na demonstração não
+há essa conferência, porque os prestadores de exemplo não estão no
+repositório de contas.
+
 **A confirmação é renderizada pelo servidor.** A action revalida a rota,
 e a revalidação desmonta o formulário levando junto o "enviado" que ele
 mostrava: quem avaliava via o formulário sumir, sem confirmação nenhuma.
@@ -1551,6 +1559,13 @@ Use `termoParaFiltro()` em `src/lib/data.ts`, que envolve o valor em
 aspas. Já vazou: `zzzznaoexiste,full_name.ilike.*a*` devolvia a base
 inteira.
 
+**E o termo tem teto (#439).** A URL não tem limite, e o `?q=` entrava
+inteiro no `ilike` e na chave do cache das listagens: cada variação de um
+termo de vários KB era uma consulta e uma entrada de cache novas.
+`termoDeBusca` (`src/lib/limites-de-lista.ts`) apara, colapsa espaço e
+corta em 100 caracteres na entrada de `getJobs` e `getProviders` — antes
+do escape, para nunca partir uma sequência de escape ao meio.
+
 **A CSP é a última linha.** Se algum escape falhar em qualquer lugar, é
 ela que impede o script injetado de rodar ou de exfiltrar. `script-src`
 ainda precisa de `'unsafe-inline'` porque o Next injeta hidratação inline
@@ -1943,6 +1958,11 @@ atendidos —, e saiu junto com o bairro (#321).
 Registro de outro dono e área administrativa respondem "não encontrado". Um
 403 confirma que o recurso existe — informação de graça para quem sonda ids
 ou procura o painel de admin.
+
+**E o `robots.txt` não a anuncia (#439).** Ele listava `/admin` entre as
+áreas bloqueadas — o arquivo mais público do site dizendo o que o 404
+existe para não dizer. Nenhum crawler chega lá sem sessão de qualquer
+forma: o muro do login responde antes.
 
 ### Enumeração de contas
 

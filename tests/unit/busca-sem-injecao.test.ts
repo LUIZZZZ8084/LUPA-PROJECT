@@ -147,6 +147,41 @@ describe("a busca comum continua funcionando", () => {
   });
 });
 
+/*
+ * O termo da URL não tem teto, e entrava inteiro no `ilike` e na chave do
+ * cache das listagens (#439). Corta-se antes do escape, para nunca partir
+ * uma sequência de escape ao meio.
+ */
+describe("o termo tem teto", () => {
+  it("termo enorme chega à consulta com no máximo 100 caracteres", async () => {
+    await getJobs({ q: "a".repeat(5000) });
+
+    const termo = /title\.ilike\."%(a+)%"/.exec(filtros[0])?.[1];
+    expect(termo).toHaveLength(100);
+  });
+
+  it("vale também para a busca de profissionais", async () => {
+    await getProviders({ q: "b".repeat(5000) });
+    expect(filtros[0].length).toBeLessThan(300);
+  });
+
+  it("espaço repetido colapsa, e só espaço não vira filtro", async () => {
+    await getProviders({ q: "  pedreiro    de   obra  " });
+    expect(filtros[0]).toContain('"%pedreiro de obra%"');
+
+    filtros.length = 0;
+    await getProviders({ q: "     " });
+    expect(filtros).toEqual([]);
+  });
+
+  it("o corte vem antes do escape: a aspa do fim não perde a barra", async () => {
+    await getProviders({ q: `${"c".repeat(99)}"` });
+    // 99 letras e a aspa escapada: o valor continua fechado nas aspas.
+    expect(virgulasForaDeAspas(filtros[0])).toBe(1);
+    expect(filtros[0]).toContain('c\\"%"');
+  });
+});
+
 /**
  * Conta vírgulas que estão fora de aspas duplas, respeitando escape por
  * barra. É assim que o PostgREST decide onde uma condição termina.

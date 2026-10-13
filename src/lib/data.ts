@@ -19,6 +19,7 @@ import {
   TETO_BUSCA,
   TETO_CANDIDATOS,
   TETO_CANDIDATURAS,
+  termoDeBusca,
 } from "./limites-de-lista";
 import {
   DEMO_COMPANY_ID,
@@ -260,8 +261,10 @@ async function jobsEmDemonstracao(): Promise<JobListing[]> {
 }
 
 export async function getJobs(
-  filters: JobFilters = {},
+  pedidos: JobFilters = {},
 ): Promise<Recorte<JobListing>> {
+  // O termo da URL não tem teto; a consulta e a chave do cache, sim (#439).
+  const filters = { ...pedidos, q: termoDeBusca(pedidos.q) };
   if (isSupabaseConfigured) {
     /*
      * Cliente **sem cookie**, de propósito: o de `./supabase/server` chama
@@ -472,8 +475,10 @@ function comAvaliacoesDaSessao(provider: ProviderListing): ProviderListing {
 }
 
 export async function getProviders(
-  filters: ProviderFilters = {},
+  pedidos: ProviderFilters = {},
 ): Promise<Recorte<ProviderListing>> {
+  // O termo da URL não tem teto; a consulta e a chave do cache, sim (#439).
+  const filters = { ...pedidos, q: termoDeBusca(pedidos.q) };
   if (isSupabaseConfigured) {
     // Sem cookie, pela mesma razão de `getJobs` (#206).
     const supabase = clientePublico();

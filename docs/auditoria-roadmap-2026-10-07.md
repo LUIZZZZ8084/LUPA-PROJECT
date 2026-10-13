@@ -236,6 +236,7 @@ de redirecionamento. Os SQL foram rodados com o OK do Luiz.
 | #434 | #433 | A busca de candidatos fica só para empresa com CNPJ conferido, com teto de 30 perfis abertos por dia: ninguém colhe em série o WhatsApp de quem pediu para ser encontrado. |
 | #436 | #435 | Denúncia de vaga e de avaliação, com decisão do admin; nada sai do ar sozinho. A cor de perigo reprovava o contraste sobre `panel-2`, inclusive no excluir conta. SQL rodado. |
 | #438 | #437 | O destino do login conferia a URL que entrava e não o caminho que devolvia: uma forma passava e, relida pelo navegador, levava para outro domínio depois do login. Confirmado no navegador antes da correção. |
+| #440 | #439 | Endurecimento: o termo de busca chega à consulta e ao cache com no máximo 100 caracteres; só se avalia quem é prestador; o `robots.txt` deixa de anunciar `/admin`. |
 
 **Conferido sem achado:**
 - O JSON-LD da home e o script do tema são texto fixo, sem dado de quem usa.
