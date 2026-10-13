@@ -259,8 +259,37 @@ qualquer endereço usando o projeto. Ninguém tinha usado (zero usuários em
 `auth.users`). Cadastro desligado no painel em 13/10, com o OK do Luiz, e
 conferido pela API pública (`disable_signup: true`).
 
+**E o GitHub (13/10, com o OK do Luiz):** o repositório é público e estava
+com a varredura de segredos, o bloqueio de push com segredo e os alertas do
+Dependabot desligados — os três são gratuitos em repositório público. Ligados
+e conferidos pela API. Antes, uma varredura local no histórico inteiro
+(todos os branches) atrás de chave de serviço do Supabase, token do Mercado
+Pago, chave do Resend, token do Sentry, chave VAPID, segredo de sessão e
+senha de banco não achou nada; o mesmo método acha o segredo de teste do
+Playwright, que está versionado de propósito, e o único JWT do histórico é
+um token falso de teste (`{"papel": "admin"}`).
+
+**Pendente com o Luiz:** a `RESEND_API_KEY` está em produção **e em
+preview** na Vercel. No preview ela não é usada (o envio exige também o
+remetente, que só existe em produção), mas fica ao alcance do código de
+qualquer branch. Tirá-la do preview é uma edição no painel; a variável é do
+tipo Secret, e a documentação da Vercel não garante que salvar sem
+reescrever o valor o mantém — por isso não foi feito por mim, que não tenho a
+chave para repor.
+
 **Conferido sem achado:**
 - O JSON-LD da home e o script do tema são texto fixo, sem dado de quem usa.
+- Funções do banco: nenhuma `security definer`; Storage sem política que
+  deixe a chave anônima enviar arquivo, e os quatro buckets com limite de
+  tamanho e de tipo; Realtime sem tabela publicada.
+- Vercel: previews exigem login da Vercel e ser da equipe; PR de fork só
+  ganha preview com autorização de alguém da equipe; logs, código-fonte e
+  sourcemaps protegidos; segredos de Supabase, Mercado Pago, Sentry e cron só
+  em produção; `SESSION_SECRET` com valor diferente em preview.
+- O workflow do GitHub roda em `pull_request` (PR de fork sem segredo e com
+  token só de leitura), e o corpo do PR entra por variável, não no script.
+- A sessão é conferida com algoritmo fixo (HS256), e o link de redefinir
+  senha não vaza para outros sites (`strict-origin-when-cross-origin`).
 - As rotas de API que recebem id (`/api/pagamentos/[id]`,
   `/api/assinaturas/[id]`) conferem o dono e respondem 404 a quem não é;
   `/api/admin/metricas` responde 404 a quem não é admin.
