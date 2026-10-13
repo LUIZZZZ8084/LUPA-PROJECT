@@ -14,6 +14,9 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 13/10/2026:
 
+- Mais áreas de vaga (de 21 para 36) e mais profissões de prestador (de 17
+  para 50) —
+  [#457](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/457)
 - "Apagar de vez" um trabalho guardado, com a foto: arquivado, o arquivo
   seguia no ar pelo endereço —
   [#454](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/454)
