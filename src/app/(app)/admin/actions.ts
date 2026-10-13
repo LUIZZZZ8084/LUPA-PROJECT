@@ -1,10 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import {
+  derrubarCacheDePrestadores,
+  revalidarBuscaDeVagas,
+} from "@/lib/cache-de-listagem";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { clienteDeServico } from "@/lib/supabase/service";
+import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
+import { decidirDenuncia } from "@/server/denuncias/servico";
 import { erros } from "@/server/errors";
 import { log } from "@/server/logger";
 
@@ -103,3 +110,29 @@ export async function decideVerification(
   revalidatePath("/admin");
   return { ok: true };
 }
+
+/**
+ * Tirar do ar ou descartar o que foi denunciado (#435).
+ *
+ * Tirar a vaga do ar a encerra, e a busca precisa saber na hora — o mesmo
+ * par de `revalidatePath` e `updateTag` de quando a empresa publica.
+ * Tirar a avaliação muda a nota do prestador, que a vitrine guarda em
+ * cache.
+ */
+export const decidirDenunciaAction = criarAcao({
+  nome: "denuncia.decidir",
+  entrada: z.object({
+    alvo: z.enum(["vaga", "avaliacao"]),
+    alvoId: z.string().min(1).max(100),
+    tirarDoAr: z.boolean(),
+  }),
+  executar: async (dados) => {
+    const fechadas = await decidirDenuncia(await sessaoAtual(), dados);
+    if (dados.tirarDoAr) {
+      if (dados.alvo === "vaga") revalidarBuscaDeVagas();
+      else derrubarCacheDePrestadores();
+    }
+    revalidatePath("/admin");
+    return { fechadas };
+  },
+});

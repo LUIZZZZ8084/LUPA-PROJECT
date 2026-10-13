@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { ApplyButton } from "@/components/apply-button";
+import { Denunciar } from "@/components/denunciar";
 import { JobCard } from "@/components/job-card";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
 import { Avatar } from "@/components/ui/avatar";
@@ -237,6 +238,19 @@ export default async function JobDetailPage({
           )}
         </div>
       </Panel>
+
+      {/*
+        Denunciar (#435): para quem tem sessão e não é o dono. Fica fora do
+        painel da vaga e discreto — é recurso de exceção, e não pode
+        disputar atenção com "Candidatar-se".
+      */}
+      {sessao &&
+        pode(sessao.papel, "denuncia:criar") &&
+        sessao.usuarioId !== job.company_id && (
+          <div className="mt-3 flex justify-end">
+            <Denunciar alvo="vaga" alvoId={job.id} />
+          </div>
+        )}
 
       {related.length > 0 && (
         <section className="mt-8">

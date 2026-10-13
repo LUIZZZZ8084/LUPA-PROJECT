@@ -43,6 +43,11 @@ export type Capacidade =
    */
   | "conta:excluir"
   /*
+   * Denunciar vaga ou avaliação (#435). Quem usa o app denuncia; só o
+   * admin decide, por `admin:moderar`. O admin não denuncia: ele decide.
+   */
+  | "denuncia:criar"
+  /*
    * Ativar o lado prestador de uma conta que já existe.
    *
    * Só o candidato tem: a empresa não vira prestador (é outra pessoa
@@ -126,6 +131,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "perfil:editar_proprio",
     "perfil:enviar_documento",
     "conta:excluir",
+    "denuncia:criar",
     "candidatura:criar",
     "candidatura:ver_propria",
     "prestador:ativar",
@@ -152,6 +158,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "perfil:editar_proprio",
     "perfil:enviar_documento",
     "conta:excluir",
+    "denuncia:criar",
     "prestador:gerenciar_assinatura",
     /*
      * Ver as candidaturas antigas, sem poder criar novas.
@@ -193,6 +200,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "perfil:editar_proprio",
     "perfil:enviar_documento",
     "conta:excluir",
+    "denuncia:criar",
     "vaga:publicar",
     "vaga:encerrar_propria",
     "vaga:reativar_propria",

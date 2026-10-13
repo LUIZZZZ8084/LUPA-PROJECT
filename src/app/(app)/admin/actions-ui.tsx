@@ -4,7 +4,11 @@ import { Check, FileImage, Loader2, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { decideVerification, type ReviewDecision } from "./actions";
+import {
+  decideVerification,
+  decidirDenunciaAction,
+  type ReviewDecision,
+} from "./actions";
 
 export function VerificationActions({
   requestId,
@@ -79,6 +83,101 @@ export function VerificationActions({
         </Button>
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Tirar do ar ou descartar o que foi denunciado (#435).
+ *
+ * "Tirar do ar" pede um segundo clique: encerra uma vaga ou apaga uma
+ * avaliação de alguém, e um clique errado não tem volta pela tela.
+ * Decidido, o item sai da lista na revalidação do painel — é essa saída
+ * que diz que deu certo.
+ */
+export function DecisaoDeDenuncia({
+  alvo,
+  alvoId,
+  className,
+}: {
+  alvo: "vaga" | "avaliacao";
+  alvoId: string;
+  className?: string;
+}) {
+  const [pendente, iniciar] = useTransition();
+  const [confirmando, setConfirmando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  function decidir(tirarDoAr: boolean) {
+    setErro(null);
+    iniciar(async () => {
+      const r = await decidirDenunciaAction({ alvo, alvoId, tirarDoAr });
+      if (!r.ok) setErro(r.mensagem);
+    });
+  }
+
+  const oQue = alvo === "vaga" ? "a vaga" : "a avaliação";
+
+  return (
+    <div className={cn("space-y-2", className)}>
+      {confirmando ? (
+        <div className="space-y-2 rounded-xl border border-danger/30 bg-danger/5 p-3">
+          <p className="text-sm">
+            {alvo === "vaga"
+              ? "A vaga é encerrada e sai da busca. A empresa vê a vaga como encerrada no painel."
+              : "A avaliação é apagada, e a nota do prestador é recalculada."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              disabled={pendente}
+              onClick={() => decidir(true)}
+            >
+              {pendente && <Loader2 size={15} className="animate-spin" />}
+              Confirmar: tirar {oQue} do ar
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pendente}
+              onClick={() => setConfirmando(false)}
+            >
+              Voltar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            disabled={pendente}
+            onClick={() => setConfirmando(true)}
+          >
+            <X size={15} />
+            Tirar do ar
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pendente}
+            onClick={() => decidir(false)}
+          >
+            <Check size={15} />
+            Descartar denúncia
+          </Button>
+        </div>
+      )}
+      {erro && (
+        <p role="alert" className="text-danger text-sm">
+          {erro}
+        </p>
+      )}
     </div>
   );
 }

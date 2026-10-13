@@ -68,6 +68,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "candidaturas",
       "carteiras_vaga",
       "categorias_servico",
+      "denuncias",
       "inscricoes_push",
       "pagamentos",
       "pedidos_verificacao",
@@ -695,6 +696,8 @@ describe("grants de anon e authenticated", () => {
     // Material de troca de senha: quem lesse isto trocaria a senha de
     // qualquer conta do app (#174).
     "tokens_recuperacao",
+    // Quem denunciou quem (#435): o denunciado nunca pode saber.
+    "denuncias",
     /*
      * Saber quem está de olho em vaga de motorista é a mesma classe de
      * informação que o currículo — numa cidade do tamanho de Sinop, diz
@@ -1031,7 +1034,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(20);
+    expect(tabelas.rows).toHaveLength(21);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -2553,6 +2556,172 @@ describe("excluir_conta", () => {
   it("aplica-exclusao-de-conta.sql roda num banco que já tem a função", async () => {
     const script = readFileSync(
       join(process.cwd(), "supabase/aplica-exclusao-de-conta.sql"),
+      "utf8",
+    );
+    await expect(db.exec(script)).resolves.toBeDefined();
+  });
+});
+
+/**
+ * Denúncias (#435): uma aberta por pessoa e por alvo, e a decisão do admin
+ * tira do ar e fecha as denúncias do mesmo alvo numa transação só.
+ */
+describe("denúncias", () => {
+  async function cenario(sufixo: string) {
+    const empresa = await criarUsuario("empresa", `den-emp-${sufixo}@t.lupa`);
+    const prestador = await criarUsuario(
+      "prestador_servico",
+      `den-pre-${sufixo}@t.lupa`,
+    );
+    const a = await criarUsuario("candidato_clt", `den-a-${sufixo}@t.lupa`);
+    const b = await criarUsuario("candidato_clt", `den-b-${sufixo}@t.lupa`);
+    await db.query(
+      "insert into perfis_empresa (usuario_id, razao_social, cnpj) values ($1, 'Empresa', null)",
+      [empresa],
+    );
+    await db.query(
+      "insert into perfis_prestador (usuario_id, categoria_id) values ($1, 1)",
+      [prestador],
+    );
+    const vaga = await db.query<{ id: string }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Vaga suspeita', 'Descrição', 'Sinop - MT') returning id`,
+      [empresa],
+    );
+    const avaliacao = await db.query<{ id: string }>(
+      `insert into avaliacoes (prestador_id, avaliador_id, nome_avaliador, nota)
+       values ($1, $2, 'Alguém', 1) returning id`,
+      [prestador, a],
+    );
+    return {
+      vagaId: vaga.rows[0].id,
+      avaliacaoId: avaliacao.rows[0].id,
+      empresa,
+      prestador,
+      a,
+      b,
+    };
+  }
+
+  async function denunciar(alvo: string, alvoId: string, quem: string) {
+    await db.query(
+      `insert into denuncias (alvo, alvo_id, denunciante_id, motivo)
+       values ($1::alvo_denuncia, $2, $3, 'golpe')`,
+      [alvo, alvoId, quem],
+    );
+  }
+
+  it("a mesma pessoa não abre duas denúncias do mesmo alvo", async () => {
+    const c = await cenario("dup");
+    await denunciar("vaga", c.vagaId, c.a);
+    await expect(denunciar("vaga", c.vagaId, c.a)).rejects.toThrow();
+    // Outra pessoa, sim.
+    await denunciar("vaga", c.vagaId, c.b);
+  });
+
+  it("tirar a vaga do ar encerra a vaga e fecha as denúncias dela", async () => {
+    const c = await cenario("vaga");
+    await denunciar("vaga", c.vagaId, c.a);
+    await denunciar("vaga", c.vagaId, c.b);
+
+    const r = await db.query<{ n: number }>(
+      "select decidir_denuncia('vaga', $1, true) as n",
+      [c.vagaId],
+    );
+
+    expect(r.rows[0].n).toBe(2);
+    const vaga = await db.query<{ status: string }>(
+      "select status from vagas where id = $1",
+      [c.vagaId],
+    );
+    expect(vaga.rows[0].status).toBe("fechada");
+    const abertas = await db.query(
+      "select 1 from denuncias where alvo_id = $1 and status = 'aberta'",
+      [c.vagaId],
+    );
+    expect(abertas.rows).toHaveLength(0);
+  });
+
+  it("tirar a avaliação do ar a apaga e refaz a nota do prestador", async () => {
+    const c = await cenario("aval");
+    await denunciar("avaliacao", c.avaliacaoId, c.b);
+
+    await db.query("select decidir_denuncia('avaliacao', $1, true)", [
+      c.avaliacaoId,
+    ]);
+
+    const restou = await db.query("select 1 from avaliacoes where id = $1", [
+      c.avaliacaoId,
+    ]);
+    expect(restou.rows).toHaveLength(0);
+    const perfil = await db.query<{ total_avaliacoes: number }>(
+      "select total_avaliacoes from perfis_prestador where usuario_id = $1",
+      [c.prestador],
+    );
+    expect(perfil.rows[0].total_avaliacoes).toBe(0);
+    // A decisão fica registrada: o trigger que apaga a denúncia junto com
+    // o alvo só alcança as abertas, e a função as fecha antes de apagar.
+    const d = await db.query<{ status: string }>(
+      "select status from denuncias where alvo_id = $1",
+      [c.avaliacaoId],
+    );
+    expect(d.rows).toEqual([{ status: "procedente" }]);
+  });
+
+  it("a denúncia aberta some com o alvo, e a decidida fica", async () => {
+    const c = await cenario("orfa");
+    const outra = await cenario("orfa-2");
+    await denunciar("vaga", c.vagaId, c.a);
+    await denunciar("avaliacao", c.avaliacaoId, c.b);
+    // Já decidida: é registro, e fica.
+    await denunciar("vaga", outra.vagaId, outra.a);
+    await db.query("select decidir_denuncia('vaga', $1, false)", [
+      outra.vagaId,
+    ]);
+
+    // A empresa e o prestador excluem a conta (#423): a vaga e a avaliação
+    // do perfil vão junto, e o painel não pode mostrar o que não abre.
+    await db.query("select excluir_conta($1)", [c.empresa]);
+    await db.query("select excluir_conta($1)", [c.prestador]);
+
+    const abertas = await db.query(
+      "select 1 from denuncias where alvo_id in ($1, $2)",
+      [c.vagaId, c.avaliacaoId],
+    );
+    expect(abertas.rows).toHaveLength(0);
+
+    // E o trigger não apaga o que não devia.
+    await db.query("delete from vagas where id = $1", [outra.vagaId]);
+    const decidida = await db.query<{ status: string }>(
+      "select status from denuncias where alvo_id = $1",
+      [outra.vagaId],
+    );
+    expect(decidida.rows).toEqual([{ status: "descartada" }]);
+  });
+
+  it("descartar fecha as denúncias e deixa a vaga no ar", async () => {
+    const c = await cenario("desc");
+    await denunciar("vaga", c.vagaId, c.a);
+
+    await db.query("select decidir_denuncia('vaga', $1, false)", [c.vagaId]);
+
+    const vaga = await db.query<{ status: string }>(
+      "select status from vagas where id = $1",
+      [c.vagaId],
+    );
+    expect(vaga.rows[0].status).toBe("aberta");
+    const d = await db.query<{ status: string }>(
+      "select status from denuncias where alvo_id = $1",
+      [c.vagaId],
+    );
+    expect(d.rows).toEqual([{ status: "descartada" }]);
+    // Fechada, a mesma pessoa pode denunciar de novo se a vaga mudar.
+    await denunciar("vaga", c.vagaId, c.a);
+  });
+
+  it("aplica-denuncias.sql roda de novo num banco que já tem tudo", async () => {
+    const script = readFileSync(
+      join(process.cwd(), "supabase/aplica-denuncias.sql"),
       "utf8",
     );
     await expect(db.exec(script)).resolves.toBeDefined();
