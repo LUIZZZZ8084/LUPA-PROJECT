@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
 import { enviarEmail, temEmailConfigurado } from "../email";
+import { saudacao } from "../email/saudacao";
 import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
@@ -138,7 +139,7 @@ export async function enviarVerificacaoDeEmail(
       assunto: "Confirme seu e-mail na Lupa",
       tipo: "verificacao_email",
       corpo: [
-        `Olá, ${usuario.nomeCompleto.split(" ")[0]}.`,
+        saudacao(usuario.nomeCompleto),
         "",
         "Confirme que este e-mail é seu abrindo o link abaixo:",
         "",

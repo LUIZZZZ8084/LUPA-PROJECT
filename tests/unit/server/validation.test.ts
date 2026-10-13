@@ -18,6 +18,7 @@ import {
   zCelular,
   zCnpj,
   zEmail,
+  zNome,
   zSenha,
   zTexto,
 } from "@/server/validation";
@@ -212,6 +213,35 @@ describe("schemas", () => {
     }
     expect(validar(schema, "a".repeat(21)).ok).toBe(false);
     expect(validar(schema, "tamanho certo").ok).toBe(true);
+  });
+});
+
+/*
+ * O nome vai para a saudação dos e-mails, para a avaliação assinada e para
+ * a tela de quem contrata (#445). Espaço de qualquer tipo vira o comum, e
+ * o que não se escreve é recusado.
+ */
+describe("zNome", () => {
+  it("normaliza espaços, inclusive os que não são o comum", () => {
+    expect(zNome.parse("  Maria\u00a0da   Silva\n")).toBe("Maria da Silva");
+    expect(zNome.parse("Ana\tPaula")).toBe("Ana Paula");
+  });
+
+  it("aceita nome com acento, apóstrofo e hífen", () => {
+    expect(zNome.parse("João D'Ávila-Ramos")).toBe("João D'Ávila-Ramos");
+  });
+
+  it.each([
+    ["largura zero", "Maria\u200bSilva"],
+    ["inversão da direção do texto", "Maria \u202eavliS"],
+    ["controle", "Maria\u0007 Silva"],
+  ])("recusa caractere invisível: %s", (_nome, valor) => {
+    expect(zNome.safeParse(valor).success).toBe(false);
+  });
+
+  it("os limites de tamanho continuam", () => {
+    expect(zNome.safeParse("Al").success).toBe(false);
+    expect(zNome.safeParse("A".repeat(121)).success).toBe(false);
   });
 });
 

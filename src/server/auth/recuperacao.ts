@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
 import { enviarEmail, temEmailConfigurado } from "../email";
+import { saudacao } from "../email/saudacao";
 import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
@@ -169,7 +170,7 @@ export async function pedirRecuperacao(
       assunto: "Redefinir sua senha na Lupa",
       tipo: "recuperacao",
       corpo: [
-        `Olá, ${usuario.nomeCompleto.split(" ")[0]}.`,
+        saudacao(usuario.nomeCompleto),
         "",
         "Você pediu para redefinir a sua senha na Lupa. Abra o link abaixo:",
         "",
