@@ -8,9 +8,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 12/10/2026.**
+**Última atualização: 13/10/2026.**
 
 ## Concluído
+
+Em 13/10/2026:
+
+- A busca de candidatos fica só para empresa com CNPJ conferido na Receita,
+  com teto de 30 perfis abertos por dia: ninguém colhe em série o WhatsApp
+  de quem pediu para ser encontrado —
+  [#433](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/433)
 
 Em 12/10/2026:
 

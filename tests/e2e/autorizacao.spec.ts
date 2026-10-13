@@ -144,6 +144,22 @@ test.describe("sessão de empresa", () => {
     expect(resposta?.status()).toBe(200);
   });
 
+  /*
+   * A busca é de empresa com CNPJ conferido (#433). A da suíte só passou
+   * pelo dígito verificador, e conferir na Receita seria rede de verdade:
+   * ela lê o que falta, sem lista nem contato. O caminho conferido é
+   * provado no teste de unidade do serviço.
+   */
+  test("sem CNPJ conferido, a busca explica o que falta", async ({ page }) => {
+    await page.goto("/candidatos");
+    await expect(
+      page.getByText("A busca é para empresa com CNPJ conferido"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Ir para o perfil" }),
+    ).toBeVisible();
+  });
+
   test("não alcança a área administrativa", async ({ page }) => {
     for (const rota of SO_DE_ADMIN) {
       const resposta = await page.goto(rota);

@@ -2759,6 +2759,29 @@ a essa tela não traz currículo nem resumo.
 vaga, porque o alcance é outro: as de vaga terminam em quem se candidatou
 àquela vaga, e esta começa em quem nunca se candidatou a nada.
 
+**E só para empresa conferida, com teto por dia (#433).** Decisão do Luiz
+em 13/10/2026. Até ali, qualquer conta de empresa abria a busca e o
+WhatsApp de cada pessoa: a cadastrada por CPF nasce verificada na hora, e
+a de CNPJ chegava à busca só com o dígito verificador. Criar uma conta e
+colher o telefone de todo mundo que pediu para ser encontrado levava
+minutos — o primeiro passo do golpe da vaga com taxa, o mais comum contra
+quem procura emprego. Hoje `acessoABuscaDeCandidatos` libera a busca só
+para empresa com CNPJ conferido na Receita, e cada uma abre até 30 perfis
+por dia (`ORCAMENTO_DE_PERFIS_DE_CANDIDATO`); o 31º mostra que o teto foi
+atingido, sem o contato.
+
+A empresa por CPF fica de fora pela mesma razão que a #251 deu ao
+prestador: quem liga a caixa consente ser encontrado por **empresas**, e
+ela é pessoa física. Quem não está conferido lê o que falta, em vez de um
+404 — a capacidade continua no papel, e o link no painel também. O perfil
+de quem se candidatou à empresa **não** conta no teto: candidatura é outro
+consentimento, e continua chegando como sempre. O admin passa direto, por
+não contratar.
+
+O que isto não resolve: conferir o CNPJ prova que a empresa existe, não
+que quem a cadastrou é dono dela. O teto é o que limita quem usa o CNPJ de
+outra empresa.
+
 **Fora do escopo por decisão, não por esquecimento:** testes e triagem
 automática, e múltiplos usuários por empresa. Os dois fazem sentido num
 produto maduro; num piloto de uma cidade, cada um é uma superfície a mais

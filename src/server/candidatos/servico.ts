@@ -8,8 +8,10 @@ import {
 } from "@/lib/data";
 import { grauDeProximidade, type Origem } from "@/lib/proximidade";
 import { formaCanonica } from "@/lib/skills";
+import { consumirOrcamento } from "../auth/rate-limit";
 import { type Autenticado, pode } from "../auth/rbac";
-import { erros } from "../errors";
+import { AppError, erros } from "../errors";
+import { ORCAMENTO_DE_PERFIS_DE_CANDIDATO } from "../limites";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
 
@@ -57,7 +59,9 @@ export async function candidatosDisponiveis(
   sessao: Autenticado | null,
   filtros: FiltrosDeCandidato = {},
 ): Promise<CandidatoNaBusca[]> {
-  if (!sessao || !pode(sessao.papel, "candidato:buscar_disponiveis")) return [];
+  if (!sessao || (await acessoABuscaDeCandidatos(sessao)) !== "liberado") {
+    return [];
+  }
 
   const [todos, quemBusca] = await Promise.all([
     getCandidatosDisponiveis(),
@@ -143,6 +147,43 @@ export interface PerfilDeCandidato {
 }
 
 /**
+ * Se quem pede pode buscar candidatos (#433).
+ *
+ * A capacidade é do papel, e o consentimento é para **empresas**: quem
+ * liga a opção lê "Quero que empresas me encontrem". Por isso a empresa
+ * precisa estar conferida — CNPJ consultado na Receita. A cadastrada por
+ * CPF é pessoa física, como o prestador a quem a #251 negou a busca pelo
+ * mesmo motivo; e a de CNPJ só com dígito verificador é qualquer número
+ * bem formado. As duas recebem candidatura normalmente; o que não fazem é
+ * procurar quem nunca se candidatou.
+ *
+ * Só o papel `empresa` passa por esta conferência. O outro papel com a
+ * capacidade é o admin, que não contrata e enxerga tudo.
+ */
+export type AcessoABusca =
+  | "liberado"
+  | "sem_capacidade"
+  | "falta_cnpj_conferido";
+
+export async function acessoABuscaDeCandidatos(
+  sessao: Autenticado | null,
+): Promise<AcessoABusca> {
+  if (!sessao || !pode(sessao.papel, "candidato:buscar_disponiveis")) {
+    return "sem_capacidade";
+  }
+  if (sessao.papel !== "empresa") return "liberado";
+
+  const repo = repositorioUsuarios();
+  const [usuario, empresa] = await Promise.all([
+    repo.porId(sessao.usuarioId),
+    repo.perfilEmpresa(sessao.usuarioId),
+  ]);
+  return usuario?.docVerificado && empresa?.cnpj
+    ? "liberado"
+    : "falta_cnpj_conferido";
+}
+
+/**
  * Um candidato, para a tela de perfil.
  *
  * `null` tanto para "não existe" quanto para "não consentiu" quanto para
@@ -153,7 +194,7 @@ export interface PerfilDeCandidato {
 export async function perfilDoCandidato(
   sessao: Autenticado | null,
   id: string,
-): Promise<PerfilDeCandidato | null> {
+): Promise<PerfilDeCandidato | "limite_do_dia" | null> {
   if (!sessao) return null;
 
   /*
@@ -192,7 +233,9 @@ export async function perfilDoCandidato(
     };
   }
 
-  if (!pode(sessao.papel, "candidato:buscar_disponiveis")) return null;
+  // Empresa sem CNPJ conferido não alcança o perfil, como quem não pode
+  // (#433): 404 igual, para não confirmar que a pessoa existe.
+  if ((await acessoABuscaDeCandidatos(sessao)) !== "liberado") return null;
 
   const todos = await getCandidatosDisponiveis();
   const candidato = todos.find((c) => c.id === id);
@@ -207,13 +250,34 @@ export async function perfilDoCandidato(
   const daEmpresa = await getCompanyApplications(
     empresaDoPainel(sessao.usuarioId),
   );
+  const candidaturaId =
+    daEmpresa.find((c) => c.candidate_id === id)?.id ?? null;
+
+  /*
+   * O teto do dia (#433). Conta só o contato de quem não se candidatou a
+   * esta empresa: quem se candidatou entregou o contato com a candidatura,
+   * e abrir o perfil dele é trabalho de recrutamento, não colheita.
+   */
+  if (!candidaturaId && sessao.papel === "empresa") {
+    try {
+      await consumirOrcamento(
+        `acao:candidato.ver_perfil:u:${sessao.usuarioId}`,
+        ORCAMENTO_DE_PERFIS_DE_CANDIDATO,
+      );
+    } catch (erro) {
+      if (erro instanceof AppError && erro.codigo === "muitas_tentativas") {
+        return "limite_do_dia";
+      }
+      throw erro;
+    }
+  }
 
   return {
     candidato,
     ehDono: false,
     // Quem chegou até aqui está na lista de quem consentiu, por definição.
     visivelParaEmpresas: true,
-    candidaturaId: daEmpresa.find((c) => c.candidate_id === id)?.id ?? null,
+    candidaturaId,
   };
 }
 

@@ -34,19 +34,50 @@ vi.mock("@/lib/data", () => ({
 let usuario: unknown = null;
 /** O perfil de candidato do dono, para o caminho da prévia própria. */
 let perfilDoDono: unknown = null;
+/** O perfil de empresa de quem busca: o CNPJ dele decide a busca (#433). */
+let perfilDaEmpresa: unknown = null;
 
 vi.mock("@/server/repositories", () => ({
   repositorioUsuarios: () => ({
     porId: async () => usuario,
     perfilCandidato: async () => perfilDoDono,
+    perfilEmpresa: async () => perfilDaEmpresa,
   }),
 }));
 
+/** O teto de perfis por dia (#433), sem banco: conta e recusa no limite. */
+const teto = vi.hoisted(() => ({ chaves: [] as string[], recusar: false }));
+
+vi.mock("@/server/auth/rate-limit", async () => {
+  const { erros } = await import("@/server/errors");
+  return {
+    consumirOrcamento: async (chave: string) => {
+      teto.chaves.push(chave);
+      if (teto.recusar) throw erros.muitasTentativas(60);
+    },
+  };
+});
+
 import type { Autenticado } from "@/server/auth/rbac";
 import {
+  acessoABuscaDeCandidatos,
   candidatosDisponiveis,
-  perfilDoCandidato,
+  perfilDoCandidato as perfilOuLimite,
 } from "@/server/candidatos/servico";
+
+/** O perfil, falhando se vier o teto do dia — que só os testes dele esperam. */
+async function perfilDoCandidato(
+  sessao: Autenticado | null,
+  id: string,
+): ReturnType<typeof abrirSemTeto> {
+  return abrirSemTeto(sessao, id);
+}
+
+async function abrirSemTeto(sessao: Autenticado | null, id: string) {
+  const p = await perfilOuLimite(sessao, id);
+  if (p === "limite_do_dia") throw new Error("teto do dia inesperado");
+  return p;
+}
 
 const empresa: Autenticado = { usuarioId: "empresa-1", papel: "empresa" };
 const candidato: Autenticado = { usuarioId: "cand-9", papel: "candidato_clt" };
@@ -76,7 +107,11 @@ const nomes = (l: { full_name: string }[]) => l.map((x) => x.full_name);
 beforeEach(() => {
   disponiveis = [];
   for (const k of Object.keys(candidaturas)) delete candidaturas[k];
-  usuario = { id: "empresa-1", cidade: "Sinop - MT" };
+  // Empresa conferida: CNPJ consultado na Receita (#433).
+  usuario = { id: "empresa-1", cidade: "Sinop - MT", docVerificado: true };
+  perfilDaEmpresa = { usuarioId: "empresa-1", cnpj: "11222333000181" };
+  teto.chaves.length = 0;
+  teto.recusar = false;
 });
 
 describe("quem pode perguntar", () => {
@@ -266,7 +301,8 @@ describe("ordem", () => {
    * quem vê duvidar do critério inteiro.
    */
   it("sem saber de onde a empresa é, ordena pelo nome", async () => {
-    usuario = null;
+    // Conferida, mas sem cidade de onde medir.
+    usuario = { id: "empresa-1", docVerificado: true };
     disponiveis = [pessoa("z"), pessoa("a")];
 
     expect(nomes(await candidatosDisponiveis(empresa))).toEqual([
@@ -410,10 +446,95 @@ describe("perfil de um candidato", () => {
     /** A prévia é do dono; a empresa continua vendo o que consentiu. */
     it("para quem não é o dono, ehDono é falso", async () => {
       disponiveis = [pessoa("a")];
+      usuario = { id: "empresa-1", cidade: "Sinop - MT", docVerificado: true };
       const p = await perfilDoCandidato(empresa, "a");
 
       expect(p?.ehDono).toBe(false);
       expect(p?.visivelParaEmpresas).toBe(true);
     });
+  });
+});
+
+/**
+ * A busca é de empresa conferida (#433).
+ *
+ * Quem liga a opção consente ser encontrado por **empresas**. A cadastrada
+ * por CPF é pessoa física — a mesma razão que negou a busca ao prestador
+ * na #251 —, e a de CNPJ só com dígito é qualquer número bem formado.
+ */
+describe("só empresa com CNPJ conferido busca", () => {
+  it("CNPJ não conferido: sem lista, sem perfil", async () => {
+    disponiveis = [pessoa("a")];
+    usuario = { id: "empresa-1", cidade: "Sinop - MT", docVerificado: false };
+
+    expect(await acessoABuscaDeCandidatos(empresa)).toBe(
+      "falta_cnpj_conferido",
+    );
+    expect(await candidatosDisponiveis(empresa)).toEqual([]);
+    expect(await perfilDoCandidato(empresa, "a")).toBeNull();
+  });
+
+  it("empresa por CPF: verificada, mas sem CNPJ, não busca", async () => {
+    disponiveis = [pessoa("a")];
+    perfilDaEmpresa = { usuarioId: "empresa-1", cnpj: null };
+
+    expect(await acessoABuscaDeCandidatos(empresa)).toBe(
+      "falta_cnpj_conferido",
+    );
+    expect(await candidatosDisponiveis(empresa)).toEqual([]);
+  });
+
+  it("empresa conferida busca", async () => {
+    expect(await acessoABuscaDeCandidatos(empresa)).toBe("liberado");
+  });
+
+  /** O admin não contrata e enxerga tudo: não passa pela conferência. */
+  it("admin não precisa de CNPJ", async () => {
+    usuario = null;
+    perfilDaEmpresa = null;
+    expect(await acessoABuscaDeCandidatos(admin)).toBe("liberado");
+  });
+
+  it("quem não tem a capacidade continua sem ela", async () => {
+    expect(await acessoABuscaDeCandidatos(prestador)).toBe("sem_capacidade");
+    expect(await acessoABuscaDeCandidatos(null)).toBe("sem_capacidade");
+  });
+});
+
+/**
+ * O teto de perfis por dia (#433): colher o WhatsApp de quem pediu para
+ * ser encontrado é o primeiro passo do golpe da vaga com taxa.
+ */
+describe("teto de perfis por dia", () => {
+  it("passado o teto, o perfil não sai, e a tela sabe por quê", async () => {
+    disponiveis = [pessoa("a")];
+    teto.recusar = true;
+
+    expect(await perfilOuLimite(empresa, "a")).toBe("limite_do_dia");
+  });
+
+  it("cada perfil aberto conta, na chave da empresa", async () => {
+    disponiveis = [pessoa("a")];
+    await perfilDoCandidato(empresa, "a");
+    expect(teto.chaves).toEqual(["acao:candidato.ver_perfil:u:empresa-1"]);
+  });
+
+  /** Candidatura é outro consentimento, e continua chegando como sempre. */
+  it("quem se candidatou à empresa não conta no teto", async () => {
+    disponiveis = [pessoa("a")];
+    candidaturas["empresa-1"] = [{ id: "cand-abc", candidate_id: "a" }];
+    teto.recusar = true;
+
+    const p = await perfilDoCandidato(empresa, "a");
+    expect(p?.candidaturaId).toBe("cand-abc");
+    expect(teto.chaves).toEqual([]);
+  });
+
+  it("o admin e o próprio dono não contam", async () => {
+    disponiveis = [pessoa("a")];
+    usuario = { id: "cand-9", cidade: "Sinop - MT" };
+    await perfilDoCandidato(admin, "a");
+    await perfilDoCandidato(candidato, "cand-9");
+    expect(teto.chaves).toEqual([]);
   });
 });
