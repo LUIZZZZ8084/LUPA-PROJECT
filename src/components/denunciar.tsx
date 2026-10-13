@@ -25,7 +25,7 @@ export const MOTIVOS_NA_TELA = [
 ] as const;
 
 /**
- * Denunciar uma vaga ou uma avaliação (#435).
+ * Denunciar uma vaga, uma avaliação ou uma foto de trabalho (#435, #452).
  *
  * Fechado até a pessoa pedir, e discreto: é um recurso de exceção, e um
  * botão vermelho em toda vaga ensinaria a desconfiar de todas. Depois de
@@ -37,12 +37,17 @@ export function Denunciar({
   alvoId,
   prestadorId,
 }: {
-  alvo: "vaga" | "avaliacao";
+  alvo: "vaga" | "avaliacao" | "publicacao";
   alvoId: string;
   prestadorId?: string;
 }) {
   const [aberto, setAberto] = useState(false);
-  const rotulo = alvo === "vaga" ? "Denunciar esta vaga" : "Denunciar";
+  const rotulo =
+    alvo === "vaga"
+      ? "Denunciar esta vaga"
+      : alvo === "publicacao"
+        ? "Denunciar esta foto"
+        : "Denunciar";
 
   if (!aberto) {
     return (
@@ -73,7 +78,7 @@ function FormularioDeDenuncia({
   prestadorId,
   aoCancelar,
 }: {
-  alvo: "vaga" | "avaliacao";
+  alvo: "vaga" | "avaliacao" | "publicacao";
   alvoId: string;
   prestadorId?: string;
   aoCancelar: () => void;
@@ -109,9 +114,13 @@ function FormularioDeDenuncia({
 
       <fieldset>
         <legend className="text-sm font-semibold">
-          {alvo === "vaga"
-            ? "O que há de errado com esta vaga?"
-            : "O que há de errado com esta avaliação?"}
+          {
+            {
+              vaga: "O que há de errado com esta vaga?",
+              avaliacao: "O que há de errado com esta avaliação?",
+              publicacao: "O que há de errado com esta foto?",
+            }[alvo]
+          }
         </legend>
         <div className="mt-2 space-y-1.5">
           {MOTIVOS_NA_TELA.map((m) => (

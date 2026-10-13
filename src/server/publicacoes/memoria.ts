@@ -72,6 +72,10 @@ export class RepositorioPublicacoesMemoria implements RepositorioPublicacoes {
     return novo;
   }
 
+  async apagar(id: string): Promise<void> {
+    if (!this.itens.delete(id)) throw erros.naoEncontrado("Publicação");
+  }
+
   async definirStatus(
     id: string,
     status: StatusPublicacao,

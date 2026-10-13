@@ -38,4 +38,10 @@ export interface RepositorioPublicacoes {
     campos: Partial<Pick<Publicacao, "titulo" | "corpo" | "imagemUrl">>,
   ): Promise<Publicacao>;
   definirStatus(id: string, status: StatusPublicacao): Promise<Publicacao>;
+  /**
+   * Apaga a linha de vez (#452). Quem chama apaga o arquivo da foto
+   * depois — na remoção, o banco vem primeiro, para nunca sobrar uma
+   * publicação apontando para um arquivo que não existe.
+   */
+  apagar(id: string): Promise<void>;
 }

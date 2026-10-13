@@ -14,7 +14,7 @@
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'alvo_denuncia') then
-    create type alvo_denuncia as enum ('vaga', 'avaliacao');
+    create type alvo_denuncia as enum ('vaga', 'avaliacao', 'publicacao');
   end if;
   if not exists (select 1 from pg_type where typname = 'motivo_denuncia') then
     create type motivo_denuncia as enum ('golpe', 'falsa', 'ofensiva', 'outro');
@@ -23,6 +23,10 @@ begin
     create type status_denuncia as enum ('aberta', 'procedente', 'descartada');
   end if;
 end $$;
+
+-- A foto de trabalho entrou depois (#452); num banco antigo, o tipo já
+-- existe sem ela.
+alter type alvo_denuncia add value if not exists 'publicacao';
 
 create table if not exists denuncias (
   id             uuid primary key default gen_random_uuid(),
@@ -83,9 +87,14 @@ begin
   if p_tirar_do_ar then
     if p_alvo = 'vaga' then
       update vagas set status = 'fechada' where id = p_alvo_id;
-    else
+    elsif p_alvo = 'avaliacao' then
       -- O trigger de `avaliacoes` recalcula a nota do prestador.
       delete from avaliacoes where id = p_alvo_id;
+    else
+      -- A foto sai de vez, e não arquivada (#452): arquivada, ela seguiria
+      -- no ar pelo endereço, e o dono poderia trazê-la de volta. O
+      -- arquivo no Storage a aplicação apaga em seguida.
+      delete from publicacoes where id = p_alvo_id;
     end if;
   end if;
 
@@ -120,6 +129,11 @@ drop trigger if exists denuncias_da_avaliacao on avaliacoes;
 create trigger denuncias_da_avaliacao
   after delete on avaliacoes
   for each row execute function denuncias_somem_com_o_alvo('avaliacao');
+
+drop trigger if exists denuncias_da_publicacao on publicacoes;
+create trigger denuncias_da_publicacao
+  after delete on publicacoes
+  for each row execute function denuncias_somem_com_o_alvo('publicacao');
 
 revoke select on denuncias from anon, authenticated;
 revoke insert, update, delete, truncate, references, trigger

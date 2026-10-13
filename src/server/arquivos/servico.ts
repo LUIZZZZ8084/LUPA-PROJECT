@@ -215,6 +215,73 @@ export async function removerArquivo(
 }
 
 /**
+ * O caminho no bucket de uma foto de trabalho, a partir do endereço que o
+ * banco guarda (#452) — ou `null`, e então nada é apagado.
+ *
+ * O endereço é o público do Storage, com `?v=` no fim. Só vale se for do
+ * nosso projeto, do bucket das fotos e da pasta do **próprio autor**, com o
+ * nome que `caminhoDoArquivo` sorteia: apagar o arquivo errado, ou o de
+ * outra pessoa, é pior que deixar um órfão no bucket.
+ */
+export function caminhoDaFotoDeTrabalho(
+  base: string | undefined,
+  autorId: string,
+  imagemUrl: string,
+): string | null {
+  if (!base) return null;
+  try {
+    const url = new URL(imagemUrl);
+    if (url.origin !== new URL(base).origin) return null;
+
+    const regra = REGRAS.publicacao;
+    const prefixo = `/storage/v1/object/public/${regra.balde}/`;
+    if (!url.pathname.startsWith(prefixo)) return null;
+
+    const caminho = decodeURIComponent(url.pathname.slice(prefixo.length));
+    const [pasta, dono, arquivo, ...resto] = caminho.split("/");
+    const extensoes = Object.values(regra.extensoes);
+    const [nome, extensao] = (arquivo ?? "").split(".");
+    const valido =
+      resto.length === 0 &&
+      pasta === regra.pasta &&
+      dono === autorId &&
+      /^[0-9a-f-]{36}$/.test(nome ?? "") &&
+      extensoes.includes(extensao ?? "");
+    return valido ? caminho : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Apaga o arquivo de uma foto de trabalho (#452). Devolve `false` se não
+ * deu — endereço que não é nosso, ou o Storage recusou —, para quem chama
+ * avisar: foto tirada do ar que continua no bucket público segue
+ * acessível pelo endereço.
+ */
+export async function apagarFotoDeTrabalho(
+  autorId: string,
+  imagemUrl: string | null,
+): Promise<boolean> {
+  if (!imagemUrl || !temArmazenamento) return true;
+
+  const caminho = caminhoDaFotoDeTrabalho(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    autorId,
+    imagemUrl,
+  );
+  if (!caminho) return false;
+
+  const supabase = clienteDeServico();
+  if (!supabase) return false;
+
+  const { error } = await supabase.storage
+    .from(REGRAS.publicacao.balde)
+    .remove([caminho]);
+  return !error;
+}
+
+/**
  * Apaga todo arquivo da pessoa nos buckets (#423).
  *
  * Foto de perfil, logo e currículo têm caminho fixo por pessoa, com uma

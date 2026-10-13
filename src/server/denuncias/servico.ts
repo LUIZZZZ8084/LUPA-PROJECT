@@ -4,13 +4,18 @@ import { getJobById } from "@/lib/data";
 import { TETO_ADMIN } from "@/lib/limites-de-lista";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { clienteDeServico } from "@/lib/supabase/service";
+import { apagarFotoDeTrabalho } from "../arquivos/servico";
 import { type Autenticado, exigirCapacidade } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
+import { repositorioPublicacoes } from "../publicacoes";
+import type { Publicacao } from "../publicacoes/tipos";
+import { repositorioUsuarios } from "../repositories";
 import { repositorioVagas } from "../vagas";
 
 /**
- * Denúncia de vaga e de avaliação, e a decisão do admin (#435).
+ * Denúncia de vaga, de avaliação e de foto de trabalho, e a decisão do
+ * admin (#435, #452).
  *
  * Decisão do Luiz em 13/10/2026: quem usa o app denuncia, e só o admin
  * decide. **Nada sai do ar sozinho** — ocultar depois de N denúncias seria
@@ -22,7 +27,7 @@ import { repositorioVagas } from "../vagas";
  * a lê.
  */
 
-export type AlvoDenuncia = "vaga" | "avaliacao";
+export type AlvoDenuncia = "vaga" | "avaliacao" | "publicacao";
 export type MotivoDenuncia = "golpe" | "falsa" | "ofensiva" | "outro";
 
 /** O texto de cada motivo, num lugar só: a tela e o painel leem daqui. */
@@ -36,7 +41,10 @@ export const MOTIVOS_DE_DENUNCIA: Record<MotivoDenuncia, string> = {
 export interface NovaDenuncia {
   alvo: AlvoDenuncia;
   alvoId: string;
-  /** Para a avaliação: de quem é o perfil onde ela aparece. */
+  /**
+   * Para a avaliação: de quem é o perfil onde ela aparece. Na foto, quem
+   * diz é a própria publicação, e o que vier aqui é ignorado.
+   */
   prestadorId?: string | null;
   motivo: MotivoDenuncia;
   detalhe?: string | null;
@@ -74,13 +82,23 @@ function jaDenunciada() {
   );
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A foto, se existir e estiver no ar. Arquivada não recebe denúncia. */
+async function fotoNoAr(id: string): Promise<Publicacao | null> {
+  // Id sem forma de UUID nem vai ao banco, que responderia com erro.
+  if (isSupabaseConfigured && !UUID.test(id)) return null;
+  const foto = await repositorioPublicacoes().porId(id);
+  return foto?.status === "ativa" ? foto : null;
+}
+
 export async function denunciar(
   sessao: Autenticado | null,
   dados: NovaDenuncia,
 ): Promise<void> {
   const quem = exigirCapacidade(sessao, "denuncia:criar");
   const detalhe = dados.detalhe?.trim() || null;
-  const prestadorId = dados.prestadorId || null;
+  let prestadorId = dados.prestadorId || null;
 
   if (dados.alvo === "vaga") {
     const vaga = await getJobById(dados.alvoId);
@@ -89,6 +107,15 @@ export async function denunciar(
     if (vaga.company_id === quem.usuarioId) {
       throw erros.semPermissao("denúncia da própria vaga");
     }
+  } else if (dados.alvo === "publicacao") {
+    const foto = await fotoNoAr(dados.alvoId);
+    if (!foto) throw erros.naoEncontrado("Foto");
+    // O dono tira a própria foto do perfil, ou a apaga.
+    if (foto.autorId === quem.usuarioId) {
+      throw erros.semPermissao("denúncia da própria foto");
+    }
+    // De quem é o perfil vem da publicação, nunca do formulário.
+    prestadorId = foto.autorId;
   } else if (!prestadorId) {
     throw erros.naoEncontrado("Avaliação");
   }
@@ -159,6 +186,12 @@ export async function denunciar(
   });
 }
 
+const TITULO_PADRAO: Record<AlvoDenuncia, string> = {
+  vaga: "Vaga",
+  avaliacao: "Avaliação",
+  publicacao: "Foto de trabalho",
+};
+
 /** As denúncias abertas de um mesmo alvo, para o painel decidir de uma vez. */
 export interface DenunciaAgrupada {
   alvo: AlvoDenuncia;
@@ -166,6 +199,8 @@ export interface DenunciaAgrupada {
   /** Onde o admin abre o alvo para ver o contexto. */
   caminho: string;
   titulo: string;
+  /** Só na foto: a miniatura, para decidir sem abrir o perfil. */
+  imagemUrl?: string | null;
   total: number;
   motivos: Partial<Record<MotivoDenuncia, number>>;
   detalhes: string[];
@@ -259,7 +294,7 @@ export async function denunciasAbertas(
           l.alvo === "vaga"
             ? `/vagas/${l.alvoId}`
             : `/servicos/${l.prestadorId ?? ""}`,
-        titulo: l.alvo === "vaga" ? "Vaga" : "Avaliação",
+        titulo: TITULO_PADRAO[l.alvo],
         total: 0,
         motivos: {},
         detalhes: [],
@@ -282,8 +317,24 @@ export async function denunciasAbertas(
       g.titulo = vaga
         ? `${vaga.title} — ${vaga.company.company_name}`
         : "Vaga já fora da busca";
-    } else {
+    } else if (g.alvo === "avaliacao") {
       g.titulo = comentarios.get(g.alvoId) ?? "Avaliação";
+    } else {
+      const foto = await repositorioPublicacoes()
+        .porId(g.alvoId)
+        .catch(() => null);
+      g.titulo = foto?.titulo ?? "Foto já apagada";
+      g.imagemUrl = foto?.imagemUrl ?? null;
+      // Candidato não tem vitrine: o perfil dele mora em /candidatos.
+      if (foto) {
+        const autor = await repositorioUsuarios()
+          .porId(foto.autorId)
+          .catch(() => null);
+        g.caminho =
+          autor?.papel === "candidato_clt"
+            ? `/candidatos/${foto.autorId}`
+            : `/servicos/${foto.autorId}`;
+      }
     }
   }
 
@@ -297,8 +348,10 @@ export async function denunciasAbertas(
  * Tira do ar ou descarta, e fecha as denúncias daquele alvo (#435).
  *
  * Tirar do ar **encerra** a vaga — o mesmo estado de quando o dono a
- * encerra, que a tira da busca — e **apaga** a avaliação, cuja nota sai da
- * média pelo trigger de sempre. Devolve quantas denúncias fechou.
+ * encerra, que a tira da busca —, **apaga** a avaliação, cuja nota sai da
+ * média pelo trigger de sempre, e **apaga** a foto de trabalho (#452): a
+ * publicação no banco e o arquivo no Storage, nessa ordem. Arquivada, a
+ * foto seguiria no ar pelo endereço. Devolve quantas denúncias fechou.
  */
 export async function decidirDenuncia(
   sessao: Autenticado | null,
@@ -308,6 +361,14 @@ export async function decidirDenuncia(
 
   let fechadas = 0;
 
+  // O endereço da foto se lê antes: depois da decisão a linha não existe.
+  const foto =
+    dados.tirarDoAr && dados.alvo === "publicacao"
+      ? await repositorioPublicacoes()
+          .porId(dados.alvoId)
+          .catch(() => null)
+      : null;
+
   if (!isSupabaseConfigured) {
     // Na demonstração, só a vaga publicada nesta sessão está no
     // repositório; a de exemplo é estática e continua na vitrine.
@@ -316,6 +377,7 @@ export async function decidirDenuncia(
         .encerrar(dados.alvoId)
         .catch(() => undefined);
     }
+    if (foto) await repositorioPublicacoes().apagar(foto.id);
     for (const d of memoria()) {
       if (
         d.status === "aberta" &&
@@ -337,6 +399,15 @@ export async function decidirDenuncia(
     if (error)
       throw erros.indisponivel(`decisão de denúncia: ${error.message}`);
     fechadas = Number(data ?? 0);
+  }
+
+  // Foto tirada do ar que fica no bucket público segue acessível pelo
+  // endereço: a falha vai ao Sentry, para alguém apagar à mão.
+  if (foto && !(await apagarFotoDeTrabalho(foto.autorId, foto.imagemUrl))) {
+    log.erro(erros.indisponivel("foto tirada do ar ficou no Storage"), {
+      acao: "denuncia.decidir",
+      publicacaoId: foto.id,
+    });
   }
 
   log.info("denúncia decidida", {

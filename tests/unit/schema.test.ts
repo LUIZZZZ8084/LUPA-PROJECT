@@ -2337,7 +2337,7 @@ describe("teste_gratis_usado_em", () => {
   beforeAll(async () => {
     banco = await PGlite.create();
     await banco.exec(SCHEMA);
-  });
+  }, 60_000);
 
   afterAll(async () => {
     await banco.close();
@@ -2404,7 +2404,10 @@ describe("teste_gratis_usado_em", () => {
     } finally {
       await antigo.close();
     }
-  });
+    // Monta um banco inteiro a partir do schema, como os `beforeAll` deste
+    // arquivo — e precisa do mesmo prazo deles: com o schema crescendo, o
+    // padrão de 5 s estourava sob a carga da suíte inteira.
+  }, 60_000);
 });
 
 /**
@@ -2768,6 +2771,85 @@ describe("denúncias", () => {
     expect(d.rows).toEqual([{ status: "descartada" }]);
     // Fechada, a mesma pessoa pode denunciar de novo se a vaga mudar.
     await denunciar("vaga", c.vagaId, c.a);
+  });
+
+  /*
+   * Foto de trabalho (#452): tirar do ar apaga a publicação — arquivada,
+   * ela seguiria no ar pelo endereço —, e a decisão fica registrada.
+   */
+  async function fotoDe(autor: string): Promise<string> {
+    const r = await db.query<{ id: string }>(
+      `insert into publicacoes (autor_id, titulo, corpo)
+       values ($1, 'Telhado refeito', 'Troca de telhas e calhas na casa.')
+       returning id`,
+      [autor],
+    );
+    return r.rows[0].id;
+  }
+
+  it("tirar a foto do ar apaga a publicação e registra a decisão", async () => {
+    const c = await cenario("foto");
+    const foto = await fotoDe(c.prestador);
+    await denunciar("publicacao", foto, c.a);
+
+    const r = await db.query<{ n: number }>(
+      "select decidir_denuncia('publicacao', $1, true) as n",
+      [foto],
+    );
+
+    expect(r.rows[0].n).toBe(1);
+    const restou = await db.query("select 1 from publicacoes where id = $1", [
+      foto,
+    ]);
+    expect(restou.rows).toHaveLength(0);
+    const d = await db.query<{ status: string }>(
+      "select status from denuncias where alvo_id = $1",
+      [foto],
+    );
+    expect(d.rows).toEqual([{ status: "procedente" }]);
+  });
+
+  it("a denúncia aberta de uma foto some quando a publicação é apagada", async () => {
+    const c = await cenario("foto-orfa");
+    const foto = await fotoDe(c.prestador);
+    await denunciar("publicacao", foto, c.a);
+
+    await db.query("delete from publicacoes where id = $1", [foto]);
+
+    const abertas = await db.query(
+      "select 1 from denuncias where alvo_id = $1",
+      [foto],
+    );
+    expect(abertas.rows).toHaveLength(0);
+  });
+
+  /*
+   * A função de decisão existe em três arquivos: o schema e os dois
+   * scripts de produção. Um deles desatualizado, rodado de novo, desfaria
+   * a foto sem ninguém ver.
+   */
+  it("as três cópias de decidir_denuncia são iguais", () => {
+    const funcao = (texto: string) => {
+      const inicio = texto.indexOf(
+        "create or replace function decidir_denuncia(",
+      );
+      return texto.slice(inicio, texto.indexOf("$$;", inicio));
+    };
+    const ler = (arquivo: string) =>
+      readFileSync(join(process.cwd(), "supabase", arquivo), "utf8");
+
+    const doSchema = funcao(SCHEMA);
+    expect(doSchema).toContain("delete from publicacoes");
+    expect(funcao(ler("aplica-denuncias.sql"))).toBe(doSchema);
+    expect(funcao(ler("aplica-denuncia-de-foto.sql"))).toBe(doSchema);
+  });
+
+  it("aplica-denuncia-de-foto.sql roda de novo num banco que já tem tudo", async () => {
+    const script = readFileSync(
+      join(process.cwd(), "supabase/aplica-denuncia-de-foto.sql"),
+      "utf8",
+    );
+    await expect(db.exec(script)).resolves.toBeDefined();
   });
 
   it("aplica-denuncias.sql roda de novo num banco que já tem tudo", async () => {

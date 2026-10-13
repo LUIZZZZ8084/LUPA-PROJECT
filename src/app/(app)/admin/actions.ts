@@ -122,7 +122,7 @@ export async function decideVerification(
 export const decidirDenunciaAction = criarAcao({
   nome: "denuncia.decidir",
   entrada: z.object({
-    alvo: z.enum(["vaga", "avaliacao"]),
+    alvo: z.enum(["vaga", "avaliacao", "publicacao"]),
     alvoId: z.string().min(1).max(100),
     tirarDoAr: z.boolean(),
   }),
@@ -130,6 +130,7 @@ export const decidirDenunciaAction = criarAcao({
     const fechadas = await decidirDenuncia(await sessaoAtual(), dados);
     if (dados.tirarDoAr) {
       if (dados.alvo === "vaga") revalidarBuscaDeVagas();
+      // A foto some da grade do perfil; a nota e a vitrine, na avaliação.
       else derrubarCacheDePrestadores();
     }
     revalidatePath("/admin");

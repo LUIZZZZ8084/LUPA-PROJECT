@@ -100,7 +100,7 @@ export function DecisaoDeDenuncia({
   alvoId,
   className,
 }: {
-  alvo: "vaga" | "avaliacao";
+  alvo: "vaga" | "avaliacao" | "publicacao";
   alvoId: string;
   className?: string;
 }) {
@@ -116,7 +116,12 @@ export function DecisaoDeDenuncia({
     });
   }
 
-  const oQue = alvo === "vaga" ? "a vaga" : "a avaliação";
+  const oQue =
+    alvo === "vaga"
+      ? "a vaga"
+      : alvo === "avaliacao"
+        ? "a avaliação"
+        : "a foto";
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -125,7 +130,9 @@ export function DecisaoDeDenuncia({
           <p className="text-sm">
             {alvo === "vaga"
               ? "A vaga é encerrada e sai da busca. A empresa vê a vaga como encerrada no painel."
-              : "A avaliação é apagada, e a nota do prestador é recalculada."}
+              : alvo === "avaliacao"
+                ? "A avaliação é apagada, e a nota do prestador é recalculada."
+                : "A foto é apagada de vez, com o arquivo. Não há como trazer de volta."}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button

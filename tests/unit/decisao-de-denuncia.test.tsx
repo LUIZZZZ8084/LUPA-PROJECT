@@ -69,6 +69,18 @@ describe("decisão de denúncia", () => {
     });
   });
 
+  it("na foto, a confirmação diz que é de vez (#452)", () => {
+    render(<DecisaoDeDenuncia alvo="publicacao" alvoId="f1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /tirar do ar/i }));
+
+    expect(screen.getByText(/apagada de vez, com o arquivo/i)).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Confirmar: tirar a foto do ar" }),
+    ).toBeTruthy();
+    expect(decidir).not.toHaveBeenCalled();
+  });
+
   it("o erro do servidor aparece na tela", async () => {
     decidir.mockResolvedValueOnce({ ok: false, mensagem: "Serviço fora." });
     render(<DecisaoDeDenuncia alvo="vaga" alvoId="v1" />);

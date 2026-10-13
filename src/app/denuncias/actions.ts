@@ -14,7 +14,7 @@ import { denunciar } from "@/server/denuncias/servico";
 export const denunciarAction = criarAcao({
   nome: "denuncia.criar",
   entrada: z.object({
-    alvo: z.enum(["vaga", "avaliacao"]),
+    alvo: z.enum(["vaga", "avaliacao", "publicacao"]),
     alvoId: z.string().min(1).max(100),
     prestadorId: z.string().max(100).optional(),
     motivo: z.enum(["golpe", "falsa", "ofensiva", "outro"], {
