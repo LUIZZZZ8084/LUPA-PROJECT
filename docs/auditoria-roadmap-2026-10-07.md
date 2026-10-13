@@ -239,6 +239,15 @@ de redirecionamento. Os SQL foram rodados com o OK do Luiz.
 | #440 | #439 | Endurecimento: o termo de busca chega à consulta e ao cache com no máximo 100 caracteres; só se avalia quem é prestador; o `robots.txt` deixa de anunciar `/admin`. |
 | #442 | #441 | Até 3 avaliações do mesmo prestador por rede a cada 24 horas: a rajada de contas falsas de uma conexão para. Decisão do Luiz. |
 | #446 | #445 | A saudação dos e-mails de confirmação e de recuperação levava o nome cadastrado quase cru: um estranho, criando conta com o e-mail de outra pessoa, punha uma frase com link num e-mail legítimo da Lupa. Hoje só o primeiro nome, só letras; o cadastro recusa caractere invisível. |
+| #448 | #447 | O título da vaga, que vai no aviso por push para até 500 pessoas, recusa link. |
+
+**Configuração (13/10, com o OK do Luiz):** o monitor de disponibilidade do
+Sentry consultava a home a cada minuto — cerca de 80% das chamadas de
+função da Vercel, e a maior parte da CPU do mês. A CPU é o teto que chega
+primeiro no plano grátis: 1h37m de 4h usadas em 30 dias, e ao estourar a
+Vercel pausa o site. O monitor passou a consultar a cada 10 minutos. O
+resto do uso estava longe do teto: 84,5 mil de 1 milhão de chamadas,
+1,92 GB de 100 GB de tráfego, 112 de 5.000 transformações de imagem.
 
 **Conferido sem achado:**
 - O JSON-LD da home e o script do tema são texto fixo, sem dado de quem usa.
