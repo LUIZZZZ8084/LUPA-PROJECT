@@ -819,6 +819,57 @@ describe("grants de anon e authenticated", () => {
     }
   });
 
+  /**
+   * E as funções (#449). O Supabase publica toda função do schema público
+   * pela API, e concede execução às duas chaves. Nenhuma daqui roda com o
+   * privilégio do dono — a segunda camada é que nenhuma seja executável
+   * por elas, para o dia em que uma `security definer` aparecer.
+   */
+  const FUNCOES_DAS_CHAVES = `
+    select p.proname as funcao
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and (has_function_privilege('anon', p.oid, 'EXECUTE')
+            or has_function_privilege('authenticated', p.oid, 'EXECUTE'))`;
+
+  it("nenhuma função do schema é executável pelas duas chaves", async () => {
+    const abertas = await db.query<{ funcao: string }>(FUNCOES_DAS_CHAVES);
+    expect(abertas.rows).toEqual([]);
+  });
+
+  it("o script de produção tira a execução, e a chave de serviço continua", async () => {
+    const script = readFileSync(
+      join(process.cwd(), "supabase/aplica-funcoes-so-servico.sql"),
+      "utf8",
+    );
+    await db.exec("begin");
+    try {
+      // O padrão do Supabase: execução para todo mundo.
+      await db.exec(
+        "grant execute on all functions in schema public to public, anon, authenticated;",
+      );
+      expect(
+        (await db.query(FUNCOES_DAS_CHAVES)).rows.length,
+        "o cenário de produção não foi reproduzido",
+      ).toBeGreaterThan(0);
+
+      await db.exec(script);
+
+      expect((await db.query(FUNCOES_DAS_CHAVES)).rows).toEqual([]);
+      const semServico = await db.query<{ funcao: string }>(
+        `select p.proname as funcao
+           from pg_proc p
+           join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public'
+            and not has_function_privilege('service_role', p.oid, 'EXECUTE')`,
+      );
+      expect(semServico.rows).toEqual([]);
+    } finally {
+      await db.exec("rollback");
+    }
+  });
+
   it("schema.sql revoga a escrita das duas chaves em tudo", () => {
     expect(SCHEMA).toMatch(
       /revoke\s+insert,\s*update,\s*delete,\s*truncate,\s*references,\s*trigger\s+on\s+all\s+tables\s+in\s+schema\s+public\s+from\s+anon,\s*authenticated/i,

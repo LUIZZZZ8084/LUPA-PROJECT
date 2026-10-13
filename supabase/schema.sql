@@ -1818,6 +1818,9 @@ begin
   if not exists (select from pg_roles where rolname = 'authenticated') then
     create role authenticated;
   end if;
+  if not exists (select from pg_roles where rolname = 'service_role') then
+    create role service_role;
+  end if;
 end $$;
 
 grant usage on schema public to anon, authenticated;
@@ -1919,3 +1922,22 @@ revoke insert, update, delete, truncate, references, trigger
 alter default privileges in schema public
   revoke insert, update, delete, truncate, references, trigger
   on tables from anon, authenticated;
+
+/*
+ * E as funções (#449). O Supabase publica toda função do schema público
+ * pela API, e por padrão as duas chaves podem executá-las. Nenhuma daqui
+ * roda com o privilégio do dono, e as chaves não escrevem em nada, então
+ * hoje isso não alcança coisa alguma — mas a garantia moraria numa
+ * propriedade de cada função, e uma `security definer` criada por engano
+ * viraria porta aberta. Quem chama função é só a chave de serviço.
+ *
+ * Fica no fim do arquivo para alcançar toda função criada acima. Em banco
+ * existente, e depois de qualquer `aplica-*.sql` que crie função:
+ * `aplica-funcoes-so-servico.sql`.
+ */
+revoke execute on all functions in schema public
+  from public, anon, authenticated;
+grant execute on all functions in schema public to service_role;
+
+alter default privileges in schema public
+  revoke execute on functions from anon, authenticated;
