@@ -80,10 +80,24 @@ describe("avaliar prestador", () => {
     vi.restoreAllMocks();
   });
 
+  let proximaOrigem = 0;
+  /**
+   * Cada chamada numa rede própria, a não ser que o teste escolha uma: o
+   * teto por rede (#441) tem testes próprios, e os outros não podem
+   * depender de quantas avaliações vieram antes.
+   */
+  function avaliar(
+    sessao: Autenticado | null,
+    dados: Parameters<typeof avaliarPrestador>[1],
+    origem = `198.51.100.${++proximaOrigem}`,
+  ) {
+    return avaliarPrestador(sessao, dados, origem);
+  }
+
   it("grava a avaliação de quem está logado", async () => {
     const quem = await criarConta("candidato_clt");
 
-    await avaliarPrestador(quem, {
+    await avaliar(quem, {
       prestadorId: PRESTADOR,
       nota: 5,
       comentario: "Chegou na hora e explicou tudo antes de começar.",
@@ -112,16 +126,16 @@ describe("avaliar prestador", () => {
     const quem = await criarConta("prestador_servico");
 
     await expect(
-      avaliarPrestador(quem, { prestadorId: quem.usuarioId, nota: 5 }),
+      avaliar(quem, { prestadorId: quem.usuarioId, nota: 5 }),
     ).rejects.toSatisfy((e) => ehAppError(e) && e.codigo === "validacao");
   });
 
   it("cada pessoa avalia uma vez", async () => {
     const quem = await criarConta("candidato_clt");
-    await avaliarPrestador(quem, { prestadorId: PRESTADOR, nota: 4 });
+    await avaliar(quem, { prestadorId: PRESTADOR, nota: 4 });
 
     await expect(
-      avaliarPrestador(quem, { prestadorId: PRESTADOR, nota: 1 }),
+      avaliar(quem, { prestadorId: PRESTADOR, nota: 1 }),
     ).rejects.toSatisfy((e) => ehAppError(e) && e.codigo === "conflito");
   });
 
@@ -129,8 +143,8 @@ describe("avaliar prestador", () => {
     const primeira = await criarConta("candidato_clt");
     const segunda = await criarConta("empresa");
 
-    await avaliarPrestador(primeira, { prestadorId: PRESTADOR, nota: 5 });
-    await avaliarPrestador(segunda, { prestadorId: PRESTADOR, nota: 4 });
+    await avaliar(primeira, { prestadorId: PRESTADOR, nota: 5 });
+    await avaliar(segunda, { prestadorId: PRESTADOR, nota: 4 });
 
     expect(await jaAvaliou(primeira, PRESTADOR)).toBe(true);
     expect(await jaAvaliou(segunda, PRESTADOR)).toBe(true);
@@ -140,7 +154,7 @@ describe("avaliar prestador", () => {
     const quem = await criarConta("candidato_clt");
 
     await expect(
-      avaliarPrestador(quem, { prestadorId: PRESTADOR, nota }),
+      avaliar(quem, { prestadorId: PRESTADOR, nota }),
     ).rejects.toSatisfy((e) => ehAppError(e) && e.codigo === "validacao");
   });
 
@@ -171,7 +185,7 @@ describe("avaliar prestador", () => {
     it("a empresa assina com o nome da empresa, não o do responsável", async () => {
       const empresa = await criarEmpresa("Mercado Bom Preço");
 
-      await avaliarPrestador(empresa, { prestadorId: PRESTADOR, nota: 5 });
+      await avaliar(empresa, { prestadorId: PRESTADOR, nota: 5 });
 
       expect(avaliacoesEmMemoria(PRESTADOR)[0]?.nome).toBe("Mercado Bom Preço");
     });
@@ -179,7 +193,7 @@ describe("avaliar prestador", () => {
     it("empresa sem perfil assina com o nome da conta", async () => {
       const empresa = await criarConta("empresa");
 
-      await avaliarPrestador(empresa, { prestadorId: PRESTADOR, nota: 5 });
+      await avaliar(empresa, { prestadorId: PRESTADOR, nota: 5 });
 
       expect(avaliacoesEmMemoria(PRESTADOR)[0]?.nome).toBe("Quem Avalia");
     });
@@ -187,7 +201,7 @@ describe("avaliar prestador", () => {
     it("pessoa assina com o próprio nome", async () => {
       const quem = await criarConta("candidato_clt");
 
-      await avaliarPrestador(quem, { prestadorId: PRESTADOR, nota: 5 });
+      await avaliar(quem, { prestadorId: PRESTADOR, nota: 5 });
 
       expect(avaliacoesEmMemoria(PRESTADOR)[0]?.nome).toBe("Quem Avalia");
     });
@@ -196,9 +210,9 @@ describe("avaliar prestador", () => {
     it("renomear troca só as avaliações de quem foi renomeado", async () => {
       const empresa = await criarEmpresa("Mercado Bom Preço");
       const outra = await criarConta("candidato_clt");
-      await avaliarPrestador(empresa, { prestadorId: PRESTADOR, nota: 5 });
-      await avaliarPrestador(empresa, { prestadorId: "outro", nota: 4 });
-      await avaliarPrestador(outra, { prestadorId: PRESTADOR, nota: 3 });
+      await avaliar(empresa, { prestadorId: PRESTADOR, nota: 5 });
+      await avaliar(empresa, { prestadorId: "outro", nota: 4 });
+      await avaliar(outra, { prestadorId: PRESTADOR, nota: 3 });
 
       await renomearAvaliacoesDe(empresa.usuarioId, "BOM PRECO LTDA");
 
@@ -210,9 +224,63 @@ describe("avaliar prestador", () => {
     });
   });
 
+  /*
+   * Até 3 avaliações do mesmo prestador por rede a cada 24 horas (#441):
+   * contas novas da mesma conexão não afundam a nota de ninguém.
+   */
+  describe("teto por rede", () => {
+    const REDE = "203.0.113.7";
+
+    it("a quarta avaliação da mesma rede é recusada, e nada é gravado", async () => {
+      for (let i = 0; i < 3; i++) {
+        const quem = await criarConta("candidato_clt");
+        await avaliar(quem, { prestadorId: PRESTADOR, nota: 1 }, REDE);
+      }
+      const quarta = await criarConta("candidato_clt");
+
+      const erro = await avaliar(
+        quarta,
+        { prestadorId: PRESTADOR, nota: 1 },
+        REDE,
+      ).catch((e) => e);
+
+      expect(ehAppError(erro) && erro.codigo).toBe("limite_excedido");
+      expect(ehAppError(erro) && erro.mensagem).toMatch(/amanhã/);
+      expect(avaliacoesEmMemoria(PRESTADOR)).toHaveLength(3);
+      expect(await jaAvaliou(quarta, PRESTADOR)).toBe(false);
+    });
+
+    it("outra rede e outro prestador não são afetados", async () => {
+      for (let i = 0; i < 3; i++) {
+        const quem = await criarConta("candidato_clt");
+        await avaliar(quem, { prestadorId: PRESTADOR, nota: 1 }, REDE);
+      }
+      const daqui = await criarConta("candidato_clt");
+      const dali = await criarConta("candidato_clt");
+
+      await avaliar(daqui, { prestadorId: "outro", nota: 5 }, REDE);
+      await avaliar(dali, { prestadorId: PRESTADOR, nota: 5 }, "192.0.2.9");
+
+      expect(avaliacoesEmMemoria(PRESTADOR)).toHaveLength(4);
+      expect(avaliacoesEmMemoria("outro")).toHaveLength(1);
+    });
+
+    it("envio inválido não gasta a cota da rede", async () => {
+      const quem = await criarConta("candidato_clt");
+      for (let i = 0; i < 5; i++) {
+        await avaliar(quem, { prestadorId: PRESTADOR, nota: 9 }, REDE).catch(
+          () => undefined,
+        );
+      }
+
+      await avaliar(quem, { prestadorId: PRESTADOR, nota: 4 }, REDE);
+      expect(await jaAvaliou(quem, PRESTADOR)).toBe(true);
+    });
+  });
+
   it("recusa sem sessão", async () => {
     await expect(
-      avaliarPrestador(null, { prestadorId: PRESTADOR, nota: 5 }),
+      avaliar(null, { prestadorId: PRESTADOR, nota: 5 }),
     ).rejects.toSatisfy((e) => ehAppError(e) && e.codigo === "nao_autenticado");
   });
 });

@@ -18,6 +18,9 @@ Em 13/10/2026:
   ao lado dos números e, a partir de 1280 px, as vagas ao lado dos
   profissionais. No celular nada muda —
   [#443](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/443)
+- Até 3 avaliações do mesmo prestador por conexão a cada 24 horas: contas
+  falsas da mesma rede não afundam a nota de ninguém —
+  [#441](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/441)
 - Denunciar vaga e avaliação, e um painel no admin para tirar do ar ou
   descartar: nada sai do ar sozinho, e o denunciado não sabe quem
   denunciou —
