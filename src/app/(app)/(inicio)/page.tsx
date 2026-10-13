@@ -115,8 +115,13 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
+      {/*
+       * A largura é a do cabeçalho (`max-w-6xl`) desde a #443. Era
+       * `max-w-4xl`, e no computador a home ficava mais estreita que o
+       * cabeçalho logo acima dela: logo e menu não alinhavam com nada.
+       */}
       <section className="aurora border-b border-line">
-        <div className="mx-auto max-w-4xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
+        <div className="mx-auto max-w-6xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
           <BannerDaHome />
 
           <div className="mt-4 sm:mt-6">
@@ -140,33 +145,53 @@ export default async function HomePage() {
             </span>
           </div>
 
-          <BuscaDoHero
-            ufs={UFS.map((u) => ({ sigla: u.sigla, nome: u.nome }))}
-            visitante={!sessao}
-          />
-
-          <FaixaDeNumeros
-            vagas={totals.jobs}
-            vagasAoMenos={totals.jobsAoMenos}
-            profissionais={totals.providers}
-            profissionaisAoMenos={totals.providersAoMenos}
-          />
-
           {/*
-           * Para quem não tem conta, o card de conta fica aqui no alto, que
-           * é onde converte (#241). Para quem já entrou, ele é um atalho
-           * para o próprio perfil, e vai para o fim da lista.
+           * No celular, uma coluna: busca, números e conta, nessa ordem. No
+           * computador (#443), a busca à esquerda e os números com a conta
+           * numa coluna à direita, alinhados pelo topo. Antes cada bloco
+           * tinha uma largura (672, 672 e 384 px), todos encostados à
+           * esquerda, e a tela parecia quebrada.
            */}
-          {!sessao && (
-            <div className="mt-3 max-w-sm">
-              <CardDeConta card={terceiroCard} />
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-x-6">
+            <BuscaDoHero
+              ufs={UFS.map((u) => ({ sigla: u.sigla, nome: u.nome }))}
+              visitante={!sessao}
+            />
+
+            <div>
+              <FaixaDeNumeros
+                vagas={totals.jobs}
+                vagasAoMenos={totals.jobsAoMenos}
+                profissionais={totals.providers}
+                profissionaisAoMenos={totals.providersAoMenos}
+              />
+
+              {/*
+               * Para quem não tem conta, o card de conta fica aqui no alto,
+               * que é onde converte (#241). Para quem já entrou, ele é um
+               * atalho para o próprio perfil, e vai para o fim da lista.
+               */}
+              {!sessao && (
+                <div className="mt-3 max-w-sm lg:max-w-none">
+                  <CardDeConta card={terceiroCard} />
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </section>
 
-      <PageShell>
-        <div className="space-y-8">
+      <PageShell width="wide">
+        {/*
+         * Na tela larga (#443), vagas e profissionais lado a lado: as vagas
+         * na coluna larga, os profissionais numa lateral. Empilhados, metade
+         * da tela ficava vazia ao lado de cada seção, e os quatro avatares
+         * se espalhavam com vãos enormes entre eles. A lateral começa em
+         * `xl`: em 1024 px ela deixaria cada card de vaga com 330 px e o
+         * título cortado. Abaixo disso a seção fica embaixo, com os quatro
+         * avatares juntos (`sm:max-w-lg`) em vez de espalhados.
+         */}
+        <div className="grid grid-cols-1 gap-y-8 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start xl:gap-x-8">
           {/*
            * No celular as vagas rolam para o lado, uma e meia à vista, para
            * dizer que há mais sem ocupar a tela. A partir de `sm` viram a
@@ -199,29 +224,34 @@ export default async function HomePage() {
             ))}
           </FeedSection>
 
-          <FeedSection
-            title="Profissionais bem avaliados"
-            href="/servicos"
-            accent="text-servicos"
-            listaClassName=""
-            vazio={
-              providers.length === 0 && (
-                <Vazio
-                  texto="Nenhum profissional na vitrine ainda."
-                  acao="Oferece um serviço? Apareça aqui"
-                  href={terceiroCard.href}
-                />
-              )
-            }
-          >
-            <ProfissionaisEmLinha providers={providers} />
-          </FeedSection>
+          <div className="space-y-8">
+            <FeedSection
+              title="Profissionais bem avaliados"
+              href="/servicos"
+              accent="text-servicos"
+              listaClassName=""
+              vazio={
+                providers.length === 0 && (
+                  <Vazio
+                    texto="Nenhum profissional na vitrine ainda."
+                    acao="Oferece um serviço? Apareça aqui"
+                    href={terceiroCard.href}
+                  />
+                )
+              }
+            >
+              <ProfissionaisEmLinha
+                providers={providers}
+                className="grid-cols-4 sm:max-w-lg xl:max-w-none xl:grid-cols-2 xl:gap-3"
+              />
+            </FeedSection>
 
-          {sessao && (
-            <div className="max-w-sm">
-              <CardDeConta card={terceiroCard} />
-            </div>
-          )}
+            {sessao && (
+              <div className="max-w-sm xl:max-w-none">
+                <CardDeConta card={terceiroCard} />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Chamada para empresas */}

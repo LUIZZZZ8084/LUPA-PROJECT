@@ -117,7 +117,7 @@ export function BuscaDoHero({
   }
 
   return (
-    <div className="mt-4 max-w-2xl">
+    <div className="mt-4 max-w-2xl lg:max-w-none">
       {/*
        * O cartão é o próprio formulário: alternador, termo, estado e botão
        * dentro de uma moldura só, como na referência da home (#372).

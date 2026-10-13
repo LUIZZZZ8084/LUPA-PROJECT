@@ -14,6 +14,10 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 13/10/2026:
 
+- A home se organiza no computador: usa a largura do cabeçalho, a busca fica
+  ao lado dos números e, a partir de 1280 px, as vagas ao lado dos
+  profissionais. No celular nada muda —
+  [#443](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/443)
 - Denunciar vaga e avaliação, e um painel no admin para tirar do ar ou
   descartar: nada sai do ar sozinho, e o denunciado não sabe quem
   denunciou —
