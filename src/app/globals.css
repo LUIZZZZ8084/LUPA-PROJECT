@@ -72,7 +72,14 @@
 
   /* Semânticas */
   --color-warn: #8a5a06;
-  --color-danger: #b92d2d;
+  /*
+   * Escurecida de novo na #435: `#b92d2d` passava sobre o selo em fundo
+   * branco (4,78:1) e reprovava com o mesmo selo sobre `panel-2` (4,30:1)
+   * — o botão "Enviar denúncia" e o de excluir conta moram num quadro
+   * `bg-panel-2`. Esta passa a 15% sobre os quatro fundos claros, o pior
+   * sendo `panel-3` (4,61:1).
+   */
+  --color-danger: #a82727;
   --color-star: #8a5a06;
   /*
    * Verde do WhatsApp de verdade (`#25d366`) não passa nem perto de
