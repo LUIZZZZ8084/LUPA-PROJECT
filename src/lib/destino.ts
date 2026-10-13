@@ -24,7 +24,12 @@ export function destinoSeguro(
   try {
     const url = new URL(bruto, origem);
     if (url.origin !== origem) return null;
-    return url.pathname + url.search + url.hash;
+    const caminho = url.pathname + url.search + url.hash;
+    // O que sai também é relido (#437): `/.//evil.com` resolve dentro da
+    // origem, e o caminho que sobra, `//evil.com`, o navegador relê como
+    // outro domínio. Conferir só a entrada deixava essa forma passar.
+    if (new URL(caminho, origem).origin !== origem) return null;
+    return caminho;
   } catch {
     return null;
   }

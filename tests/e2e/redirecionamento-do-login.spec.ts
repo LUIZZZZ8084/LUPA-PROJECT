@@ -45,6 +45,22 @@ test.describe("redirecionamento pós-login", () => {
     expect(page.url()).not.toContain("evil.com");
   });
 
+  /*
+   * #437: `/.//evil.com` resolve dentro da origem, e o caminho que sobra é
+   * `//evil.com` — que o `router.replace` relê como outro domínio. A
+   * conferência olhava a entrada e não o que devolvia.
+   */
+  test("destino que vira barra dupla não leva para fora do app", async ({
+    page,
+    baseURL,
+  }) => {
+    await logarComDestino(page, "/.//evil.com");
+
+    await page.waitForURL((url) => !url.pathname.startsWith("/entrar"));
+    expect(new URL(page.url()).origin).toBe(new URL(String(baseURL)).origin);
+    expect(page.url()).not.toContain("evil.com");
+  });
+
   test("destino interno legítimo é respeitado", async ({ page }) => {
     await logarComDestino(page, "/perfil/editar");
 
