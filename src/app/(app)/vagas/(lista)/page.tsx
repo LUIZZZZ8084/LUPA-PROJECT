@@ -12,7 +12,7 @@ import {
 import { ButtonLink } from "@/components/ui/button";
 import { filtrosDeLugar, lugarDaBusca, umParametro } from "@/lib/busca";
 import { UFS } from "@/lib/cidades";
-import { CONTRACT_TYPES, JOB_CATEGORIES } from "@/lib/constants";
+import { CONTRACT_TYPES, JOB_CATEGORIES, ROTULO_PCD } from "@/lib/constants";
 import { getJobs } from "@/lib/data";
 import { pluralize } from "@/lib/format";
 import { origemDoUsuario } from "@/server/auth/origem";
@@ -80,6 +80,9 @@ export default async function VagasPage({
     uf: lugar.uf,
     category: single("categoria"),
     contract_type: single("tipo"),
+    // "sim" é o único valor que filtra (#456); qualquer outra coisa na URL
+    // é "todas as vagas", e não um filtro que nunca casa.
+    pcd: single("pcd") === "sim",
     q: single("q"),
     perto,
   };
@@ -116,7 +119,11 @@ export default async function VagasPage({
    */
   const ordenadoPorProximidade = Boolean(perto && !filters.city);
   const temFiltro = Boolean(
-    filters.uf || filters.category || filters.contract_type || filters.q,
+    filters.uf ||
+      filters.category ||
+      filters.contract_type ||
+      filters.pcd ||
+      filters.q,
   );
 
   return (
@@ -142,6 +149,7 @@ export default async function VagasPage({
           cidade: lugar.cidade,
           categoria: single("categoria"),
           tipo: single("tipo"),
+          pcd: single("pcd") === "sim" ? "sim" : undefined,
           q: single("q"),
         }}
         filters={[
@@ -155,6 +163,11 @@ export default async function VagasPage({
             key: "tipo",
             placeholder: "Tipo",
             options: CONTRACT_TYPES.map((c) => ({ value: c, label: c })),
+          },
+          {
+            key: "pcd",
+            placeholder: "Todas as vagas",
+            options: [{ value: "sim", label: ROTULO_PCD }],
           },
         ]}
       />

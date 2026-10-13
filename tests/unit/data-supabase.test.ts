@@ -230,6 +230,31 @@ describe("camada de dados com Supabase ligado", () => {
     ]);
   });
 
+  /*
+   * O filtro de PCD (#456) vai na coluna da view, e só quando foi pedido:
+   * `eq("for_pcd", false)` esconderia as vagas comuns de quem não pediu
+   * nada.
+   */
+  it("o filtro de PCD filtra `for_pcd`, e só quando pedido", async () => {
+    respostaAtual = { data: [], error: null };
+
+    await getJobs({ pcd: true });
+    const comFiltro = (
+      ultimoBuilder.chamadas as { metodo: string; args: unknown[] }[]
+    )
+      .filter((c) => c.metodo === "eq")
+      .map((c) => c.args);
+    expect(comFiltro).toContainEqual(["for_pcd", true]);
+
+    await getJobs({ pcd: false });
+    const semFiltro = (
+      ultimoBuilder.chamadas as { metodo: string; args: unknown[] }[]
+    )
+      .filter((c) => c.metodo === "eq")
+      .map((c) => c.args);
+    expect(semFiltro).toEqual([["status", "aberta"]]);
+  });
+
   it("busca sem filtro não inventa cláusula", async () => {
     respostaAtual = { data: [], error: null };
 

@@ -116,6 +116,8 @@ export interface Job {
   contract_type: ContractType | null;
   /** `null` em vaga publicada antes de o campo existir — sem selo. */
   work_mode: WorkMode | null;
+  /** Vaga para pessoa com deficiência (PCD), informada pela empresa (#456). */
+  for_pcd: boolean;
   salary_min: number | null;
   salary_max: number | null;
   /** O que a vaga pede. Vazio quando a empresa não declarou — aí o
@@ -225,6 +227,8 @@ export interface JobFilters {
   perto?: Origem;
   category?: string;
   contract_type?: string;
+  /** Só vagas para pessoa com deficiência (#456). */
+  pcd?: boolean;
   q?: string;
 }
 

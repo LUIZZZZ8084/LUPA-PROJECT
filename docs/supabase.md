@@ -88,6 +88,7 @@ e repetível, ao lado do `schema.sql`:
 | [`supabase/aplica-exclusao-de-conta.sql`](../supabase/aplica-exclusao-de-conta.sql) | Uma vez, em banco criado antes da Issue #423 — cria a função que exclui a conta pelo perfil; **antes do deploy**, ou o botão falha sem excluir nada |
 | [`supabase/aplica-denuncias.sql`](../supabase/aplica-denuncias.sql) | Uma vez, em banco criado antes da Issue #435 — cria a tabela de denúncias e a decisão do admin; **antes do deploy**, ou denunciar falha |
 | [`supabase/aplica-anon-sem-escrita.sql`](../supabase/aplica-anon-sem-escrita.sql) | Uma vez, em banco criado antes da Issue #421 — tira de `anon` e `authenticated` a escrita que o Supabase concede por padrão; a leitura pública fica; antes ou depois do deploy, tanto faz |
+| [`supabase/aplica-vaga-pcd.sql`](../supabase/aplica-vaga-pcd.sql) | Uma vez, em banco criado antes da Issue #456 — acrescenta a coluna da vaga para PCD e a expõe na view; **antes do deploy**, ou publicar vaga falha |
 | [`supabase/aplica-denuncia-de-foto.sql`](../supabase/aplica-denuncia-de-foto.sql) | Uma vez, em banco criado antes da Issue #452 — estende a denúncia às fotos de trabalho; **antes do deploy**, ou denunciar foto falha |
 | [`supabase/aplica-funcoes-so-servico.sql`](../supabase/aplica-funcoes-so-servico.sql) | Uma vez, em banco criado antes da Issue #449 — tira das chaves anônima e autenticada a execução de funções; a de serviço continua. Antes ou depois do deploy, tanto faz, e **de novo depois de qualquer `aplica-*.sql` que crie função** |
 

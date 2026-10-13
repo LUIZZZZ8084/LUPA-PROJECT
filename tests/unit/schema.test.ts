@@ -598,6 +598,76 @@ describe("views devolvem o formato que a aplicação espera", () => {
     );
   });
 
+  /*
+   * Vaga para PCD (#456). A coluna é `not null default false`: vaga
+   * publicada antes dela não era para PCD, e a view expõe o valor.
+   */
+  it("vaga nova nasce sem ser para PCD, e job_listings expõe `for_pcd`", async () => {
+    const existente = await db.query<{ empresa_id: string }>(
+      "select empresa_id from vagas limit 1",
+    );
+    const r = await db.query<{ id: string }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Teste de PCD', 'Descrição de teste para a vaga de PCD, longa o bastante.', 'Sinop - MT')
+       returning id`,
+      [existente.rows[0].empresa_id],
+    );
+
+    const padrao = await db.query<{ for_pcd: boolean }>(
+      "select for_pcd from job_listings where id = $1",
+      [r.rows[0].id],
+    );
+    expect(padrao.rows[0].for_pcd).toBe(false);
+
+    await db.query("update vagas set para_pcd = true where id = $1", [
+      r.rows[0].id,
+    ]);
+    const marcada = await db.query<{ for_pcd: boolean }>(
+      "select for_pcd from job_listings where id = $1",
+      [r.rows[0].id],
+    );
+    expect(marcada.rows[0].for_pcd).toBe(true);
+  });
+
+  it("a migração de PCD acrescenta a coluna a um banco que não a tem, e roda de novo", async () => {
+    const MIGRACAO = readFileSync(
+      join(process.cwd(), "supabase/aplica-vaga-pcd.sql"),
+      "utf8",
+    );
+    const antigo = await PGlite.create();
+    try {
+      await antigo.exec(SCHEMA);
+      // Volta ao banco de antes: sem a coluna e com a view antiga.
+      await antigo.exec(`
+        drop view job_listings;
+        create view job_listings with (security_invoker = false) as
+        select v.id, v.empresa_id as company_id, v.titulo as title,
+               v.descricao as description, v.categoria as category,
+               v.cidade as city, v.bairro as neighborhood,
+               v.endereco as address, v.tipo_contrato as contract_type,
+               v.salario_min as salary_min, v.salario_max as salary_max,
+               v.habilidades as skills, v.status, v.criado_em as created_at,
+               '{}'::jsonb as company, 0::bigint as applicant_count,
+               v.expira_em as expires_at, v.modalidade as work_mode
+          from vagas v;
+      `);
+      await antigo.exec("alter table vagas drop column para_pcd");
+
+      await antigo.exec(MIGRACAO);
+      await antigo.exec(MIGRACAO);
+
+      const r = await antigo.query<{ coluna: string }>(
+        `select column_name as coluna from information_schema.columns
+          where (table_name = 'vagas' and column_name = 'para_pcd')
+             or (table_name = 'job_listings' and column_name = 'for_pcd')
+          order by 1`,
+      );
+      expect(r.rows.map((x) => x.coluna)).toEqual(["for_pcd", "para_pcd"]);
+    } finally {
+      await antigo.close();
+    }
+  }, 60_000);
+
   /**
    * Quem contrata é pessoa ou empresa, e a vaga diz qual (#129).
    *

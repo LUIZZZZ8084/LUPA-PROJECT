@@ -14,6 +14,10 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 13/10/2026:
 
+- Vaga para PCD: a empresa informa ao publicar, a vaga ganha selo e a busca
+  ganha o filtro. Vaga por sexo ficou de fora, por decisão, pelo risco da CLT
+  art. 373-A —
+  [#456](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/456)
 - "Apagar de vez" um trabalho guardado, com a foto: arquivado, o arquivo
   seguia no ar pelo endereço —
   [#454](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/454)

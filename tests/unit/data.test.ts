@@ -540,6 +540,7 @@ describe("busca ordenada pelo mais perto", () => {
       cidade,
       tipoContrato: "CLT",
       modalidade: "presencial" as const,
+      paraPcd: false,
       endereco: "Av. das Itaúbas, 1200",
     });
 
