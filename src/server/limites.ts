@@ -162,6 +162,20 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
  */
 export const ORCAMENTO_DO_CURRICULO_PDF = porJanela(10);
 
+/**
+ * Quantos perfis de candidato uma empresa abre por dia (#433).
+ *
+ * O perfil traz o WhatsApp de quem pediu para ser encontrado, e colher
+ * esses telefones em série é o primeiro passo do golpe da vaga com taxa.
+ * Trinta cabem num dia de recrutamento de verdade; quem passa disso está
+ * colhendo. Conta só o perfil de quem **não** se candidatou à empresa —
+ * candidatura é outro consentimento, e continua chegando como sempre.
+ */
+export const ORCAMENTO_DE_PERFIS_DE_CANDIDATO: Orcamento = {
+  chamadas: 30,
+  janelaSegundos: 24 * 60 * 60,
+};
+
 export const SEM_ORCAMENTO: Record<string, string> = {
   "auth.entrar":
     "tem limite próprio, por e-mail, em `rate-limit.ts` — e a regra lá é " +
