@@ -39,6 +39,16 @@ vi.mock("@/lib/supabase/service", () => ({
   clienteDeServico: () => ({ from: (tabela: string) => construtor(tabela) }),
 }));
 
+/*
+ * O teto por rede (#441) é conferido pelo repositório de limites, que no
+ * caminho com banco chama uma função SQL. Aqui ele vira um dublê que
+ * registra a chave, e `schema.test.ts` cobre a função de verdade.
+ */
+const consumir = vi.hoisted(() =>
+  vi.fn(async (_chave: string, _orcamento: unknown) => {}),
+);
+vi.mock("@/server/auth/rate-limit", () => ({ consumirOrcamento: consumir }));
+
 vi.mock("@/server/repositories", () => ({
   repositorioUsuarios: () => ({
     porId: async () => ({ nomeCompleto: "Ana Paula" }),
@@ -52,6 +62,7 @@ import { ehAppError } from "@/server/errors";
 
 const ana: Autenticado = { usuarioId: "ana", papel: "candidato_clt" };
 const PRESTADOR = "44444444-4444-4444-8444-000000000001";
+const REDE = "203.0.113.7";
 
 function codigo(e: unknown) {
   return ehAppError(e) ? e.codigo : String(e);
@@ -66,6 +77,8 @@ function inseriu() {
 beforeEach(() => {
   chamadas.length = 0;
   respostas = {};
+  consumir.mockReset();
+  consumir.mockResolvedValue(undefined);
   vi.spyOn(console, "log").mockImplementation(() => {});
 });
 
@@ -74,7 +87,7 @@ describe("avaliar, com banco", () => {
     respostas.perfis_prestador = { data: null, error: null };
 
     await expect(
-      avaliarPrestador(ana, { prestadorId: PRESTADOR, nota: 1 }),
+      avaliarPrestador(ana, { prestadorId: PRESTADOR, nota: 1 }, REDE),
     ).rejects.toSatisfy((e) => codigo(e) === "nao_encontrado");
     expect(inseriu()).toBe(false);
   });
@@ -86,7 +99,7 @@ describe("avaliar, com banco", () => {
     };
 
     await expect(
-      avaliarPrestador(ana, { prestadorId: "nao-e-uuid", nota: 1 }),
+      avaliarPrestador(ana, { prestadorId: "nao-e-uuid", nota: 1 }, REDE),
     ).rejects.toSatisfy((e) => codigo(e) === "nao_encontrado");
     expect(inseriu()).toBe(false);
   });
@@ -95,7 +108,7 @@ describe("avaliar, com banco", () => {
     respostas.perfis_prestador = { data: null, error: { message: "caiu" } };
 
     await expect(
-      avaliarPrestador(ana, { prestadorId: PRESTADOR, nota: 5 }),
+      avaliarPrestador(ana, { prestadorId: PRESTADOR, nota: 5 }, REDE),
     ).rejects.toSatisfy((e) => codigo(e) === "indisponivel");
     expect(inseriu()).toBe(false);
   });
@@ -106,11 +119,15 @@ describe("avaliar, com banco", () => {
       error: null,
     };
 
-    await avaliarPrestador(ana, {
-      prestadorId: PRESTADOR,
-      nota: 5,
-      comentario: "  Chegou na hora.  ",
-    });
+    await avaliarPrestador(
+      ana,
+      {
+        prestadorId: PRESTADOR,
+        nota: 5,
+        comentario: "  Chegou na hora.  ",
+      },
+      REDE,
+    );
 
     const insert = chamadas.find(
       (c) => c.tabela === "avaliacoes" && c.metodo === "insert",
@@ -122,5 +139,67 @@ describe("avaliar, com banco", () => {
       nota: 5,
       comentario: "Chegou na hora.",
     });
+  });
+
+  it("o teto conta por prestador e rede, depois de conferir o prestador", async () => {
+    respostas.perfis_prestador = {
+      data: { usuario_id: PRESTADOR },
+      error: null,
+    };
+
+    await avaliarPrestador(ana, { prestadorId: PRESTADOR, nota: 4 }, REDE);
+
+    expect(consumir).toHaveBeenCalledTimes(1);
+    expect(consumir.mock.calls[0][0]).toBe(
+      `avaliacao-rede:${PRESTADOR}:${REDE}`,
+    );
+    expect(consumir.mock.calls[0][1]).toEqual({
+      chamadas: 3,
+      janelaSegundos: 86400,
+    });
+  });
+
+  it("quem não é prestador não gasta a cota da rede", async () => {
+    respostas.perfis_prestador = { data: null, error: null };
+
+    await avaliarPrestador(
+      ana,
+      { prestadorId: PRESTADOR, nota: 1 },
+      REDE,
+    ).catch(() => undefined);
+
+    expect(consumir).not.toHaveBeenCalled();
+  });
+
+  it("teto atingido vira mensagem de amanhã, e nada é gravado", async () => {
+    respostas.perfis_prestador = {
+      data: { usuario_id: PRESTADOR },
+      error: null,
+    };
+    const { erros } = await import("@/server/errors");
+    consumir.mockRejectedValueOnce(erros.muitasTentativas(80000));
+
+    const erro = await avaliarPrestador(
+      ana,
+      { prestadorId: PRESTADOR, nota: 1 },
+      REDE,
+    ).catch((e) => e);
+
+    expect(codigo(erro)).toBe("limite_excedido");
+    expect(ehAppError(erro) && erro.mensagem).not.toMatch(/80000/);
+    expect(inseriu()).toBe(false);
+  });
+
+  it("outro erro do limite sobe como veio", async () => {
+    respostas.perfis_prestador = {
+      data: { usuario_id: PRESTADOR },
+      error: null,
+    };
+    const { erros } = await import("@/server/errors");
+    consumir.mockRejectedValueOnce(erros.indisponivel("limite fora"));
+
+    await expect(
+      avaliarPrestador(ana, { prestadorId: PRESTADOR, nota: 1 }, REDE),
+    ).rejects.toSatisfy((e) => codigo(e) === "indisponivel");
   });
 });

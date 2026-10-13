@@ -14,6 +14,9 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 13/10/2026:
 
+- Até 3 avaliações do mesmo prestador por conexão a cada 24 horas: contas
+  falsas da mesma rede não afundam a nota de ninguém —
+  [#441](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/441)
 - Denunciar vaga e avaliação, e um painel no admin para tirar do ar ou
   descartar: nada sai do ar sozinho, e o denunciado não sabe quem
   denunciou —

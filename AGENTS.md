@@ -211,6 +211,20 @@ o caminho com banco confere o perfil antes de gravar. Na demonstração não
 há essa conferência, porque os prestadores de exemplo não estão no
 repositório de contas.
 
+**Até 3 avaliações do mesmo prestador por rede a cada 24 horas (#441).**
+Decisão do Luiz em 13/10/2026. Criar conta é barato — 20 por rede a cada
+15 minutos, sem confirmar e-mail —, e cada conta avalia uma vez: de uma
+conexão só, um concorrente afundava a nota de alguém com uma rajada de
+contas novas, e a denúncia (#435) só desfazia uma por uma, depois do
+estrago. A chave é o prestador e a rede (`avaliacao-rede:<id>:<origem>`),
+não quem avalia, porque cada conta falsa tem a própria sessão. O teto vem
+depois de toda validação, para que um envio inválido não gaste a cota da
+rede de ninguém, e a mensagem fala em "amanhã", não em segundos.
+
+Descartadas: exigir e-mail confirmado para avaliar (atrito em quem avalia
+e gasto da cota de e-mail) e deixar só com a denúncia. O que isto não
+fecha: quem usa várias redes. Encarece, não impede.
+
 **A confirmação é renderizada pelo servidor.** A action revalida a rota,
 e a revalidação desmonta o formulário levando junto o "enviado" que ele
 mostrava: quem avaliava via o formulário sumir, sem confirmação nenhuma.
