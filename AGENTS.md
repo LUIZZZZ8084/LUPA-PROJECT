@@ -1314,6 +1314,25 @@ ninguém abre. As decididas ficam, como registro — e por isso
 toda vaga ensinaria a desconfiar de todas. É um link pequeno ao fim da
 vaga e de cada avaliação; o formulário só abre no clique.
 
+**E a foto de trabalho também (#452).** Decisão do Luiz em 13/10/2026.
+Foto é o conteúdo que pode exigir retirada rápida — imagem íntima, foto de
+outra pessoa sem autorização —, e nada no admin apagava uma. O link fica na
+foto ampliada, para quem olha o perfil de outra pessoa; o painel mostra a
+miniatura, porque decidir sobre imagem pela legenda é decidir às cegas.
+
+**Tirar a foto do ar apaga, não arquiva.** Arquivada, a publicação sai do
+perfil mas o arquivo continua no bucket público, acessível pelo endereço,
+e o dono pode trazê-la de volta. `decidir_denuncia` apaga a linha, e a
+aplicação apaga o arquivo depois, por `apagarFotoDeTrabalho` — só se o
+endereço for do nosso bucket e da pasta do próprio autor, com o nome que o
+servidor sorteia. Apagar o arquivo errado é pior que deixar um órfão; se o
+Storage recusar, a falha vai ao Sentry. O dono do perfil vem da
+publicação, nunca do formulário.
+
+**A função de decisão mora em três arquivos** — o schema e os dois
+`aplica-*.sql` —, e um teste exige que sejam iguais: um script velho rodado
+de novo desfaria a foto sem ninguém ver.
+
 ### O que se edita depois, e o que nunca
 
 O cadastro pede o mínimo para a conta existir e a pessoa ser encontrada;
