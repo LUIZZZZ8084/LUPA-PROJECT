@@ -172,9 +172,9 @@ const SEM_PROTECAO: Record<string, { formularios: number; razao: string }> = {
     razao: "Só o botão de conferir na Receita. Não há campo para perder.",
   },
   "src/app/(app)/perfil/publicacoes/feed.tsx": {
-    formularios: 1,
+    formularios: 2,
     razao:
-      "BotaoDeStatus: remover ou devolver ao feed, com um campo escondido que o próprio React recoloca.",
+      "BotaoDeStatus (remover ou devolver ao feed) e BotaoApagarDeVez (#454): só um campo escondido com o id, que o próprio React recoloca.",
   },
 };
 

@@ -190,4 +190,44 @@ test.describe("feed do prestador", () => {
     await page.goto("/servicos/prv-joao-silva");
     await expect(page.getByText(/bairros atendidos/i)).toHaveCount(0);
   });
+
+  /*
+   * Apagar de vez (#454). Por último na fila: tira o trabalho que os
+   * testes acima publicaram.
+   *
+   * O contraste é varrido com o trabalho guardado na tela, que é onde o
+   * cartão usava `opacity-70` e a varredura de cima, com tudo no feed,
+   * nunca olhava.
+   */
+  test("o trabalho guardado passa no contraste, e se apaga de vez", async () => {
+    await page.goto("/perfil/publicacoes");
+    await page
+      .getByRole("button", { name: /remover do feed/i })
+      .first()
+      .click();
+    await expect(page.getByText("Fora do feed").first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Apagar de vez" }).click();
+    await expect(page.getByText(/não há como trazer de volta/i)).toBeVisible();
+
+    const resultado = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(
+      resultado.violations.map((v) => ({
+        regra: v.id,
+        elementos: v.nodes.slice(0, 2).map((n) => n.html.slice(0, 120)),
+      })),
+    ).toEqual([]);
+
+    await page
+      .getByRole("button", { name: "Confirmar: apagar de vez" })
+      .click();
+
+    await expect(
+      page.getByText(/ainda não publicou nenhum trabalho/i),
+    ).toBeVisible();
+    await expect(page.getByText("Fora do feed")).toHaveCount(0);
+    await expect(page.getByText(/0 de 10 no feed/)).toBeVisible();
+  });
 });

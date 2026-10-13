@@ -342,6 +342,21 @@ quer fazer; por baixo, o registro fica e volta pelo botão ao lado.
 Apagar de verdade tiraria dela um trabalho que ela teve — e arquivar já
 libera a vaga no feed, que é o efeito que ela procurava.
 
+**E o guardado pode ser apagado de vez (#454).** Arquivado, o trabalho sai
+do perfil, mas o arquivo continua no bucket público, acessível pelo
+endereço — e às vezes a foto precisa deixar de existir: a foto errada, a
+casa de um cliente que pediu para tirar. Decisão do Luiz em 13/10/2026:
+"Apagar de vez", só no que já está fora do feed. Os dois passos seguram o
+clique errado, a confirmação diz que não tem volta, e o servidor confere o
+estado além do dono. O registro sai primeiro e o arquivo depois, pela
+mesma conferência de caminho da denúncia de foto (#452); arquivo que fica
+vai ao Sentry.
+
+O cartão guardado usava `opacity-70` para parecer apagado, e a varredura
+de contraste nunca o via, porque rodava com tudo no feed. Saiu a
+opacidade — o selo "Fora do feed" já diz o estado —, e o e2e agora varre
+a tela com um trabalho guardado aberto.
+
 **A foto tem caminho próprio, ao contrário do avatar.** `caminhoDoArquivo`
 usa caminho fixo por pessoa para avatar, logo e currículo, e é de
 propósito: trocar substitui, e o bucket não vira depósito de versões

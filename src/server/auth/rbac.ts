@@ -106,6 +106,7 @@ export type Capacidade =
   | "publicacao:criar"
   | "publicacao:editar_propria"
   | "publicacao:arquivar_propria"
+  | "publicacao:apagar_propria"
   // Avaliações
   | "avaliacao:receber"
   /*
@@ -152,6 +153,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "publicacao:criar",
     "publicacao:editar_propria",
     "publicacao:arquivar_propria",
+    "publicacao:apagar_propria",
   ],
 
   prestador_servico: [
@@ -173,6 +175,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "publicacao:criar",
     "publicacao:editar_propria",
     "publicacao:arquivar_propria",
+    "publicacao:apagar_propria",
     "avaliacao:receber",
     "avaliacao:escrever",
     /*

@@ -2,7 +2,7 @@
 
 import { ImagePlus, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import Image from "next/image";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { ajustarAoLimite } from "@/components/ui/arquivo-que-cabe";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { useEnvioQueNaoApaga } from "@/components/ui/formulario";
 import { REGRAS } from "@/server/arquivos/regras";
 import type { Publicacao } from "@/server/publicacoes/tipos";
 import {
+  apagarDeVezComEstado,
   arquivarComEstado,
   type EstadoPublicacao,
   publicarComFotoComEstado,
@@ -166,11 +167,77 @@ function BotaoDeStatus({ id, arquivada }: { id: string; arquivada: boolean }) {
   );
 }
 
+/**
+ * Apagar de vez um trabalho guardado (#454).
+ *
+ * Só aparece no que já saiu do feed: tirar do perfil é o que a pessoa quer
+ * na maioria das vezes, e os dois passos seguram o clique errado. A
+ * confirmação diz o que "Remover" não diz — que aqui não tem volta, e que
+ * a foto sai junto.
+ */
+function BotaoApagarDeVez({ id }: { id: string }) {
+  const [confirmando, setConfirmando] = useState(false);
+  const [state, action, pendente] = useActionState(
+    apagarDeVezComEstado,
+    inicial,
+  );
+
+  if (!confirmando) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setConfirmando(true)}
+      >
+        <Trash2 size={14} />
+        Apagar de vez
+      </Button>
+    );
+  }
+
+  return (
+    <form
+      action={action}
+      className="mt-2 w-full space-y-2 rounded-xl border border-danger/30 bg-danger/5 p-3"
+    >
+      <input type="hidden" name="id" value={id} />
+      <p className="text-sm">
+        A foto e o texto saem para sempre. Não há como trazer de volta.
+      </p>
+      {state.erro && (
+        <p role="alert" className="text-danger text-sm">
+          {state.erro}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" variant="danger" size="sm" disabled={pendente}>
+          {pendente && <Loader2 size={14} className="animate-spin" />}
+          Confirmar: apagar de vez
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={pendente}
+          onClick={() => setConfirmando(false)}
+        >
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 function Cartao({ publicacao }: { publicacao: Publicacao }) {
   const arquivada = publicacao.status === "arquivada";
 
+  /*
+   * Sem `opacity-70` no guardado (#454): opacidade sobre texto derruba o
+   * contraste abaixo do mínimo, e o selo "Fora do feed" já diz o estado.
+   */
   return (
-    <Panel className={arquivada ? "opacity-70" : undefined}>
+    <Panel>
       <div className="flex flex-col gap-4 sm:flex-row">
         {publicacao.imagemUrl ? (
           <span className="relative block h-32 w-full flex-none overflow-hidden rounded-xl sm:w-40">
@@ -200,8 +267,9 @@ function Cartao({ publicacao }: { publicacao: Publicacao }) {
           <p className="mt-1.5 whitespace-pre-line text-muted text-sm leading-relaxed">
             {publicacao.corpo}
           </p>
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap items-start gap-2">
             <BotaoDeStatus id={publicacao.id} arquivada={arquivada} />
+            {arquivada && <BotaoApagarDeVez id={publicacao.id} />}
           </div>
         </div>
       </div>
