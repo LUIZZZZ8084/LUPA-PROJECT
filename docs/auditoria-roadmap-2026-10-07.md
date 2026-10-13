@@ -250,6 +250,15 @@ Vercel pausa o site. O monitor passou a consultar a cada 10 minutos. O
 resto do uso estava longe do teto: 84,5 mil de 1 milhão de chamadas,
 1,92 GB de 100 GB de tráfego, 112 de 5.000 transformações de imagem.
 
+E o login próprio do Supabase estava com o cadastro aberto, embora a Lupa
+não o use (a autenticação é a tabela `usuarios`, desde a migração 0001).
+Não vazava dado — quem se cadastrasse ganharia o papel `authenticated`,
+que lê exatamente as 8 relações públicas que a chave anônima já lê —, mas
+qualquer um conseguiria fazer o Supabase mandar e-mail de confirmação a
+qualquer endereço usando o projeto. Ninguém tinha usado (zero usuários em
+`auth.users`). Cadastro desligado no painel em 13/10, com o OK do Luiz, e
+conferido pela API pública (`disable_signup: true`).
+
 **Conferido sem achado:**
 - O JSON-LD da home e o script do tema são texto fixo, sem dado de quem usa.
 - As rotas de API que recebem id (`/api/pagamentos/[id]`,
