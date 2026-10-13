@@ -3126,6 +3126,16 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   concede tudo, como o Supabase, roda `aplica-anon-sem-escrita.sql` por
   cima numa transação e confere que sobrou só o `select` público.
 
+  **E a execução de funções (#449).** O Supabase publica toda função do
+  schema público pela API e concede execução às duas chaves. Nenhuma das
+  nossas roda com o privilégio do dono, e as chaves não escrevem em nada,
+  então isso não alcançava coisa alguma — mas a garantia morava numa
+  propriedade de cada função. Hoje só a chave de serviço executa função:
+  o fim do `schema.sql` revoga das duas, e `aplica-funcoes-so-servico.sql`
+  faz o mesmo em banco existente. **Rode-o de novo depois de qualquer
+  `aplica-*.sql` que crie função**, porque o `revoke ... on all functions`
+  só alcança as que já existem.
+
 - **Repositório em memória numa variável de módulo não atravessa
   bundles.** Server action e route handler viram bundles diferentes no
   build de produção, e cada um recebe a própria cópia do módulo — logo, o
