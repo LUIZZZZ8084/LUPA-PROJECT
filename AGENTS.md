@@ -839,6 +839,20 @@ celular, e template com imagem e botão colorido é o formato que os
 provedores mais pontuam como promoção — justamente o e-mail que precisa
 chegar na caixa de entrada, e rápido.
 
+**E o nome de quem se cadastrou não entra cru nele (#445).** A saudação
+cortava o nome no espaço comum e levava o resto como veio. Com outro
+espaço Unicode entre as palavras, uma frase inteira com link cabia ali, e
+como a conta pode ser criada com o e-mail de outra pessoa — a confirmação
+sai sozinha no cadastro —, a Lupa entregava o texto de um estranho, com o
+remetente dela, na caixa de quem não pediu nada. Hoje `saudacao`
+(`src/server/email/saudacao.ts`) leva só o primeiro nome, só letras,
+apóstrofo e hífen, com teto; sem nada aproveitável, "Olá.". Mora no
+e-mail, e não só no cadastro, para valer também para as contas que já
+existem. O cadastro, por sua vez, normaliza espaços e recusa caractere de
+controle e invisível no nome (`zNome`). *Texto que sai com o nome da Lupa
+não leva nada que um estranho escreveu sem passar por um filtro de
+saída.*
+
 ### Confirmar o e-mail, e o que isso resolve de verdade (#227)
 
 `usuarios.email_verificado` existia desde o começo, era lido pelos
