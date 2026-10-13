@@ -95,9 +95,13 @@ export function ProviderCardSkeleton() {
  * nota. A altura (141 px) é a do conteúdo medido, com as três linhas de
  * texto; sem a terceira, a tela baixaria 27 px quando os dados chegassem.
  */
-export function ProfissionaisEmLinhaSkeleton() {
+export function ProfissionaisEmLinhaSkeleton({
+  className,
+}: {
+  className?: string;
+} = {}) {
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className={cn("grid grid-cols-4 gap-2", className)}>
       {Array.from({ length: 4 }, (_, i) => (
         <div key={i} className="flex flex-col items-center gap-1.5 px-1 py-2">
           <SkeletonAvatar size="lg" />

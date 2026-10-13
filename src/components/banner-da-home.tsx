@@ -42,7 +42,7 @@ import Image from "next/image";
  */
 export function BannerDaHome() {
   return (
-    <section className="relative flex h-[10rem] items-center overflow-hidden rounded-[var(--radius-card)] border border-[color:var(--banner-borda)] bg-[linear-gradient(to_right,var(--banner-de),var(--banner-ate))] sm:h-[17rem]">
+    <section className="relative flex h-[10rem] items-center overflow-hidden rounded-[var(--radius-card)] border border-[color:var(--banner-borda)] bg-[linear-gradient(to_right,var(--banner-de),var(--banner-ate))] sm:h-[17rem] lg:h-[19rem]">
       <div
         aria-hidden
         className="pointer-events-none absolute -top-4 -right-6 h-[140%] w-28 skew-x-[-18deg] [background:var(--banner-faixa-a)] sm:w-44"
@@ -52,11 +52,11 @@ export function BannerDaHome() {
         className="pointer-events-none absolute -top-4 right-24 h-[140%] w-8 skew-x-[-18deg] [background:var(--banner-faixa-b)] sm:right-52 sm:w-10"
       />
 
-      <div className="relative z-10 max-w-[10.5rem] pl-5 sm:max-w-md sm:pl-10">
-        <h1 className="font-bold text-[1.3rem] text-[color:var(--banner-titulo)] leading-[1.12] tracking-tight sm:text-4xl">
+      <div className="relative z-10 max-w-[10.5rem] pl-5 sm:max-w-md sm:pl-10 lg:max-w-xl lg:pl-14">
+        <h1 className="font-bold text-[1.3rem] text-[color:var(--banner-titulo)] leading-[1.12] tracking-tight sm:text-4xl lg:text-5xl">
           Encontre seu próximo trabalho
         </h1>
-        <p className="mt-2 text-[12.5px] text-[color:var(--banner-texto)] leading-snug sm:mt-3 sm:text-base sm:leading-relaxed">
+        <p className="mt-2 text-[12.5px] text-[color:var(--banner-texto)] leading-snug sm:mt-3 sm:text-base sm:leading-relaxed lg:text-lg">
           Vagas e profissionais perto de você, de forma simples e rápida.
         </p>
       </div>
@@ -67,7 +67,7 @@ export function BannerDaHome() {
         width={435}
         height={476}
         priority
-        sizes="(min-width: 640px) 248px, 146px"
+        sizes="(min-width: 1024px) 278px, (min-width: 640px) 248px, 146px"
         className="absolute right-0 bottom-0 h-full w-auto max-w-none"
       />
       <div
