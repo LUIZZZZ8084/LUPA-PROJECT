@@ -180,6 +180,19 @@ export const ORCAMENTO_DE_PERFIS_DE_CANDIDATO: Orcamento = {
   janelaSegundos: 24 * 60 * 60,
 };
 
+/**
+ * Quantas avaliações do mesmo prestador saem da mesma rede por dia (#441).
+ *
+ * A chave é o prestador e a rede (`avaliacao-rede:<id>:<origem>`), não
+ * quem avalia: a rajada que isto barra é de contas novas, cada uma com a
+ * sua sessão. Sem multiplicador da suíte — nenhum spec avalia o mesmo
+ * prestador mais de uma vez.
+ */
+export const ORCAMENTO_DE_AVALIACOES_POR_REDE: Orcamento = {
+  chamadas: 3,
+  janelaSegundos: 24 * 60 * 60,
+};
+
 export const SEM_ORCAMENTO: Record<string, string> = {
   "auth.entrar":
     "tem limite próprio, por e-mail, em `rate-limit.ts` — e a regra lá é " +

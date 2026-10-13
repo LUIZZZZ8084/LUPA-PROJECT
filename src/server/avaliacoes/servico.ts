@@ -2,8 +2,10 @@ import "server-only";
 
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { clienteDeServico } from "@/lib/supabase/service";
+import { consumirOrcamento } from "../auth/rate-limit";
 import { type Autenticado, exigirCapacidade } from "../auth/rbac";
-import { erros } from "../errors";
+import { ehAppError, erros } from "../errors";
+import { ORCAMENTO_DE_AVALIACOES_POR_REDE } from "../limites";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
 
@@ -79,6 +81,8 @@ export async function jaAvaliou(
 export async function avaliarPrestador(
   sessao: Autenticado | null,
   dados: DadosAvaliacao,
+  /** A rede de quem avalia, já agrupada (`origemDaRequisicao`). */
+  origem: string,
 ): Promise<void> {
   const autenticado = exigirCapacidade(sessao, "avaliacao:escrever");
 
@@ -101,6 +105,9 @@ export async function avaliarPrestador(
     );
   }
 
+  await exigirPerfilDePrestador(dados.prestadorId);
+  await conferirTetoDaRede(dados.prestadorId, origem);
+
   const nome = await nomeDeQuemAvalia(autenticado);
   const comentario = dados.comentario?.trim() || null;
 
@@ -116,23 +123,6 @@ export async function avaliarPrestador(
   } else {
     const supabase = clienteDeServico();
     if (!supabase) throw erros.indisponivel("cliente de banco");
-
-    /*
-     * Só se avalia quem é prestador (#439). A chave estrangeira aponta para
-     * `usuarios`, e a avaliação gravada na conta de um candidato não
-     * aparecia em lugar nenhum — até ele virar prestador, quando passava a
-     * contar na nota dele. Id sem forma de UUID volta 22P02, e a resposta é
-     * a mesma de "não existe".
-     */
-    const { data: perfil, error: erroPerfil } = await supabase
-      .from("perfis_prestador")
-      .select("usuario_id")
-      .eq("usuario_id", dados.prestadorId)
-      .maybeSingle();
-    if (erroPerfil && erroPerfil.code !== "22P02") {
-      throw erros.indisponivel(`perfil avaliado: ${erroPerfil.message}`);
-    }
-    if (!perfil) throw erros.naoEncontrado("Prestador");
 
     const { error } = await supabase.from("avaliacoes").insert({
       prestador_id: dados.prestadorId,
@@ -169,6 +159,67 @@ export async function avaliarPrestador(
     papel: autenticado.papel,
     nota: dados.nota,
   });
+}
+
+/*
+ * Só se avalia quem é prestador (#439). A chave estrangeira aponta para
+ * `usuarios`, e a avaliação gravada na conta de um candidato não aparecia
+ * em lugar nenhum — até ele virar prestador, quando passava a contar na
+ * nota dele. Id sem forma de UUID volta 22P02, e a resposta é a mesma de
+ * "não existe".
+ *
+ * Na demonstração não há conferência: os prestadores de exemplo não estão
+ * no repositório de contas.
+ */
+async function exigirPerfilDePrestador(prestadorId: string): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const supabase = clienteDeServico();
+  if (!supabase) throw erros.indisponivel("cliente de banco");
+
+  const { data: perfil, error } = await supabase
+    .from("perfis_prestador")
+    .select("usuario_id")
+    .eq("usuario_id", prestadorId)
+    .maybeSingle();
+  if (error && error.code !== "22P02") {
+    throw erros.indisponivel(`perfil avaliado: ${error.message}`);
+  }
+  if (!perfil) throw erros.naoEncontrado("Prestador");
+}
+
+/*
+ * Até 3 avaliações do mesmo prestador por rede a cada 24 horas (#441).
+ *
+ * Criar conta é barato — 20 por rede a cada 15 minutos, sem confirmar
+ * e-mail —, e cada conta avalia uma vez. Sem isto, um concorrente afundava
+ * a nota de alguém com uma rajada de contas novas da mesma conexão.
+ * Ninguém de verdade sente: três pessoas da mesma rede avaliando o mesmo
+ * profissional no mesmo dia já é raro.
+ *
+ * Vem depois de toda validação, para que um envio inválido não gaste a
+ * cota da rede, e antes de gravar: a contagem e a decisão são a mesma
+ * instrução (`consumirOrcamento`), e duas avaliações simultâneas não
+ * passam as duas pela última vaga. A mensagem genérica de "muitas
+ * tentativas" falaria em segundos de um teto que é de um dia.
+ */
+async function conferirTetoDaRede(
+  prestadorId: string,
+  origem: string,
+): Promise<void> {
+  try {
+    await consumirOrcamento(
+      `avaliacao-rede:${prestadorId}:${origem}`,
+      ORCAMENTO_DE_AVALIACOES_POR_REDE,
+    );
+  } catch (e) {
+    if (ehAppError(e) && e.codigo === "muitas_tentativas") {
+      throw erros.limiteExcedido(
+        "Muitas avaliações deste profissional saíram da mesma conexão de " +
+          "internet hoje. Tente de novo amanhã.",
+      );
+    }
+    throw e;
+  }
 }
 
 /**

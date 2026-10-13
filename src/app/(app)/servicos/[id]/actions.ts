@@ -6,6 +6,7 @@ import { revalidarBuscaDePrestadores } from "@/lib/cache-de-listagem";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { avaliarPrestador } from "@/server/avaliacoes/servico";
+import { origemDaRequisicao } from "@/server/origem-da-requisicao";
 import { zTexto } from "@/server/validation";
 
 /**
@@ -19,7 +20,10 @@ import { zTexto } from "@/server/validation";
 export const avaliar = criarAcao({
   nome: "avaliacao.criar",
   entrada: z.object({
-    prestadorId: z.string().min(1, "Prestador inválido."),
+    prestadorId: z
+      .string()
+      .min(1, "Prestador inválido.")
+      .max(100, "Prestador inválido."),
     nota: z.coerce
       .number()
       .int()
@@ -31,11 +35,11 @@ export const avaliar = criarAcao({
     ),
   }),
   executar: async ({ prestadorId, nota, comentario }) => {
-    await avaliarPrestador(await sessaoAtual(), {
-      prestadorId,
-      nota,
-      comentario,
-    });
+    await avaliarPrestador(
+      await sessaoAtual(),
+      { prestadorId, nota, comentario },
+      await origemDaRequisicao(),
+    );
 
     // A nota média e a contagem mudam com a avaliação nova, e as duas
     // aparecem também na busca.
