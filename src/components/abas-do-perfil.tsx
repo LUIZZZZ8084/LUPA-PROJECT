@@ -4,6 +4,7 @@ import { ImagePlus, Loader2, Pencil, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useEffect, useState, useTransition } from "react";
+import { Denunciar } from "@/components/denunciar";
 import { ajustarAoLimite } from "@/components/ui/arquivo-que-cabe";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
@@ -51,6 +52,7 @@ export function AbasDoPerfil({
   vazio,
   acoesDoDono,
   dono,
+  denunciar = false,
 }: {
   sobre: React.ReactNode;
   trabalhos: TrabalhoNaAba[];
@@ -69,6 +71,11 @@ export function AbasDoPerfil({
    * já está olhando quando decide mexer.
    */
   dono?: AcoesDoDono;
+  /**
+   * Quem olha pode denunciar a foto (#452). Decidido pela página, que tem
+   * a sessão: nem o dono, nem o admin, nem quem não entrou.
+   */
+  denunciar?: boolean;
 }) {
   const [aba, setAba] = useState<"sobre" | "servicos">("sobre");
   const [aberta, setAberta] = useState<TrabalhoNaAba | null>(null);
@@ -167,6 +174,7 @@ export function AbasDoPerfil({
         <Ampliada
           trabalho={aberta}
           dono={dono}
+          denunciar={denunciar && !dono}
           fechar={() => setAberta(null)}
         />
       )}
@@ -184,10 +192,12 @@ export function AbasDoPerfil({
 function Ampliada({
   trabalho,
   dono,
+  denunciar,
   fechar,
 }: {
   trabalho: TrabalhoNaAba;
   dono?: AcoesDoDono;
+  denunciar: boolean;
   fechar: () => void;
 }) {
   const [editando, setEditando] = useState(false);
@@ -350,6 +360,12 @@ function Ampliada({
                       </Button>
                     </div>
                   )}
+                </div>
+              )}
+
+              {denunciar && (
+                <div className="mt-5 border-line border-t pt-3">
+                  <Denunciar alvo="publicacao" alvoId={trabalho.id} />
                 </div>
               )}
             </>

@@ -220,6 +220,23 @@ describe("publicações de perfil", () => {
     });
   });
 
+  describe("apagar (#452)", () => {
+    it("tira a linha, e apagar de novo é 'não encontrado'", async () => {
+      const p = await repo.criar({
+        autorId: "autor",
+        titulo: "Piso novo",
+        corpo: "Piso cerâmico na sala e na cozinha.",
+      });
+
+      await repo.apagar(p.id);
+
+      expect(await repo.porId(p.id)).toBeNull();
+      await expect(repo.apagar(p.id)).rejects.toSatisfy(
+        (e) => ehAppError(e) && e.codigo === "nao_encontrado",
+      );
+    });
+  });
+
   describe("listagem", () => {
     it("mais recente primeiro", async () => {
       await criarPublicacao(prestador, {

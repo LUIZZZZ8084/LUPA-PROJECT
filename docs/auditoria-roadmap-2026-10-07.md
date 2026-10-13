@@ -241,6 +241,7 @@ de redirecionamento. Os SQL foram rodados com o OK do Luiz.
 | #446 | #445 | A saudação dos e-mails de confirmação e de recuperação levava o nome cadastrado quase cru: um estranho, criando conta com o e-mail de outra pessoa, punha uma frase com link num e-mail legítimo da Lupa. Hoje só o primeiro nome, só letras; o cadastro recusa caractere invisível. |
 | #448 | #447 | O título da vaga, que vai no aviso por push para até 500 pessoas, recusa link. |
 | #450 | #449 | Funções do banco só executáveis pela chave de serviço: a segunda camada para o dia em que uma `security definer` aparecer. SQL rodado. |
+| #453 | #452 | Denúncia de foto de trabalho; tirar do ar apaga a publicação e o arquivo (arquivada, a foto seguiria no ar pelo endereço). SQL rodado. |
 
 **Configuração (13/10, com o OK do Luiz):** o monitor de disponibilidade do
 Sentry consultava a home a cada minuto — cerca de 80% das chamadas de

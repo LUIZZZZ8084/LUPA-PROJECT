@@ -36,6 +36,7 @@ function construtor(tabela: string) {
 }
 
 vi.mock("@/lib/supabase/service", () => ({
+  temChaveDeServico: true,
   clienteDeServico: () =>
     semChave
       ? null
@@ -44,6 +45,18 @@ vi.mock("@/lib/supabase/service", () => ({
           rpc: async (nome: string, args: unknown) => {
             chamadas.push({ tabela: nome, metodo: "rpc", args: [args] });
             return respostas[nome] ?? { data: null, error: null };
+          },
+          storage: {
+            from: (balde: string) => ({
+              remove: async (caminhos: string[]) => {
+                chamadas.push({
+                  tabela: balde,
+                  metodo: "remove",
+                  args: [caminhos],
+                });
+                return respostas.storage ?? { data: null, error: null };
+              },
+            }),
           },
         },
 }));
@@ -73,7 +86,23 @@ function chamadasDe(tabela: string, metodo: string) {
   return chamadas.filter((c) => c.tabela === tabela && c.metodo === metodo);
 }
 
+const BASE = "https://projeto.supabase.co";
+const FOTO = "55555555-5555-4555-8555-000000000001";
+const AUTOR = "66666666-6666-4666-8666-000000000001";
+const ARQUIVO = `trabalho/${AUTOR}/77777777-7777-4777-8777-000000000001.webp`;
+const LINHA_DA_FOTO = {
+  id: FOTO,
+  autor_id: AUTOR,
+  titulo: "Muro de arrimo",
+  corpo: "Muro levantado em dois dias, com fundação.",
+  imagem_url: `${BASE}/storage/v1/object/public/portfolio/${ARQUIVO}?v=1`,
+  status: "ativa",
+  criado_em: "2026-10-13T10:00:00Z",
+  atualizado_em: "2026-10-13T10:00:00Z",
+};
+
 beforeEach(() => {
+  process.env.NEXT_PUBLIC_SUPABASE_URL = BASE;
   chamadas.length = 0;
   respostas = {};
   semChave = false;
@@ -278,5 +307,121 @@ describe("decidir, com banco", () => {
     await expect(
       decidirDenuncia(admin, { alvo: "vaga", alvoId: VAGA, tirarDoAr: false }),
     ).rejects.toSatisfy((e) => codigo(e) === "indisponivel");
+  });
+});
+
+describe("foto de trabalho, com banco (#452)", () => {
+  it("id sem forma de UUID nem chega ao banco", async () => {
+    await expect(
+      denunciar(ana, { alvo: "publicacao", alvoId: "x", motivo: "ofensiva" }),
+    ).rejects.toSatisfy((e) => codigo(e) === "nao_encontrado");
+    expect(chamadasDe("publicacoes", "select")).toHaveLength(0);
+  });
+
+  it("o dono do perfil vem da publicação, não do formulário", async () => {
+    respostas.publicacoes = { data: LINHA_DA_FOTO, error: null };
+
+    await denunciar(ana, {
+      alvo: "publicacao",
+      alvoId: FOTO,
+      prestadorId: "outra-pessoa",
+      motivo: "ofensiva",
+    });
+
+    expect(chamadasDe("denuncias", "insert")[0].args[0]).toMatchObject({
+      alvo: "publicacao",
+      alvo_id: FOTO,
+      prestador_id: AUTOR,
+    });
+  });
+
+  it("foto arquivada não recebe denúncia", async () => {
+    respostas.publicacoes = {
+      data: { ...LINHA_DA_FOTO, status: "arquivada" },
+      error: null,
+    };
+    await expect(
+      denunciar(ana, { alvo: "publicacao", alvoId: FOTO, motivo: "outro" }),
+    ).rejects.toSatisfy((e) => codigo(e) === "nao_encontrado");
+  });
+
+  it("tirar do ar apaga a publicação pelo banco e o arquivo certo", async () => {
+    respostas.publicacoes = { data: LINHA_DA_FOTO, error: null };
+    respostas.decidir_denuncia = { data: 1, error: null };
+
+    await decidirDenuncia(admin, {
+      alvo: "publicacao",
+      alvoId: FOTO,
+      tirarDoAr: true,
+    });
+
+    expect(chamadasDe("decidir_denuncia", "rpc")).toHaveLength(1);
+    expect(chamadasDe("portfolio", "remove")[0].args[0]).toEqual([ARQUIVO]);
+  });
+
+  it("o banco que recusa a decisão não apaga arquivo nenhum", async () => {
+    respostas.publicacoes = { data: LINHA_DA_FOTO, error: null };
+    respostas.decidir_denuncia = { data: null, error: { message: "caiu" } };
+
+    await expect(
+      decidirDenuncia(admin, {
+        alvo: "publicacao",
+        alvoId: FOTO,
+        tirarDoAr: true,
+      }),
+    ).rejects.toSatisfy((e) => codigo(e) === "indisponivel");
+    expect(chamadasDe("portfolio", "remove")).toHaveLength(0);
+  });
+
+  it("arquivo que não sai do Storage vai ao Sentry, e a decisão vale", async () => {
+    respostas.publicacoes = { data: LINHA_DA_FOTO, error: null };
+    respostas.decidir_denuncia = { data: 2, error: null };
+    respostas.storage = { data: null, error: { message: "fora" } };
+    const erro = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const n = await decidirDenuncia(admin, {
+      alvo: "publicacao",
+      alvoId: FOTO,
+      tirarDoAr: true,
+    });
+
+    expect(n).toBe(2);
+    expect(erro).toHaveBeenCalled();
+  });
+
+  it("descartar não apaga nada", async () => {
+    respostas.publicacoes = { data: LINHA_DA_FOTO, error: null };
+    await decidirDenuncia(admin, {
+      alvo: "publicacao",
+      alvoId: FOTO,
+      tirarDoAr: false,
+    });
+    expect(chamadasDe("portfolio", "remove")).toHaveLength(0);
+  });
+
+  it("o painel mostra a legenda e a miniatura", async () => {
+    respostas.denuncias = {
+      data: [
+        {
+          alvo: "publicacao",
+          alvo_id: FOTO,
+          prestador_id: AUTOR,
+          motivo: "ofensiva",
+          detalhe: null,
+          criada_em: "2026-10-13T10:00:00Z",
+        },
+      ],
+      error: null,
+    };
+    respostas.publicacoes = { data: LINHA_DA_FOTO, error: null };
+
+    const [g] = await denunciasAbertas(admin);
+
+    expect(g).toMatchObject({
+      alvo: "publicacao",
+      titulo: "Muro de arrimo",
+      imagemUrl: LINHA_DA_FOTO.imagem_url,
+    });
+    expect(g.caminho).toMatch(new RegExp(AUTOR));
   });
 });

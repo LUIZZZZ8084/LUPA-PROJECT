@@ -1294,7 +1294,7 @@ $$;
 -- de serviço, e o denunciante nunca aparece para o denunciado.
 -- ============================================================================
 
-create type alvo_denuncia as enum ('vaga', 'avaliacao');
+create type alvo_denuncia as enum ('vaga', 'avaliacao', 'publicacao');
 create type motivo_denuncia as enum ('golpe', 'falsa', 'ofensiva', 'outro');
 create type status_denuncia as enum ('aberta', 'procedente', 'descartada');
 
@@ -1302,8 +1302,9 @@ create table denuncias (
   id             uuid primary key default gen_random_uuid(),
   alvo           alvo_denuncia not null,
   alvo_id        uuid not null,
-  -- Para a avaliação, de quem é o perfil onde ela aparece: é o caminho que
-  -- o admin abre para ver o contexto. Nulo na vaga, cujo id já é o caminho.
+  -- Para a avaliação e a foto (#452), de quem é o perfil onde ela aparece:
+  -- é o caminho que o admin abre para ver o contexto. Nulo na vaga, cujo
+  -- id já é o caminho.
   prestador_id   uuid references usuarios(id) on delete cascade,
   -- `set null`: a conta anonimizada não é apagada (#423), mas se um dia
   -- for, a denúncia que ela fez continua valendo como sinal.
@@ -1360,9 +1361,14 @@ begin
   if p_tirar_do_ar then
     if p_alvo = 'vaga' then
       update vagas set status = 'fechada' where id = p_alvo_id;
-    else
+    elsif p_alvo = 'avaliacao' then
       -- O trigger de `avaliacoes` recalcula a nota do prestador.
       delete from avaliacoes where id = p_alvo_id;
+    else
+      -- A foto sai de vez, e não arquivada (#452): arquivada, ela seguiria
+      -- no ar pelo endereço, e o dono poderia trazê-la de volta. O
+      -- arquivo no Storage a aplicação apaga em seguida.
+      delete from publicacoes where id = p_alvo_id;
     end if;
   end if;
 
@@ -1397,6 +1403,11 @@ drop trigger if exists denuncias_da_avaliacao on avaliacoes;
 create trigger denuncias_da_avaliacao
   after delete on avaliacoes
   for each row execute function denuncias_somem_com_o_alvo('avaliacao');
+
+drop trigger if exists denuncias_da_publicacao on publicacoes;
+create trigger denuncias_da_publicacao
+  after delete on publicacoes
+  for each row execute function denuncias_somem_com_o_alvo('publicacao');
 
 -- ============================================================================
 -- 10. Views que a aplicação consulta

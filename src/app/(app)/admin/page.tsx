@@ -1,5 +1,6 @@
 import { Flag, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -21,6 +22,12 @@ import {
   type MotivoDenuncia,
 } from "@/server/denuncias/servico";
 import { DecisaoDeDenuncia, VerificationActions } from "./actions-ui";
+
+const ROTULO_DO_ALVO = {
+  vaga: "Vaga",
+  avaliacao: "Avaliação",
+  publicacao: "Foto de trabalho",
+} as const;
 
 export const metadata: Metadata = {
   title: "Fila de verificação",
@@ -75,7 +82,7 @@ export default async function AdminPage() {
               <li key={`${d.alvo}:${d.alvoId}`}>
                 <Panel>
                   <p className="text-[11px] tracking-wide text-muted uppercase">
-                    {d.alvo === "vaga" ? "Vaga" : "Avaliação"} ·{" "}
+                    {ROTULO_DO_ALVO[d.alvo]} ·{" "}
                     {pluralize(d.total, "denúncia", "denúncias")}
                   </p>
                   <Link
@@ -84,6 +91,20 @@ export default async function AdminPage() {
                   >
                     {d.titulo}
                   </Link>
+                  {d.imagemUrl && (
+                    /*
+                     * A foto denunciada à vista (#452): decidir sobre uma
+                     * imagem pela legenda seria decidir às cegas.
+                     */
+                    <Image
+                      src={d.imagemUrl}
+                      alt={d.titulo}
+                      width={256}
+                      height={256}
+                      sizes="128px"
+                      className="mt-2 h-32 w-32 rounded-lg object-cover"
+                    />
+                  )}
                   <p className="mt-1 text-xs text-muted">
                     {Object.entries(d.motivos)
                       .map(

@@ -21,6 +21,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { pode } from "@/server/auth/rbac";
 import { perfilDoCandidato } from "@/server/candidatos/servico";
 import { ORCAMENTO_DE_PERFIS_DE_CANDIDATO } from "@/server/limites";
 import {
@@ -191,6 +192,13 @@ export default async function CandidatoPage({
             ehDono
               ? { editar: editarComFotoComEstado, excluir: arquivarPelaAba }
               : undefined
+          }
+          /*
+           * Denunciar a foto (#452): quem olha o perfil de outra pessoa e
+           * pode denunciar. O dono tira a própria foto; o admin decide.
+           */
+          denunciar={
+            !ehDono && Boolean(sessao && pode(sessao.papel, "denuncia:criar"))
           }
           sobre={
             <div className="pt-5">

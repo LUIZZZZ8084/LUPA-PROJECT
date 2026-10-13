@@ -21,6 +21,7 @@ import {
   MOTIVOS_DE_DENUNCIA,
 } from "@/server/denuncias/servico";
 import { ehAppError } from "@/server/errors";
+import { repositorioPublicacoes } from "@/server/publicacoes";
 
 const VAGA = "job-operador-maquinas";
 const DONO_DA_VAGA: Autenticado = {
@@ -185,6 +186,100 @@ describe("decidir", () => {
 
     await denunciar(ana, { alvo: "vaga", alvoId: VAGA, motivo: "golpe" });
     expect(await denunciasAbertas(admin)).toHaveLength(1);
+  });
+});
+
+/*
+ * Foto de trabalho (#452). Tirar do ar apaga a publicação, não arquiva:
+ * arquivada, ela seguiria no ar pelo endereço.
+ */
+describe("foto de trabalho", () => {
+  async function foto(autorId = "prest-1") {
+    return repositorioPublicacoes().criar({
+      autorId,
+      titulo: "Telhado refeito",
+      corpo: "Troca de telhas e calhas numa casa de dois andares.",
+    });
+  }
+
+  it("quem olha denuncia, e o painel mostra a legenda", async () => {
+    const f = await foto();
+    await denunciar(ana, {
+      alvo: "publicacao",
+      alvoId: f.id,
+      motivo: "ofensiva",
+    });
+
+    const [g] = await denunciasAbertas(admin);
+    expect(g).toMatchObject({
+      alvo: "publicacao",
+      alvoId: f.id,
+      titulo: "Telhado refeito",
+      caminho: "/servicos/prest-1",
+    });
+  });
+
+  it("o dono não denuncia a própria foto", async () => {
+    const f = await foto(prestador.usuarioId);
+    await expect(
+      denunciar(prestador, {
+        alvo: "publicacao",
+        alvoId: f.id,
+        motivo: "outro",
+      }),
+    ).rejects.toSatisfy((e) => codigo(e) === "sem_permissao");
+  });
+
+  it("foto arquivada não recebe denúncia", async () => {
+    const f = await foto();
+    await repositorioPublicacoes().definirStatus(f.id, "arquivada");
+    await expect(
+      denunciar(ana, { alvo: "publicacao", alvoId: f.id, motivo: "outro" }),
+    ).rejects.toSatisfy((e) => codigo(e) === "nao_encontrado");
+  });
+
+  it("o perfil vem da publicação, não do formulário", async () => {
+    const f = await foto("prest-2");
+    await denunciar(ana, {
+      alvo: "publicacao",
+      alvoId: f.id,
+      prestadorId: "outra-pessoa",
+      motivo: "falsa",
+    });
+    const [g] = await denunciasAbertas(admin);
+    expect(g.caminho).toBe("/servicos/prest-2");
+  });
+
+  it("tirar do ar apaga a publicação, e descartar a mantém", async () => {
+    const apagar = await foto();
+    const manter = await foto();
+    await denunciar(ana, {
+      alvo: "publicacao",
+      alvoId: apagar.id,
+      motivo: "ofensiva",
+    });
+    await denunciar(ana, {
+      alvo: "publicacao",
+      alvoId: manter.id,
+      motivo: "ofensiva",
+    });
+
+    await decidirDenuncia(admin, {
+      alvo: "publicacao",
+      alvoId: apagar.id,
+      tirarDoAr: true,
+    });
+    await decidirDenuncia(admin, {
+      alvo: "publicacao",
+      alvoId: manter.id,
+      tirarDoAr: false,
+    });
+
+    expect(await repositorioPublicacoes().porId(apagar.id)).toBeNull();
+    expect((await repositorioPublicacoes().porId(manter.id))?.status).toBe(
+      "ativa",
+    );
+    expect(await denunciasAbertas(admin)).toEqual([]);
   });
 });
 

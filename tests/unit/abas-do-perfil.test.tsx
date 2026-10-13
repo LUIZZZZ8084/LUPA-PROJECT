@@ -104,6 +104,45 @@ describe("abas do perfil", () => {
     expect(within(dialogo).getByText(/Jardim Botânico/)).toBeTruthy();
   });
 
+  /*
+   * Denunciar a foto (#452): para quem olha o perfil de outra pessoa, e
+   * nunca para o dono, que tira a própria foto pelo "Remover".
+   */
+  function abrirPrimeira(props: Partial<Parameters<typeof AbasDoPerfil>[0]>) {
+    render(
+      <AbasDoPerfil
+        sobre={<p>Descrição.</p>}
+        trabalhos={TRABALHOS}
+        vazio="Nada."
+        {...props}
+      />,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Serviços" }));
+    const painel = document.querySelector("#painel-servicos") as HTMLElement;
+    fireEvent.click(within(painel).getAllByRole("button")[0]);
+    return screen.getByRole("dialog");
+  }
+
+  it("quem olha vê 'Denunciar esta foto' na foto ampliada", () => {
+    const dialogo = abrirPrimeira({ denunciar: true });
+    expect(
+      within(dialogo).getByRole("button", { name: /denunciar esta foto/i }),
+    ).toBeTruthy();
+  });
+
+  it("sem permissão de denunciar, o link não aparece", () => {
+    const dialogo = abrirPrimeira({});
+    expect(within(dialogo).queryByText(/denunciar/i)).toBeNull();
+  });
+
+  it("o dono nunca vê o link, mesmo que a página peça", () => {
+    const dialogo = abrirPrimeira({
+      denunciar: true,
+      dono: { editar: async () => ({}), excluir: async () => {} },
+    });
+    expect(within(dialogo).queryByText(/denunciar/i)).toBeNull();
+  });
+
   it("fecha com Escape", () => {
     montar();
     fireEvent.click(screen.getByRole("tab", { name: "Serviços" }));

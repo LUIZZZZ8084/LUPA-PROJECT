@@ -23,7 +23,17 @@ function construtor(tabela: string) {
   // `limit` entrou com o teto das listagens (#203). Sem ele no duble, a
   // cadeia quebra e o teste reprova por falta de espelho, não por defeito
   // — falso vermelho é o que ensina a ignorar teste.
-  for (const metodo of ["select", "eq", "insert", "update", "order", "limit"]) {
+  // `delete` entrou com o apagar (#452): sem ele no dublê, o teste
+  // reprovaria por falta de espelho, não por defeito.
+  for (const metodo of [
+    "select",
+    "eq",
+    "insert",
+    "update",
+    "delete",
+    "order",
+    "limit",
+  ]) {
     builder[metodo] = (...args: unknown[]) => {
       chamadas.push({ tabela, metodo, args });
       return builder;
@@ -149,5 +159,19 @@ describe("RepositorioPublicacoesPostgres", () => {
     expect(p.status).toBe("arquivada");
     const update = chamadas.find((c) => c.metodo === "update");
     expect(update?.args[0]).toEqual({ status: "arquivada" });
+  });
+
+  it("apagar remove a linha pelo id (#452)", async () => {
+    resposta = { data: null, error: null };
+    await repo.apagar(LINHA.id);
+
+    expect(chamadas.some((c) => c.metodo === "delete")).toBe(true);
+    const filtro = chamadas.find((c) => c.metodo === "eq");
+    expect(filtro?.args).toEqual(["id", LINHA.id]);
+  });
+
+  it("apagar que o banco recusa não passa como feito", async () => {
+    resposta = { data: null, error: { message: "caiu" } };
+    await expect(repo.apagar(LINHA.id)).rejects.toThrow();
   });
 });

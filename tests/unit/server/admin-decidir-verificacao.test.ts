@@ -65,6 +65,9 @@ function consulta(tabela: string) {
 }
 
 vi.mock("@/lib/supabase/service", () => ({
+  // A action do admin alcança o serviço de arquivos pela denúncia de
+  // foto (#452), que lê esta constante na importação.
+  temChaveDeServico: true,
   clienteDeServico: () => {
     estado.abertos += 1;
     return {

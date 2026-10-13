@@ -126,6 +126,12 @@ export class RepositorioPublicacoesPostgres implements RepositorioPublicacoes {
     return paraPublicacao(data);
   }
 
+  async apagar(id: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase.from("publicacoes").delete().eq("id", id);
+    if (error) throw traduzirErro(error.message);
+  }
+
   async definirStatus(
     id: string,
     status: StatusPublicacao,

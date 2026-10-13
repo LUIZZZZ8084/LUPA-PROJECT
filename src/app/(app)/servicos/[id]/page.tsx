@@ -264,6 +264,13 @@ export default async function ProviderPage({
               ? { editar: editarComFotoComEstado, excluir: arquivarPelaAba }
               : undefined
           }
+          /*
+           * Denunciar a foto (#452): quem olha o perfil de outra pessoa e
+           * pode denunciar. O dono tira a própria foto; o admin decide.
+           */
+          denunciar={
+            !ehDono && Boolean(sessao && pode(sessao.papel, "denuncia:criar"))
+          }
           sobre={
             <>
               {provider.description && (
