@@ -2091,6 +2091,13 @@ aberta a qualquer conta com sessão, como o serviço já permitia: quem
 decide mostrar o atalho é o cabeçalho, não o portão, e quem chega por
 link não cai num 404.
 
+**O título da vaga não aceita link (#447).** Ele é o texto da notificação,
+para até 500 pessoas, e a notificação aparece como sendo da Lupa: um link
+ali é texto de um estranho com o nome dela. Publicar exige crédito pago e
+documento, e a denúncia tira a vaga do ar — mas a notificação já saiu
+quando alguém denuncia. Cargo nunca precisa de link; o lugar dele é a
+descrição.
+
 **Ninguém é avisado da própria vaga.** Parece óbvio e não é: quem publica
 está na mesma cidade e quase sempre na mesma categoria, então sem essa
 linha a primeira notificação que a pessoa recebe é a dela mesma — e a
