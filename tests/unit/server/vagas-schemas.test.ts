@@ -18,6 +18,37 @@ const DADOS = {
   endereco: "Av. das Itaúbas, 1200",
 };
 
+/*
+ * O título vai no aviso por push para até 500 pessoas, como notificação da
+ * Lupa (#447): link ali é texto de um estranho com o nome da Lupa.
+ */
+describe("título sem link", () => {
+  it.each([
+    "Motorista https://vagas-rapidas.example",
+    "Ganhe R$ 500 por dia em www.renda-extra.example",
+    "Sua conta Lupa será bloqueada: lupa-seguranca.com",
+    "Vendedor - LOJA.COM.BR",
+    "Promotor de vendas renda.site",
+  ])("recusa %s", (titulo) => {
+    const r = schemaNovaVaga.safeParse({ ...DADOS, titulo });
+    expect(r.success).toBe(false);
+    expect(
+      !r.success && r.error.issues.some((i) => i.path[0] === "titulo"),
+    ).toBe(true);
+  });
+
+  it.each([
+    "Aux. de produção",
+    "Analista de T.I.",
+    "Motorista D/E",
+    "Aux.comércio e estoque",
+    "Eng. Agrônomo (Sr.)",
+    "Téc. Seg. do Trabalho",
+  ])("aceita %s", (titulo) => {
+    expect(schemaNovaVaga.safeParse({ ...DADOS, titulo }).success).toBe(true);
+  });
+});
+
 describe("schemaNovaVaga", () => {
   it("aceita o mínimo", () => {
     const r = schemaNovaVaga.safeParse(DADOS);

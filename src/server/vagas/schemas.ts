@@ -31,9 +31,22 @@ const zHabilidades = z.preprocess(
 
 const zSalario = z.coerce.number().nonnegative().optional();
 
+/*
+ * O título vai no aviso de vaga nova (#48), para até 500 pessoas, numa
+ * notificação que aparece como sendo da Lupa (#447). Cargo nunca precisa
+ * de link, e o lugar dele é a descrição. O domínio é reconhecido pelo fim
+ * conhecido, seguido de algo que não é letra — "Aux. de produção", "T.I." e
+ * "Aux.comércio" passam; `\b` sozinho tomaria o "é" por fim de palavra.
+ */
+const PARECE_LINK =
+  /https?:\/\/|www\.|[\p{L}\p{N}-]+\.(?:com|net|org|br|info|io|app|site|online|xyz|me|co|biz|top|link|shop|store|club|vip|ly|gl)(?![\p{L}\p{N}])/iu;
+
 /** Campos comuns a publicar e editar vaga. */
 export const camposVaga = {
-  titulo: zTexto(4, 120, "O cargo"),
+  titulo: zTexto(4, 120, "O cargo").refine(
+    (titulo) => !PARECE_LINK.test(titulo),
+    "O cargo não pode ter link. Se precisar, ponha na descrição.",
+  ),
   descricao: zTexto(30, 5000, "A descrição"),
   categoria: z.string().trim().min(1, "Escolha uma categoria."),
   /*
