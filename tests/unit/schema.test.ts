@@ -108,11 +108,11 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
     }
   });
 
-  it("já vem com as dezessete categorias de serviço", async () => {
+  it("já vem com as cinquenta categorias de serviço", async () => {
     const r = await db.query<{ total: string }>(
       "select count(*) as total from categorias_servico",
     );
-    expect(Number(r.rows[0].total)).toBe(17);
+    expect(Number(r.rows[0].total)).toBe(50);
   });
 
   /**

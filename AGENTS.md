@@ -1475,6 +1475,28 @@ chega a um banco vivo sem derrubar a view. **Rode a migração antes do
 deploy**: o `insert` de vaga passa a mandar `modalidade`, e sem a coluna
 publicar vaga falha.
 
+### Áreas de vaga e profissões de prestador (#457)
+
+Pedido do Luiz em 13/10/2026: mais áreas e mais profissões. Com o app
+aberto ao Brasil inteiro, a lista de dezessete profissões e a de vinte e
+uma áreas deixavam de fora quem é marceneiro, soldador, babá ou tratorista,
+e a vaga de atendimento ou de recursos humanos.
+
+**As duas listas são coisas diferentes, e crescem de jeitos diferentes.**
+`JOB_CATEGORIES` é só uma constante: a área gravada numa vaga ou num perfil
+é o próprio texto, e adicionar item é mudar o arquivo. `SERVICE_CATEGORIES`
+tem chave estrangeira — o id de cada profissão é o `categoria_id` de
+`perfis_prestador` —, então cada profissão nova entra por SQL
+(`aplica-mais-profissoes.sql`) com o **id fixo**, igual ao da constante, e
+não o que a sequência daria. Um teste (`categorias.test.ts`) compara a
+constante, o `schema.sql` e o script: divergir não quebra nada na hora, a
+profissão aparece na tela e falha por chave estrangeira quando alguém a
+escolhe.
+
+**Só se acrescenta; não se renomeia nem se reordena.** O nome gravado é o
+que a busca por categoria compara: trocar "Comércio e Vendas" por outra
+grafia esconderia do filtro tudo que já foi publicado sob a antiga.
+
 ### Vaga para PCD, e a vaga por sexo que não existe (#456)
 
 Pedido do Luiz em 13/10/2026: a empresa informa ao publicar se a vaga é para
