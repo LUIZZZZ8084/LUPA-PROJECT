@@ -166,7 +166,8 @@ export default async function VagasPage({
           },
           {
             key: "pcd",
-            placeholder: "Todas as vagas",
+            placeholder: "PCD",
+            opcaoVazia: "Todas as vagas",
             options: [{ value: "sim", label: ROTULO_PCD }],
           },
         ]}

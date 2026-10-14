@@ -1523,6 +1523,8 @@ ficar de fora serviria a lista de todas as vagas a quem pediu só as de PCD —
 pelo cache, sem erro nenhum. `?pcd=sim` é o único valor que filtra; qualquer
 outro é "todas as vagas", e não um filtro que nunca casa.
 
+**O filtro aparece inteiro e diz PCD (#460).** Ele nasceu como o quarto chip de uma fileira que rolava para o lado, sem barra: num celular de 412 px ficava cortado na borda ("Todas a…"), e o rótulo era "Todas as vagas". Quem abriu a busca no dia do deploy não o achou e concluiu que a atualização não tinha subido, quando tinha. Hoje os chips quebram de linha e o rótulo é "PCD", com a opção que solta o filtro dizendo "Todas as vagas" (`opcaoVazia`). A spec da #458 achava o filtro pelo `<select>` escondido, que existe mesmo com o chip fora da tela; a nova confere que cada filtro cabe inteiro na largura do aparelho. *Teste que encontra o controle por baixo da tela não prova que a pessoa o encontra por cima.*
+
 **A Lupa não guarda se o candidato é PCD.** É dado de saúde, e o filtro
 funciona sem isso: quem procura filtra, quem tem a vaga responde. Se um dia
 o perfil do candidato pedir isso, é decisão nova, com a LGPD à frente.
