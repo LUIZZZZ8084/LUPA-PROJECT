@@ -3119,6 +3119,15 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
 - **`truncate` num elemento que também é `flex` não corta o texto** — o
   ellipsis não se aplica e o `nowrap` trava a largura, empurrando a página
   para fora da tela. O truncate vai num `<span>` de texto dentro do flex.
+- **No Tailwind v4, `row-span-N` e `col-span-N` apagam o início da linha e
+  da coluna.** Eles geram o atalho `grid-row: span N / span N`, que reescreve
+  o `grid-row-start` posto por `row-start-1`. No hero da home (#465) o fundo do
+  banner, que devia ocupar as três primeiras linhas, foi parar depois do
+  conteúdo, com altura zero, e a foto sumiu. Para pôr um item numa área fixa
+  da grade, use início e fim juntos: `row-[1/4]`, `col-[1/-1]`. E coluna
+  flexível que guarda campo de formulário é `minmax(0,1fr)`, não `1fr`: o
+  `1fr` não encolhe abaixo da largura mínima do campo, e o botão ao lado vaza
+  pela borda do cartão.
 - **Grade responsiva sem `grid-cols-1` explícito** dimensiona a coluna
   implícita por `min-content`, e o card impõe largura maior que a tela.
 - **`loading.tsx` num segmento faz todo `notFound()` daquele ramo
