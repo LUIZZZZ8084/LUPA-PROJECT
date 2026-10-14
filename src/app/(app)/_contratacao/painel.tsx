@@ -302,7 +302,7 @@ export async function PainelDeContratacao({
               AGENTS.md. Presa em `trial` para todo mundo, ela fazia o
               painel prometer "1ª vaga gratuita" a quem paga desde a
               primeira, e continuaria dizendo isso a quem tivesse acabado
-              de assinar o mensal de R$ 199,90.
+              de assinar o plano mensal.
 
               Quem responde de verdade é a carteira, que a página já
               carregou logo acima para o card de saldo.

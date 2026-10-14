@@ -389,7 +389,7 @@ export function PerfilEmpresa({
       {/*
         O selo lia `empresa.plano` e dizia "Período de teste" para todo
         mundo, para sempre — inclusive para quem tivesse acabado de assinar
-        o mensal de R$ 199,90. `perfis_empresa.plano` é a coluna que o
+        o plano mensal. `perfis_empresa.plano` é a coluna que o
         AGENTS.md cita como exemplo de estado declarado sem produtor: nada
         nunca escreveu nela.
 
