@@ -279,6 +279,20 @@ html[data-theme="dark"] {
 }
 
 /*
+ * A lista que abre ao tocar num <select> é desenhada pelo navegador (#462).
+ *
+ * O preflight do Tailwind deixa o fundo do select transparente e a cor do
+ * texto herdada. No tema escuro isso é texto claro sobre o branco padrão
+ * do navegador: a lista abria branca e só se lia o item sob o mouse.
+ * `color-scheme: dark` não resolve, porque a cor do texto é a do tema, não
+ * a do navegador. Fundo e cor próprios, dos tokens, valem nos dois temas.
+ */
+option {
+  background-color: var(--color-panel);
+  color: var(--color-ink);
+}
+
+/*
  * O degradê do aro da logo (#343), nos dois temas.
  *
  * Não são tokens de interface: são as duas pontas de um degradê que só a

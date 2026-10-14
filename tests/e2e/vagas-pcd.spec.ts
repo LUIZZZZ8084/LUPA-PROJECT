@@ -43,13 +43,35 @@ test.describe("filtro de vagas para PCD", () => {
   }) => {
     await page.goto("/vagas");
 
-    await page
-      .getByRole("combobox", { name: "Todas as vagas" })
-      .selectOption("sim");
+    await page.getByRole("combobox", { name: "PCD" }).selectOption("sim");
 
     await expect(page).toHaveURL(/pcd=sim/);
     await expect(
       page.locator(CARTOES).first().getByText("Vaga para PCD"),
+    ).toBeVisible();
+  });
+
+  /*
+   * #460: o select de cada filtro existe mesmo quando o chip está fora da
+   * tela, então "achar o combobox" não prova que a pessoa acha o filtro. A
+   * fileira antiga rolava para o lado sem barra, e no celular o de PCD —
+   * o último — nascia cortado na borda. Aqui o que se confere é estar
+   * inteiro dentro da tela, na largura do aparelho.
+   */
+  test("todos os filtros cabem na tela, e o de PCD diz PCD", async ({
+    page,
+  }) => {
+    await page.goto("/vagas");
+
+    for (const nome of ["uf", "categoria", "tipo", "pcd"]) {
+      await expect(
+        page.locator(`form select[name="${nome}"]`),
+        `o filtro ${nome} aparece inteiro, sem rolar para o lado`,
+      ).toBeInViewport({ ratio: 1 });
+    }
+
+    await expect(
+      page.locator("form").getByText("PCD", { exact: true }),
     ).toBeVisible();
   });
 

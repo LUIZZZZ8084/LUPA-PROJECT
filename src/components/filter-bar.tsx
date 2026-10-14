@@ -10,6 +10,11 @@ export interface FilterDef {
   key: string;
   /** Texto quando nada está selecionado, ex.: "Categoria". */
   placeholder: string;
+  /**
+   * Texto da opção que solta o filtro, quando "Categoria" não serve — o
+   * chip diz "PCD" e a opção que o desliga diz "Todas as vagas" (#460).
+   */
+  opcaoVazia?: string;
   options: { value: string; label: string }[];
   /** Fixa o valor e desabilita o filtro. */
   locked?: boolean;
@@ -187,7 +192,13 @@ export function FilterBar({
         )}
       </div>
 
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+      {/*
+       * Os chips quebram de linha, não rolam para o lado (#460). Com rolagem
+       * horizontal e sem barra, o quarto filtro nascia cortado na borda do
+       * celular, sem pista nenhuma de que existia — e o de PCD, o último,
+       * ficava invisível para quem não adivinhasse arrastar.
+       */}
+      <div className="flex flex-wrap gap-2">
         {filters.map((filter) => (
           <FilterSelect
             key={filter.key}
@@ -252,7 +263,7 @@ function FilterSelect({
         aria-label={filter.placeholder}
         className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-default"
       >
-        <option value="">{filter.placeholder}</option>
+        <option value="">{filter.opcaoVazia ?? filter.placeholder}</option>
         {filter.options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
