@@ -3,7 +3,6 @@ import {
   BadgeCheck,
   Briefcase,
   Building2,
-  MapPin,
   MessageCircle,
   ShieldCheck,
   Star,
@@ -122,62 +121,51 @@ export default async function HomePage() {
        */}
       <section className="aurora border-b border-line">
         <div className="mx-auto max-w-6xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
-          <BannerDaHome />
-
-          <div className="mt-4 sm:mt-6">
-            {/*
-             * O pino de localização promete "aqui é onde você está" — e até
-             * a #107 dizia sempre "Mato Grosso · começando por Sinop",
-             * pra quem quer que fosse, de qualquer cidade. `origemDoUsuario()`
-             * já lê a cidade da conta para ordenar a busca por perto; usar o
-             * mesmo valor aqui é a diferença entre um selo de abrangência e
-             * uma promessa que o ícone já fazia sem cumprir.
-             *
-             * Sem sessão (a home é pública desde a #241), ou com uma conta
-             * sem cidade, o selo diz o alcance do app — o Brasil inteiro
-             * desde a #301 — em vez de mostrar um pino sem legenda. A cidade
-             * já é gravada com o estado ("Sinop - MT"), então não há rótulo
-             * a montar.
-             */}
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
-              <MapPin size={12} className="text-vagas" />
-              {origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
-            </span>
-          </div>
-
           {/*
-           * No celular, uma coluna: busca, números e conta, nessa ordem. No
-           * computador (#443), a busca à esquerda e os números com a conta
-           * numa coluna à direita, alinhados pelo topo. Antes cada bloco
-           * tinha uma largura (672, 672 e 384 px), todos encostados à
-           * esquerda, e a tela parecia quebrada.
+           * O banner é o hero inteiro no computador (#465): selo, título,
+           * busca e números numa coluna dentro dele, e a foto à direita. No
+           * celular ele é só a faixa do título, e o resto vem embaixo, na
+           * ordem de antes. Quem decide onde cada parte fica é a grade do
+           * banner; aqui só se diz o que vai em cada lugar.
+           *
+           * O selo usa a cidade da conta, a mesma que `origemDoUsuario()`
+           * usa para ordenar a busca por perto. Sem sessão (a home é pública
+           * desde a #241), ou com uma conta sem cidade, ele diz o alcance do
+           * app em vez de mostrar um pino sem legenda.
            */}
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-x-6">
-            <BuscaDoHero
-              ufs={UFS.map((u) => ({ sigla: u.sigla, nome: u.nome }))}
-              visitante={!sessao}
-            />
-
-            <div>
-              <FaixaDeNumeros
-                vagas={totals.jobs}
-                vagasAoMenos={totals.jobsAoMenos}
-                profissionais={totals.providers}
-                profissionaisAoMenos={totals.providersAoMenos}
+          <BannerDaHome
+            local={origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
+            busca={
+              <BuscaDoHero
+                ufs={UFS.map((u) => ({ sigla: u.sigla, nome: u.nome }))}
+                visitante={!sessao}
               />
-
-              {/*
-               * Para quem não tem conta, o card de conta fica aqui no alto,
-               * que é onde converte (#241). Para quem já entrou, ele é um
-               * atalho para o próprio perfil, e vai para o fim da lista.
-               */}
-              {!sessao && (
-                <div className="mt-3 max-w-sm lg:max-w-none">
-                  <CardDeConta card={terceiroCard} />
-                </div>
-              )}
-            </div>
-          </div>
+            }
+            rodape={
+              /*
+               * Números e conta empilhados, embaixo da busca. Lado a lado, no
+               * computador, os dois ficavam com uns 280 px cada: "vagas
+               * abertas" quebrava em duas linhas e a legenda do card era
+               * cortada. Para quem não tem conta, o card de conta fica aqui
+               * no alto, que é onde converte (#241); para quem já entrou,
+               * ele é um atalho para o próprio perfil, e vai para o fim da
+               * lista.
+               */
+              <>
+                <FaixaDeNumeros
+                  vagas={totals.jobs}
+                  vagasAoMenos={totals.jobsAoMenos}
+                  profissionais={totals.providers}
+                  profissionaisAoMenos={totals.providersAoMenos}
+                />
+                {!sessao && (
+                  <div className="mt-3 max-w-sm lg:max-w-none">
+                    <CardDeConta card={terceiroCard} />
+                  </div>
+                )}
+              </>
+            }
+          />
         </div>
       </section>
 

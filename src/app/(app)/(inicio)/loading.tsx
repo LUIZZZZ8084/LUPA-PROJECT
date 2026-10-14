@@ -18,9 +18,13 @@ import {
  * a partir de `sm`, como no conteúdo. (Medido no navegador, em 375 e em
  * 1024 px, com o conteúdo carregado.)
  *
- * No computador (#443) a home usa a largura do cabeçalho, com a busca ao
- * lado dos números e, a partir de `xl`, as vagas ao lado dos profissionais, e o esqueleto
- * segue as mesmas colunas e o banner de 19 rem.
+ * No computador (#443) a home usa a largura do cabeçalho e, a partir de
+ * `xl`, as vagas ao lado dos profissionais, e o esqueleto segue as mesmas
+ * colunas. Desde a #465 a busca e os números moram dentro do banner a partir
+ * de `lg`, e o esqueleto é um bloco só, com a altura do hero de quem tem
+ * conta: 534 px, igual em 1024, 1280 e 1920 (medido no navegador). O do
+ * visitante é mais alto, pelo aviso e pelo card de conta, e cresce para baixo
+ * sem mover o que já estava à vista.
  *
  * Ficam de fora o aviso e o card de conta que só o visitante vê: o
  * esqueleto não sabe se há sessão, e os dois estão abaixo da dobra no
@@ -36,11 +40,11 @@ export default function Loading() {
     <>
       <section className="aurora border-b border-line">
         <div className="mx-auto max-w-6xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
-          <Skeleton className="h-[10rem] rounded-[var(--radius-card)] sm:h-[17rem] lg:h-[19rem]" />
-          <Skeleton className="mt-4 h-[26px] w-44 rounded-full sm:mt-6" />
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-x-6">
-            <Skeleton className="mt-3 h-[267px] max-w-2xl rounded-[var(--radius-card)] sm:h-[139px] lg:mt-4 lg:max-w-none" />
-            <Skeleton className="mt-4 h-[68px] max-w-2xl rounded-2xl lg:max-w-none" />
+          <Skeleton className="h-[10rem] rounded-[var(--radius-card)] sm:h-[17rem] lg:h-[534px]" />
+          <div className="lg:hidden">
+            <Skeleton className="mt-4 h-[26px] w-44 rounded-full sm:mt-6" />
+            <Skeleton className="mt-3 h-[267px] max-w-2xl rounded-[var(--radius-card)] sm:h-[139px]" />
+            <Skeleton className="mt-4 h-[68px] max-w-2xl rounded-2xl" />
           </div>
         </div>
       </section>
