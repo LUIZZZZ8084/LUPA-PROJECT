@@ -1520,10 +1520,28 @@ deploy**: o `insert` passa a mandar `para_pcd`.
 
 **O filtro entra na chave do cache da listagem.** É do que se pergunta, e
 ficar de fora serviria a lista de todas as vagas a quem pediu só as de PCD —
-pelo cache, sem erro nenhum. `?pcd=sim` é o único valor que filtra; qualquer
-outro é "todas as vagas", e não um filtro que nunca casa.
+pelo cache, sem erro nenhum.
 
-**O filtro aparece inteiro e diz PCD (#460).** Ele nasceu como o quarto chip de uma fileira que rolava para o lado, sem barra: num celular de 412 px ficava cortado na borda ("Todas a…"), e o rótulo era "Todas as vagas". Quem abriu a busca no dia do deploy não o achou e concluiu que a atualização não tinha subido, quando tinha. Hoje os chips quebram de linha e o rótulo é "PCD", com a opção que solta o filtro dizendo "Todas as vagas" (`opcaoVazia`). A spec da #458 achava o filtro pelo `<select>` escondido, que existe mesmo com o chip fora da tela; a nova confere que cada filtro cabe inteiro na largura do aparelho. *Teste que encontra o controle por baixo da tela não prova que a pessoa o encontra por cima.*
+**Mora dentro de "Tipo", como `?tipo=pcd` (#463).** Decisão do Luiz em
+14/10/2026: ele não precisa de um filtro separado na barra. A página traduz
+o valor para o booleano que a camada de dados já recebia, e não o repassa à
+consulta como tipo de contrato — o banco compara `contract_type` com o
+texto, e "pcd" nunca casaria. O custo, que ele aceitou ao pedir: é uma
+escolha só, dá para filtrar por "CLT" **ou** por "Vaga para PCD", não pelos
+dois juntos, e PCD não é tipo de contrato. O endereço antigo, `?pcd=sim`,
+viveu um dia e hoje é "todas as vagas".
+
+**A barra de filtros não esconde nenhum chip (#460).** O filtro de PCD
+nasceu como o quarto chip de uma fileira que rolava para o lado, sem barra:
+num celular de 412 px ficava cortado na borda ("Todas a…"), e o rótulo não
+dizia PCD. Quem abriu a busca no dia do deploy não o achou e concluiu que a
+atualização não tinha subido, quando tinha. Hoje os chips quebram de linha, e
+a #463 tirou o chip de PCD de vez. A spec da #458 achava o filtro pelo
+`<select>` escondido, que existe mesmo com o chip fora da tela; a nova
+confere que cada filtro cabe inteiro na largura do aparelho, com um estado
+escolhido (são quatro chips, e é aí que a fileira antiga cortava). *Teste que
+encontra o controle por baixo da tela não prova que a pessoa o encontra por
+cima.*
 
 **E a lista que o filtro abre era branca no tema escuro (#462).** O preflight do Tailwind deixa o `select` sem fundo e com a cor do texto herdada, e a lista que o navegador desenha pegava o texto claro do tema sobre o branco padrão: só se lia o item sob o mouse. `color-scheme: dark` já estava no `<html>` e não resolvia, porque a cor do texto é a do tema. Hoje `option` tem fundo e cor dos tokens em `globals.css`, e o e2e (`lista-dos-filtros.spec.ts`) confere fundo opaco e contraste de 4,5:1 nos dois temas pelo estilo calculado — o popup nativo não sai em captura de tela. *Controle nativo herda a cor do tema, mas não o fundo: confira os dois.*
 

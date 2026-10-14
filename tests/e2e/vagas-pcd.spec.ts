@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 /**
  * O filtro de vaga para PCD (#456), pelo caminho que a pessoa percorre.
  *
+ * Ele mora dentro da lista de Tipo (#463): `?tipo=pcd`.
+ *
  * Na demonstração duas vagas de exemplo são para PCD. As outras specs
  * publicam vagas durante a corrida e a lista é compartilhada, então aqui
  * se confere a regra — toda vaga listada leva o selo —, e não a contagem.
@@ -11,7 +13,7 @@ test.describe("filtro de vagas para PCD", () => {
   const CARTOES = 'main a[href^="/vagas/"]';
 
   test("com o filtro, só aparecem vagas para PCD", async ({ page }) => {
-    await page.goto("/vagas?pcd=sim");
+    await page.goto("/vagas?tipo=pcd");
 
     const cartoes = page.locator(CARTOES);
     await expect(cartoes.first()).toBeVisible();
@@ -32,56 +34,68 @@ test.describe("filtro de vagas para PCD", () => {
     await page.goto("/vagas");
 
     const todas = await page.locator(CARTOES).count();
-    await page.goto("/vagas?pcd=sim");
+    await page.goto("/vagas?tipo=pcd");
     const soPcd = await page.locator(CARTOES).count();
 
     expect(todas).toBeGreaterThan(soPcd);
   });
 
-  test("o filtro se escolhe na tela, e o valor sobra na URL", async ({
+  test("a opção está na lista de Tipo, e escolher liga o filtro", async ({
     page,
   }) => {
     await page.goto("/vagas");
 
-    await page.getByRole("combobox", { name: "PCD" }).selectOption("sim");
+    const tipo = page.getByRole("combobox", { name: "Tipo" });
+    await expect(
+      tipo.locator("option", { hasText: "Vaga para PCD" }),
+      "a opção de PCD é uma das da lista de Tipo",
+    ).toHaveCount(1);
 
-    await expect(page).toHaveURL(/pcd=sim/);
+    await tipo.selectOption("pcd");
+
+    await expect(page).toHaveURL(/tipo=pcd/);
     await expect(
       page.locator(CARTOES).first().getByText("Vaga para PCD"),
     ).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "PCD" }),
+      "não sobrou um filtro separado de PCD na barra",
+    ).toHaveCount(0);
   });
 
   /*
    * #460: o select de cada filtro existe mesmo quando o chip está fora da
    * tela, então "achar o combobox" não prova que a pessoa acha o filtro. A
-   * fileira antiga rolava para o lado sem barra, e no celular o de PCD —
-   * o último — nascia cortado na borda. Aqui o que se confere é estar
-   * inteiro dentro da tela, na largura do aparelho.
+   * fileira antiga rolava para o lado sem barra, e o que passasse do
+   * terceiro chip nascia cortado na borda do celular. Com um estado
+   * escolhido a cidade aparece, são quatro chips, e é aí que a fileira
+   * antiga cortava — por isso o estado vem na URL.
    */
-  test("todos os filtros cabem na tela, e o de PCD diz PCD", async ({
+  test("todos os filtros cabem na tela, sem rolar para o lado", async ({
     page,
   }) => {
-    await page.goto("/vagas");
+    await page.goto("/vagas?uf=MT");
 
-    for (const nome of ["uf", "categoria", "tipo", "pcd"]) {
+    for (const nome of ["uf", "cidade", "categoria", "tipo"]) {
       await expect(
         page.locator(`form select[name="${nome}"]`),
         `o filtro ${nome} aparece inteiro, sem rolar para o lado`,
       ).toBeInViewport({ ratio: 1 });
     }
-
-    await expect(
-      page.locator("form").getByText("PCD", { exact: true }),
-    ).toBeVisible();
   });
 
-  test("valor torto na URL é 'todas as vagas', e não uma lista vazia", async ({
+  /*
+   * O filtro nasceu como `?pcd=sim` (#456) e viveu um dia antes de ir para
+   * dentro de Tipo (#463). O endereço antigo não filtra nada: parâmetro que
+   * a página não conhece é "todas as vagas", e não uma lista vazia.
+   */
+  test("o endereço antigo, ?pcd=sim, mostra todas as vagas", async ({
     page,
   }) => {
     await page.goto("/vagas");
     const todas = await page.locator(CARTOES).count();
 
-    await page.goto("/vagas?pcd=talvez");
+    await page.goto("/vagas?pcd=sim");
     await expect(page.locator(CARTOES)).toHaveCount(todas);
   });
 

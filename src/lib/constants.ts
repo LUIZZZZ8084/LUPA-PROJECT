@@ -183,6 +183,13 @@ export const WORK_MODES = Object.keys(WORK_MODE_LABELS) as WorkMode[];
  */
 export const ROTULO_PCD = "Vaga para PCD";
 
+/**
+ * Valor de `?tipo=` que liga o filtro de PCD (#463). O filtro mora dentro
+ * da lista de Tipo, mas PCD não é tipo de contrato: a página traduz este
+ * valor e não o repassa à consulta como contrato.
+ */
+export const PCD_NO_TIPO = "pcd";
+
 export const ROLE_LABELS = {
   candidato_clt: "Candidato",
   prestador_servico: "Prestador de serviço",

@@ -10,11 +10,6 @@ export interface FilterDef {
   key: string;
   /** Texto quando nada está selecionado, ex.: "Categoria". */
   placeholder: string;
-  /**
-   * Texto da opção que solta o filtro, quando "Categoria" não serve — o
-   * chip diz "PCD" e a opção que o desliga diz "Todas as vagas" (#460).
-   */
-  opcaoVazia?: string;
   options: { value: string; label: string }[];
   /** Fixa o valor e desabilita o filtro. */
   locked?: boolean;
@@ -263,7 +258,7 @@ function FilterSelect({
         aria-label={filter.placeholder}
         className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-default"
       >
-        <option value="">{filter.opcaoVazia ?? filter.placeholder}</option>
+        <option value="">{filter.placeholder}</option>
         {filter.options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
