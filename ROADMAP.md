@@ -15,7 +15,7 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 Em 14/10/2026:
 
 - Nova tabela de preços das vagas de empresa: 1 vaga R$ 19,90, 5 vagas
-  R$ 79,99, 10 vagas R$ 99,90 e plano mensal R$ 149,90 —
+  R$ 79,90, 10 vagas R$ 99,90 e plano mensal R$ 149,90 —
   [#469](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/469)
 - No computador, a busca e os números da home entram no banner, e o card de
   conta de quem está logado sai da home —

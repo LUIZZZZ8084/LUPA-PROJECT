@@ -2359,11 +2359,11 @@ repetido na tela e no servidor é como se cobra um valor e se anuncia
 outro.
 
 **A tabela das vagas de empresa mudou em 14/10/2026 (#469).** Decisão do
-Luiz: 1 vaga R$ 19,90, 5 vagas R$ 79,99, 10 vagas R$ 99,90 e plano mensal
+Luiz: 1 vaga R$ 19,90, 5 vagas R$ 79,90, 10 vagas R$ 99,90 e plano mensal
 R$ 149,90 — antes eram 29,90, 119,90, 149,90 e 199,90. A mensalidade do
 prestador (R$ 19,90) e o currículo (R$ 14,90) não mudaram. Mexer foi só
 `PRECO_CENTAVOS`: as telas de compra, o fim do cadastro e o chamado da home
-leem dali, e o preço por vaga sai da conta (16,00 e 9,99). A conferência no
+leem dali, e o preço por vaga sai da conta (15,98 e 9,99). A conferência no
 banco antes de mudar achou **nenhuma assinatura de empresa** e só uma compra
 aprovada, então ninguém em andamento muda de preço — e, em geral, a
 cobrança aberta guarda o valor de quando foi criada, e o Mercado Pago o da
@@ -2371,7 +2371,7 @@ assinatura: quem já assinou o mensal por 199,90 continuaria pagando 199,90
 até cancelar. Um teste (`tabela-de-precos.test.ts`) trava os valores e cobra a
 **escada**: unitário que cai com o pacote maior, e o mensal como teto, mais
 caro que o pacote de 10 e vencendo depois dele (hoje, a partir de 13 vagas).
-O pacote de 5 custa só R$ 19,91 a menos que o de 10, e quem o escolhe
+O pacote de 5 custa só R$ 20,00 a menos que o de 10, e quem o escolhe
 escolhe pelo valor que sai do bolso, não pela conta por vaga.
 
 **A infraestrutura nasceu com um tipo de cobrança só, não seis.** O brief

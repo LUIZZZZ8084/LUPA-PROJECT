@@ -44,7 +44,7 @@ describe("tabela de preços das vagas", () => {
   it("é a de 14/10/2026", () => {
     expect(PRECO_CENTAVOS).toMatchObject({
       empresa_vaga_avulsa: 1990,
-      empresa_pacote_5: 7999,
+      empresa_pacote_5: 7990,
       empresa_pacote_10: 9990,
       empresa_mensal: 14990,
     });

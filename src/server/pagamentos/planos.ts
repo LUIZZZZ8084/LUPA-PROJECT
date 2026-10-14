@@ -11,9 +11,9 @@ export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
 
   /*
    * Publicar vaga (#172), e a tabela de agora é a de 14/10/2026 (#469),
-   * decisão do Luiz: 19,90 / 79,99 / 99,90 e mensal de 149,90.
+   * decisão do Luiz: 19,90 / 79,90 / 99,90 e mensal de 149,90.
    *
-   * O preço por vaga sai 19,90 / 16,00 / 9,99: a avulsa custa o **dobro**
+   * O preço por vaga sai 19,90 / 15,98 / 9,99: a avulsa custa o **dobro**
    * do unitário do pacote de 10, e o de 5 fica no meio. A tabela anterior
    * era 29,90 / 119,90 / 149,90 e mensal de 199,90 (a primeira, de 09/09,
    * tinha pacote de 15 e avulsa a três vezes o unitário dele — quem tinha
@@ -26,11 +26,11 @@ export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
    * teste que reprova uma tabela em que o unitário não cai com o pacote ou
    * o mensal sai mais barato que o pacote de 10.
    *
-   * O pacote de 10 custa só 19,91 a mais que o de 5: quem escolhe o de 5
+   * O pacote de 10 custa só 20,00 a mais que o de 5: quem escolhe o de 5
    * escolhe pelo valor que sai do bolso, não pela conta por vaga.
    */
   empresa_vaga_avulsa: 1990,
-  empresa_pacote_5: 7999,
+  empresa_pacote_5: 7990,
   empresa_pacote_10: 9990,
   empresa_mensal: 14990,
 
