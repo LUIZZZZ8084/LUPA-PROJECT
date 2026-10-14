@@ -234,8 +234,15 @@ export default async function HomePage() {
               />
             </FeedSection>
 
+            {/*
+             * Só no celular (#467). No computador o card ficava solto embaixo
+             * dos profissionais, no meio da página, e o que ele oferece já tem
+             * lugar fixo: o perfil está no avatar do cabeçalho, e o convite
+             * para virar prestador, no fim de `/servicos`. No celular ele fica,
+             * porque é o atalho à mão para quem rola a home.
+             */}
             {sessao && (
-              <div className="max-w-sm xl:max-w-none">
+              <div className="max-w-sm lg:hidden">
                 <CardDeConta card={terceiroCard} />
               </div>
             )}
