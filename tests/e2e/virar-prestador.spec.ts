@@ -60,17 +60,40 @@ test.describe("virar prestador", () => {
     await page?.context().close();
   });
 
+  /*
+   * O card só aparece no celular (#467): no computador ele ficava solto no
+   * meio da home. Por isso a tela é estreitada só aqui, e volta ao tamanho
+   * do projeto no fim, para os outros passos.
+   */
   test("o card da home leva para a ativação, não para o cadastro", async () => {
+    const tamanho = page.viewportSize();
+    await page.setViewportSize({ width: 375, height: 812 });
+    try {
+      await page.goto("/");
+
+      const card = page.getByRole("link", { name: /oferecer serviço/i });
+      await expect(card).toBeVisible();
+
+      /*
+       * O destino é o bug inteiro: `/cadastro?tipo=prestador_servico` pedia
+       * conta nova a quem já tinha uma.
+       */
+      await expect(card).toHaveAttribute("href", "/perfil/virar-prestador");
+    } finally {
+      if (tamanho) await page.setViewportSize(tamanho);
+    }
+  });
+
+  test("no computador o card sai da home, e a porta fica em /servicos", async () => {
     await page.goto("/");
+    await expect(
+      page.getByRole("link", { name: /oferecer serviço/i }),
+    ).toBeHidden();
 
-    const card = page.getByRole("link", { name: /oferecer serviço/i });
-    await expect(card).toBeVisible();
-
-    /*
-     * O destino é o bug inteiro: `/cadastro?tipo=prestador_servico` pedia
-     * conta nova a quem já tinha uma.
-     */
-    await expect(card).toHaveAttribute("href", "/perfil/virar-prestador");
+    await page.goto("/servicos");
+    await expect(
+      page.getByRole("link", { name: "Criar meu perfil" }),
+    ).toHaveAttribute("href", "/perfil/virar-prestador");
   });
 
   test("avisa o que se perde antes de pedir qualquer dado", async () => {
