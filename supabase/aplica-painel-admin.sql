@@ -110,10 +110,13 @@ drop view if exists metricas_por_local;
 
 -- Métrica administrativa nunca é pública. As views são
 -- `security_invoker = false` e leem `usuarios` por cima da RLS: sem o
--- revoke, a chave anônima leria quantas contas há em cada cidade.
-revoke select on metricas_totais            from anon, authenticated;
-revoke select on metricas_contas_por_estado from anon, authenticated;
-revoke select on metricas_contas_por_cidade from anon, authenticated;
-revoke select on metricas_funil             from anon, authenticated;
+-- revoke, a chave anônima leria quantas contas há em cada cidade. E é
+-- `revoke all`, não só o select: o Supabase concede também escrita às duas
+-- chaves em toda view nova (#421), e o revoke geral do fim do `schema.sql`
+-- não roda aqui.
+revoke all on metricas_totais            from anon, authenticated;
+revoke all on metricas_contas_por_estado from anon, authenticated;
+revoke all on metricas_contas_por_cidade from anon, authenticated;
+revoke all on metricas_funil             from anon, authenticated;
 
 commit;

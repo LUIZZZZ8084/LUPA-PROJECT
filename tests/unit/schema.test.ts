@@ -3286,6 +3286,10 @@ describe("aplica-painel-admin.sql", () => {
       // Um banco de antes da #471 ainda tem a view velha.
       await banco.exec(`create view metricas_por_local as
         select cidade, bairro, count(*) as total from usuarios group by 1, 2`);
+      // E o Supabase concede tudo às duas chaves em toda view (#421).
+      await banco.exec(
+        `grant all on ${VIEWS.join(", ")} to anon, authenticated`,
+      );
 
       const definicoes = async () =>
         Promise.all(
@@ -3308,6 +3312,16 @@ describe("aplica-painel-admin.sql", () => {
       await banco.exec(script);
 
       expect(await definicoes()).toEqual(antes);
+      for (const view of VIEWS) {
+        const r = await banco.query<{ algum: boolean }>(
+          `select bool_or(has_table_privilege(papel, $1, p)) as algum
+             from unnest(array['anon', 'authenticated']) as papel,
+                  unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE',
+                               'TRUNCATE']) as p`,
+          [view],
+        );
+        expect(r.rows[0].algum, `${view} ainda tem privilégio`).toBe(false);
+      }
       const velha = await banco.query(
         `select 1 from information_schema.views
           where table_schema = 'public' and table_name = 'metricas_por_local'`,
