@@ -107,7 +107,7 @@ async function aplicarEfeito(pagamento: Pagamento): Promise<void> {
      * As três compras únicas de vaga viram crédito, e a quantidade sai de
      * `CREDITOS_POR_COMPRA` — nunca de um número escrito aqui. Preço e
      * quantidade moram no mesmo arquivo de propósito: é lá que se
-     * confere se "5 vagas por R$ 119,90" continua sendo cinco.
+     * confere se o "5 vagas" do preço continua sendo cinco.
      */
     case "empresa_vaga_avulsa":
     case "empresa_pacote_5":
