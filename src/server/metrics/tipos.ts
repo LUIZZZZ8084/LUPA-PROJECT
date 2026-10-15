@@ -1,4 +1,5 @@
 import type { Papel } from "../auth/rbac";
+import type { CustoMensal } from "../custos/tipos";
 
 /**
  * Métricas do painel administrativo.
@@ -265,12 +266,6 @@ export function montarFunil(e: EntradaDoFunil): Funil {
         .reduce((s, p) => s + p.valorCentavos, 0),
     },
   };
-}
-
-/** Um custo mensal que o Lupa precisa cobrir para se pagar (#471). */
-export interface CustoMensal {
-  nome: string;
-  centavos: number;
 }
 
 /**

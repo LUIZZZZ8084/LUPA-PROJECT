@@ -15,6 +15,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { CUSTOS_INICIAIS } from "@/server/custos/iniciais";
 import {
   agregarContasPorLugar,
   agregarPressao,
@@ -76,6 +77,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "candidaturas",
       "carteiras_vaga",
       "categorias_servico",
+      "custos_mensais",
       "denuncias",
       "inscricoes_push",
       "pagamentos",
@@ -775,6 +777,8 @@ describe("grants de anon e authenticated", () => {
     "tokens_recuperacao",
     // Quem denunciou quem (#435): o denunciado nunca pode saber.
     "denuncias",
+    // Quanto a empresa gasta por mês (#473): dado dela, não do app.
+    "custos_mensais",
     /*
      * Saber quem está de olho em vaga de motorista é a mesma classe de
      * informação que o currículo — numa cidade do tamanho de Sinop, diz
@@ -1166,7 +1170,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    expect(tabelas.rows).toHaveLength(21);
+    expect(tabelas.rows).toHaveLength(22);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -3327,6 +3331,122 @@ describe("aplica-painel-admin.sql", () => {
           where table_schema = 'public' and table_name = 'metricas_por_local'`,
       );
       expect(velha.rows).toHaveLength(0);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
+});
+
+/**
+ * Os custos mensais do painel (#473).
+ *
+ * A tabela nasce com os mesmos custos de `CUSTOS_INICIAIS` — o painel em
+ * demonstração e o banco começam iguais —, e as travas do valor e do nome
+ * moram no banco, além da validação da tela.
+ */
+describe("custos mensais", () => {
+  let banco: PGlite;
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  const lista = async () =>
+    (
+      await banco.query<{ nome: string; valor_centavos: number }>(
+        "select nome, valor_centavos from custos_mensais order by ordem",
+      )
+    ).rows.map((c) => ({ nome: c.nome, centavos: Number(c.valor_centavos) }));
+
+  it("nasce com os custos iniciais, na ordem deles", async () => {
+    expect(await lista()).toEqual(CUSTOS_INICIAIS);
+  });
+
+  it("o custo novo entra no fim da ordem", async () => {
+    await banco.query(
+      "insert into custos_mensais (nome, valor_centavos) values ('Contador', 30000)",
+    );
+    expect((await lista()).at(-1)).toEqual({
+      nome: "Contador",
+      centavos: 30_000,
+    });
+  });
+
+  it.each([
+    ["valor zero", "'Aluguel', 0"],
+    ["valor acima de R$ 100.000,00", "'Aluguel', 10000001"],
+    ["nome de uma letra", "'A', 100"],
+    ["nome em branco", "'   ', 100"],
+  ])("recusa %s", async (_caso, valores) => {
+    await expect(
+      banco.query(
+        `insert into custos_mensais (nome, valor_centavos) values (${valores})`,
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("editar move o atualizado_em", async () => {
+    const antes = await banco.query<{ id: string; atualizado_em: Date }>(
+      `update custos_mensais set atualizado_em = now() - interval '1 day'
+        where nome = 'Contador' returning id, atualizado_em`,
+    );
+    const depois = await banco.query<{ atualizado_em: Date }>(
+      `update custos_mensais set valor_centavos = 35000
+        where id = $1 returning atualizado_em`,
+      [antes.rows[0].id],
+    );
+    expect(+new Date(depois.rows[0].atualizado_em)).toBeGreaterThan(
+      +new Date(antes.rows[0].atualizado_em),
+    );
+  });
+});
+
+/**
+ * O script que leva os custos ao banco de produção (#473). Num banco sem a
+ * tabela, cria e semeia; rodado de novo, não duplica nem desfaz o que o
+ * admin editou; e tira das chaves públicas tudo o que o Supabase concede.
+ */
+describe("aplica-custos-mensais.sql", () => {
+  it("cria, semeia uma vez só, preserva o editado e fecha para as chaves públicas", async () => {
+    const banco = await PGlite.create();
+    try {
+      await banco.exec(SCHEMA);
+      // Um banco de antes da #473 não tem a tabela.
+      await banco.exec("drop table custos_mensais");
+
+      const script = readFileSync(
+        join(process.cwd(), "supabase/aplica-custos-mensais.sql"),
+        "utf8",
+      );
+      await banco.exec(script);
+      await banco.exec("grant all on custos_mensais to anon, authenticated");
+      await banco.query(
+        "update custos_mensais set valor_centavos = 9900 where nome = 'Vercel Pro'",
+      );
+      await banco.exec(script);
+
+      const r = await banco.query<{ nome: string; valor_centavos: number }>(
+        "select nome, valor_centavos from custos_mensais order by ordem",
+      );
+      expect(
+        r.rows.map((c) => ({
+          nome: c.nome,
+          centavos: Number(c.valor_centavos),
+        })),
+      ).toEqual([CUSTOS_INICIAIS[0], { nome: "Vercel Pro", centavos: 9_900 }]);
+
+      const privilegio = await banco.query<{ algum: boolean }>(
+        `select bool_or(has_table_privilege(papel, 'custos_mensais', p)) as algum
+           from unnest(array['anon', 'authenticated']) as papel,
+                unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE',
+                             'TRUNCATE']) as p`,
+      );
+      expect(privilegio.rows[0].algum).toBe(false);
     } finally {
       await banco.close();
     }

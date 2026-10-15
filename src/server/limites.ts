@@ -94,6 +94,11 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
   "denuncia.criar": porJanela(5),
   // O admin decide em lote quando a fila acumula.
   "denuncia.decidir": porJanela(60),
+  // Cadastrar os custos do mês é coisa de poucos cliques (#473); acima disto
+  // é um script, não uma pessoa no painel.
+  "custo.criar": porJanela(30),
+  "custo.editar": porJanela(60),
+  "custo.remover": porJanela(30),
 
   /*
    * Candidatar-se é o verbo mais usado do app, e por quem tem menos

@@ -122,7 +122,12 @@ export type Capacidade =
   | "admin:painel"
   | "admin:metricas"
   | "admin:decidir_verificacao"
-  | "admin:moderar";
+  | "admin:moderar"
+  /*
+   * Os custos mensais que o painel compara com a receita (#473): ler e
+   * editar. É dado da empresa, não de ninguém do app.
+   */
+  | "admin:custos";
 
 const NENHUMA: readonly Capacidade[] = [];
 
@@ -240,6 +245,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "admin:metricas",
     "admin:decidir_verificacao",
     "admin:moderar",
+    "admin:custos",
     "perfil:editar_proprio",
     "candidato:buscar_disponiveis",
   ],

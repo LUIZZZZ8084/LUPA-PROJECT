@@ -238,6 +238,7 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
         <CoberturaDosCustos
           receita={painel.funil.receita}
           custos={painel.custos}
+          aoMudar={buscar}
         />
       </div>
 

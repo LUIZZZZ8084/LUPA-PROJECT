@@ -18,6 +18,9 @@ Em 15/10/2026:
   candidato, prestador e empresa, o funil de cada papel e quanto da receita
   recorrente cobre os custos de Supabase e Vercel —
   [#471](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/471)
+- Custos mensais editáveis no painel do admin (contador, aluguel, o que
+  vier), com a cobertura recalculada na hora —
+  [#473](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/473)
 
 Em 14/10/2026:
 

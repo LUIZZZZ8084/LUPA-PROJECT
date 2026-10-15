@@ -3,9 +3,12 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Autenticado, Papel } from "@/server/auth/rbac";
+import {
+  RepositorioCustosMemoria,
+  usarRepositorioCustos,
+} from "@/server/custos";
 import { ehAppError } from "@/server/errors";
 import { usarRepositorioMetricas } from "@/server/metrics";
-import { CUSTOS_MENSAIS } from "@/server/metrics/custos";
 import { RepositorioMetricasMemoria } from "@/server/metrics/memoria";
 import { painelAdmin, somarCadastros } from "@/server/metrics/servico";
 import type { Funil, RepositorioMetricas } from "@/server/metrics/tipos";
@@ -241,26 +244,31 @@ describe("painel administrativo", () => {
       expect(painel.lugares).toEqual(lugares);
     });
 
-    it("leva o funil e a meta de custo para a tela", async () => {
+    /*
+     * Os custos vêm do repositório deles desde a #473, editados no próprio
+     * painel: o que o admin acabou de cadastrar é o que a tela recebe.
+     */
+    it("leva o funil e os custos cadastrados para a tela", async () => {
       const funil = { ...funilZerado(), candidatos: 7 };
+      const custos = new RepositorioCustosMemoria();
+      await custos.criar({ nome: "Contador", centavos: 30_000 });
+      const restaurarCustos = usarRepositorioCustos(custos);
       restaurar = usarRepositorioMetricas(
         repoFalso({ funil: async () => funil }),
       );
 
-      const painel = await painelAdmin(admin);
+      try {
+        const painel = await painelAdmin(admin);
 
-      expect(painel.funil).toEqual(funil);
-      expect(painel.custos).toEqual(CUSTOS_MENSAIS);
-    });
-
-    /*
-     * A meta é o custo dos planos pagos, e a pergunta do Luiz era "pelo
-     * menos o Supabase": ele vem primeiro, porque a tela cobre os custos
-     * na ordem em que aparecem.
-     */
-    it("o primeiro custo da meta é o Supabase", () => {
-      expect(CUSTOS_MENSAIS[0].nome).toMatch(/supabase/i);
-      expect(CUSTOS_MENSAIS.every((c) => c.centavos > 0)).toBe(true);
+        expect(painel.funil).toEqual(funil);
+        expect(painel.custos).toEqual(await custos.listar());
+        expect(painel.custos.at(-1)).toMatchObject({
+          nome: "Contador",
+          centavos: 30_000,
+        });
+      } finally {
+        restaurarCustos();
+      }
     });
   });
 

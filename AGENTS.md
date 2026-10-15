@@ -2172,10 +2172,26 @@ mensal.** A receita é a soma das assinaturas ativas pelo valor de cada uma
 — quem assinou antes de uma mudança de preço continua pagando o que
 assinou —, com o teste grátis incluído. O que entrou nos últimos 30 dias
 aparece à parte, pela mesma razão que o caixa separa recorrente de compra
-única. Os custos (`src/server/metrics/custos.ts`) são estimativas em reais
-do Supabase Pro e do Vercel Pro, e a receita cobre o primeiro antes do
+única. Os custos são uma lista, e a receita cobre o primeiro antes do
 segundo, porque a pergunta era "pelo menos o Supabase". A tela diz que o
 valor é bruto, antes da taxa do Mercado Pago e do imposto.
+
+**E os custos se editam no próprio bloco (#473).** Nasceram como constante
+no código; no mesmo dia o Luiz pediu para acrescentar contador, aluguel e o
+que mais vier sem depender de deploy. Moram em `custos_mensais`, fechada
+para as duas chaves públicas, e só `admin:custos` lê e mexe. A lista nasce
+com as estimativas do Supabase Pro e do Vercel Pro (`CUSTOS_INICIAIS`, a
+mesma no `schema.sql` e no script de produção). A ordem de cobertura é a de
+cadastro, pela coluna `ordem`, e não pelo `criado_em`: dois custos gravados
+no mesmo instante empatariam. O valor é digitado como se escreve no Brasil
+("1.234,56") e guardado em centavos; sem vírgula, "1.500" é milhar, mas
+"133.50" é R$ 133,50, porque ler o ponto como milhar ali multiplicaria o
+custo por cem. Depois de salvar, a tela pede as métricas de novo, e a conta
+é refeita no servidor com a lista nova. O formulário é controlado e usa
+`onSubmit`, sem `action` no `<form>`, para o React 19 não apagar o que foi
+digitado quando o valor vem errado. Em demonstração a lista mora em
+`globalThis`, porque a ação que salva e a rota que o painel consulta são
+bundles diferentes.
 
 **Conta excluída não é conta.** A linha anonimizada da #423 fica em
 `usuarios`, marcada por `senha_hash = '!conta-excluida'`, e

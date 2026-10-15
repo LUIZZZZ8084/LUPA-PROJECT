@@ -7,8 +7,20 @@
  * das barras, a porcentagem sobre a base certa e a ordem em que a receita
  * cobre os custos.
  */
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/*
+ * As ações do servidor são dublês: o que se testa aqui é o que a tela manda
+ * e o que ela faz com a resposta. As regras moram em `custos.test.ts`.
+ */
+const acoes = vi.hoisted(() => ({
+  adicionarCustoAction: vi.fn(),
+  editarCustoAction: vi.fn(),
+  removerCustoAction: vi.fn(),
+}));
+vi.mock("@/app/(app)/admin/actions", () => acoes);
+
 import { CoberturaDosCustos } from "@/app/(app)/admin/painel/cobertura-dos-custos";
 import {
   ContasPorLugarBlocos,
@@ -18,8 +30,8 @@ import { FunilDoPainel, porcentagem } from "@/app/(app)/admin/painel/funil";
 import type { Funil } from "@/server/metrics/tipos";
 
 const CUSTOS = [
-  { nome: "Supabase Pro", centavos: 13_300 },
-  { nome: "Vercel Pro", centavos: 10_700 },
+  { id: "c1", nome: "Supabase Pro", centavos: 13_300 },
+  { id: "c2", nome: "Vercel Pro", centavos: 10_700 },
 ];
 
 function receita(recorrente: number, entrou = 0): Funil["receita"] {
@@ -131,12 +143,29 @@ describe("funil", () => {
 });
 
 describe("o Lupa já se paga?", () => {
+  const aoMudar = vi.fn();
+
+  beforeEach(() => {
+    aoMudar.mockClear();
+    for (const acao of Object.values(acoes)) acao.mockReset();
+  });
+
+  function bloco(recorrente = 0, custos = CUSTOS, entrou = 0) {
+    return render(
+      <CoberturaDosCustos
+        receita={receita(recorrente, entrou)}
+        custos={custos}
+        aoMudar={aoMudar}
+      />,
+    );
+  }
+
   it("sem receita recorrente, falta o custo inteiro, e diz quanto", () => {
-    render(<CoberturaDosCustos receita={receita(0)} custos={CUSTOS} />);
+    bloco(0);
 
     expect(screen.getByText(/0 assinaturas ativas/)).toBeInTheDocument();
-    expect(screen.getByText("faltam R$ 133")).toBeInTheDocument();
-    expect(screen.getByText("faltam R$ 107")).toBeInTheDocument();
+    expect(screen.getByText("faltam R$ 133,00")).toBeInTheDocument();
+    expect(screen.getByText("faltam R$ 107,00")).toBeInTheDocument();
     expect(screen.getByText("0%")).toBeInTheDocument();
   });
 
@@ -145,20 +174,147 @@ describe("o Lupa já se paga?", () => {
    * custo antes do segundo.
    */
   it("a receita cobre o Supabase primeiro, e o que sobra vai para o Vercel", () => {
-    render(<CoberturaDosCustos receita={receita(15_000)} custos={CUSTOS} />);
+    bloco(15_000);
 
-    const supabase = screen.getByText(/Supabase Pro/).closest("li");
-    const vercel = screen.getByText(/Vercel Pro/).closest("li");
+    const supabase = screen.getByText(/^Supabase Pro/).closest("li");
+    const vercel = screen.getByText(/^Vercel Pro/).closest("li");
     expect(supabase).toHaveTextContent("coberto");
     // 150,00 − 133,00 sobram 17,00; faltam 90,00 dos 107,00.
-    expect(vercel).toHaveTextContent("faltam R$ 90");
+    expect(vercel).toHaveTextContent("faltam R$ 90,00");
     expect(screen.getByText("62%")).toBeInTheDocument();
   });
 
   it("diz que o valor é bruto, e mostra o que entrou em 30 dias à parte", () => {
-    render(<CoberturaDosCustos receita={receita(0, 9_990)} custos={CUSTOS} />);
+    bloco(0, CUSTOS, 9_990);
 
     expect(screen.getByText("R$ 100")).toBeInTheDocument();
     expect(screen.getByText(/Valores brutos/)).toBeInTheDocument();
+  });
+
+  /*
+   * Sem custo cadastrado, "cobre 100%" seria verdade aritmética e mentira
+   * de leitura. A tela pede o cadastro em vez de mostrar a barra.
+   */
+  it("sem custo nenhum, pede o cadastro e não mostra porcentagem", () => {
+    bloco(5_000, []);
+
+    expect(screen.getByText(/Nenhum custo cadastrado/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cobre/)).not.toBeInTheDocument();
+  });
+
+  it("acrescentar manda nome e valor como digitados, e pede a conta de novo", async () => {
+    acoes.adicionarCustoAction.mockResolvedValue({
+      ok: true,
+      dados: { id: "c3", nome: "Contador", centavos: 30_000 },
+    });
+    bloco();
+
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar custo/ }));
+    fireEvent.change(screen.getByLabelText("Nome"), {
+      target: { value: "Contador" },
+    });
+    fireEvent.change(screen.getByLabelText("Valor por mês (R$)"), {
+      target: { value: "300,00" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+    });
+
+    expect(acoes.adicionarCustoAction).toHaveBeenCalledWith({
+      nome: "Contador",
+      valor: "300,00",
+    });
+    expect(aoMudar).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText("Nome")).not.toBeInTheDocument();
+  });
+
+  it("valor errado mostra o erro ao lado do campo, e mantém o que foi digitado", async () => {
+    acoes.adicionarCustoAction.mockResolvedValue({
+      ok: false,
+      codigo: "validacao",
+      mensagem: "Confira os campos.",
+      id: "x",
+      campos: [{ campo: "valor", mensagem: "Escreva o valor em reais." }],
+    });
+    bloco();
+
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar custo/ }));
+    fireEvent.change(screen.getByLabelText("Nome"), {
+      target: { value: "Aluguel" },
+    });
+    fireEvent.change(screen.getByLabelText("Valor por mês (R$)"), {
+      target: { value: "mil" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+    });
+
+    const valor = screen.getByLabelText("Valor por mês (R$)");
+    expect(valor).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Escreva o valor em reais.")).toBeInTheDocument();
+    expect(valor).toHaveValue("mil");
+    expect(screen.getByLabelText("Nome")).toHaveValue("Aluguel");
+    expect(aoMudar).not.toHaveBeenCalled();
+  });
+
+  it("editar abre com o valor no formato que se digita, e manda o id", async () => {
+    acoes.editarCustoAction.mockResolvedValue({ ok: true, dados: {} });
+    bloco();
+
+    fireEvent.click(screen.getByRole("button", { name: "Editar Vercel Pro" }));
+    expect(screen.getByLabelText("Valor por mês (R$)")).toHaveValue("107,00");
+    fireEvent.change(screen.getByLabelText("Valor por mês (R$)"), {
+      target: { value: "103,50" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
+    });
+
+    expect(acoes.editarCustoAction).toHaveBeenCalledWith({
+      id: "c2",
+      nome: "Vercel Pro",
+      valor: "103,50",
+    });
+    expect(aoMudar).toHaveBeenCalledTimes(1);
+  });
+
+  it("remover pede confirmação, e só então chama a ação", async () => {
+    acoes.removerCustoAction.mockResolvedValue({ ok: true, dados: {} });
+    bloco();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remover Supabase Pro" }),
+    );
+    expect(acoes.removerCustoAction).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Tirar Supabase Pro da conta?"),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Remover" }));
+    });
+
+    expect(acoes.removerCustoAction).toHaveBeenCalledWith({ id: "c1" });
+    expect(aoMudar).toHaveBeenCalledTimes(1);
+  });
+
+  it("falha ao remover aparece na tela, e a conta não é pedida de novo", async () => {
+    acoes.removerCustoAction.mockResolvedValue({
+      ok: false,
+      codigo: "nao_encontrado",
+      mensagem: "Custo não encontrado.",
+      id: "x",
+    });
+    bloco();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remover Vercel Pro" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Remover" }));
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Custo não encontrado.",
+    );
+    expect(aoMudar).not.toHaveBeenCalled();
   });
 });
