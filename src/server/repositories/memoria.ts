@@ -470,6 +470,16 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     return [...this.usuarios.values()];
   }
 
+  /** Os perfis de candidato, para o funil do painel em demonstração (#471). */
+  perfisDeCandidato(): PerfilCandidato[] {
+    return [...this.candidatos.values()];
+  }
+
+  /** Os perfis de prestador, para o funil do painel em demonstração (#471). */
+  perfisDePrestador(): PerfilPrestador[] {
+    return [...this.prestadores.values()];
+  }
+
   limpar(): void {
     this.usuarios.clear();
     this.porEmailIndice.clear();

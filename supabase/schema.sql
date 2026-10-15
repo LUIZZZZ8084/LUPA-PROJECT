@@ -165,7 +165,9 @@ create table usuarios (
    * apagar dado de producao e decisao do Luiz, e a coluna e inofensiva:
    * `usuarios` nao tem grant para `anon`. Sai numa migracao futura, junto
    * com as views que ainda a expoem (`provider_listings`,
-   * `company_applications`, `candidatos_disponiveis`, `metricas_por_local`).
+   * `company_applications`, `candidatos_disponiveis`). A
+   * `metricas_por_local` saiu na #471, trocada por contas por estado e por
+   * cidade.
    */
   bairro               text,
   avatar_url           text,
@@ -1659,14 +1661,26 @@ left join categorias_servico cs on cs.id = pp.categoria_id;
 -- continua barato quando a base crescer.
 -- ============================================================================
 
+/*
+ * Conta é quem pode entrar (#471). A linha de quem excluiu a própria conta
+ * (#423) fica em `usuarios`, anonimizada e com a senha que nenhum hash
+ * produz, porque `pagamentos` aponta para ela — e as views de métrica a
+ * somavam como gente. E vaga aberta é a que ainda aparece na busca: vencida
+ * continua `aberta` no status (#157), e contava.
+ */
 create view metricas_totais
 with (security_invoker = false) as
+with contas as (
+  select papel from usuarios
+  where papel <> 'admin' and senha_hash <> '!conta-excluida'
+)
 select
-  (select count(*) from usuarios where papel <> 'admin')            as usuarios,
-  (select count(*) from usuarios where papel = 'candidato_clt')     as candidatos,
-  (select count(*) from usuarios where papel = 'prestador_servico') as prestadores,
-  (select count(*) from usuarios where papel = 'empresa')           as empresas,
-  (select count(*) from vagas where status = 'aberta')              as vagas_abertas;
+  (select count(*) from contas)                                     as usuarios,
+  (select count(*) from contas where papel = 'candidato_clt')       as candidatos,
+  (select count(*) from contas where papel = 'prestador_servico')   as prestadores,
+  (select count(*) from contas where papel = 'empresa')             as empresas,
+  (select count(*) from vagas
+     where status = 'aberta' and expira_em > now())                 as vagas_abertas;
 
 /*
  * Fuso de Cuiabá, não UTC: um cadastro às 21h em Sinop precisa contar no dia
@@ -1682,12 +1696,116 @@ from usuarios
 where papel <> 'admin'
 group by 1, 2;
 
-create view metricas_por_local
+/*
+ * Contas por estado e por cidade, separadas por papel (#471).
+ *
+ * Substituem `metricas_por_local`, que agrupava por cidade **e bairro** —
+ * o bairro de pessoa saiu do produto na #321 — e não dizia o papel. O
+ * estado sai do próprio valor gravado ("Sinop - MT", #301); o que não tem
+ * esse formato fica com estado nulo, e a tela o mostra como "sem estado",
+ * em vez de sumir com a conta.
+ *
+ * A mesma conta existe em TypeScript, para a demonstração
+ * (`agregarContasPorLugar`), e o `schema.test.ts` roda as duas sobre a
+ * mesma entrada: o recorte do estado é regra de texto, e regra de texto
+ * escrita em duas linguagens é a que diverge sem ninguém ver.
+ */
+create view metricas_contas_por_estado
 with (security_invoker = false) as
-select cidade, bairro, count(*) as total
+select
+  substring(cidade from ' - ([A-Z]{2})$')              as uf,
+  count(*) filter (where papel = 'candidato_clt')      as candidatos,
+  count(*) filter (where papel = 'prestador_servico')  as prestadores,
+  count(*) filter (where papel = 'empresa')            as empresas,
+  count(*)                                             as total
 from usuarios
-where papel <> 'admin'
-group by cidade, bairro;
+where papel <> 'admin' and senha_hash <> '!conta-excluida'
+group by 1;
+
+create view metricas_contas_por_cidade
+with (security_invoker = false) as
+select
+  cidade,
+  count(*) filter (where papel = 'candidato_clt')      as candidatos,
+  count(*) filter (where papel = 'prestador_servico')  as prestadores,
+  count(*) filter (where papel = 'empresa')            as empresas,
+  count(*)                                             as total
+from usuarios
+where papel <> 'admin' and senha_hash <> '!conta-excluida'
+group by cidade;
+
+/*
+ * O funil de cada papel e a receita que se repete (#471).
+ *
+ * A pergunta é a do Luiz em 15/10/2026: quanto falta para o Lupa pagar o
+ * próprio custo. Cada papel tem o caminho dele até virar receita, e o
+ * funil mostra onde ele para:
+ *
+ * - candidato: conta → visível para empresas → se candidatou;
+ * - prestador: conta → na vitrine (CPF conferido e mensalidade em dia,
+ *   a mesma regra de `getProviders`) → assinante;
+ * - empresa: conta → conferida (CNPJ na Receita, ou CPF no cadastro) →
+ *   publicou vaga → comprou.
+ *
+ * `recorrente_ativo_centavos` soma as assinaturas ativas pelo valor de
+ * cada uma, não pela tabela de hoje: quem assinou antes de um preço mudar
+ * continua pagando o que assinou. Inclui quem está no teste grátis, que é
+ * `ativa` antes da primeira cobrança. `entrou_30_dias_centavos` é o que foi
+ * aprovado nos últimos 30 dias, pacotes inclusive.
+ *
+ * Só contagem sai daqui. A mesma regra existe em TypeScript
+ * (`montarFunil`), e o `schema.test.ts` compara as duas.
+ */
+create view metricas_funil
+with (security_invoker = false) as
+with contas as (
+  select id, papel, doc_verificado from usuarios
+  where papel <> 'admin' and senha_hash <> '!conta-excluida'
+)
+select
+  (select count(*) from contas where papel = 'candidato_clt')
+    as candidatos,
+  (select count(*) from contas c
+     join perfis_candidato pc on pc.usuario_id = c.id
+    where c.papel = 'candidato_clt' and pc.visivel_para_empresas)
+    as candidatos_visiveis,
+  (select count(distinct ca.candidato_id) from candidaturas ca
+     join contas c on c.id = ca.candidato_id
+    where c.papel = 'candidato_clt')
+    as candidatos_que_se_candidataram,
+  (select count(*) from contas where papel = 'prestador_servico')
+    as prestadores,
+  (select count(*) from contas c
+     join perfis_prestador pp on pp.usuario_id = c.id
+    where c.papel = 'prestador_servico' and c.doc_verificado
+      and pp.mensalidade_valida_ate > now())
+    as prestadores_na_vitrine,
+  (select count(distinct a.usuario_id) from assinaturas a
+     join contas c on c.id = a.usuario_id
+    where a.tipo = 'prestador_mensalidade' and a.status = 'ativa')
+    as prestadores_assinantes,
+  (select count(*) from contas where papel = 'empresa')
+    as empresas,
+  (select count(*) from contas where papel = 'empresa' and doc_verificado)
+    as empresas_verificadas,
+  (select count(distinct v.empresa_id) from vagas v
+     join contas c on c.id = v.empresa_id
+    where c.papel = 'empresa')
+    as empresas_com_vaga,
+  (select count(distinct p.usuario_id) from pagamentos p
+     join contas c on c.id = p.usuario_id
+    where c.papel = 'empresa' and p.status = 'aprovado'
+      and p.tipo in ('empresa_vaga_avulsa', 'empresa_pacote_5',
+                     'empresa_pacote_10', 'empresa_mensal'))
+    as empresas_que_compraram,
+  (select count(*) from assinaturas where status = 'ativa')
+    as assinaturas_ativas,
+  (select coalesce(sum(valor_centavos), 0) from assinaturas
+    where status = 'ativa')
+    as recorrente_ativo_centavos,
+  (select coalesce(sum(valor_centavos), 0) from pagamentos
+    where status = 'aprovado' and criado_em > now() - interval '30 days')
+    as entrou_30_dias_centavos;
 
 /*
  * O caixa: o que entrou e o que saiu, de verdade (#179).
@@ -1903,7 +2021,9 @@ revoke select on candidatos_disponiveis        from anon, authenticated;
 revoke select on verification_queue            from anon, authenticated;
 revoke select on metricas_totais               from anon, authenticated;
 revoke select on metricas_cadastros_por_dia    from anon, authenticated;
-revoke select on metricas_por_local            from anon, authenticated;
+revoke select on metricas_contas_por_estado    from anon, authenticated;
+revoke select on metricas_contas_por_cidade    from anon, authenticated;
+revoke select on metricas_funil                from anon, authenticated;
 revoke select on metricas_caixa                from anon, authenticated;
 
 /*

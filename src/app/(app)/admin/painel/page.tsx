@@ -44,7 +44,7 @@ export default async function PainelAdminPage() {
       <PageTitle
         title="Painel"
         accent="text-warn"
-        description="Cadastros, faturamento e distribuição por cidade."
+        description="Contas por estado, cidade e papel, o funil de cada papel, o caixa e quanto falta para o Lupa pagar os próprios custos."
       />
       <PainelCliente inicial={inicial} />
       <BuscasSemResultado termos={termos} dias={DIAS_DA_JANELA} />

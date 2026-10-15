@@ -2145,6 +2145,57 @@ ser ocupado por quem não é o dono, e a correção disso é a verificação pag
 da #120. A chave aparece como linha própria no painel de pressão (a view
 agrupa pelo texto antes do primeiro `:`), sem mudança de SQL.
 
+### O painel do admin responde de onde vem a conta e se o Lupa se paga (#471)
+
+Pedido do Luiz em 15/10/2026: contas por região, separadas por papel, e,
+na conversa antes, "precisamos que o Lupa se pague pelo menos o
+Supabase". O painel já existia em `/admin/painel` — quem entra com a conta
+de admin cai direto nele —, e o Luiz nunca o tinha visto porque usa outra
+conta no dia a dia.
+
+**Contas por estado e por cidade, cada uma com os três papéis.** Trocaram
+`metricas_por_local`, que somava por cidade **e bairro** (o bairro de pessoa
+saiu na #321) e não dizia o papel. O estado sai do próprio valor gravado
+("Sinop - MT"); o que não tem esse formato aparece como "sem estado", em vez
+de sumir. Os estados vêm todos e as cidades, as quinze maiores: a soma do
+estado não pode sair das cidades recortadas.
+
+**O funil é por papel, e a porcentagem é sobre o primeiro passo da
+coluna.** Candidato: conta, visível para empresas, candidatou-se. Prestador:
+conta, na vitrine (a regra de `getProviders`), assinante. Empresa: conta,
+conferida, publicou vaga, comprou. "20% das empresas compraram" se lê sem
+conta; a porcentagem sobre o passo anterior obrigaria a lembrar o número de
+cima.
+
+**"O Lupa já se paga?" compara a receita que se repete com o custo
+mensal.** A receita é a soma das assinaturas ativas pelo valor de cada uma
+— quem assinou antes de uma mudança de preço continua pagando o que
+assinou —, com o teste grátis incluído. O que entrou nos últimos 30 dias
+aparece à parte, pela mesma razão que o caixa separa recorrente de compra
+única. Os custos (`src/server/metrics/custos.ts`) são estimativas em reais
+do Supabase Pro e do Vercel Pro, e a receita cobre o primeiro antes do
+segundo, porque a pergunta era "pelo menos o Supabase". A tela diz que o
+valor é bruto, antes da taxa do Mercado Pago e do imposto.
+
+**Conta excluída não é conta.** A linha anonimizada da #423 fica em
+`usuarios`, marcada por `senha_hash = '!conta-excluida'`, e
+`metricas_totais` a somava como gente; também somava a vaga vencida como
+aberta. As views novas e a corrigida conferem as duas coisas, e o teste
+exclui a conta pela própria `excluir_conta`, para provar que a marca que a
+view lê é a que a função grava.
+
+**As mesmas contas existem duas vezes, e um teste prova que concordam.**
+O modo demonstração não tem banco, então `agregarContasPorLugar` e
+`montarFunil` repetem as views em TypeScript; o `schema.test.ts` roda as
+duas sobre as mesmas linhas, lidas de um Postgres de verdade. E o
+`aplica-painel-admin.sql` é aplicado por cima do schema no teste: o que o
+banco guarda de cada view não pode mudar, senão os dois arquivos divergem.
+
+**A conta de admin é criada por quem vai usá-la.** `npm run admin:criar`
+imprime a senha uma vez no terminal de quem roda; criá-la por um agente
+poria a senha numa conversa, que é o que a #69 registra como garantia
+perdida.
+
 ### Polling, não websocket, no painel do admin
 
 Conexão aberta em serverless exige um serviço à parte, com custo e mais uma

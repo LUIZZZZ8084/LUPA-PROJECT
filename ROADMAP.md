@@ -8,9 +8,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 14/10/2026.**
+**Última atualização: 15/10/2026.**
 
 ## Concluído
+
+Em 15/10/2026:
+
+- Painel do admin com contas por estado e por cidade, separadas em
+  candidato, prestador e empresa, o funil de cada papel e quanto da receita
+  recorrente cobre os custos de Supabase e Vercel —
+  [#471](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/471)
 
 Em 14/10/2026:
 

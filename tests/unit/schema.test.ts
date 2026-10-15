@@ -15,7 +15,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { agregarPressao } from "@/server/metrics/tipos";
+import {
+  agregarContasPorLugar,
+  agregarPressao,
+  type ContasNoLugar,
+  montarFunil,
+  ordenarLugares,
+  SEM_CIDADE,
+  SEM_ESTADO,
+} from "@/server/metrics/tipos";
 
 const SCHEMA = readFileSync(join(process.cwd(), "supabase/schema.sql"), "utf8");
 
@@ -100,7 +108,9 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "verification_queue",
       "metricas_totais",
       "metricas_cadastros_por_dia",
-      "metricas_por_local",
+      "metricas_contas_por_estado",
+      "metricas_contas_por_cidade",
+      "metricas_funil",
       "metricas_caixa",
       "metricas_pressao",
     ]) {
@@ -718,15 +728,12 @@ describe("views devolvem o formato que a aplicação espera", () => {
     expect(Number(r.rows[0].usuarios)).toBeGreaterThan(0);
   });
 
-  it("metricas_por_local agrupa por cidade e bairro", async () => {
-    await criarUsuario("candidato_clt", "local@teste.lupa", {
-      bairro: "Centro",
-    });
-
-    const r = await db.query<{ cidade: string; bairro: string; total: string }>(
-      "select * from metricas_por_local where bairro = 'Centro'",
+  it("metricas_por_local saiu, trocada por estado e cidade (#471)", async () => {
+    const r = await db.query(
+      `select 1 from information_schema.views
+        where table_schema = 'public' and table_name = 'metricas_por_local'`,
     );
-    expect(Number(r.rows[0].total)).toBeGreaterThan(0);
+    expect(r.rows).toHaveLength(0);
   });
 
   it("metricas_cadastros_por_dia usa o fuso de Sinop, não UTC", async () => {
@@ -782,7 +789,11 @@ describe("grants de anon e authenticated", () => {
     "verification_queue",
     "metricas_totais",
     "metricas_cadastros_por_dia",
-    "metricas_por_local",
+    // Quantas contas há em cada cidade, e de quem é cada papel (#471).
+    "metricas_contas_por_estado",
+    "metricas_contas_por_cidade",
+    // Funil e receita recorrente: dado comercial da Lupa (#471).
+    "metricas_funil",
     "metricas_caixa",
     /*
      * Agrega `tentativas_de_acesso`, e a view e `security_invoker = false`
@@ -1161,8 +1172,9 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
       `select count(*) as total from information_schema.views
        where table_schema = 'public'`,
     );
-    // Onze desde a #207, que acrescentou `metricas_pressao`.
-    expect(Number(views.rows[0].total)).toBe(11);
+    // Treze desde a #471: sai `metricas_por_local`, entram contas por
+    // estado, contas por cidade e o funil.
+    expect(Number(views.rows[0].total)).toBe(13);
   });
 
   it("não sobra tipo, função nem view órfã", async () => {
@@ -2929,4 +2941,394 @@ describe("denúncias", () => {
     );
     await expect(db.exec(script)).resolves.toBeDefined();
   });
+});
+
+/**
+ * O painel do admin por lugar e o funil (#471).
+ *
+ * Duas coisas, como na pressão nos tetos. **A paridade:** as mesmas contas
+ * existem em SQL, para produção, e em TypeScript, para a demonstração; as
+ * duas rodam aqui sobre as mesmas linhas, lidas do banco, e precisam dar o
+ * mesmo resultado. **O que não conta:** a conta excluída — pela própria
+ * `excluir_conta`, para provar que a marca que a view confere é a que a
+ * função grava —, o admin, a vaga vencida e o pagamento de mais de 30 dias.
+ */
+describe("painel do admin por lugar e funil", () => {
+  let banco: PGlite;
+
+  async function conta(
+    papel: string,
+    email: string,
+    cidade: string,
+    docVerificado = false,
+  ) {
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone,
+                             cidade, doc_verificado)
+       values ($1, 'h', $2::papel_usuario, 'Pessoa', '66999110001', $3, $4)
+       returning id`,
+      [email, papel, cidade, docVerificado],
+    );
+    return r.rows[0].id;
+  }
+
+  async function empresa(email: string, cidade: string, verificada: boolean) {
+    const id = await conta("empresa", email, cidade, verificada);
+    await banco.query(
+      `insert into perfis_empresa (usuario_id, razao_social) values ($1, 'E')`,
+      [id],
+    );
+    return id;
+  }
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+
+    // Candidatos: dois em Sinop (um visível, um que se candidatou), um em
+    // Sorriso, um em São Paulo e um numa cidade gravada antes da #301.
+    const cand1 = await conta("candidato_clt", "c1@t.lupa", "Sinop - MT");
+    const cand2 = await conta("candidato_clt", "c2@t.lupa", "Sinop - MT");
+    await conta("candidato_clt", "c3@t.lupa", "Sorriso - MT");
+    await conta("candidato_clt", "c4@t.lupa", "São Paulo - SP");
+    await conta("candidato_clt", "c5@t.lupa", "Cidade Antiga");
+    await banco.query(
+      `insert into perfis_candidato (usuario_id, visivel_para_empresas)
+       values ($1, true), ($2, false)`,
+      [cand1, cand2],
+    );
+
+    // Prestadores: um na vitrine e assinante, um com a mensalidade vencida,
+    // um sem CPF conferido.
+    const prest1 = await conta(
+      "prestador_servico",
+      "p1@t.lupa",
+      "Sinop - MT",
+      true,
+    );
+    const prest2 = await conta(
+      "prestador_servico",
+      "p2@t.lupa",
+      "Sinop - MT",
+      true,
+    );
+    const prest3 = await conta(
+      "prestador_servico",
+      "p3@t.lupa",
+      "Sorriso - MT",
+    );
+    await banco.query(
+      `insert into perfis_prestador (usuario_id, categoria_id, mensalidade_valida_ate)
+       values ($1, 1, now() + interval '10 days'),
+              ($2, 1, now() - interval '1 day'),
+              ($3, 1, now() + interval '10 days')`,
+      [prest1, prest2, prest3],
+    );
+    await banco.query(
+      `insert into assinaturas (usuario_id, tipo, valor_centavos, status)
+       values ($1, 'prestador_mensalidade', 1990, 'ativa'),
+              ($2, 'prestador_mensalidade', 1990, 'cancelada')`,
+      [prest1, prest2],
+    );
+
+    // Empresas: uma conferida, com vaga aberta e uma vencida, que comprou;
+    // outra sem conferência e sem vaga.
+    const emp1 = await empresa("e1@t.lupa", "Sinop - MT", true);
+    await empresa("e2@t.lupa", "São Paulo - SP", false);
+    const vaga = await banco.query<{ id: string }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Aberta', 'Descrição', 'Sinop - MT') returning id`,
+      [emp1],
+    );
+    await banco.query(
+      `insert into vagas (empresa_id, titulo, descricao, cidade, expira_em)
+       values ($1, 'Vencida', 'Descrição', 'Sinop - MT', now() - interval '1 day')`,
+      [emp1],
+    );
+    await banco.query(
+      `insert into candidaturas (vaga_id, candidato_id) values ($1, $2)`,
+      [vaga.rows[0].id, cand2],
+    );
+    await banco.query(
+      `insert into pagamentos (usuario_id, tipo, valor_centavos, status, criado_em)
+       values ($1, 'empresa_pacote_10', 9990, 'aprovado', now()),
+              ($1, 'empresa_vaga_avulsa', 1990, 'aprovado', now() - interval '40 days'),
+              ($1, 'empresa_vaga_avulsa', 1990, 'pendente', now())`,
+      [emp1],
+    );
+
+    // Quem não conta: o admin e uma conta excluída pela função de verdade.
+    await conta("admin", "adm@t.lupa", "Sinop - MT");
+    const saiu = await conta("candidato_clt", "saiu@t.lupa", "Sinop - MT");
+    await banco.query("select excluir_conta($1)", [saiu]);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  /** As contas como a função pura as recebe, lidas do mesmo banco. */
+  async function contasDoBanco() {
+    const r = await banco.query<{
+      id: string;
+      papel: "candidato_clt" | "prestador_servico" | "empresa" | "admin";
+      cidade: string | null;
+      senha_hash: string;
+      doc_verificado: boolean;
+    }>("select id, papel, cidade, senha_hash, doc_verificado from usuarios");
+    return r.rows.map((u) => ({
+      id: u.id,
+      papel: u.papel,
+      cidade: u.cidade,
+      docVerificado: u.doc_verificado,
+      excluida: u.senha_hash === "!conta-excluida",
+    }));
+  }
+
+  const linha = (
+    lugar: string | null,
+    vazio: string,
+    l: Record<string, unknown>,
+  ): ContasNoLugar => ({
+    lugar: lugar ?? vazio,
+    candidatos: Number(l.candidatos),
+    prestadores: Number(l.prestadores),
+    empresas: Number(l.empresas),
+    total: Number(l.total),
+  });
+
+  it("contas por estado: a view e a função dão o mesmo resultado", async () => {
+    const r = await banco.query<
+      Record<string, unknown> & { uf: string | null }
+    >("select * from metricas_contas_por_estado");
+    const doBanco = r.rows
+      .map((l) => linha(l.uf, SEM_ESTADO, l))
+      .sort(ordenarLugares);
+
+    expect(doBanco).toEqual(
+      agregarContasPorLugar(await contasDoBanco(), 100).estados,
+    );
+    expect(doBanco).toEqual([
+      { lugar: "MT", candidatos: 3, prestadores: 3, empresas: 1, total: 7 },
+      { lugar: "SP", candidatos: 1, prestadores: 0, empresas: 1, total: 2 },
+      {
+        lugar: SEM_ESTADO,
+        candidatos: 1,
+        prestadores: 0,
+        empresas: 0,
+        total: 1,
+      },
+    ]);
+  });
+
+  it("contas por cidade: a view e a função dão o mesmo resultado", async () => {
+    const r = await banco.query<
+      Record<string, unknown> & { cidade: string | null }
+    >("select * from metricas_contas_por_cidade");
+    const doBanco = r.rows
+      .map((l) => linha(l.cidade, SEM_CIDADE, l))
+      .sort(ordenarLugares);
+
+    expect(doBanco).toEqual(
+      agregarContasPorLugar(await contasDoBanco(), 100).cidades,
+    );
+    expect(doBanco[0]).toEqual({
+      lugar: "Sinop - MT",
+      candidatos: 2,
+      prestadores: 2,
+      empresas: 1,
+      total: 5,
+    });
+  });
+
+  it("o funil: a view e a função dão o mesmo resultado", async () => {
+    const [
+      view,
+      perfisC,
+      perfisP,
+      candidaturas,
+      vagas,
+      assinaturas,
+      pagamentos,
+    ] = await Promise.all([
+      banco.query<Record<string, unknown>>("select * from metricas_funil"),
+      banco.query<{ usuario_id: string; visivel_para_empresas: boolean }>(
+        "select usuario_id, visivel_para_empresas from perfis_candidato",
+      ),
+      banco.query<{ usuario_id: string; mensalidade_valida_ate: Date | null }>(
+        "select usuario_id, mensalidade_valida_ate from perfis_prestador",
+      ),
+      banco.query<{ candidato_id: string }>(
+        "select candidato_id from candidaturas",
+      ),
+      banco.query<{ empresa_id: string }>("select empresa_id from vagas"),
+      banco.query<{
+        usuario_id: string;
+        tipo: string;
+        status: string;
+        valor_centavos: number;
+      }>("select usuario_id, tipo, status, valor_centavos from assinaturas"),
+      banco.query<{
+        usuario_id: string;
+        tipo: string;
+        status: string;
+        valor_centavos: number;
+        criado_em: Date;
+      }>(
+        "select usuario_id, tipo, status, valor_centavos, criado_em from pagamentos",
+      ),
+    ]);
+
+    const v = view.rows[0];
+    const n = (k: string) => Number(v[k]);
+    const doBanco = {
+      candidatos: n("candidatos"),
+      candidatosVisiveis: n("candidatos_visiveis"),
+      candidatosQueSeCandidataram: n("candidatos_que_se_candidataram"),
+      prestadores: n("prestadores"),
+      prestadoresNaVitrine: n("prestadores_na_vitrine"),
+      prestadoresAssinantes: n("prestadores_assinantes"),
+      empresas: n("empresas"),
+      empresasVerificadas: n("empresas_verificadas"),
+      empresasComVaga: n("empresas_com_vaga"),
+      empresasQueCompraram: n("empresas_que_compraram"),
+      receita: {
+        assinaturasAtivas: n("assinaturas_ativas"),
+        recorrenteAtivoCentavos: n("recorrente_ativo_centavos"),
+        entrouUltimos30DiasCentavos: n("entrou_30_dias_centavos"),
+      },
+    };
+
+    const daMemoria = montarFunil({
+      contas: await contasDoBanco(),
+      perfisDeCandidato: perfisC.rows.map((p) => ({
+        usuarioId: p.usuario_id,
+        visivelParaEmpresas: p.visivel_para_empresas,
+      })),
+      perfisDePrestador: perfisP.rows.map((p) => ({
+        usuarioId: p.usuario_id,
+        mensalidadeValidaAte: p.mensalidade_valida_ate
+          ? new Date(p.mensalidade_valida_ate).toISOString()
+          : null,
+      })),
+      candidaturas: candidaturas.rows.map((c) => ({
+        candidatoId: c.candidato_id,
+      })),
+      vagas: vagas.rows.map((x) => ({ empresaId: x.empresa_id })),
+      assinaturas: assinaturas.rows.map((a) => ({
+        usuarioId: a.usuario_id,
+        tipo: a.tipo,
+        status: a.status,
+        valorCentavos: a.valor_centavos,
+      })),
+      pagamentos: pagamentos.rows.map((p) => ({
+        usuarioId: p.usuario_id,
+        tipo: p.tipo,
+        status: p.status,
+        valorCentavos: p.valor_centavos,
+        criadoEm: new Date(p.criado_em).toISOString(),
+      })),
+      agora: new Date(),
+    });
+
+    expect(doBanco).toEqual(daMemoria);
+    expect(doBanco).toEqual({
+      candidatos: 5,
+      candidatosVisiveis: 1,
+      candidatosQueSeCandidataram: 1,
+      prestadores: 3,
+      // Só quem tem CPF conferido **e** a mensalidade em dia.
+      prestadoresNaVitrine: 1,
+      prestadoresAssinantes: 1,
+      empresas: 2,
+      empresasVerificadas: 1,
+      empresasComVaga: 1,
+      empresasQueCompraram: 1,
+      receita: {
+        assinaturasAtivas: 1,
+        recorrenteAtivoCentavos: 1990,
+        // O pacote de hoje entra; a avulsa de 40 dias atrás e a pendente,
+        // não.
+        entrouUltimos30DiasCentavos: 9990,
+      },
+    });
+  });
+
+  it("metricas_totais não conta a conta excluída nem a vaga vencida", async () => {
+    const r = await banco.query<Record<string, unknown>>(
+      "select * from metricas_totais",
+    );
+    const t = r.rows[0];
+    expect([t.usuarios, t.candidatos, t.vagas_abertas].map(Number)).toEqual([
+      10, 5, 1,
+    ]);
+  });
+});
+
+/**
+ * O script que leva o painel ao banco de produção (#471) tem as mesmas
+ * views do `schema.sql`. Aplicado por cima do schema, o que o banco guarda
+ * de cada view não pode mudar — se mudar, um dos dois arquivos diverge, e
+ * produção ficaria com uma conta e os testes com outra.
+ */
+describe("aplica-painel-admin.sql", () => {
+  const VIEWS = [
+    "metricas_totais",
+    "metricas_contas_por_estado",
+    "metricas_contas_por_cidade",
+    "metricas_funil",
+  ];
+
+  it("deixa as views iguais às do schema, e tira a metricas_por_local", async () => {
+    const banco = await PGlite.create();
+    try {
+      await banco.exec(SCHEMA);
+      // Um banco de antes da #471 ainda tem a view velha.
+      await banco.exec(`create view metricas_por_local as
+        select cidade, bairro, count(*) as total from usuarios group by 1, 2`);
+      // E o Supabase concede tudo às duas chaves em toda view (#421).
+      await banco.exec(
+        `grant all on ${VIEWS.join(", ")} to anon, authenticated`,
+      );
+
+      const definicoes = async () =>
+        Promise.all(
+          VIEWS.map(async (v) => {
+            const r = await banco.query<{ def: string }>(
+              "select pg_get_viewdef($1::regclass, true) as def",
+              [v],
+            );
+            return r.rows[0].def;
+          }),
+        );
+
+      const antes = await definicoes();
+      const script = readFileSync(
+        join(process.cwd(), "supabase/aplica-painel-admin.sql"),
+        "utf8",
+      );
+      await banco.exec(script);
+      // Seguro de rodar mais de uma vez.
+      await banco.exec(script);
+
+      expect(await definicoes()).toEqual(antes);
+      for (const view of VIEWS) {
+        const r = await banco.query<{ algum: boolean }>(
+          `select bool_or(has_table_privilege(papel, $1, p)) as algum
+             from unnest(array['anon', 'authenticated']) as papel,
+                  unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE',
+                               'TRUNCATE']) as p`,
+          [view],
+        );
+        expect(r.rows[0].algum, `${view} ainda tem privilégio`).toBe(false);
+      }
+      const velha = await banco.query(
+        `select 1 from information_schema.views
+          where table_schema = 'public' and table_name = 'metricas_por_local'`,
+      );
+      expect(velha.rows).toHaveLength(0);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
 });

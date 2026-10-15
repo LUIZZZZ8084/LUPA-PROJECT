@@ -4,9 +4,9 @@ import {
   AlertCircle,
   Briefcase,
   Building2,
-  MapPin,
   RefreshCw,
   TrendingUp,
+  UserRound,
   Users,
   Wrench,
 } from "lucide-react";
@@ -15,6 +15,9 @@ import { Panel } from "@/components/ui/card";
 import { formatMoneyBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PainelAdmin } from "@/server/metrics/tipos";
+import { CoberturaDosCustos } from "./cobertura-dos-custos";
+import { ContasPorLugarBlocos, Legenda } from "./contas-por-lugar";
+import { FunilDoPainel } from "./funil";
 import { PressaoNosTetos } from "./pressao-nos-tetos";
 
 /**
@@ -128,12 +131,22 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/*
+        Candidatos ganharam cartão (#471): o número já vinha da view, e
+        o papel mais numeroso do app era o único sem lugar no topo.
+      */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Cartao
           icone={<Users size={18} />}
-          rotulo="Pessoas cadastradas"
+          rotulo="Contas"
           valor={painel.totais.usuarios}
           cor="text-ink"
+        />
+        <Cartao
+          icone={<UserRound size={18} />}
+          rotulo="Candidatos"
+          valor={painel.totais.candidatos}
+          cor="text-vagas"
         />
         <Cartao
           icone={<Wrench size={18} />}
@@ -166,34 +179,35 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
         Hoje sai de `pagamentos`. Não é estimativa: é o que entrou e o que
         saiu, e por isso o aviso de "projeção" saiu junto.
       */}
-      <Panel>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <TrendingUp size={16} className="text-empresas" />
-              Caixa
-            </h2>
-            <p className="mt-2 text-3xl font-bold tabular-nums text-empresas">
-              {formatMoneyBRL(painel.caixa.liquidoCentavos / 100)}
-              <span className="ml-1 text-sm font-normal text-muted">
-                líquido
-              </span>
-            </p>
-            <p className="mt-1 text-muted text-xs">
-              {formatMoneyBRL(painel.caixa.entrouCentavos / 100)} entraram em{" "}
-              {painel.caixa.cobrancas}{" "}
-              {painel.caixa.cobrancas === 1 ? "cobrança" : "cobranças"}
-            </p>
-          </div>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <Panel>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-semibold">
+                <TrendingUp size={16} className="text-empresas" />
+                Caixa
+              </h2>
+              <p className="mt-2 text-3xl font-bold tabular-nums text-empresas">
+                {formatMoneyBRL(painel.caixa.liquidoCentavos / 100)}
+                <span className="ml-1 text-sm font-normal text-muted">
+                  líquido
+                </span>
+              </p>
+              <p className="mt-1 text-muted text-xs">
+                {formatMoneyBRL(painel.caixa.entrouCentavos / 100)} entraram em{" "}
+                {painel.caixa.cobrancas}{" "}
+                {painel.caixa.cobrancas === 1 ? "cobrança" : "cobranças"}
+              </p>
+            </div>
 
-          <div className="text-right text-xs text-muted">
-            <p>
-              <strong className="text-ink">
-                {formatMoneyBRL(painel.caixa.recorrenteCentavos / 100)}
-              </strong>{" "}
-              de assinatura
-            </p>
-            {/*
+            <div className="text-right text-xs text-muted">
+              <p>
+                <strong className="text-ink">
+                  {formatMoneyBRL(painel.caixa.recorrenteCentavos / 100)}
+                </strong>{" "}
+                de assinatura
+              </p>
+              {/*
               As duas saídas aparecem separadas, e só quando existem.
 
               Somá-las daria um total certo e uma leitura errada: devolver
@@ -201,29 +215,37 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
               disputa no cartão — custa taxa e é sinal de fraude. Zerado,
               nenhuma das duas ocupa espaço no painel.
             */}
-            {painel.caixa.estornadoCentavos > 0 && (
-              <p className="mt-1">
-                <strong className="text-ink">
-                  −{formatMoneyBRL(painel.caixa.estornadoCentavos / 100)}
-                </strong>{" "}
-                devolvidos
-              </p>
-            )}
-            {painel.caixa.contestadoCentavos > 0 && (
-              <p className="mt-1 text-danger">
-                <strong>
-                  −{formatMoneyBRL(painel.caixa.contestadoCentavos / 100)}
-                </strong>{" "}
-                contestados ({painel.caixa.contestacoes})
-              </p>
-            )}
+              {painel.caixa.estornadoCentavos > 0 && (
+                <p className="mt-1">
+                  <strong className="text-ink">
+                    −{formatMoneyBRL(painel.caixa.estornadoCentavos / 100)}
+                  </strong>{" "}
+                  devolvidos
+                </p>
+              )}
+              {painel.caixa.contestadoCentavos > 0 && (
+                <p className="mt-1 text-danger">
+                  <strong>
+                    −{formatMoneyBRL(painel.caixa.contestadoCentavos / 100)}
+                  </strong>{" "}
+                  contestados ({painel.caixa.contestacoes})
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-      </Panel>
+        </Panel>
+
+        <CoberturaDosCustos
+          receita={painel.funil.receita}
+          custos={painel.custos}
+        />
+      </div>
+
+      <FunilDoPainel funil={painel.funil} />
 
       {/* Cadastros por dia */}
       <Panel>
-        <div className="flex items-baseline justify-between">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-sm font-semibold">
             Cadastros nos últimos 30 dias
           </h2>
@@ -231,16 +253,43 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
             {cadastrosNaJanela} no período
           </span>
         </div>
+        <div className="mt-2">
+          <Legenda />
+        </div>
 
+        {/*
+          Cada dia empilha os três papéis (#471). A série já vinha separada
+          por papel do banco, e a barra única a somava — um dia de dez
+          cadastros de empresa e um de dez candidatos eram a mesma barra.
+          Dia sem cadastro continua com o tracinho de 2%, para a série
+          mostrar a constância.
+        */}
         <div className="mt-4 flex h-28 items-end gap-[3px]">
           {painel.cadastros.map((dia) => (
             <div
               key={dia.dia}
-              className="group relative flex-1 rounded-t-sm bg-vagas/25 transition-colors hover:bg-vagas/60"
+              className="group relative flex flex-1 flex-col-reverse overflow-visible rounded-t-sm bg-panel-3"
               style={{
                 height: `${Math.max(2, (dia.total / picoDiario) * 100)}%`,
               }}
             >
+              {(
+                [
+                  ["candidato_clt", "bg-vagas"],
+                  ["prestador_servico", "bg-servicos"],
+                  ["empresa", "bg-empresas"],
+                ] as const
+              ).map(([papel, cor]) =>
+                dia.porPapel[papel] > 0 ? (
+                  <div
+                    key={papel}
+                    className={cor}
+                    style={{
+                      height: `${(dia.porPapel[papel] / dia.total) * 100}%`,
+                    }}
+                  />
+                ) : null,
+              )}
               <span className="pointer-events-none absolute -top-7 left-1/2 hidden -translate-x-1/2 rounded bg-panel-3 px-1.5 py-0.5 text-[10px] whitespace-nowrap text-ink group-hover:block">
                 {new Date(`${dia.dia}T12:00:00Z`).toLocaleDateString("pt-BR", {
                   day: "2-digit",
@@ -253,42 +302,7 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
         </div>
       </Panel>
 
-      {/* Distribuição por local */}
-      <Panel>
-        <h2 className="flex items-center gap-2 text-sm font-semibold">
-          <MapPin size={16} className="text-vagas" />
-          Onde estão
-        </h2>
-
-        {painel.locais.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">Ainda sem cadastros.</p>
-        ) : (
-          <ul className="mt-4 space-y-2">
-            {painel.locais.map((local) => {
-              const maior = painel.locais[0].total;
-              return (
-                <li key={local.cidade} className="flex items-center gap-3">
-                  <span
-                    className="w-40 shrink-0 truncate text-xs text-muted"
-                    title={local.cidade}
-                  >
-                    {local.cidade}
-                  </span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-panel-3">
-                    <div
-                      className="h-full rounded-full bg-vagas transition-[width] duration-[var(--duration-slow)]"
-                      style={{ width: `${(local.total / maior) * 100}%` }}
-                    />
-                  </div>
-                  <span className="w-8 text-right text-xs tabular-nums text-ink">
-                    {local.total}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Panel>
+      <ContasPorLugarBlocos lugares={painel.lugares} />
 
       {/*
         Por último, e dentro do polling.

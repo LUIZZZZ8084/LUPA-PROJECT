@@ -29,6 +29,15 @@ export class RepositorioPagamentosMemoria implements RepositorioPagamentos {
   }
   private assinaturas = new Map<string, Assinatura>();
 
+  /**
+   * Todas as assinaturas, para o funil do painel em demonstração (#471).
+   * Fora do contrato pela mesma razão de `todos()`: em produção quem soma
+   * é a view `metricas_funil`.
+   */
+  todasAsAssinaturas(): Assinatura[] {
+    return [...this.assinaturas.values()];
+  }
+
   async porId(id: string): Promise<Pagamento | null> {
     return this.itens.get(id) ?? null;
   }
