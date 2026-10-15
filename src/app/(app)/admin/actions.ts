@@ -11,6 +11,16 @@ import { clienteDeServico } from "@/lib/supabase/service";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
+import {
+  schemaEdicaoDeCusto,
+  schemaIdDeCusto,
+  schemaNovoCusto,
+} from "@/server/custos/schemas";
+import {
+  adicionarCusto,
+  editarCusto,
+  removerCusto,
+} from "@/server/custos/servico";
 import { decidirDenuncia } from "@/server/denuncias/servico";
 import { erros } from "@/server/errors";
 import { log } from "@/server/logger";
@@ -135,5 +145,46 @@ export const decidirDenunciaAction = criarAcao({
     }
     revalidatePath("/admin");
     return { fechadas };
+  },
+});
+
+/*
+ * Os custos mensais do painel (#473). A tela chama com objeto, de dentro do
+ * bloco "O Lupa já se paga?", e pede de novo as métricas depois: a
+ * cobertura é recalculada no servidor, com a lista que acabou de mudar.
+ */
+export const adicionarCustoAction = criarAcao({
+  nome: "custo.criar",
+  entrada: schemaNovoCusto,
+  executar: async ({ nome, valor }) => {
+    const custo = await adicionarCusto(await sessaoAtual(), {
+      nome,
+      centavos: valor,
+    });
+    revalidatePath("/admin/painel");
+    return custo;
+  },
+});
+
+export const editarCustoAction = criarAcao({
+  nome: "custo.editar",
+  entrada: schemaEdicaoDeCusto,
+  executar: async ({ id, nome, valor }) => {
+    const custo = await editarCusto(await sessaoAtual(), id, {
+      nome,
+      centavos: valor,
+    });
+    revalidatePath("/admin/painel");
+    return custo;
+  },
+});
+
+export const removerCustoAction = criarAcao({
+  nome: "custo.remover",
+  entrada: schemaIdDeCusto,
+  executar: async ({ id }) => {
+    await removerCusto(await sessaoAtual(), id);
+    revalidatePath("/admin/painel");
+    return { id };
   },
 });

@@ -45,6 +45,7 @@ drop view if exists provider_listings cascade;
 -- As tabelas. O `cascade` leva junto índices, constraints e triggers.
 -- Notificação push (#48). Antes de `usuarios`, como todo o resto:
 -- a ordem aqui é da folha para a raiz.
+drop table if exists custos_mensais cascade;
 drop table if exists denuncias cascade;
 drop table if exists inscricoes_push cascade;
 drop table if exists preferencias_notificacao cascade;

@@ -39,6 +39,10 @@ const NAO_SAO_LISTA: Record<string, string> = {
   "repositories/postgres.ts:perfis_prestador":
     "a irmã da anterior, no outro perfil que pode ter CNPJ, e pelo mesmo " +
     "motivo.",
+  "custos/postgres.ts:custos_mensais":
+    'remover (#473): `.delete().eq("id", ...)` pela chave primária, com ' +
+    '`.select("id")` só para saber se a linha existia — no máximo uma. A ' +
+    "listagem do mesmo arquivo tem `.limit(TETO_ADMIN)`.",
 };
 
 function arquivosTs(dir: string): string[] {

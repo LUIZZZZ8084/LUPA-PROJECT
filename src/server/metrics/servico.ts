@@ -1,5 +1,5 @@
 import { type Autenticado, exigirCapacidade } from "../auth/rbac";
-import { CUSTOS_MENSAIS } from "./custos";
+import { repositorioCustos } from "../custos";
 import { repositorioMetricas } from "./index";
 import type { PainelAdmin } from "./tipos";
 
@@ -40,23 +40,27 @@ export async function painelAdmin(
    * se lê uma vez por mês; recusa de teto se lê enquanto acontece, e a
    * fonte dela se apaga sozinha algumas janelas depois.
    */
-  const [totais, cadastros, lugares, funil, caixa, pressao] = await Promise.all(
-    [
+  /*
+   * Os custos vêm do repositório deles (#473), editados no próprio painel.
+   * Quem chega aqui já passou por `admin:metricas`.
+   */
+  const [totais, cadastros, lugares, funil, caixa, pressao, custos] =
+    await Promise.all([
       repo.totais(),
       repo.cadastrosPorDia(dias),
       repo.contasPorLugar(CIDADES_MOSTRADAS),
       repo.funil(),
       repo.caixa(),
       repo.pressaoNosTetos(TETOS_MOSTRADOS),
-    ],
-  );
+      repositorioCustos().listar(),
+    ]);
 
   return {
     totais,
     cadastros,
     lugares,
     funil,
-    custos: [...CUSTOS_MENSAIS],
+    custos,
     caixa,
     pressao,
     apuradoEm: new Date().toISOString(),
