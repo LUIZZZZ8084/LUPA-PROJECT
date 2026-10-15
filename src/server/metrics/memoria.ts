@@ -1,18 +1,28 @@
 import { getJobs, getProviders } from "@/lib/data";
 import { janelasVivas } from "../auth/rate-limit";
 import type { Papel } from "../auth/rbac";
-import { pagamentosEmMemoria } from "../pagamentos";
+import { candidaturasEmMemoria } from "../candidaturas";
+import { assinaturasEmMemoria, pagamentosEmMemoria } from "../pagamentos";
 import type { RepositorioMemoria } from "../repositories/memoria";
+import type { Usuario } from "../repositories/tipos";
+import { vagasEmMemoria } from "../vagas";
 import {
+  agregarContasPorLugar,
   agregarPressao,
   type CadastrosPorDia,
   type Caixa,
-  type DistribuicaoLocal,
+  type ContasPorLugar,
+  type Funil,
+  montarFunil,
   type PressaoNoTeto,
   type RepositorioMetricas,
-  somarPorCidade,
   type Totais,
 } from "./tipos";
+
+/** A marca da conta excluída (#423), a mesma que as views conferem. */
+const SENHA_DE_CONTA_EXCLUIDA = "!conta-excluida";
+
+const excluida = (u: Usuario) => u.senhaHash === SENHA_DE_CONTA_EXCLUIDA;
 
 /**
  * Métricas no modo demonstração.
@@ -31,7 +41,8 @@ export class RepositorioMetricasMemoria implements RepositorioMetricas {
   async totais(): Promise<Totais> {
     const [vagas, prestadores] = await Promise.all([getJobs(), getProviders()]);
 
-    const cadastrados = this.usuarios.todos();
+    // Como na view: conta excluída (#423) não é gente.
+    const cadastrados = this.usuarios.todos().filter((u) => !excluida(u));
     const contar = (papel: Papel) =>
       cadastrados.filter((u) => u.papel === papel).length;
 
@@ -66,16 +77,61 @@ export class RepositorioMetricasMemoria implements RepositorioMetricas {
     return [...porDia.values()];
   }
 
-  async distribuicaoPorLocal(limite: number): Promise<DistribuicaoLocal[]> {
-    const cidades = [
-      ...this.usuarios.todos().map((u) => u.cidade),
-      ...(await getProviders()).itens.map((p) => p.city),
-    ];
-
-    return somarPorCidade(
-      cidades.map((cidade) => ({ cidade, total: 1 })),
-      limite,
+  /*
+   * Os prestadores de exemplo entram como contas, como em `totais()`: são
+   * eles que enchem a vitrine da demonstração, e um painel que os contasse
+   * num bloco e não no outro mostraria dois números para a mesma pergunta.
+   */
+  async contasPorLugar(limiteDeCidades: number): Promise<ContasPorLugar> {
+    const exemplos = (await getProviders()).itens;
+    return agregarContasPorLugar(
+      [
+        ...this.usuarios.todos().map((u) => ({
+          papel: u.papel,
+          cidade: u.cidade,
+          excluida: excluida(u),
+        })),
+        ...exemplos.map((p) => ({
+          papel: "prestador_servico" as const,
+          cidade: p.city,
+          excluida: false,
+        })),
+      ],
+      limiteDeCidades,
     );
+  }
+
+  async funil(): Promise<Funil> {
+    const exemplos = (await getProviders()).itens;
+    return montarFunil({
+      contas: [
+        ...this.usuarios.todos().map((u) => ({
+          id: u.id,
+          papel: u.papel,
+          docVerificado: u.docVerificado,
+          excluida: excluida(u),
+        })),
+        ...exemplos.map((p) => ({
+          id: p.profile_id,
+          papel: "prestador_servico" as const,
+          docVerificado: p.doc_verified,
+          excluida: false,
+        })),
+      ],
+      perfisDeCandidato: this.usuarios.perfisDeCandidato(),
+      perfisDePrestador: [
+        ...this.usuarios.perfisDePrestador(),
+        ...exemplos.map((p) => ({
+          usuarioId: p.profile_id,
+          mensalidadeValidaAte: p.subscription_valid_until,
+        })),
+      ],
+      candidaturas: candidaturasEmMemoria(),
+      vagas: vagasEmMemoria(),
+      assinaturas: assinaturasEmMemoria(),
+      pagamentos: pagamentosEmMemoria(),
+      agora: new Date(),
+    });
   }
 
   /**

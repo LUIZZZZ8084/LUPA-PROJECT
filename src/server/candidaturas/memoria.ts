@@ -22,6 +22,11 @@ export class RepositorioCandidaturasMemoria implements RepositorioCandidaturas {
     for (const c of candidaturas) this.itens.set(c.id, c);
   }
 
+  /** Todas as candidaturas, para o funil do painel em demonstração (#471). */
+  todas(): Candidatura[] {
+    return [...this.itens.values()];
+  }
+
   async porId(id: string): Promise<Candidatura | null> {
     return this.itens.get(id) ?? null;
   }

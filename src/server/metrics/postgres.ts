@@ -4,15 +4,18 @@ import { TETO_ADMIN } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import type { Papel } from "../auth/rbac";
 import { erros } from "../errors";
-import type {
-  CadastrosPorDia,
-  Caixa,
-  DistribuicaoLocal,
-  PressaoNoTeto,
-  RepositorioMetricas,
-  Totais,
+import {
+  type CadastrosPorDia,
+  type Caixa,
+  type ContasNoLugar,
+  type ContasPorLugar,
+  type Funil,
+  type PressaoNoTeto,
+  type RepositorioMetricas,
+  SEM_CIDADE,
+  SEM_ESTADO,
+  type Totais,
 } from "./tipos";
-import { somarPorCidade } from "./tipos";
 
 /**
  * Métricas em Postgres.
@@ -92,23 +95,80 @@ export class RepositorioMetricasPostgres implements RepositorioMetricas {
     return [...porDia.values()];
   }
 
-  async distribuicaoPorLocal(limite: number): Promise<DistribuicaoLocal[]> {
+  /*
+   * Estados e cidades em duas consultas, cada uma já somada no banco.
+   *
+   * Os estados vêm todos — são no máximo 27 e o "sem estado" —, e a soma
+   * por estado não pode sair das cidades recortadas: uma cidade fora do
+   * recorte sumiria do total do estado dela, sem aviso.
+   */
+  async contasPorLugar(limiteDeCidades: number): Promise<ContasPorLugar> {
+    const supabase = await cliente();
+    const [estados, cidades] = await Promise.all([
+      supabase
+        .from("metricas_contas_por_estado")
+        .select("*")
+        .order("total", { ascending: false })
+        .order("uf", { ascending: true })
+        .limit(TETO_ADMIN),
+      supabase
+        .from("metricas_contas_por_cidade")
+        .select("*")
+        .order("total", { ascending: false })
+        .order("cidade", { ascending: true })
+        .limit(limiteDeCidades),
+    ]);
+
+    if (estados.error)
+      throw erros.indisponivel(`contas por estado: ${estados.error.message}`);
+    if (cidades.error)
+      throw erros.indisponivel(`contas por cidade: ${cidades.error.message}`);
+
+    const linha = (
+      lugar: unknown,
+      vazio: string,
+      l: Record<string, unknown>,
+    ): ContasNoLugar => ({
+      lugar: lugar == null ? vazio : String(lugar),
+      candidatos: Number(l.candidatos ?? 0),
+      prestadores: Number(l.prestadores ?? 0),
+      empresas: Number(l.empresas ?? 0),
+      total: Number(l.total ?? 0),
+    });
+
+    return {
+      estados: (estados.data ?? []).map((l) => linha(l.uf, SEM_ESTADO, l)),
+      cidades: (cidades.data ?? []).map((l) => linha(l.cidade, SEM_CIDADE, l)),
+    };
+  }
+
+  async funil(): Promise<Funil> {
     const supabase = await cliente();
     const { data, error } = await supabase
-      .from("metricas_por_local")
+      .from("metricas_funil")
       .select("*")
-      .order("total", { ascending: false })
-      .limit(TETO_ADMIN);
+      .maybeSingle();
 
-    if (error) throw erros.indisponivel(`métricas locais: ${error.message}`);
+    if (error) throw erros.indisponivel(`funil: ${error.message}`);
 
-    return somarPorCidade(
-      (data ?? []).map((l) => ({
-        cidade: String(l.cidade),
-        total: Number(l.total ?? 0),
-      })),
-      limite,
-    );
+    const n = (chave: string) => Number(data?.[chave] ?? 0);
+    return {
+      candidatos: n("candidatos"),
+      candidatosVisiveis: n("candidatos_visiveis"),
+      candidatosQueSeCandidataram: n("candidatos_que_se_candidataram"),
+      prestadores: n("prestadores"),
+      prestadoresNaVitrine: n("prestadores_na_vitrine"),
+      prestadoresAssinantes: n("prestadores_assinantes"),
+      empresas: n("empresas"),
+      empresasVerificadas: n("empresas_verificadas"),
+      empresasComVaga: n("empresas_com_vaga"),
+      empresasQueCompraram: n("empresas_que_compraram"),
+      receita: {
+        assinaturasAtivas: n("assinaturas_ativas"),
+        recorrenteAtivoCentavos: n("recorrente_ativo_centavos"),
+        entrouUltimos30DiasCentavos: n("entrou_30_dias_centavos"),
+      },
+    };
   }
 
   async caixa(): Promise<Caixa> {

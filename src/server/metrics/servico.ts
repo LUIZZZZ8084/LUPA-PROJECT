@@ -1,4 +1,5 @@
 import { type Autenticado, exigirCapacidade } from "../auth/rbac";
+import { CUSTOS_MENSAIS } from "./custos";
 import { repositorioMetricas } from "./index";
 import type { PainelAdmin } from "./tipos";
 
@@ -14,6 +15,13 @@ export const JANELA_PADRAO_DIAS = 30;
  * relatório quando alguém varrer o app inteiro.
  */
 const TETOS_MOSTRADOS = 20;
+
+/**
+ * Quantas cidades o bloco de lugares mostra (#471). Os estados vêm todos;
+ * cidade é a lista que cresce com o país inteiro aberto (#301), e quinze
+ * cabem numa tela sem virar relatório.
+ */
+const CIDADES_MOSTRADAS = 15;
 
 export async function painelAdmin(
   sessao: Autenticado | null,
@@ -32,18 +40,23 @@ export async function painelAdmin(
    * se lê uma vez por mês; recusa de teto se lê enquanto acontece, e a
    * fonte dela se apaga sozinha algumas janelas depois.
    */
-  const [totais, cadastros, locais, caixa, pressao] = await Promise.all([
-    repo.totais(),
-    repo.cadastrosPorDia(dias),
-    repo.distribuicaoPorLocal(12),
-    repo.caixa(),
-    repo.pressaoNosTetos(TETOS_MOSTRADOS),
-  ]);
+  const [totais, cadastros, lugares, funil, caixa, pressao] = await Promise.all(
+    [
+      repo.totais(),
+      repo.cadastrosPorDia(dias),
+      repo.contasPorLugar(CIDADES_MOSTRADAS),
+      repo.funil(),
+      repo.caixa(),
+      repo.pressaoNosTetos(TETOS_MOSTRADOS),
+    ],
+  );
 
   return {
     totais,
     cadastros,
-    locais,
+    lugares,
+    funil,
+    custos: [...CUSTOS_MENSAIS],
     caixa,
     pressao,
     apuradoEm: new Date().toISOString(),

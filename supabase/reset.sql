@@ -29,6 +29,9 @@
 drop view if exists metricas_pressao cascade;
 drop view if exists metricas_caixa cascade;
 drop view if exists metricas_planos cascade;
+drop view if exists metricas_funil cascade;
+drop view if exists metricas_contas_por_cidade cascade;
+drop view if exists metricas_contas_por_estado cascade;
 drop view if exists metricas_por_local cascade;
 drop view if exists metricas_cadastros_por_dia cascade;
 drop view if exists metricas_totais cascade;

@@ -14,36 +14,263 @@ export interface CadastrosPorDia {
   porPapel: Record<Papel, number>;
 }
 
-export interface DistribuicaoLocal {
-  cidade: string;
+/**
+ * Uma linha de contas num lugar — um estado ou uma cidade —, por papel
+ * (#471). O admin não entra, nem a conta excluída (#423).
+ */
+export interface ContasNoLugar {
+  /** A sigla do estado, ou a cidade com o estado ("Sinop - MT"). */
+  lugar: string;
+  candidatos: number;
+  prestadores: number;
+  empresas: number;
   total: number;
 }
 
+export interface ContasPorLugar {
+  /** Todos os estados com alguma conta, do maior para o menor. */
+  estados: ContasNoLugar[];
+  /** As cidades com mais contas, até o limite pedido. */
+  cidades: ContasNoLugar[];
+}
+
+/** Como a tela chama o lugar que a conta não diz qual é. */
+export const SEM_ESTADO = "Sem estado";
+export const SEM_CIDADE = "Sem cidade";
+
 /**
- * Soma por cidade as linhas de `metricas_por_local`.
+ * O estado de uma cidade gravada como "Sinop - MT", do jeito da view.
  *
- * A view ainda agrupa por cidade **e** bairro, porque o banco não mudou
- * (#321): `usuarios.bairro` continua lá, com o que as contas antigas
- * informaram. A tela, não — não há mais bairro de pessoa na Lupa, e o
- * painel mostrava "Centro, Sinop" como se isso ainda fosse uma dimensão do
- * produto. Somar aqui, e não na view, é o que dispensa mexer em produção.
+ * Espelha `substring(cidade from ' - ([A-Z]{2})$')` em
+ * `metricas_contas_por_estado`: só o sufixo " - XX" no fim conta, e o resto
+ * é nulo. Não usa `ufDaCidade`, de `src/lib/cidades`, de propósito — aquela
+ * é a regra da aplicação, e esta precisa ser a regra do banco, para as duas
+ * contagens baterem. O `schema.test.ts` passa as mesmas cidades pelas duas.
  */
-export function somarPorCidade(
-  linhas: ReadonlyArray<{ cidade: string; total: number }>,
-  limite: number,
-): DistribuicaoLocal[] {
-  const porCidade = new Map<string, number>();
-  for (const linha of linhas) {
-    porCidade.set(
-      linha.cidade,
-      (porCidade.get(linha.cidade) ?? 0) + linha.total,
-    );
+export function ufNaMetrica(cidade: string | null): string | null {
+  return / - ([A-Z]{2})$/.exec(cidade ?? "")?.[1] ?? null;
+}
+
+/** O que uma conta precisa ter para entrar nas contas por lugar. */
+export interface ContaNoMapa {
+  papel: Papel;
+  cidade: string | null;
+  excluida: boolean;
+}
+
+/** Ordem das linhas: do maior para o menor, e por nome no empate. */
+export function ordenarLugares(a: ContasNoLugar, b: ContasNoLugar): number {
+  return b.total - a.total || a.lugar.localeCompare(b.lugar, "pt-BR");
+}
+
+/**
+ * Contas por estado e por cidade, em memória — a mesma conta das views
+ * `metricas_contas_por_estado` e `metricas_contas_por_cidade`.
+ *
+ * Existe para o modo demonstração, e é função pura de propósito: é ela que
+ * o `schema.test.ts` compara com as views num Postgres de verdade.
+ */
+export function agregarContasPorLugar(
+  contas: ReadonlyArray<ContaNoMapa>,
+  limiteDeCidades: number,
+): ContasPorLugar {
+  const estados = new Map<string, ContasNoLugar>();
+  const cidades = new Map<string, ContasNoLugar>();
+
+  const somar = (
+    mapa: Map<string, ContasNoLugar>,
+    lugar: string,
+    papel: Papel,
+  ) => {
+    const linha = mapa.get(lugar) ?? {
+      lugar,
+      candidatos: 0,
+      prestadores: 0,
+      empresas: 0,
+      total: 0,
+    };
+    if (papel === "candidato_clt") linha.candidatos += 1;
+    if (papel === "prestador_servico") linha.prestadores += 1;
+    if (papel === "empresa") linha.empresas += 1;
+    linha.total += 1;
+    mapa.set(lugar, linha);
+  };
+
+  for (const conta of contas) {
+    if (conta.papel === "admin" || conta.excluida) continue;
+    somar(estados, ufNaMetrica(conta.cidade) ?? SEM_ESTADO, conta.papel);
+    somar(cidades, conta.cidade ?? SEM_CIDADE, conta.papel);
   }
 
-  return [...porCidade]
-    .map(([cidade, total]) => ({ cidade, total }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, limite);
+  return {
+    estados: [...estados.values()].sort(ordenarLugares),
+    cidades: [...cidades.values()]
+      .sort(ordenarLugares)
+      .slice(0, limiteDeCidades),
+  };
+}
+
+/**
+ * O caminho de cada papel até virar receita, e a receita que se repete
+ * (#471). É a pergunta do Luiz em 15/10/2026: quanto falta para o Lupa
+ * pagar o próprio custo — e, faltando, em que passo cada um para.
+ */
+export interface Funil {
+  candidatos: number;
+  /** Ligaram "quero que empresas me encontrem". */
+  candidatosVisiveis: number;
+  /** Mandaram pelo menos uma candidatura. */
+  candidatosQueSeCandidataram: number;
+  prestadores: number;
+  /** CPF conferido e mensalidade em dia: aparecem em `/servicos`. */
+  prestadoresNaVitrine: number;
+  /** Com a mensalidade em assinatura ativa, teste grátis inclusive. */
+  prestadoresAssinantes: number;
+  empresas: number;
+  /** CNPJ conferido na Receita, ou cadastro por CPF. */
+  empresasVerificadas: number;
+  empresasComVaga: number;
+  empresasQueCompraram: number;
+  receita: {
+    assinaturasAtivas: number;
+    /** O valor de cada assinatura ativa, somado: o que volta todo mês. */
+    recorrenteAtivoCentavos: number;
+    /** Tudo o que foi aprovado nos últimos 30 dias, pacotes inclusive. */
+    entrouUltimos30DiasCentavos: number;
+  };
+}
+
+/** O que o funil lê, nos dois repositórios. */
+export interface EntradaDoFunil {
+  contas: ReadonlyArray<{
+    id: string;
+    papel: Papel;
+    docVerificado: boolean;
+    excluida: boolean;
+  }>;
+  perfisDeCandidato: ReadonlyArray<{
+    usuarioId: string;
+    visivelParaEmpresas: boolean;
+  }>;
+  perfisDePrestador: ReadonlyArray<{
+    usuarioId: string;
+    mensalidadeValidaAte: string | null;
+  }>;
+  candidaturas: ReadonlyArray<{ candidatoId: string }>;
+  vagas: ReadonlyArray<{ empresaId: string }>;
+  assinaturas: ReadonlyArray<{
+    usuarioId: string;
+    tipo: string;
+    status: string;
+    valorCentavos: number;
+  }>;
+  pagamentos: ReadonlyArray<{
+    usuarioId: string;
+    tipo: string;
+    status: string;
+    valorCentavos: number;
+    criadoEm: string;
+  }>;
+  agora: Date;
+}
+
+const COMPRAS_DE_EMPRESA = new Set([
+  "empresa_vaga_avulsa",
+  "empresa_pacote_5",
+  "empresa_pacote_10",
+  "empresa_mensal",
+]);
+
+const TRINTA_DIAS_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * O funil em memória — a mesma regra da view `metricas_funil`, para o modo
+ * demonstração. O `schema.test.ts` roda as duas sobre a mesma entrada e
+ * compara.
+ */
+export function montarFunil(e: EntradaDoFunil): Funil {
+  const contas = new Map(
+    e.contas
+      .filter((c) => c.papel !== "admin" && !c.excluida)
+      .map((c) => [c.id, c]),
+  );
+  const doPapel = (papel: Papel) =>
+    [...contas.values()].filter((c) => c.papel === papel);
+  const ehDoPapel = (id: string, papel: Papel) =>
+    contas.get(id)?.papel === papel;
+  const distintos = (ids: string[]) => new Set(ids).size;
+
+  const visiveis = new Set(
+    e.perfisDeCandidato
+      .filter((p) => p.visivelParaEmpresas)
+      .map((p) => p.usuarioId),
+  );
+  const emDia = new Set(
+    e.perfisDePrestador
+      .filter(
+        (p) =>
+          p.mensalidadeValidaAte !== null &&
+          new Date(p.mensalidadeValidaAte) > e.agora,
+      )
+      .map((p) => p.usuarioId),
+  );
+  const ativas = e.assinaturas.filter((a) => a.status === "ativa");
+  const desde = e.agora.getTime() - TRINTA_DIAS_MS;
+
+  return {
+    candidatos: doPapel("candidato_clt").length,
+    candidatosVisiveis: doPapel("candidato_clt").filter((c) =>
+      visiveis.has(c.id),
+    ).length,
+    candidatosQueSeCandidataram: distintos(
+      e.candidaturas
+        .map((c) => c.candidatoId)
+        .filter((id) => ehDoPapel(id, "candidato_clt")),
+    ),
+    prestadores: doPapel("prestador_servico").length,
+    prestadoresNaVitrine: doPapel("prestador_servico").filter(
+      (c) => c.docVerificado && emDia.has(c.id),
+    ).length,
+    prestadoresAssinantes: distintos(
+      ativas
+        .filter(
+          (a) => a.tipo === "prestador_mensalidade" && contas.has(a.usuarioId),
+        )
+        .map((a) => a.usuarioId),
+    ),
+    empresas: doPapel("empresa").length,
+    empresasVerificadas: doPapel("empresa").filter((c) => c.docVerificado)
+      .length,
+    empresasComVaga: distintos(
+      e.vagas.map((v) => v.empresaId).filter((id) => ehDoPapel(id, "empresa")),
+    ),
+    empresasQueCompraram: distintos(
+      e.pagamentos
+        .filter(
+          (p) =>
+            p.status === "aprovado" &&
+            COMPRAS_DE_EMPRESA.has(p.tipo) &&
+            ehDoPapel(p.usuarioId, "empresa"),
+        )
+        .map((p) => p.usuarioId),
+    ),
+    receita: {
+      assinaturasAtivas: ativas.length,
+      recorrenteAtivoCentavos: ativas.reduce((s, a) => s + a.valorCentavos, 0),
+      entrouUltimos30DiasCentavos: e.pagamentos
+        .filter(
+          (p) =>
+            p.status === "aprovado" && new Date(p.criadoEm).getTime() > desde,
+        )
+        .reduce((s, p) => s + p.valorCentavos, 0),
+    },
+  };
+}
+
+/** Um custo mensal que o Lupa precisa cobrir para se pagar (#471). */
+export interface CustoMensal {
+  nome: string;
+  centavos: number;
 }
 
 /**
@@ -189,7 +416,10 @@ export function agregarPressao(
 export interface PainelAdmin {
   totais: Totais;
   cadastros: CadastrosPorDia[];
-  locais: DistribuicaoLocal[];
+  lugares: ContasPorLugar;
+  funil: Funil;
+  /** A meta do mês: o custo dos planos que o Lupa precisa pagar. */
+  custos: CustoMensal[];
   caixa: Caixa;
   /** Quem está encostando nos tetos agora, da maior pressão para a menor. */
   pressao: PressaoNoTeto[];
@@ -200,7 +430,8 @@ export interface PainelAdmin {
 export interface RepositorioMetricas {
   totais(): Promise<Totais>;
   cadastrosPorDia(dias: number): Promise<CadastrosPorDia[]>;
-  distribuicaoPorLocal(limite: number): Promise<DistribuicaoLocal[]>;
+  contasPorLugar(limiteDeCidades: number): Promise<ContasPorLugar>;
+  funil(): Promise<Funil>;
 
   /**
    * O caixa, somado no banco e não na aplicação.
