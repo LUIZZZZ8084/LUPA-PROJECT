@@ -2,16 +2,18 @@
  * O convite para instalar, renderizado (#475).
  *
  * O componente guarda estado no módulo — "Agora não" vale para a visita
- * inteira —, então cada teste importa uma cópia nova dele.
+ * inteira —, então cada teste importa uma cópia nova dele, que é o que
+ * abrir a Lupa de novo faz.
  */
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  CHAVE_INSTALAR_DISPENSADO,
-  DIAS_DISPENSADO,
-  EVENTO_INSTALAVEL,
-  type PedidoDeInstalacao,
-} from "@/lib/instalacao";
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { EVENTO_INSTALAVEL, type PedidoDeInstalacao } from "@/lib/instalacao";
 
 const IPHONE =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
@@ -31,9 +33,14 @@ function noAparelho(ua: string) {
   definir("maxTouchPoints", ua === WINDOWS ? 0 : 5);
 }
 
-async function montar() {
+/** Uma cópia nova do módulo: o que acontece quando a Lupa é aberta. */
+async function importar() {
   vi.resetModules();
-  const { InstalarApp } = await import("@/components/instalar-app");
+  return import("@/components/instalar-app");
+}
+
+async function montar() {
+  const { InstalarApp } = await importar();
   return render(<InstalarApp />);
 }
 
@@ -47,7 +54,6 @@ function pedidoFalso(escolha: "accepted" | "dismissed") {
 const botaoInstalar = () => screen.getByRole("button", { name: "Instalar" });
 
 beforeEach(() => {
-  localStorage.clear();
   window.__lupaPedidoDeInstalacao = undefined;
   window.__lupaInstalado = undefined;
 });
@@ -176,28 +182,28 @@ describe("no Android", () => {
 });
 
 describe('"Agora não"', () => {
-  it(`esconde e grava a data de daqui a ${DIAS_DISPENSADO} dias`, async () => {
+  it("esconde, e trocar de tela não traz de volta", async () => {
     noAparelho(IPHONE);
-    const antes = Date.now();
-    await montar();
+    const { InstalarApp } = await importar();
+    const primeira = render(<InstalarApp />);
 
     fireEvent.click(screen.getByRole("button", { name: "Agora não" }));
-
     expect(screen.queryByRole("button", { name: "Instalar" })).toBeNull();
-    const ate = Number(localStorage.getItem(CHAVE_INSTALAR_DISPENSADO));
-    expect(ate).toBeGreaterThanOrEqual(antes + DIAS_DISPENSADO * 86_400_000);
-  });
 
-  it("dentro do prazo, a próxima visita não mostra o convite", async () => {
-    noAparelho(IPHONE);
-    localStorage.setItem(CHAVE_INSTALAR_DISPENSADO, String(Date.now() + 1000));
-    const { container } = await montar();
+    // Outra tela do mesmo carregamento monta o componente de novo.
+    primeira.unmount();
+    const { container } = render(<InstalarApp />);
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("vencido o prazo, o convite volta", async () => {
+  it("não grava nada no aparelho: abrir de novo traz o convite", async () => {
     noAparelho(IPHONE);
-    localStorage.setItem(CHAVE_INSTALAR_DISPENSADO, String(Date.now() - 1000));
+    localStorage.clear();
+    await montar();
+    fireEvent.click(screen.getByRole("button", { name: "Agora não" }));
+    expect(localStorage.length).toBe(0);
+
+    cleanup();
     await montar();
     expect(botaoInstalar()).toBeVisible();
   });

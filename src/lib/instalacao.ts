@@ -31,12 +31,6 @@ export type Oferta =
   | "passos-android"
   | "abrir-no-navegador";
 
-/** Quanto tempo "Agora não" esconde o convite. */
-export const DIAS_DISPENSADO = 30;
-
-/** Onde mora a data até quando o convite fica escondido. */
-export const CHAVE_INSTALAR_DISPENSADO = "lupa:instalar-dispensado-ate";
-
 /**
  * O aviso de que o pedido de instalação chegou, ou de que o app foi
  * instalado. O script do `<head>` o dispara; o botão o ouve.
@@ -82,18 +76,19 @@ export function aparelhoDoNavegador(
  * tela inicial abre sem barra de navegador) e o Android dizer que ele já
  * está no aparelho. `temPedido` é o pedido de instalação que o navegador
  * entregou e ninguém usou ainda.
+ *
+ * `dispensado` é o "Agora não" desta visita, e só dela: na próxima vez que
+ * a pessoa abre a Lupa, o convite volta. Decisão do Luiz em 20/10/2026 —
+ * esconder por 30 dias era tempo demais para quem só não queria agora.
  */
 export function ofertaDeInstalacao(estado: {
   aparelho: Aparelho;
   instalado: boolean;
-  dispensadoAte: number | null;
-  agora: number;
+  dispensado: boolean;
   temPedido: boolean;
 }): Oferta {
   if (estado.aparelho === "computador" || estado.instalado) return "nenhuma";
-  if (estado.dispensadoAte !== null && estado.dispensadoAte > estado.agora) {
-    return "nenhuma";
-  }
+  if (estado.dispensado) return "nenhuma";
   switch (estado.aparelho) {
     case "iphone":
       return "passos-iphone";
@@ -102,18 +97,6 @@ export function ofertaDeInstalacao(estado: {
     case "android":
       return estado.temPedido ? "instalar-direto" : "passos-android";
   }
-}
-
-/** A data em que "Agora não" deixa de valer, contada de `agora`. */
-export function dispensarAte(agora: number): number {
-  return agora + DIAS_DISPENSADO * 24 * 60 * 60 * 1000;
-}
-
-/** Lê a data gravada; qualquer coisa que não seja número vira `null`. */
-export function lerDispensa(valor: string | null): number | null {
-  if (valor === null) return null;
-  const ate = Number(valor);
-  return Number.isFinite(ate) ? ate : null;
 }
 
 /**

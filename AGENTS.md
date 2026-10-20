@@ -2356,7 +2356,13 @@ direto.
 **Não aparece dentro do app instalado**, nem quando o Android diz que o app
 já está no aparelho (`related_applications` no manifesto, lido por
 `getInstalledRelatedApps`). O iPhone não diz; ali, quem já instalou e voltou
-pelo Safari fecha com "Agora não", que esconde por 30 dias.
+pelo Safari fecha com "Agora não".
+
+**"Agora não" vale para a visita, e só para ela.** Trocar de tela não traz
+o convite de volta; abrir a Lupa de novo, sim. Nasceu escondendo por 30
+dias, gravado no aparelho, e o Luiz achou tempo demais no mesmo dia
+(20/10/2026): quem tocou "Agora não" não disse "nunca". Por isso a
+dispensa mora no módulo do componente, e não no `localStorage`.
 
 **O preço, aceito:** o `preventDefault` no pedido tira a barrinha do próprio
 Chrome, para a mesma oferta não aparecer duas vezes. Quem tocou "Agora não"

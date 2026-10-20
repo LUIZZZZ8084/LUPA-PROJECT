@@ -12,10 +12,7 @@ import { type ReactNode, useId, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
   aparelhoDoNavegador,
-  CHAVE_INSTALAR_DISPENSADO,
-  dispensarAte,
   EVENTO_INSTALAVEL,
-  lerDispensa,
   type Oferta,
   ofertaDeInstalacao,
 } from "@/lib/instalacao";
@@ -23,9 +20,10 @@ import {
 /*
  * O estado do convite mora fora do React, como o tema em `theme-toggle.tsx`:
  * o pedido de instalação chega por um evento do navegador, guardado em
- * `window` pelo script do `<head>`, e "Agora não" vale para a visita inteira,
- * não só para a tela onde foi tocado. `useSyncExternalStore` lê os dois sem
- * `setState` dentro de efeito.
+ * `window` pelo script do `<head>`, e "Agora não" vale para a visita inteira
+ * — trocar de tela não traz o convite de volta; abrir a Lupa de novo, sim.
+ * Por isso a dispensa mora no módulo, e não no aparelho.
+ * `useSyncExternalStore` lê os dois sem `setState` dentro de efeito.
  */
 const ouvintes = new Set<() => void>();
 let jaEstaNoAparelho = false;
@@ -78,15 +76,6 @@ function abertoComoApp(): boolean {
   );
 }
 
-function lerDataDispensada(): number | null {
-  if (dispensadoNestaVisita) return Number.POSITIVE_INFINITY;
-  try {
-    return lerDispensa(localStorage.getItem(CHAVE_INSTALAR_DISPENSADO));
-  } catch {
-    return null;
-  }
-}
-
 function lerOferta(): Oferta {
   return ofertaDeInstalacao({
     aparelho: aparelhoDoNavegador(
@@ -95,8 +84,7 @@ function lerOferta(): Oferta {
     ),
     instalado:
       jaEstaNoAparelho || window.__lupaInstalado === true || abertoComoApp(),
-    dispensadoAte: lerDataDispensada(),
-    agora: Date.now(),
+    dispensado: dispensadoNestaVisita,
     temPedido: Boolean(window.__lupaPedidoDeInstalacao),
   });
 }
@@ -128,14 +116,6 @@ async function pedirInstalacao(): Promise<void> {
 
 function dispensar(): void {
   dispensadoNestaVisita = true;
-  try {
-    localStorage.setItem(
-      CHAVE_INSTALAR_DISPENSADO,
-      String(dispensarAte(Date.now())),
-    );
-  } catch {
-    // Sem storage, vale até fechar a aba — é o que dá.
-  }
   avisar();
 }
 

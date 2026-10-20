@@ -7,10 +7,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   aparelhoDoNavegador,
-  DIAS_DISPENSADO,
-  dispensarAte,
   EVENTO_INSTALAVEL,
-  lerDispensa,
   ofertaDeInstalacao,
   SCRIPT_PEDIDO_DE_INSTALACAO,
 } from "@/lib/instalacao";
@@ -67,12 +64,10 @@ describe("aparelhoDoNavegador", () => {
 });
 
 describe("ofertaDeInstalacao", () => {
-  const AGORA = Date.UTC(2026, 9, 20);
   const base = {
     aparelho: "android" as const,
     instalado: false,
-    dispensadoAte: null,
-    agora: AGORA,
+    dispensado: false,
     temPedido: false,
   };
 
@@ -108,25 +103,10 @@ describe("ofertaDeInstalacao", () => {
     ).toBe("nenhuma");
   });
 
-  it('"Agora não" vale até a data, e não depois', () => {
-    expect(ofertaDeInstalacao({ ...base, dispensadoAte: AGORA + 1 })).toBe(
-      "nenhuma",
-    );
-    expect(ofertaDeInstalacao({ ...base, dispensadoAte: AGORA })).toBe(
-      "passos-android",
-    );
-  });
-});
-
-describe("a dispensa gravada", () => {
-  it(`dura ${DIAS_DISPENSADO} dias`, () => {
-    expect(dispensarAte(0)).toBe(DIAS_DISPENSADO * 86_400_000);
-  });
-
-  it("valor que não é número não esconde nada", () => {
-    expect(lerDispensa(null)).toBeNull();
-    expect(lerDispensa("amanhã")).toBeNull();
-    expect(lerDispensa("1760000000000")).toBe(1_760_000_000_000);
+  it('"Agora não" esconde, mesmo com o pedido entregue', () => {
+    expect(
+      ofertaDeInstalacao({ ...base, dispensado: true, temPedido: true }),
+    ).toBe("nenhuma");
   });
 });
 

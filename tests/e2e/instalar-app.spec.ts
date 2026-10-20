@@ -88,16 +88,25 @@ test.describe("no iPhone", () => {
     expect(sobra).toBeLessThanOrEqual(0);
   });
 
-  test('"Agora não" esconde, e continua escondido depois de recarregar', async ({
+  test('"Agora não" vale para a visita: trocar de tela não traz de volta, abrir de novo traz', async ({
     page,
   }) => {
     await page.goto("/");
     await convite(page).getByRole("button", { name: "Agora não" }).click();
     await expect(convite(page)).toHaveCount(0);
 
-    await page.reload();
+    // Navegar pela barra de baixo é trocar de tela sem recarregar.
+    await page
+      .getByRole("navigation", { name: "Navegação principal" })
+      .getByRole("link", { name: "Vagas" })
+      .click();
+    await expect(page).toHaveURL(/\/vagas/);
     await aguardarHidratacao(page);
     await expect(convite(page)).toHaveCount(0);
+
+    // Abrir a Lupa de novo é carregar a página do zero.
+    await page.goto("/");
+    await expect(convite(page)).toBeVisible();
   });
 });
 
