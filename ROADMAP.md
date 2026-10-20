@@ -8,9 +8,17 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 15/10/2026.**
+**Última atualização: 20/10/2026.**
 
 ## Concluído
+
+Em 20/10/2026:
+
+- Convite para instalar o app no navegador do celular: no Android o toque
+  instala, no iPhone mostra os passos do Compartilhar, dentro do Instagram
+  e do Facebook explica como abrir no navegador; no computador não
+  aparece —
+  [#475](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/475)
 
 Em 15/10/2026:
 

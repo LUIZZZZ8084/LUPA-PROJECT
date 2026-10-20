@@ -2326,6 +2326,52 @@ hoje, ou o conteúdo da sessão de outra pessoa no mesmo aparelho. Ele existe
 para receber push e para ser o requisito de instalação no iPhone, que é do
 que o APK/TWA depende.
 
+### O convite para instalar, e o que cada aparelho deixa (#475)
+
+Pedido do Luiz em 20/10/2026: um botão para instalar na hora, no iPhone e
+no Android, só para quem está no navegador do celular. O iPhone nunca
+mostrou botão de instalar — o Safari não tem um para site nenhum —, e quem
+não conhece o caminho do Compartilhar não instala.
+
+**O botão diz a verdade sobre o que o toque faz.** No Android que já
+entregou o pedido de instalação (`beforeinstallprompt`), o toque abre a
+janela do navegador. A Apple não dá a site nenhum um jeito de instalar, e
+no iPhone o toque mostra os três passos, com o desenho dos botões do
+Safari. Dentro do Instagram e do Facebook nada instala, e o toque explica
+como abrir no navegador. No Android antes de o pedido chegar — o Chrome só
+o entrega depois de a pessoa interagir com a página —, o toque mostra o
+caminho pelo menu.
+
+**O aparelho sai do que o navegador diz de si** (`aparelhoDoNavegador`, em
+`src/lib/instalacao.ts`), e não da largura da tela: o pedido era "no
+celular sim, no PC não", e janela estreita no PC não é celular. O iPad, que
+se apresenta como Mac, é separado pela tela de toque.
+
+**O pedido é guardado por um script no `<head>`**, assinado com o nonce da
+CSP, porque o Chrome o entrega uma vez por carregamento e pode entregá-lo
+antes de o React montar a página. O e2e do Android só passa se esse script
+rodou: sem o nonce, ele morreria em silêncio e o botão nunca instalaria
+direto.
+
+**Não aparece dentro do app instalado**, nem quando o Android diz que o app
+já está no aparelho (`related_applications` no manifesto, lido por
+`getInstalledRelatedApps`). O iPhone não diz; ali, quem já instalou e voltou
+pelo Safari fecha com "Agora não".
+
+**"Agora não" vale para a visita, e só para ela.** Trocar de tela não traz
+o convite de volta; abrir a Lupa de novo, sim. Nasceu escondendo por 30
+dias, gravado no aparelho, e o Luiz achou tempo demais no mesmo dia
+(20/10/2026): quem tocou "Agora não" não disse "nunca". Por isso a
+dispensa mora no módulo do componente, e não no `localStorage`.
+
+**O preço, aceito:** o `preventDefault` no pedido tira a barrinha do próprio
+Chrome, para a mesma oferta não aparecer duas vezes. Quem tocou "Agora não"
+continua tendo o "Instalar app" no menu do Chrome.
+
+**O projeto `mobile` do e2e vê a faixa em toda tela**, porque o Pixel 7 se
+apresenta como Android. A varredura de contraste das rotas a mede fechada;
+os passos abertos, nos dois temas, ficam em `instalar-app.spec.ts`.
+
 ### Busca sem resultado é vocabulário, não histórico de pessoa
 
 `buscas_sem_resultado` guarda termo, dia, tela e contagem — quatro colunas,

@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import { headers } from "next/headers";
 import { DemoBanner } from "@/components/demo-banner";
 import { RouteProgress } from "@/components/motion/route-progress";
+import { SCRIPT_PEDIDO_DE_INSTALACAO } from "@/lib/instalacao";
 import { SCRIPT_TEMA_INICIAL } from "@/lib/theme";
 import { urlPublica } from "@/server/url-publica";
 import "./globals.css";
@@ -112,6 +113,15 @@ export default async function RootLayout({
           nonce={nonce}
           // biome-ignore lint/security/noDangerouslySetInnerHtml: script fixo do próprio código, não dado de entrada.
           dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA_INICIAL }}
+        />
+        {/*
+         * Guarda o pedido de instalação do Android antes de o React montar
+         * a página (#475) — ver o comentário em `lib/instalacao.ts`.
+         */}
+        <script
+          nonce={nonce}
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: script fixo do próprio código, não dado de entrada.
+          dangerouslySetInnerHTML={{ __html: SCRIPT_PEDIDO_DE_INSTALACAO }}
         />
       </head>
       <body className="flex min-h-full flex-col bg-bg text-ink">
