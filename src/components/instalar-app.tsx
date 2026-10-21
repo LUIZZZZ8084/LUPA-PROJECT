@@ -1,14 +1,7 @@
 "use client";
 
-import {
-  Download,
-  Ellipsis,
-  EllipsisVertical,
-  Share,
-  SquarePlus,
-  X,
-} from "lucide-react";
-import { type ReactNode, useId, useState, useSyncExternalStore } from "react";
+import { Download, Ellipsis, EllipsisVertical, Share, X } from "lucide-react";
+import { type ReactNode, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
   aparelhoDoNavegador,
@@ -122,13 +115,19 @@ function dispensar(): void {
 /**
  * O convite para instalar a Lupa, para quem está no navegador do celular
  * (#475). No Android que já entregou o pedido, o toque instala; nos outros
- * casos, mostra os passos daquele aparelho. A regra de quem vê o quê mora
- * em `src/lib/instalacao.ts`.
+ * casos, a frase da faixa vira uma dica de uma linha dizendo onde tocar. A
+ * regra de quem vê o quê mora em `src/lib/instalacao.ts`.
+ *
+ * **A dica toma o lugar da frase, e a faixa não cresce (#477).** Nasceu
+ * abrindo uma caixa com três passos e uma nota embaixo da faixa, e no
+ * iPhone ela ocupava quase metade da tela. O Luiz pediu só o botão. Só o
+ * botão não basta onde ele não pode instalar — a Apple não deixa —, então
+ * o que sobrou é o mínimo: o desenho do botão Compartilhar e o nome da
+ * opção, no espaço que a frase já usava.
  */
 export function InstalarApp() {
   const oferta = useSyncExternalStore(inscrever, lerOferta, nadaNoServidor);
-  const [aberto, setAberto] = useState(false);
-  const idPassos = useId();
+  const [comDica, setComDica] = useState(false);
 
   if (oferta === "nenhuma") return null;
 
@@ -140,15 +139,27 @@ export function InstalarApp() {
       className="border-b border-line bg-panel"
     >
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 sm:px-6">
-        <p className="min-w-0 flex-1 text-[13px] leading-snug text-ink">
-          <strong className="font-semibold">Instale a Lupa no celular.</strong>{" "}
-          <span className="text-muted">Abre da tela inicial, como um app.</span>
+        {/* Quem ouve a tela ouve a dica quando ela entra no lugar da frase. */}
+        <p
+          aria-live="polite"
+          className="min-w-0 flex-1 text-[13px] leading-snug text-ink"
+        >
+          {comDica && !direto ? (
+            <Dica oferta={oferta} />
+          ) : (
+            <>
+              <strong className="font-semibold">
+                Instale a Lupa no celular.
+              </strong>{" "}
+              <span className="text-muted">
+                Abre da tela inicial, como um app.
+              </span>
+            </>
+          )}
         </p>
         <Button
           size="sm"
-          onClick={() => (direto ? pedirInstalacao() : setAberto((a) => !a))}
-          aria-expanded={direto ? undefined : aberto}
-          aria-controls={direto ? undefined : idPassos}
+          onClick={() => (direto ? pedirInstalacao() : setComDica(true))}
         >
           <Download size={15} aria-hidden />
           Instalar
@@ -163,132 +174,51 @@ export function InstalarApp() {
           <X size={16} aria-hidden />
         </button>
       </div>
-      {!direto && (
-        <div
-          id={idPassos}
-          hidden={!aberto}
-          className="mx-auto max-w-6xl px-4 pb-3 sm:px-6"
-        >
-          <Passos oferta={oferta} />
-        </div>
-      )}
     </section>
   );
 }
 
-/** Um botão do navegador, desenhado como ele aparece na tela. */
-function Botao({
-  icone,
-  nome,
-  children,
-}: {
-  icone: ReactNode;
-  /** Para quem ouve a tela, quando o botão real não tem texto. */
-  nome?: string;
-  children?: ReactNode;
-}) {
+/**
+ * Um botão do navegador, desenhado como ele aparece na tela. O real não tem
+ * texto, então o nome vai só para quem ouve a tela.
+ */
+function Botao({ icone, nome }: { icone: ReactNode; nome: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-line bg-panel px-1.5 py-0.5 align-middle font-semibold">
+    <span className="inline-flex items-center rounded-md border border-line bg-panel-2 px-1 py-0.5 align-middle">
       {icone}
-      {children}
-      {nome && <span className="sr-only">{nome}</span>}
+      <span className="sr-only">{nome}</span>
     </span>
   );
 }
 
-function Lista({ children }: { children: ReactNode }) {
-  return (
-    <ol className="list-decimal space-y-2 rounded-xl border border-line bg-panel-2 py-3 pr-3 pl-8 text-[13px] leading-relaxed text-ink">
-      {children}
-    </ol>
-  );
-}
-
-function Nota({ children }: { children: ReactNode }) {
-  return <p className="mt-2 text-xs leading-relaxed text-muted">{children}</p>;
-}
-
-function Passos({ oferta }: { oferta: Oferta }) {
-  if (oferta === "passos-iphone") {
+function Dica({ oferta }: { oferta: Oferta }) {
+  if (oferta === "dica-iphone") {
     return (
       <>
-        <Lista>
-          <li>
-            Toque em{" "}
-            <Botao icone={<Share size={14} aria-hidden />}>Compartilhar</Botao>{" "}
-            — no Safari, fica na barra de baixo; no Chrome, ao lado do endereço.
-            Se não achar, toque antes em{" "}
-            <Botao icone={<Ellipsis size={14} aria-hidden />} nome="Mais" />
-          </li>
-          <li>
-            Role a lista e toque em{" "}
-            <Botao icone={<SquarePlus size={14} aria-hidden />}>
-              Adicionar à Tela de Início
-            </Botao>
-          </li>
-          <li>
-            Toque em <strong>Adicionar</strong>. A Lupa fica na tela inicial,
-            como um app.
-          </li>
-        </Lista>
-        <Nota>
-          Não achou a opção? Abra este endereço direto no Safari e tente de
-          novo.
-        </Nota>
+        Toque em{" "}
+        <Botao icone={<Share size={14} aria-hidden />} nome="Compartilhar" /> e
+        depois em{" "}
+        <strong className="font-semibold">Adicionar à Tela de Início</strong>.
       </>
     );
   }
-
   if (oferta === "abrir-no-navegador") {
     return (
       <>
-        <Nota>
-          O Instagram e o Facebook não deixam instalar por dentro deles. Abra a
-          Lupa no navegador primeiro:
-        </Nota>
-        <div className="mt-2">
-          <Lista>
-            <li>
-              No canto de cima, toque nos três pontinhos{" "}
-              <Botao icone={<Ellipsis size={14} aria-hidden />} nome="Mais" />
-            </li>
-            <li>
-              Escolha <strong>Abrir no navegador</strong> — ou{" "}
-              <strong>Abrir no Safari</strong>, ou <strong>no Chrome</strong>.
-            </li>
-            <li>
-              Lá, toque em <strong>Instalar</strong> de novo.
-            </li>
-          </Lista>
-        </div>
+        Abra no navegador: toque em{" "}
+        <Botao icone={<Ellipsis size={14} aria-hidden />} nome="Mais" /> e em{" "}
+        <strong className="font-semibold">Abrir no navegador</strong>.
       </>
     );
   }
-
   return (
     <>
-      <Lista>
-        <li>
-          No canto de cima, toque no menu do navegador{" "}
-          <Botao
-            icone={<EllipsisVertical size={14} aria-hidden />}
-            nome="três pontinhos"
-          />
-        </li>
-        <li>
-          Toque em{" "}
-          <Botao icone={<Download size={14} aria-hidden />}>Instalar app</Botao>{" "}
-          ou em <strong>Adicionar à tela inicial</strong>.
-        </li>
-        <li>
-          Confirme em <strong>Instalar</strong>. A Lupa fica na tela inicial,
-          como um app.
-        </li>
-      </Lista>
-      <Nota>
-        Se o menu não tiver essa opção, escolha antes{" "}
-        <strong>Abrir no Chrome</strong>.
-      </Nota>
+      Toque em{" "}
+      <Botao
+        icone={<EllipsisVertical size={14} aria-hidden />}
+        nome="Menu do navegador"
+      />{" "}
+      e depois em <strong className="font-semibold">Instalar app</strong>.
     </>
   );
 }

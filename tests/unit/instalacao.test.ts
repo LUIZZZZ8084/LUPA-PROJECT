@@ -73,12 +73,12 @@ describe("ofertaDeInstalacao", () => {
 
   it("cada aparelho recebe o seu caminho", () => {
     expect(ofertaDeInstalacao({ ...base, aparelho: "iphone" })).toBe(
-      "passos-iphone",
+      "dica-iphone",
     );
     expect(ofertaDeInstalacao({ ...base, aparelho: "app-embutido" })).toBe(
       "abrir-no-navegador",
     );
-    expect(ofertaDeInstalacao(base)).toBe("passos-android");
+    expect(ofertaDeInstalacao(base)).toBe("dica-android");
   });
 
   it("o Android instala direto só quando o navegador entregou o pedido", () => {
@@ -88,7 +88,7 @@ describe("ofertaDeInstalacao", () => {
     // O iPhone não tem pedido nenhum; se tivesse, não mudaria nada.
     expect(
       ofertaDeInstalacao({ ...base, aparelho: "iphone", temPedido: true }),
-    ).toBe("passos-iphone");
+    ).toBe("dica-iphone");
   });
 
   it("no computador, nunca", () => {
