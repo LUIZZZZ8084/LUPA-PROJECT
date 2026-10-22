@@ -177,13 +177,16 @@ function VisivelParaEmpresas({ ligado }: { ligado: boolean }) {
         name="visivelParaEmpresas"
         defaultChecked={ligado}
         aria-describedby={idExplicacao}
-        className="mt-0.5 h-4 w-4 flex-none rounded border-line bg-panel accent-vagas"
+        className="relative z-10 mt-0.5 h-4 w-4 flex-none rounded border-line bg-panel accent-vagas"
       />
       <div className="text-sm">
         {/*
           O `::after` estica o rótulo sobre a linha toda (#481): o alvo de
           toque passa a ser o cartão inteiro, e não a caixa de 16 px. O
-          rótulo continua curto, então o nome acessível não muda.
+          rótulo continua curto, então o nome acessível não muda. A caixa
+          fica acima do rótulo (`z-10`), para o toque exato nela ir direto a
+          ela: com o rótulo por cima, uma ferramenta que clica pelo centro do
+          campo recebia "o rótulo intercepta o clique".
         */}
         <label
           htmlFor={id}
