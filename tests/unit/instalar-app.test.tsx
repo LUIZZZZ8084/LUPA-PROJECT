@@ -102,32 +102,38 @@ describe("quem vê o convite", () => {
 });
 
 describe("no iPhone", () => {
-  it("o toque mostra os passos do Compartilhar", async () => {
+  /*
+   * A dica entra no lugar da frase, sem caixa de passos (#477): o que
+   * ocupava meia tela no iPhone vira uma linha dentro da própria faixa.
+   */
+  it("o toque troca a frase pela dica do Compartilhar, sem abrir nada embaixo", async () => {
     noAparelho(IPHONE);
-    await montar();
+    const { container } = await montar();
 
-    expect(botaoInstalar()).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText(/Adicionar à Tela de Início/)).not.toBeVisible();
+    expect(screen.getByText("Instale a Lupa no celular.")).toBeVisible();
+    expect(screen.queryByText("Adicionar à Tela de Início")).toBeNull();
 
     fireEvent.click(botaoInstalar());
 
-    expect(botaoInstalar()).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText(/Adicionar à Tela de Início/)).toBeVisible();
-    expect(screen.getByText("Compartilhar")).toBeVisible();
+    expect(screen.getByText("Adicionar à Tela de Início")).toBeVisible();
+    // O botão do Safari é desenhado; o nome vai para quem ouve a tela.
+    expect(screen.getByText("Compartilhar")).toHaveClass("sr-only");
+    expect(screen.queryByText("Instale a Lupa no celular.")).toBeNull();
+    expect(container.querySelector("ol, ul")).toBeNull();
+    expect(container.querySelectorAll("p")).toHaveLength(1);
   });
 
-  it("dentro do Instagram, explica como abrir no navegador", async () => {
+  it("dentro do Instagram, diz para abrir no navegador", async () => {
     noAparelho(INSTAGRAM);
     await montar();
     fireEvent.click(botaoInstalar());
 
-    expect(screen.getByText(/não deixam instalar/)).toBeVisible();
     expect(screen.getByText("Abrir no navegador")).toBeVisible();
   });
 });
 
 describe("no Android", () => {
-  it("sem o pedido do navegador, o toque mostra o caminho pelo menu", async () => {
+  it("sem o pedido do navegador, o toque dá a dica do menu", async () => {
     noAparelho(ANDROID);
     await montar();
     fireEvent.click(botaoInstalar());
@@ -141,14 +147,13 @@ describe("no Android", () => {
     window.__lupaPedidoDeInstalacao = pedido;
     await montar();
 
-    // Instala direto: não há passos para abrir.
-    expect(botaoInstalar()).not.toHaveAttribute("aria-expanded");
-
     await act(async () => {
       fireEvent.click(botaoInstalar());
     });
 
+    // Instala direto: nenhuma dica no caminho.
     expect(pedido.prompt).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Instalar app")).toBeNull();
     expect(screen.queryByRole("button", { name: "Instalar" })).toBeNull();
   });
 
@@ -170,14 +175,18 @@ describe("no Android", () => {
   it("o pedido que chega depois da tela montada passa a instalar direto", async () => {
     noAparelho(ANDROID);
     await montar();
-    expect(botaoInstalar()).toHaveAttribute("aria-expanded", "false");
+    const pedido = pedidoFalso("accepted");
 
     act(() => {
-      window.__lupaPedidoDeInstalacao = pedidoFalso("accepted");
+      window.__lupaPedidoDeInstalacao = pedido;
       window.dispatchEvent(new Event(EVENTO_INSTALAVEL));
     });
+    await act(async () => {
+      fireEvent.click(botaoInstalar());
+    });
 
-    expect(botaoInstalar()).not.toHaveAttribute("aria-expanded");
+    expect(pedido.prompt).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Instalar app")).toBeNull();
   });
 });
 

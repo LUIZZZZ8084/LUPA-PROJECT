@@ -8,9 +8,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 20/10/2026.**
+**Última atualização: 21/10/2026.**
 
 ## Concluído
+
+Em 21/10/2026:
+
+- O convite de instalar deixou de abrir a caixa de passos: no iPhone, o
+  toque troca a frase da faixa por uma dica de uma linha, e a faixa não
+  cresce —
+  [#477](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/477)
 
 Em 20/10/2026:
 

@@ -2336,11 +2336,19 @@ não conhece o caminho do Compartilhar não instala.
 **O botão diz a verdade sobre o que o toque faz.** No Android que já
 entregou o pedido de instalação (`beforeinstallprompt`), o toque abre a
 janela do navegador. A Apple não dá a site nenhum um jeito de instalar, e
-no iPhone o toque mostra os três passos, com o desenho dos botões do
-Safari. Dentro do Instagram e do Facebook nada instala, e o toque explica
-como abrir no navegador. No Android antes de o pedido chegar — o Chrome só
-o entrega depois de a pessoa interagir com a página —, o toque mostra o
-caminho pelo menu.
+no iPhone o toque troca a frase da faixa por uma dica: o desenho do botão
+Compartilhar e "Adicionar à Tela de Início". Dentro do Instagram e do
+Facebook nada instala, e a dica é abrir no navegador. No Android antes de
+o pedido chegar — o Chrome só o entrega depois de a pessoa interagir com a
+página —, a dica é o menu ⋮.
+
+**A dica cabe na faixa, e a faixa não cresce (#477).** A primeira versão
+abria embaixo dela uma caixa com três passos e uma nota, e no iPhone isso
+ocupava quase metade da tela. O Luiz achou que poluía e pediu só o botão.
+Só o botão não basta onde ele não instala, então ficou o mínimo, no lugar
+da frase: um desenho e o nome da opção. O caso raro — o iPhone que esconde
+o Compartilhar atrás do ⋯, a opção que não aparece dentro de um app — saiu
+junto: explicá-lo custava a tela de todo mundo.
 
 **O aparelho sai do que o navegador diz de si** (`aparelhoDoNavegador`, em
 `src/lib/instalacao.ts`), e não da largura da tela: o pedido era "no
@@ -2369,8 +2377,8 @@ Chrome, para a mesma oferta não aparecer duas vezes. Quem tocou "Agora não"
 continua tendo o "Instalar app" no menu do Chrome.
 
 **O projeto `mobile` do e2e vê a faixa em toda tela**, porque o Pixel 7 se
-apresenta como Android. A varredura de contraste das rotas a mede fechada;
-os passos abertos, nos dois temas, ficam em `instalar-app.spec.ts`.
+apresenta como Android. A varredura de contraste das rotas a mede sem a dica;
+a dica, nos dois temas, fica em `instalar-app.spec.ts`.
 
 ### Busca sem resultado é vocabulário, não histórico de pessoa
 

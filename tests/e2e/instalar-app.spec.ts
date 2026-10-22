@@ -40,20 +40,24 @@ async function aguardarHidratacao(page: Page) {
 test.describe("no iPhone", () => {
   test.use(comoAparelho("iPhone 13"));
 
-  test("o botão mostra os passos, com contraste nos dois temas", async ({
+  test("o botão troca a frase pela dica, sem a faixa crescer, com contraste nos dois temas", async ({
     page,
   }) => {
     await page.goto("/");
     const instalar = convite(page).getByRole("button", { name: "Instalar" });
     await expect(instalar).toBeVisible();
+    const antes = (await convite(page).boundingBox())?.height ?? 0;
 
     await instalar.click();
-    await expect(instalar).toHaveAttribute("aria-expanded", "true");
     await expect(
       convite(page).getByText("Adicionar à Tela de Início"),
     ).toBeVisible();
 
-    // Os passos só existem depois do clique: a varredura das rotas não os vê.
+    // A dica mora no lugar da frase (#477): no máximo uma linha a mais.
+    const depois = (await convite(page).boundingBox())?.height ?? 0;
+    expect(depois - antes).toBeLessThanOrEqual(18);
+
+    // A dica só existe depois do clique: a varredura das rotas não a vê.
     for (const tema of ["claro", "escuro"] as const) {
       await page.evaluate((t) => {
         if (t === "escuro") document.documentElement.dataset.theme = "dark";
@@ -118,8 +122,8 @@ test.describe("no Android", () => {
   }) => {
     await page.goto("/");
     const instalar = convite(page).getByRole("button", { name: "Instalar" });
-    // Antes do pedido, o toque mostraria o caminho pelo menu.
-    await expect(instalar).toHaveAttribute("aria-expanded", "false");
+    await expect(instalar).toBeVisible();
+    await aguardarHidratacao(page);
 
     await page.evaluate(() => {
       const pedido = new Event("beforeinstallprompt", { cancelable: true });
@@ -132,8 +136,8 @@ test.describe("no Android", () => {
       window.dispatchEvent(pedido);
     });
 
-    // Com o pedido guardado pelo script do `<head>`, o botão instala direto.
-    await expect(instalar).not.toHaveAttribute("aria-expanded");
+    // Com o pedido guardado pelo script do `<head>`, o botão instala
+    // direto; sem ele, o toque só daria a dica do menu.
     await instalar.click();
 
     await expect(page.locator("html")).toHaveAttribute(

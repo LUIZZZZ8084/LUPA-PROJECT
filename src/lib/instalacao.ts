@@ -8,11 +8,11 @@
  *   site um pedido de instalação (`beforeinstallprompt`), e um toque abre a
  *   janela de instalar. Ele só chega quando o navegador decide — depois de
  *   a pessoa interagir com a página, e nunca se o app já está instalado.
- *   Antes disso, o toque mostra o caminho pelo menu.
+ *   Antes disso, o toque dá a dica do menu.
  * - **iPhone**: a Apple não dá a site nenhum um jeito de instalar. O toque
- *   mostra os passos do Compartilhar.
+ *   dá a dica do Compartilhar.
  * - **Dentro do Instagram ou do Facebook**: nenhum dos dois deixa instalar
- *   por dentro, em nenhum sistema. O toque explica como abrir no navegador.
+ *   por dentro, em nenhum sistema. A dica é abrir no navegador.
  * - **Computador**: não há convite. O pedido foi para quem está no celular.
  *
  * As regras são funções puras, com o aparelho e o estado chegando por
@@ -27,8 +27,8 @@ export type Aparelho = "android" | "iphone" | "app-embutido" | "computador";
 export type Oferta =
   | "nenhuma"
   | "instalar-direto"
-  | "passos-iphone"
-  | "passos-android"
+  | "dica-iphone"
+  | "dica-android"
   | "abrir-no-navegador";
 
 /**
@@ -91,11 +91,11 @@ export function ofertaDeInstalacao(estado: {
   if (estado.dispensado) return "nenhuma";
   switch (estado.aparelho) {
     case "iphone":
-      return "passos-iphone";
+      return "dica-iphone";
     case "app-embutido":
       return "abrir-no-navegador";
     case "android":
-      return estado.temPedido ? "instalar-direto" : "passos-android";
+      return estado.temPedido ? "instalar-direto" : "dica-android";
   }
 }
 
