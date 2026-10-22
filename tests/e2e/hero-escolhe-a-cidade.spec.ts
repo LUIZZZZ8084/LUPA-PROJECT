@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { aguardarHidratacao } from "./helpers";
 
 /**
  * A busca do hero oferece a cidade logo depois do estado (#380).
@@ -11,11 +12,21 @@ import { expect, test } from "@playwright/test";
  * Com sessão: sem ela, `/vagas` manda para o login, e o que se confere aqui
  * é a lista de verdade, com os dois filtros já marcados.
  */
+/*
+ * Todo teste que clica ou escolhe algo no hero espera a hidratação antes (#483).
+ *
+ * O alternador Vagas/Serviços e o estado da busca vivem no React. O clique que
+ * chega antes de o React assumir se perde, e a busca sai para `/vagas` em vez de
+ * `/servicos`: era o que fazia estes testes falharem às vezes no celular, em
+ * desenvolvimento (onde a hidratação demora), inclusive na `main`. É o mesmo
+ * cuidado que `escolherCidade` e `aguardarHidratacao` já têm em `helpers.ts`.
+ */
 test.describe("hero: estado e cidade", () => {
   test("escolher o estado e a cidade abre a lista com os dois filtros", async ({
     page,
   }) => {
     await page.goto("/");
+    await aguardarHidratacao(page, 'select[name="uf"]');
 
     await page.getByLabel("Estado").selectOption("MT");
     const cidade = page.getByLabel("Cidade");
@@ -35,6 +46,7 @@ test.describe("hero: estado e cidade", () => {
 
   test("'Todas as cidades' busca o estado inteiro", async ({ page }) => {
     await page.goto("/");
+    await aguardarHidratacao(page, 'select[name="uf"]');
 
     await page.getByLabel("Estado").selectOption("MT");
     await expect(page.getByLabel("Cidade")).toHaveValue("");
@@ -45,6 +57,7 @@ test.describe("hero: estado e cidade", () => {
 
   test("a mesma escolha vale para Serviços", async ({ page }) => {
     await page.goto("/");
+    await aguardarHidratacao(page, 'select[name="uf"]');
 
     await page.getByRole("button", { name: "Serviços" }).click();
     await page.getByLabel("Estado").selectOption("MT");
@@ -61,6 +74,7 @@ test.describe("hero: estado e cidade", () => {
     page,
   }) => {
     await page.goto("/");
+    await aguardarHidratacao(page, 'select[name="uf"]');
     await expect(page.getByLabel("Cidade")).toHaveCount(0);
 
     await page.getByLabel("Estado").selectOption("MT");
@@ -76,6 +90,7 @@ test.describe("hero: estado e cidade", () => {
   test("sem rolagem horizontal com a cidade, no celular", async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.goto("/");
+    await aguardarHidratacao(page, 'select[name="uf"]');
     await page.getByLabel("Estado").selectOption("MT");
     await expect(page.getByLabel("Cidade")).toBeVisible();
 
@@ -95,6 +110,7 @@ test.describe("hero: estado e cidade", () => {
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/");
+    await aguardarHidratacao(page, 'select[name="uf"]');
     await page.getByLabel("Estado").selectOption("MT");
 
     const [estado, cidade, buscar, termo] = await Promise.all([

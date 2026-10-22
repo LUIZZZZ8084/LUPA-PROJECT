@@ -301,6 +301,23 @@ html[data-theme="dark"] {
 }
 
 /*
+ * Os títulos equilibram as linhas (#483).
+ *
+ * Um título que quebra em três linhas deixava uma palavra sozinha, o jeito
+ * mais comum de ele parecer mal diagramado: no celular, "Encontre seu /
+ * próximo / trabalho". `text-wrap: balance` distribui as palavras para as
+ * linhas ficarem parecidas. Não acrescenta linha nenhuma (só muda onde elas
+ * quebram), então não mexe na altura de nada que já cabia. Limita-se a h1, h2
+ * e h3, os títulos: nos parágrafos o navegador teria de refazer a quebra do
+ * texto corrido inteiro, sem ganho que se veja.
+ */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/*
  * A lista que abre ao tocar num <select> é desenhada pelo navegador (#462).
  *
  * O preflight do Tailwind deixa o fundo do select transparente e a cor do
