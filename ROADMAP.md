@@ -14,6 +14,14 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 22/10/2026:
 
+- Terceira rodada da revisão de design: o texto do banner da home não passa
+  mais por baixo do ombro do homem (media-se pelos pixels da foto: cobria o
+  homem a 640 a 700 px e a 320 px, e hoje não cobre em nenhuma das 17 larguras
+  testadas); os títulos equilibram as linhas, sem palavra sozinha na última;
+  e os testes do hero esperam a hidratação, o que acaba com a falha
+  intermitente do alternador Vagas/Serviços no celular. A aba "Empresa" do
+  candidato fica como está, porque o código registra que ela é de propósito —
+  [#483](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/483)
 - Segunda rodada da revisão de design, com os cinco itens que ficaram da
   primeira: no celular os alvos de toque passam a 44 px (botões pequenos,
   filtros, logo e botão de tema, estrelas de nota e links soltos; o desktop
