@@ -121,6 +121,11 @@ describe("EncerrarVagaButton", () => {
       expect(screen.getByText("Vaga já encerrada.")).toBeInTheDocument(),
     );
     expect(screen.queryByRole("group")).toBeNull();
-    expect(screen.getByRole("button", { name: "Encerrar" })).toBeEnabled();
+    // O botão só reabilita quando a transição termina, um instante depois de a
+    // mensagem aparecer: conferir na hora é uma corrida que, de vez em quando,
+    // pega o botão ainda desabilitado (#483).
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Encerrar" })).toBeEnabled(),
+    );
   });
 });
