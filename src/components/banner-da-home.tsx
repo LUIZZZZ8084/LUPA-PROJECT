@@ -72,6 +72,18 @@ import type { ReactNode } from "react";
  * navegador não sabe fazer isso, a camada simplesmente não aparece e a foto
  * fica como estava.
  *
+ * **O texto não passa para cima do homem (#483).** A coluna do texto tinha
+ * largura própria (`max-w-md`) e a foto ficava à direita sem reserva: entre 640
+ * e uns 750 px a frase de apoio passava por baixo do ombro, e em celular
+ * pequeno também. A coluna agora é o menor entre o teto de antes e o que sobra
+ * à esquerda da foto: `100%` menos a largura da foto (9,14 rem abaixo de
+ * `sm`, 15,54 rem a partir dele, que é a altura do banner vezes 435/476) e uma
+ * folga. A partir de `lg` o texto vive numa coluna só dele, antes da foto, e
+ * não precisa disto. Abaixo de 360 px a coluna fica tão estreita que o texto
+ * ganharia linhas e passaria do pé do banner, então o título e a frase
+ * encolhem um pouco ali. Um e2e confere, pelos pixels da foto, 17 larguras, e
+ * que o texto não vaza.
+ *
  * A foto é decorativa (`alt=""`): ela não informa nada que o texto não diga.
  */
 export function BannerDaHome({
@@ -117,14 +129,14 @@ export function BannerDaHome({
         />
       </div>
 
-      <div className="relative z-10 col-start-1 row-start-1 max-w-[10.5rem] self-center pl-5 sm:max-w-md sm:pl-10 lg:max-w-none lg:self-start lg:pt-12 lg:pl-10 xl:pl-14">
+      <div className="relative z-10 col-start-1 row-start-1 max-w-[min(10.5rem,calc(100%-9.5rem))] self-center pl-5 sm:max-w-[min(28rem,calc(100%-16rem))] sm:pl-10 lg:max-w-none lg:self-start lg:pt-12 lg:pl-10 xl:pl-14">
         {local && (
           <SeloDeLugar local={local} className="mb-4 hidden lg:inline-flex" />
         )}
-        <h1 className="font-bold text-[1.3rem] text-[color:var(--banner-titulo)] leading-[1.12] tracking-tight sm:text-4xl lg:text-5xl">
+        <h1 className="font-bold text-[1.3rem] text-[color:var(--banner-titulo)] leading-[1.12] tracking-tight max-[359px]:text-[1.15rem] sm:text-4xl lg:text-5xl">
           Encontre seu próximo trabalho
         </h1>
-        <p className="mt-2 text-[12.5px] text-[color:var(--banner-texto)] leading-snug sm:mt-3 sm:text-base sm:leading-relaxed lg:text-lg">
+        <p className="mt-2 text-[12.5px] text-[color:var(--banner-texto)] leading-snug max-[359px]:text-xs sm:mt-3 sm:text-base sm:leading-relaxed lg:text-lg">
           Vagas e profissionais perto de você, de forma simples e rápida.
         </p>
       </div>
