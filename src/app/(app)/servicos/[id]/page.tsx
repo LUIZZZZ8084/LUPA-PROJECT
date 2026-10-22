@@ -359,7 +359,7 @@ export default async function ProviderPage({
           block
         />
       </BarraDeAcaoFixa>
-      <p className="mt-2 text-center text-[11px] text-faint">
+      <p className="mt-2 text-center text-xs text-faint">
         A conversa acontece direto no seu WhatsApp. A Lupa não cobra nada de
         quem contrata.
       </p>

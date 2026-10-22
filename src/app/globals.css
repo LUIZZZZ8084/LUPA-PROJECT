@@ -80,7 +80,16 @@
    * sendo `panel-3` (4,61:1).
    */
   --color-danger: #a82727;
-  --color-star: #8a5a06;
+  /*
+   * A estrela é gráfico, não texto (#481): nenhum `text-star` pinta letra, só
+   * o ícone. Para gráfico o WCAG 2.2 pede 3:1 (1.4.11), e não os 4,5:1 do
+   * texto. Esta cor dividia o valor com `--color-warn`, que é texto de
+   * aviso e por isso precisa de 4,5:1, e a nota ficava marrom. `#b87700`
+   * é o dourado mais vivo que ainda passa de 3:1 sobre os quatro fundos de
+   * cartão (3,70 no branco, 3,07 no pior, `panel-3`). No escuro a estrela já
+   * era dourada.
+   */
+  --color-star: #b87700;
   /*
    * Verde do WhatsApp de verdade (`#25d366`) não passa nem perto de
    * 4.5:1 sobre branco — é cor pensada para ícone sobre fundo escuro do

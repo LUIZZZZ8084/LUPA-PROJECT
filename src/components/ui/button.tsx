@@ -24,10 +24,10 @@ const button = cva(
         danger: "bg-danger/15 text-danger hover:bg-danger/25",
       },
       size: {
-        sm: "h-9 px-3.5 text-[13px]",
+        sm: "h-9 px-3.5 text-[13px] pointer-coarse:h-11",
         md: "h-11 px-5 text-sm",
         lg: "h-13 px-6 text-[15px]",
-        icon: "h-10 w-10",
+        icon: "h-10 w-10 pointer-coarse:h-11 pointer-coarse:w-11",
       },
       block: {
         true: "w-full",

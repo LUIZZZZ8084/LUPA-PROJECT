@@ -208,7 +208,7 @@ export function FilterBar({
           <button
             type="button"
             onClick={clearFilters}
-            className="inline-flex h-9 flex-none items-center gap-1.5 rounded-full px-3 text-[13px] text-muted transition-colors hover:text-ink"
+            className="inline-flex h-9 flex-none items-center gap-1.5 rounded-full px-3 pointer-coarse:h-11 text-[13px] text-muted transition-colors hover:text-ink"
           >
             <X size={14} />
             Limpar filtros
@@ -267,7 +267,7 @@ function FilterSelect({
       </select>
       <span
         className={cn(
-          "pointer-events-none inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium",
+          "pointer-events-none inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 pointer-coarse:h-11 text-[13px] font-medium",
           "transition-colors duration-200",
           active ? activeStyle : "border-line bg-panel text-muted",
           // O chip travado se distingue pelo fundo e pela ausência da seta,

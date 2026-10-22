@@ -54,7 +54,7 @@ export function Denunciar({
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="inline-flex items-center gap-1.5 text-xs text-muted underline-offset-2 hover:underline"
+        className="-my-3.5 inline-flex items-center gap-1.5 py-3.5 text-xs text-muted underline-offset-2 hover:underline"
       >
         <Flag size={12} />
         {rotulo}

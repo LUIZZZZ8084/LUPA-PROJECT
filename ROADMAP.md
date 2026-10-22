@@ -14,6 +14,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 22/10/2026:
 
+- Segunda rodada da revisão de design, com os cinco itens que ficaram da
+  primeira: no celular os alvos de toque passam a 44 px (botões pequenos,
+  filtros, logo e botão de tema, estrelas de nota e links soltos; o desktop
+  mantém a densidade); nenhum texto que informa tem menos de 12 px (eram 10 e
+  11 em chips, selos, navegação e no bloco de confiança da home); os
+  placeholders de exemplo começam com "Ex.:" para não parecerem preenchidos;
+  "Encerrar" vaga é um botão discreto que confirma na própria tela, sem a
+  caixa do navegador e sem o vermelho cheio; e a estrela do tema claro é
+  dourada, com a nota da home acompanhada do ícone —
+  [#481](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/481)
 - Cinco ajustes de uma revisão de design, medidos no navegador em celular e
   desktop: o título da vaga tem até duas linhas e o selo "Novo" foi para a
   linha da empresa (antes cortava o cargo, como "Operador de M…" no

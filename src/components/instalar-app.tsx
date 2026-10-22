@@ -169,7 +169,7 @@ export function InstalarApp() {
           onClick={dispensar}
           aria-label="Agora não"
           title="Agora não"
-          className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-muted transition-colors hover:bg-panel-2 hover:text-ink"
+          className="flex h-9 w-9 flex-none items-center justify-center rounded-full pointer-coarse:h-11 pointer-coarse:w-11 text-muted transition-colors hover:bg-panel-2 hover:text-ink"
         >
           <X size={16} aria-hidden />
         </button>

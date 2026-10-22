@@ -170,22 +170,33 @@ function VisivelParaEmpresas({ ligado }: { ligado: boolean }) {
   const idExplicacao = `${id}-explicacao`;
 
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-line bg-panel-2 p-4">
+    <div className="relative flex items-start gap-3 rounded-xl border border-line bg-panel-2 p-4">
       <input
         id={id}
         type="checkbox"
         name="visivelParaEmpresas"
         defaultChecked={ligado}
         aria-describedby={idExplicacao}
-        className="mt-0.5 h-4 w-4 flex-none rounded border-line bg-panel accent-vagas"
+        className="relative z-10 mt-0.5 h-4 w-4 flex-none rounded border-line bg-panel accent-vagas"
       />
       <div className="text-sm">
-        <label htmlFor={id} className="font-semibold">
+        {/*
+          O `::after` estica o rótulo sobre a linha toda (#481): o alvo de
+          toque passa a ser o cartão inteiro, e não a caixa de 16 px. O
+          rótulo continua curto, então o nome acessível não muda. A caixa
+          fica acima do rótulo (`z-10`), para o toque exato nela ir direto a
+          ela: com o rótulo por cima, uma ferramenta que clica pelo centro do
+          campo recebia "o rótulo intercepta o clique".
+        */}
+        <label
+          htmlFor={id}
+          className="font-semibold after:absolute after:inset-0 after:content-['']"
+        >
           Quero que empresas me encontrem
         </label>
         <p
           id={idExplicacao}
-          className="mt-1 text-[11px] leading-relaxed text-muted"
+          className="mt-1 text-xs leading-relaxed text-muted"
         >
           Empresas com vaga aberta passam a ver seu nome, sua cidade, suas
           habilidades e seu contato — mesmo sem você se candidatar. Seu
@@ -267,14 +278,14 @@ function Experiencias({
               <Input
                 name="expCargo"
                 defaultValue={linha.dado.role}
-                placeholder="Operador de colheitadeira"
+                placeholder="Ex.: Operador de colheitadeira"
               />
             </Field>
             <Field label="Empresa">
               <Input
                 name="expEmpresa"
                 defaultValue={linha.dado.company}
-                placeholder="Agro Norte Ltda."
+                placeholder="Ex.: Agro Norte Ltda."
               />
             </Field>
           </div>
@@ -283,7 +294,7 @@ function Experiencias({
             <Input
               name="expPeriodo"
               defaultValue={linha.dado.period}
-              placeholder="2021 — 2023"
+              placeholder="Ex.: 2021 — 2023"
             />
           </Field>
 
@@ -358,7 +369,7 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
           <Input
             name="formacao"
             defaultValue={c?.formacao ?? ""}
-            placeholder="Ensino médio completo"
+            placeholder="Ex.: Ensino médio completo"
           />
         </Field>
 
@@ -387,7 +398,7 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
           <Input
             name="disponibilidade"
             defaultValue={c?.disponibilidade ?? ""}
-            placeholder="Imediata"
+            placeholder="Ex.: Imediata"
           />
         </Field>
       </Secao>
@@ -622,7 +633,7 @@ function Empresa({ perfil }: { perfil: PerfilCompleto }) {
             <Input
               name="setor"
               defaultValue={e?.setor ?? ""}
-              placeholder="Agronegócio"
+              placeholder="Ex.: Agronegócio"
             />
           </Field>
 

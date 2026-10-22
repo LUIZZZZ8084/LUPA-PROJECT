@@ -46,7 +46,7 @@ export function ReviewsPanel({
                 {formatRating(avgRating)}
               </div>
               <Stars rating={avgRating} className="mt-1.5" />
-              <p className="mt-1.5 text-[11px] text-muted">
+              <p className="mt-1.5 text-xs text-muted">
                 {reviewCount} avaliações
               </p>
             </div>
@@ -57,7 +57,7 @@ export function ReviewsPanel({
                 const pct = reviews.length ? (count / reviews.length) * 100 : 0;
                 return (
                   <div key={star} className="flex items-center gap-2">
-                    <span className="w-2 text-[11px] text-muted tabular-nums">
+                    <span className="w-2 text-xs text-muted tabular-nums">
                       {star}
                     </span>
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-panel-3">
@@ -67,7 +67,7 @@ export function ReviewsPanel({
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <span className="w-5 text-right text-[11px] text-faint tabular-nums">
+                    <span className="w-5 text-right text-xs text-faint tabular-nums">
                       {count}
                     </span>
                   </div>
@@ -87,7 +87,7 @@ export function ReviewsPanel({
                         {review.reviewer_name}
                       </span>
                       <Stars rating={review.rating} size={12} />
-                      <span className="text-[11px] text-faint">
+                      <span className="text-xs text-faint">
                         {timeAgo(review.created_at)}
                       </span>
                     </div>

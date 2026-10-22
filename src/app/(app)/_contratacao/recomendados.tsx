@@ -54,7 +54,7 @@ export function Recomendados({
           <Panel key={vaga.vagaId} className="p-4 sm:p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-sm font-semibold">{vaga.titulo}</h3>
-              <p className="text-[11px] text-muted">
+              <p className="text-xs text-muted">
                 {vaga.cidade} · pede {vaga.pedidas.length}{" "}
                 {vaga.pedidas.length === 1 ? "habilidade" : "habilidades"}
               </p>
@@ -100,10 +100,10 @@ function Lista({
 }) {
   return (
     <div className="mt-4 border-t border-line pt-3 first:mt-3">
-      <h4 className="text-[11px] font-semibold tracking-wide text-muted uppercase">
+      <h4 className="text-xs font-semibold tracking-wide text-muted uppercase">
         {titulo}
       </h4>
-      {dica && <p className="mt-0.5 text-[11px] text-muted">{dica}</p>}
+      {dica && <p className="mt-0.5 text-xs text-muted">{dica}</p>}
 
       <ul className="mt-2 space-y-2">
         {pessoas.map((p) => (
@@ -130,7 +130,7 @@ function Pessoa({
       <Avatar name={pessoa.nome} src={pessoa.avatarUrl} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{pessoa.nome}</p>
-        <p className="mt-0.5 text-[11px] text-muted">
+        <p className="mt-0.5 text-xs text-muted">
           {pessoa.casadas.length} de {pessoa.deQuantas} habilidades
           {pessoa.cidade ? ` · ${pessoa.cidade}` : ""}
         </p>
@@ -161,7 +161,7 @@ function Pessoa({
       {pessoa.candidaturaId ? (
         <Link
           href={`${base}/candidaturas/${pessoa.candidaturaId}`}
-          className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-2 transition-colors hover:bg-panel-2"
+          className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-xl p-2 transition-colors hover:bg-panel-2"
         >
           {corpo}
         </Link>
@@ -178,7 +178,7 @@ function Pessoa({
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Falar com ${pessoa.nome} no WhatsApp`}
-          className="mt-2 flex-none rounded-lg border border-line p-2 text-muted transition-colors hover:border-vagas hover:text-vagas"
+          className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg border border-line text-muted transition-colors hover:border-vagas hover:text-vagas"
         >
           <MessageCircle size={16} />
         </a>

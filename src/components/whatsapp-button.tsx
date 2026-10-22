@@ -126,7 +126,7 @@ export function WhatsAppIconButton({
       rel="noopener noreferrer"
       aria-label={`Conversar com ${providerName} no WhatsApp`}
       className={cn(
-        "flex h-10 w-10 flex-none items-center justify-center rounded-full",
+        "flex h-11 w-11 flex-none items-center justify-center rounded-full",
         "bg-whatsapp/15 text-whatsapp transition-colors hover:bg-whatsapp/25",
         className,
       )}

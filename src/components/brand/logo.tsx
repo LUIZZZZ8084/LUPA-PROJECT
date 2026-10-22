@@ -94,7 +94,7 @@ export function LupaLogo({
       <span className="leading-none">
         <Nome size={size} />
         {tagline && (
-          <span className="mt-2 block text-[11px] font-medium text-muted">
+          <span className="mt-2 block text-xs font-medium text-muted">
             {tagline}
           </span>
         )}

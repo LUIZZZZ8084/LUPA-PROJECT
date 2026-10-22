@@ -100,7 +100,7 @@ export function AlternarTema({ className }: { className?: string }) {
       }
       title={escuro ? "Tema claro" : "Tema escuro"}
       className={cn(
-        "relative flex h-10 w-10 flex-none items-center justify-center rounded-full text-muted transition-colors hover:bg-panel-2 hover:text-ink",
+        "relative flex h-11 w-11 flex-none items-center justify-center rounded-full text-muted transition-colors hover:bg-panel-2 hover:text-ink",
         className,
       )}
     >

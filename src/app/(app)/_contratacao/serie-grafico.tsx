@@ -62,7 +62,7 @@ export function SerieGrafico({ serie }: { serie: PontoDaSerie[] }) {
   return (
     <div className="mt-5 space-y-4">
       <div>
-        <p className="mb-1.5 text-[11px] font-semibold text-muted">
+        <p className="mb-1.5 text-xs font-semibold text-muted">
           Visualizações por dia
         </p>
         <Barras
@@ -73,7 +73,7 @@ export function SerieGrafico({ serie }: { serie: PontoDaSerie[] }) {
       </div>
 
       <div>
-        <p className="mb-1.5 text-[11px] font-semibold text-muted">
+        <p className="mb-1.5 text-xs font-semibold text-muted">
           Candidaturas por dia
         </p>
         <Barras
@@ -83,7 +83,7 @@ export function SerieGrafico({ serie }: { serie: PontoDaSerie[] }) {
         />
       </div>
 
-      <div className="flex justify-between text-[10px] text-muted tabular-nums">
+      <div className="flex justify-between text-xs text-muted tabular-nums">
         <span>{primeiro}</span>
         <span>{ultimo}</span>
       </div>
@@ -110,7 +110,7 @@ export function SerieGrafico({ serie }: { serie: PontoDaSerie[] }) {
         ))}
       </ul>
 
-      <p className="text-[11px] leading-relaxed text-muted">
+      <p className="text-xs leading-relaxed text-muted">
         Visualização conta cada abertura da vaga, inclusive quando a mesma
         pessoa volta depois. Serve para comparar dias e vagas entre si, não para
         contar quantas pessoas diferentes viram. Suas próprias aberturas não

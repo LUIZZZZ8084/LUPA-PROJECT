@@ -133,7 +133,7 @@ export function PerfilCandidato({ perfil }: { perfil: DadosCandidato | null }) {
             {perfil.experiencias.map((e) => (
               <li key={`${e.company}-${e.role}-${e.period}`}>
                 <p className="text-sm font-semibold">{e.role}</p>
-                <p className="text-[11px] text-muted">
+                <p className="text-xs text-muted">
                   {e.company} · {e.period}
                 </p>
                 {e.description && (

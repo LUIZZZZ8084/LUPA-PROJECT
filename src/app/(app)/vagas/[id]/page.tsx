@@ -127,7 +127,7 @@ export default async function JobDetailPage({
                     href={redes.site}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
+                    className="-my-3.5 inline-flex items-center py-3.5 text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
                   >
                     Site
                   </a>
@@ -137,7 +137,7 @@ export default async function JobDetailPage({
                     href={redes.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
+                    className="-my-3.5 inline-flex items-center py-3.5 text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
                   >
                     Instagram
                   </a>
@@ -147,7 +147,7 @@ export default async function JobDetailPage({
                     href={redes.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
+                    className="-my-3.5 inline-flex items-center py-3.5 text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
                   >
                     Facebook
                   </a>
@@ -295,7 +295,7 @@ function Fact({
 }) {
   return (
     <div className="rounded-xl border border-line bg-panel-2 p-3">
-      <p className="flex items-center gap-1.5 text-[11px] text-faint">
+      <p className="flex items-center gap-1.5 text-xs text-faint">
         {icon}
         {label}
       </p>

@@ -159,7 +159,7 @@ export function AbasDoPerfil({
                       />
                     </span>
                   ) : (
-                    <span className="flex aspect-square w-full items-center justify-center bg-panel-2 p-2 text-center text-[11px] text-muted">
+                    <span className="flex aspect-square w-full items-center justify-center bg-panel-2 p-2 text-center text-xs text-muted">
                       {t.titulo}
                     </span>
                   )}
@@ -567,7 +567,7 @@ export function GerenciarTrabalhos({
                 name="titulo"
                 required
                 maxLength={80}
-                placeholder="Quadro de disjuntores trocado"
+                placeholder="Ex.: Quadro de disjuntores trocado"
                 className="mt-1.5 w-full rounded-xl border border-line bg-panel-2 px-4 py-2.5 text-sm"
               />
             </div>
@@ -582,7 +582,7 @@ export function GerenciarTrabalhos({
                 required
                 rows={3}
                 maxLength={600}
-                placeholder="Troca completa no Jardim Botânico, com disjuntores DR."
+                placeholder="Ex.: Troca completa no Jardim Botânico, com disjuntores DR."
                 className="mt-1.5 w-full rounded-xl border border-line bg-panel-2 px-4 py-2.5 text-sm"
               />
             </div>

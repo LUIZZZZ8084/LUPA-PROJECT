@@ -298,7 +298,7 @@ export function NewJobForm({
               {WORK_MODES.map((modo) => (
                 <label
                   key={modo}
-                  className="flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line px-2 py-2.5 text-center text-[13px] text-muted leading-tight transition-colors hover:border-line-soft has-[:checked]:border-empresas has-[:checked]:bg-empresas/8 has-[:checked]:text-ink"
+                  className="flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line px-2 py-2.5 text-center text-[13px] text-muted leading-tight transition-colors hover:border-line-soft has-[:checked]:border-empresas has-[:checked]:bg-empresas/8 has-[:checked]:text-ink"
                 >
                   <input
                     type="radio"
@@ -342,7 +342,7 @@ export function NewJobForm({
               ).map(([valor, rotulo]) => (
                 <label
                   key={valor}
-                  className="flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line px-2 py-2.5 text-center text-[13px] text-muted leading-tight transition-colors hover:border-line-soft has-[:checked]:border-empresas has-[:checked]:bg-empresas/8 has-[:checked]:text-ink"
+                  className="flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line px-2 py-2.5 text-center text-[13px] text-muted leading-tight transition-colors hover:border-line-soft has-[:checked]:border-empresas has-[:checked]:bg-empresas/8 has-[:checked]:text-ink"
                 >
                   <input
                     type="radio"
@@ -379,7 +379,7 @@ export function NewJobForm({
               error={state.campos?.bairro}
               hint="Opcional. Aparece só no anúncio da vaga."
             >
-              <Input name="bairro" maxLength={60} placeholder="Centro" />
+              <Input name="bairro" maxLength={60} placeholder="Ex.: Centro" />
             </Field>
           </div>
 
@@ -403,7 +403,7 @@ export function NewJobForm({
           >
             <Input
               name="habilidades"
-              placeholder="colheitadeira, CNH D, manutenção básica"
+              placeholder="Ex.: colheitadeira, CNH D, manutenção básica"
             />
           </Field>
 
@@ -419,7 +419,7 @@ export function NewJobForm({
                 min={0}
                 step={100}
                 inputMode="numeric"
-                placeholder="1800"
+                placeholder="Ex.: 1800"
               />
             </Field>
 
@@ -430,7 +430,7 @@ export function NewJobForm({
                 min={0}
                 step={100}
                 inputMode="numeric"
-                placeholder="2200"
+                placeholder="Ex.: 2200"
               />
             </Field>
           </div>

@@ -343,7 +343,7 @@ export default async function HomePage() {
               />
             </div>
 
-            <p className="mt-5 border-t border-line pt-4 text-xs leading-relaxed text-muted">
+            <p className="mt-5 border-t border-line pt-4 text-sm leading-relaxed text-muted">
               A Lupa confere o cadastro. O resto você combina direto com a outra
               pessoa, pelo WhatsApp: valor, prazo e detalhes. E se candidatar é
               grátis.
@@ -489,7 +489,7 @@ function ActionCard({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold">{title}</span>
-        <span className="mt-0.5 block truncate text-[11px] text-muted">
+        <span className="mt-0.5 block truncate text-xs text-muted">
           {subtitle}
         </span>
       </span>
@@ -581,7 +581,7 @@ function TrustItem({
         {icon}
       </div>
       <p className="text-[13px] font-semibold">{title}</p>
-      <p className="mt-1 text-[11px] leading-snug text-muted">{description}</p>
+      <p className="mt-1 text-[13px] leading-snug text-muted">{description}</p>
     </div>
   );
 }

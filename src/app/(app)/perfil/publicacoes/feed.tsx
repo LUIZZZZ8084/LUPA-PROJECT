@@ -93,7 +93,11 @@ function FormularioNovo({
           error={state.campos?.titulo}
           hint="Ex.: Instalação de chuveiro e disjuntor"
         >
-          <Input name="titulo" required placeholder="Instalação elétrica" />
+          <Input
+            name="titulo"
+            required
+            placeholder="Ex.: Instalação elétrica"
+          />
         </Field>
 
         <Field
@@ -106,7 +110,7 @@ function FormularioNovo({
             name="corpo"
             rows={4}
             required
-            placeholder="Troca do quadro de disjuntores num sobrado no Jardim Botânico. Instalei DR e refiz a fiação da cozinha. Um dia de serviço."
+            placeholder="Ex.: Troca do quadro de disjuntores num sobrado no Jardim Botânico. Instalei DR e refiz a fiação da cozinha. Um dia de serviço."
           />
         </Field>
 

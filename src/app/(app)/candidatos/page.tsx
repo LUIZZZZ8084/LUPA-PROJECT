@@ -165,7 +165,7 @@ export default async function CandidatosPage({
                   <p className="truncate text-sm font-semibold underline-offset-2 group-hover:underline">
                     {c.full_name}
                   </p>
-                  <p className="truncate text-[11px] text-muted">
+                  <p className="truncate text-xs text-muted">
                     {c.desired_area ?? "Área não informada"}
                     {` · ${c.city}`}
                   </p>
