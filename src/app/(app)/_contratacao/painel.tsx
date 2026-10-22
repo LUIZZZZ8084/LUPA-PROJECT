@@ -412,7 +412,7 @@ export async function PainelDeContratacao({
               return (
                 <li
                   key={job.id}
-                  className="flex items-center gap-3 p-4 transition-colors hover:bg-panel-2"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4 transition-colors hover:bg-panel-2"
                 >
                   <Link
                     href={`/vagas/${job.id}`}
@@ -451,15 +451,19 @@ export async function PainelDeContratacao({
                           : "Encerrada"}
                     </Badge>
                   </Link>
-                  {job.status === "aberta" && (
-                    <div className="flex shrink-0 items-center gap-2">
-                      {expirada ? (
+                  {/*
+                    O "Encerrar" devolve o botão e, ao ser tocado, um quadro de
+                    confirmação que ocupa a linha inteira: por isso a linha é
+                    `flex-wrap` e o botão é filho direto dela (#481).
+                  */}
+                  {job.status === "aberta" &&
+                    (expirada ? (
+                      <div className="flex shrink-0 items-center gap-2">
                         <ReativarVagaButton id={job.id} />
-                      ) : (
-                        <EncerrarVagaButton id={job.id} titulo={job.title} />
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    ) : (
+                      <EncerrarVagaButton id={job.id} titulo={job.title} />
+                    ))}
                 </li>
               );
             })}
