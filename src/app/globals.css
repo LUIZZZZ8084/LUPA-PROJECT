@@ -378,11 +378,39 @@ body {
   display: none;
 }
 
-/* Foco visível e consistente em toda a interface */
-:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+/*
+ * Foco visível e consistente em toda a interface.
+ *
+ * O anel não mexe no raio da borda. O `outline` acompanha o `border-radius`
+ * do próprio elemento, e forçar `border-radius: 6px` aqui, por estar fora de
+ * qualquer camada, vencia os utilitários do Tailwind e deformava quem ganhava
+ * foco por teclado: o botão redondo do tema virava quadrado, a aba em pílula
+ * idem, e o "Buscar" e os cartões perdiam o raio (#479).
+ *
+ * `[tabindex="-1"]` fica de fora. É o que o código usa para levar o foco a um
+ * lugar, como o `<main>` do "Pular para o conteúdo", e esse lugar não é um
+ * controle: um anel em volta da página inteira não ajuda ninguém. Sem esta
+ * exceção o navegador desenharia o anel dele (`outline: auto`), por isso a
+ * regra logo abaixo o apaga.
+ *
+ * Esta regra está fora de `@layer`, então vence `focus:outline-none` e
+ * parentes: para tirar o anel de um elemento, é preciso mudar a regra, não
+ * pôr a classe.
+ */
+:where(
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
   outline: 2px solid var(--color-vagas);
   outline-offset: 2px;
-  border-radius: 6px;
+}
+
+[tabindex="-1"]:focus {
+  outline: none;
 }
 
 /* Brilho ambiente usado no topo das telas principais */
