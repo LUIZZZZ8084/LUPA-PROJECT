@@ -44,7 +44,7 @@ export function EncerrarVagaButton({
         )}
         Encerrar
       </Button>
-      {erro && <p className="text-[11px] text-danger">{erro}</p>}
+      {erro && <p className="text-xs text-danger">{erro}</p>}
     </div>
   );
 }

@@ -424,7 +424,7 @@ export async function PainelDeContratacao({
                       <p className="line-clamp-2 text-sm font-semibold">
                         {job.title}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-muted">
+                      <p className="mt-0.5 text-xs text-muted">
                         {pluralize(
                           job.applicant_count,
                           "candidato",
@@ -513,7 +513,7 @@ export async function PainelDeContratacao({
                     <p className="truncate text-sm font-semibold underline-offset-2 group-hover:underline">
                       {app.candidate.full_name}
                     </p>
-                    <p className="truncate text-[11px] text-muted">
+                    <p className="truncate text-xs text-muted">
                       {app.job_title}
                       {` · ${timeAgo(app.created_at)}`}
                     </p>

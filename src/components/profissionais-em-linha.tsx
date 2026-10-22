@@ -39,11 +39,11 @@ export function ProfissionaisEmLinha({
             <span className="block w-full truncate font-semibold text-xs leading-tight group-hover:text-servicos">
               {primeiroNome(p.full_name)}
             </span>
-            <span className="block w-full truncate text-[11px] text-muted leading-tight">
+            <span className="block w-full truncate text-xs text-muted leading-tight">
               {p.category.name}
             </span>
             {p.review_count > 0 && (
-              <span className="block text-[11px] font-medium text-ink leading-tight">
+              <span className="block text-xs font-medium text-ink leading-tight">
                 {formatRating(p.avg_rating)}
               </span>
             )}

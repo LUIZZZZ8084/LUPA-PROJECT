@@ -295,7 +295,7 @@ function Fact({
 }) {
   return (
     <div className="rounded-xl border border-line bg-panel-2 p-3">
-      <p className="flex items-center gap-1.5 text-[11px] text-faint">
+      <p className="flex items-center gap-1.5 text-xs text-faint">
         {icon}
         {label}
       </p>

@@ -48,12 +48,12 @@ export function CancelarRenovacaoButton({
             ? "Cancelar antes de ser cobrado"
             : "Cancelar renovação"}
         </Button>
-        <p className="mt-1.5 text-[11px] text-faint leading-relaxed">
+        <p className="mt-1.5 text-xs text-faint leading-relaxed">
           {emTesteGratis
             ? "Você sai do teste sem pagar nada, e seu perfil deixa de aparecer na busca."
             : "Você para de ser cobrado, e continua na busca até o fim do período já pago."}
         </p>
-        {erro && <p className="mt-1.5 text-[11px] text-danger">{erro}</p>}
+        {erro && <p className="mt-1.5 text-xs text-danger">{erro}</p>}
       </div>
     );
   }

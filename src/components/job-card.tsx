@@ -66,7 +66,7 @@ export function JobCard({
           <span className="truncate">{job.company.company_name}</span>
           {job.company.doc_verified && <VerifiedMark size={13} />}
           {job.company.pessoa_fisica && (
-            <span className="flex-none text-[11px] text-faint">
+            <span className="flex-none text-xs text-faint">
               · Pessoa física
             </span>
           )}
@@ -86,7 +86,7 @@ export function JobCard({
           {formatSalaryRange(job.salary_min, job.salary_max)}
         </p>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-faint">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-faint">
           <span className="inline-flex items-center gap-1">
             <MapPin size={12} />
             {job.neighborhood ? `${job.neighborhood}, ` : ""}

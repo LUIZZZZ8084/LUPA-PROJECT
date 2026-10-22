@@ -193,7 +193,7 @@ function VisivelParaEmpresas({ ligado }: { ligado: boolean }) {
         </label>
         <p
           id={idExplicacao}
-          className="mt-1 text-[11px] leading-relaxed text-muted"
+          className="mt-1 text-xs leading-relaxed text-muted"
         >
           Empresas com vaga aberta passam a ver seu nome, sua cidade, suas
           habilidades e seu contato — mesmo sem você se candidatar. Seu

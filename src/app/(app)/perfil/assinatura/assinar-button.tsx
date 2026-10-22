@@ -42,7 +42,7 @@ export function AssinarButton({ rotulo }: { rotulo: string }) {
         )}
         {rotulo}
       </Button>
-      {erro && <p className="mt-1.5 text-[11px] text-danger">{erro}</p>}
+      {erro && <p className="mt-1.5 text-xs text-danger">{erro}</p>}
     </div>
   );
 }

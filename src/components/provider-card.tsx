@@ -67,7 +67,7 @@ export function ProviderCard({
           </span>
         </div>
 
-        <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-faint">
+        <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-faint">
           <MapPin size={12} />
           {provider.city}
           {provider.years_experience

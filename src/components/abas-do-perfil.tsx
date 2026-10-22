@@ -159,7 +159,7 @@ export function AbasDoPerfil({
                       />
                     </span>
                   ) : (
-                    <span className="flex aspect-square w-full items-center justify-center bg-panel-2 p-2 text-center text-[11px] text-muted">
+                    <span className="flex aspect-square w-full items-center justify-center bg-panel-2 p-2 text-center text-xs text-muted">
                       {t.titulo}
                     </span>
                   )}

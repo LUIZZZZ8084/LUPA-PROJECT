@@ -46,7 +46,7 @@ export function MoverCandidaturaSelect({
           </option>
         ))}
       </Select>
-      {erro && <p className="text-[11px] text-danger">{erro}</p>}
+      {erro && <p className="text-xs text-danger">{erro}</p>}
     </div>
   );
 }

@@ -166,7 +166,7 @@ function SeloDeLugar({
 }) {
   return (
     <span
-      className={`items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 font-medium text-[11px] text-muted ${className}`}
+      className={`items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 font-medium text-xs text-muted ${className}`}
     >
       <MapPin size={12} className="text-vagas" aria-hidden />
       {local}
