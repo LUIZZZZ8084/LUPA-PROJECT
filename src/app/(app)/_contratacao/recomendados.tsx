@@ -161,7 +161,7 @@ function Pessoa({
       {pessoa.candidaturaId ? (
         <Link
           href={`${base}/candidaturas/${pessoa.candidaturaId}`}
-          className="flex min-w-0 flex-1 items-start gap-3 rounded-xl p-2 transition-colors hover:bg-panel-2"
+          className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-xl p-2 transition-colors hover:bg-panel-2"
         >
           {corpo}
         </Link>
@@ -178,7 +178,7 @@ function Pessoa({
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Falar com ${pessoa.nome} no WhatsApp`}
-          className="mt-2 flex-none rounded-lg border border-line p-2 text-muted transition-colors hover:border-vagas hover:text-vagas"
+          className="mt-1 flex h-11 w-11 flex-none items-center justify-center rounded-lg border border-line text-muted transition-colors hover:border-vagas hover:text-vagas"
         >
           <MessageCircle size={16} />
         </a>

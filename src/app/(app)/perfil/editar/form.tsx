@@ -170,7 +170,7 @@ function VisivelParaEmpresas({ ligado }: { ligado: boolean }) {
   const idExplicacao = `${id}-explicacao`;
 
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-line bg-panel-2 p-4">
+    <div className="relative flex items-start gap-3 rounded-xl border border-line bg-panel-2 p-4">
       <input
         id={id}
         type="checkbox"
@@ -180,7 +180,15 @@ function VisivelParaEmpresas({ ligado }: { ligado: boolean }) {
         className="mt-0.5 h-4 w-4 flex-none rounded border-line bg-panel accent-vagas"
       />
       <div className="text-sm">
-        <label htmlFor={id} className="font-semibold">
+        {/*
+          O `::after` estica o rótulo sobre a linha toda (#481): o alvo de
+          toque passa a ser o cartão inteiro, e não a caixa de 16 px. O
+          rótulo continua curto, então o nome acessível não muda.
+        */}
+        <label
+          htmlFor={id}
+          className="font-semibold after:absolute after:inset-0 after:content-['']"
+        >
           Quero que empresas me encontrem
         </label>
         <p

@@ -73,7 +73,10 @@ export function EsqueciSenhaForm() {
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href="/entrar" className="text-muted text-xs underline">
+          <Link
+            href="/entrar"
+            className="inline-flex min-h-11 items-center text-muted text-xs underline"
+          >
             Lembrei a senha
           </Link>
           <Button type="submit" variant="vagas" disabled={pendente}>

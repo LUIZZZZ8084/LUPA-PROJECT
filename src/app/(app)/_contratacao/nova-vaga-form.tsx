@@ -298,7 +298,7 @@ export function NewJobForm({
               {WORK_MODES.map((modo) => (
                 <label
                   key={modo}
-                  className="flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line px-2 py-2.5 text-center text-[13px] text-muted leading-tight transition-colors hover:border-line-soft has-[:checked]:border-empresas has-[:checked]:bg-empresas/8 has-[:checked]:text-ink"
+                  className="flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line px-2 py-2.5 text-center text-[13px] text-muted leading-tight transition-colors hover:border-line-soft has-[:checked]:border-empresas has-[:checked]:bg-empresas/8 has-[:checked]:text-ink"
                 >
                   <input
                     type="radio"
@@ -342,7 +342,7 @@ export function NewJobForm({
               ).map(([valor, rotulo]) => (
                 <label
                   key={valor}
-                  className="flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line px-2 py-2.5 text-center text-[13px] text-muted leading-tight transition-colors hover:border-line-soft has-[:checked]:border-empresas has-[:checked]:bg-empresas/8 has-[:checked]:text-ink"
+                  className="flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line px-2 py-2.5 text-center text-[13px] text-muted leading-tight transition-colors hover:border-line-soft has-[:checked]:border-empresas has-[:checked]:bg-empresas/8 has-[:checked]:text-ink"
                 >
                   <input
                     type="radio"

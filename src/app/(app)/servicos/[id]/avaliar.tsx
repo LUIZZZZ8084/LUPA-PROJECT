@@ -32,7 +32,7 @@ function Nota({ erro }: { erro?: string }) {
         {[1, 2, 3, 4, 5].map((n) => (
           <label
             key={n}
-            className="cursor-pointer rounded-lg p-1 focus-within:ring-2 focus-within:ring-servicos"
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg focus-within:ring-2 focus-within:ring-servicos"
           >
             <input
               type="radio"

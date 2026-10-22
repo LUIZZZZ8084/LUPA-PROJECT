@@ -502,7 +502,7 @@ export async function PainelDeContratacao({
                 */}
                 <Link
                   href={`${area.base}/candidaturas/${app.id}`}
-                  className="group flex min-w-0 flex-1 items-center gap-3"
+                  className="group flex min-h-11 min-w-0 flex-1 items-center gap-3"
                 >
                   <Avatar
                     name={app.candidate.full_name}
@@ -542,7 +542,7 @@ export async function PainelDeContratacao({
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Falar com ${app.candidate.full_name} no WhatsApp`}
-                      className="flex-none rounded-lg border border-line p-2 text-muted transition-colors hover:border-vagas hover:text-vagas"
+                      className="flex h-11 w-11 flex-none items-center justify-center rounded-lg border border-line text-muted transition-colors hover:border-vagas hover:text-vagas"
                     >
                       <MessageCircle size={16} />
                     </a>

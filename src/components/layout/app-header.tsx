@@ -58,7 +58,11 @@ export function AppHeader({
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
-        <Link href="/" aria-label="Lupa — início">
+        <Link
+          href="/"
+          aria-label="Lupa — início"
+          className="flex h-11 items-center"
+        >
           <LupaLogo size={28} />
         </Link>
 

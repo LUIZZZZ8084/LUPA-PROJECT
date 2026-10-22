@@ -50,7 +50,7 @@ export function BackLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="mb-4 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-ink"
+      className="-mt-3 mb-1 inline-flex items-center gap-1 py-3 text-sm text-muted transition-colors hover:text-ink"
     >
       <ChevronLeft size={16} />
       {label}
@@ -77,7 +77,7 @@ export function PageTitle({
       {back && (
         <Link
           href={back.href}
-          className="mb-3 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-ink"
+          className="-mt-3 mb-0 inline-flex items-center gap-1 py-3 text-sm text-muted transition-colors hover:text-ink"
         >
           <ChevronLeft size={16} />
           {back.label}
