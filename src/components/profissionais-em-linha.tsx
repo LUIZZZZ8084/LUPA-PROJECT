@@ -1,3 +1,4 @@
+import { Star } from "lucide-react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { formatRating } from "@/lib/format";
@@ -43,7 +44,16 @@ export function ProfissionaisEmLinha({
               {p.category.name}
             </span>
             {p.review_count > 0 && (
-              <span className="block text-xs font-medium text-ink leading-tight">
+              // A estrela diz o que o número é: sozinho, "5,0" podia ser
+              // preço, idade ou código (#481). O leitor de tela ouve "Nota".
+              <span className="inline-flex items-center gap-0.5 text-xs font-medium text-ink leading-tight">
+                <Star
+                  size={11}
+                  className="text-star"
+                  fill="currentColor"
+                  aria-hidden
+                />
+                <span className="sr-only">Nota </span>
                 {formatRating(p.avg_rating)}
               </span>
             )}

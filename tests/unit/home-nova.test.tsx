@@ -280,6 +280,30 @@ describe("ProfissionaisEmLinha", () => {
     expect(screen.getByRole("link")).not.toHaveTextContent("0,0");
   });
 
+  /**
+   * O número sozinho não diz o que é: "5,0" podia ser preço, idade, código
+   * (#481). Ao lado vai a estrela, e quem ouve a tela escuta "Nota".
+   */
+  it("a nota vem com a estrela, e o leitor de tela ouve 'Nota'", () => {
+    const [p] = quatro;
+    const { container, rerender } = render(
+      <ProfissionaisEmLinha
+        providers={[{ ...p, review_count: 3, avg_rating: 4.5 }]}
+      />,
+    );
+    const estrela = container.querySelector("svg.text-star");
+    expect(estrela).not.toBeNull();
+    expect(estrela).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByRole("link")).toHaveTextContent("Nota 4,5");
+
+    rerender(
+      <ProfissionaisEmLinha
+        providers={[{ ...p, review_count: 0, avg_rating: 0 }]}
+      />,
+    );
+    expect(container.querySelector("svg.text-star")).toBeNull();
+  });
+
   it("o alvo de toque tem 44 px de altura mínima", () => {
     render(<ProfissionaisEmLinha providers={[quatro[0]]} />);
     expect(screen.getByRole("link").className).toContain("min-h-11");
