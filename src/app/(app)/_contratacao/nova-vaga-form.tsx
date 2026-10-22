@@ -379,7 +379,7 @@ export function NewJobForm({
               error={state.campos?.bairro}
               hint="Opcional. Aparece só no anúncio da vaga."
             >
-              <Input name="bairro" maxLength={60} placeholder="Centro" />
+              <Input name="bairro" maxLength={60} placeholder="Ex.: Centro" />
             </Field>
           </div>
 
@@ -403,7 +403,7 @@ export function NewJobForm({
           >
             <Input
               name="habilidades"
-              placeholder="colheitadeira, CNH D, manutenção básica"
+              placeholder="Ex.: colheitadeira, CNH D, manutenção básica"
             />
           </Field>
 
@@ -419,7 +419,7 @@ export function NewJobForm({
                 min={0}
                 step={100}
                 inputMode="numeric"
-                placeholder="1800"
+                placeholder="Ex.: 1800"
               />
             </Field>
 
@@ -430,7 +430,7 @@ export function NewJobForm({
                 min={0}
                 step={100}
                 inputMode="numeric"
-                placeholder="2200"
+                placeholder="Ex.: 2200"
               />
             </Field>
           </div>

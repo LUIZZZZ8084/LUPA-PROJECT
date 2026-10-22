@@ -116,7 +116,7 @@ export function FormularioDeAvaliacao({
           <Textarea
             name="comentario"
             rows={3}
-            placeholder="Chegou na hora e explicou o que ia fazer antes de começar."
+            placeholder="Ex.: Chegou na hora e explicou o que ia fazer antes de começar."
           />
         </Field>
 

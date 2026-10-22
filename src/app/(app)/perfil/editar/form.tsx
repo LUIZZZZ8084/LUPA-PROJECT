@@ -275,14 +275,14 @@ function Experiencias({
               <Input
                 name="expCargo"
                 defaultValue={linha.dado.role}
-                placeholder="Operador de colheitadeira"
+                placeholder="Ex.: Operador de colheitadeira"
               />
             </Field>
             <Field label="Empresa">
               <Input
                 name="expEmpresa"
                 defaultValue={linha.dado.company}
-                placeholder="Agro Norte Ltda."
+                placeholder="Ex.: Agro Norte Ltda."
               />
             </Field>
           </div>
@@ -291,7 +291,7 @@ function Experiencias({
             <Input
               name="expPeriodo"
               defaultValue={linha.dado.period}
-              placeholder="2021 — 2023"
+              placeholder="Ex.: 2021 — 2023"
             />
           </Field>
 
@@ -366,7 +366,7 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
           <Input
             name="formacao"
             defaultValue={c?.formacao ?? ""}
-            placeholder="Ensino médio completo"
+            placeholder="Ex.: Ensino médio completo"
           />
         </Field>
 
@@ -395,7 +395,7 @@ function Curriculo({ perfil }: { perfil: PerfilCompleto }) {
           <Input
             name="disponibilidade"
             defaultValue={c?.disponibilidade ?? ""}
-            placeholder="Imediata"
+            placeholder="Ex.: Imediata"
           />
         </Field>
       </Secao>
@@ -630,7 +630,7 @@ function Empresa({ perfil }: { perfil: PerfilCompleto }) {
             <Input
               name="setor"
               defaultValue={e?.setor ?? ""}
-              placeholder="Agronegócio"
+              placeholder="Ex.: Agronegócio"
             />
           </Field>
 
