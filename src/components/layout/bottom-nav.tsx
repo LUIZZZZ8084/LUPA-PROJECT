@@ -81,7 +81,7 @@ export function BottomNav({
         "pb-[env(safe-area-inset-bottom)]",
       )}
     >
-      <ul className="mx-auto flex max-w-lg">
+      <ul className="mx-auto flex h-[var(--barra-inferior)] max-w-lg">
         {itens(papel).map(({ href, label, icon: Icon, accent }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -91,7 +91,7 @@ export function BottomNav({
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
+                  "flex h-full flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors",
                   active ? accent : "text-faint hover:text-muted",
                 )}
               >

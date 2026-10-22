@@ -279,6 +279,19 @@ html[data-theme="dark"] {
 }
 
 /*
+ * A altura da navegação inferior, sem a borda de cima (1 px) e sem a área
+ * segura do aparelho (#479).
+ *
+ * A navegação a usa como altura explícita, e a barra de ação fixa das telas
+ * de vaga e de profissional a usa para ficar logo acima dela. Um número só: se
+ * cada um medisse a sua, a barra de ação acabaria por baixo da navegação ou
+ * com um vão, e só um celular de verdade mostraria qual.
+ */
+:root {
+  --barra-inferior: 3.75rem;
+}
+
+/*
  * A lista que abre ao tocar num <select> é desenhada pelo navegador (#462).
  *
  * O preflight do Tailwind deixa o fundo do select transparente e a cor do
@@ -378,11 +391,54 @@ body {
   display: none;
 }
 
-/* Foco visível e consistente em toda a interface */
-:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+/*
+ * Foco visível e consistente em toda a interface.
+ *
+ * O anel não mexe no raio da borda. O `outline` acompanha o `border-radius`
+ * do próprio elemento, e forçar `border-radius: 6px` aqui, por estar fora de
+ * qualquer camada, vencia os utilitários do Tailwind e deformava quem ganhava
+ * foco por teclado: o botão redondo do tema virava quadrado, a aba em pílula
+ * idem, e o "Buscar" e os cartões perdiam o raio (#479).
+ *
+ * `[tabindex="-1"]` fica de fora. É o que o código usa para levar o foco a um
+ * lugar, como o `<main>` do "Pular para o conteúdo", e esse lugar não é um
+ * controle: um anel em volta da página inteira não ajuda ninguém. Sem esta
+ * exceção o navegador desenharia o anel dele (`outline: auto`), por isso a
+ * regra logo abaixo o apaga.
+ *
+ * Esta regra está fora de `@layer`, então vence `focus:outline-none` e
+ * parentes: para tirar o anel de um elemento, é preciso mudar a regra, não
+ * pôr a classe.
+ */
+:where(
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
   outline: 2px solid var(--color-vagas);
   outline-offset: 2px;
-  border-radius: 6px;
+}
+
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
+/*
+ * Com o teclado do celular aberto, o pé da tela é do campo (#479).
+ *
+ * A barra de ação fixa e a navegação ficariam as duas por cima do que a
+ * pessoa digita, comendo uns 140 px de uma tela que o teclado já encolheu.
+ * Em aparelho de toque, enquanto um campo de texto tem foco, a barra de ação
+ * sai da frente; volta quando o foco sai. Não vale para o mouse: no desktop não
+ * há teclado na tela, e a barra continua sendo o botão que a pessoa procura.
+ */
+@media (pointer: coarse) {
+  body:has(input:focus, textarea:focus, select:focus) [data-barra-de-acao] {
+    visibility: hidden;
+  }
 }
 
 /* Brilho ambiente usado no topo das telas principais */

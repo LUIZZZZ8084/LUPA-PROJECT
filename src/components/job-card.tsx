@@ -39,12 +39,17 @@ export function JobCard({
       />
 
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <h3 className="min-w-0 truncate text-[15px] leading-snug font-semibold text-ink group-hover:text-vagas">
-            {job.title}
-          </h3>
-          {isNew(job.created_at) && <Badge tone="vagas">Novo</Badge>}
-        </div>
+        {/*
+         * O título tem até duas linhas, e o selo "Novo" não divide a largura
+         * com ele (#479). Ao lado do título o selo tirava uns 50 px, e o
+         * cargo, que é o que a pessoa lê primeiro, aparecia cortado:
+         * "Operador de Máquinas Agríc…" na lista e "Operador de M…" no
+         * carrossel da home, no celular. O selo foi para a linha da empresa,
+         * onde sobra espaço.
+         */}
+        <h3 className="line-clamp-2 min-w-0 text-[15px] leading-snug font-semibold text-ink group-hover:text-vagas">
+          {job.title}
+        </h3>
 
         {/* O truncate precisa ficar no texto, não no contêiner flex: em flex
             o ellipsis não se aplica e o nowrap trava a largura do card. */}
@@ -64,6 +69,16 @@ export function JobCard({
             <span className="flex-none text-[11px] text-faint">
               · Pessoa física
             </span>
+          )}
+          {isNew(job.created_at) && (
+            // Compacto de propósito: com o padding do selo comum a linha
+            // cresceria uns 6 px só nos cartões novos.
+            <Badge
+              tone="vagas"
+              className="ml-1 flex-none px-2 py-0.5 leading-none"
+            >
+              Novo
+            </Badge>
           )}
         </p>
 

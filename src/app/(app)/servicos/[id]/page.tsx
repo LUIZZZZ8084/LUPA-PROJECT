@@ -8,6 +8,7 @@ import {
   publicarComFotoComEstado,
 } from "@/app/(app)/perfil/publicacoes/actions";
 import { AbasDoPerfil, GerenciarTrabalhos } from "@/components/abas-do-perfil";
+import { BarraDeAcaoFixa } from "@/components/barra-de-acao-fixa";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
 import { SocialLinks } from "@/components/social-links";
@@ -292,20 +293,6 @@ export default async function ProviderPage({
             </>
           }
         />
-
-        <div className="mt-6 border-t border-line pt-5">
-          <WhatsAppButton
-            phone={provider.phone}
-            providerName={provider.full_name}
-            context={provider.category.name}
-            size="lg"
-            block
-          />
-          <p className="mt-2 text-center text-[11px] text-faint">
-            A conversa acontece direto no seu WhatsApp. A Lupa não cobra nada de
-            quem contrata.
-          </p>
-        </div>
       </Panel>
 
       {podeAvaliar && (
@@ -354,6 +341,28 @@ export default async function ProviderPage({
             : undefined
         }
       />
+
+      {/*
+        O contato fica na barra fixa (#479). No fim do painel ele ficava depois
+        da biografia e das fotos, fora da primeira tela. A barra vem depois das
+        avaliações, e não logo abaixo do painel: o lugar natural dela é onde
+        ela assenta, e quem lê as avaliações é quem está decidindo contratar,
+        então ela acompanha o perfil inteiro. A nota vem logo abaixo e segue a
+        barra quando ela assenta.
+      */}
+      <BarraDeAcaoFixa>
+        <WhatsAppButton
+          phone={provider.phone}
+          providerName={provider.full_name}
+          context={provider.category.name}
+          size="lg"
+          block
+        />
+      </BarraDeAcaoFixa>
+      <p className="mt-2 text-center text-[11px] text-faint">
+        A conversa acontece direto no seu WhatsApp. A Lupa não cobra nada de
+        quem contrata.
+      </p>
 
       {similar.length > 0 && (
         <section className="mt-8">

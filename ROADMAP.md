@@ -8,9 +8,21 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 21/10/2026.**
+**Última atualização: 22/10/2026.**
 
 ## Concluído
+
+Em 22/10/2026:
+
+- Cinco ajustes de uma revisão de design, medidos no navegador em celular e
+  desktop: o título da vaga tem até duas linhas e o selo "Novo" foi para a
+  linha da empresa (antes cortava o cargo, como "Operador de M…" no
+  carrossel); "Candidatar-se" e "Conversar no WhatsApp" ficam presos no pé da
+  tela, acima da navegação, em vez de no fim da página; a barra do navegador
+  e a do app instalado acompanham o tema escuro; o foco por teclado deixou de
+  deformar botões e cartões (a regra global forçava `border-radius: 6px`); e
+  entrou o link "Pular para o conteúdo" —
+  [#479](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/479)
 
 Em 21/10/2026:
 

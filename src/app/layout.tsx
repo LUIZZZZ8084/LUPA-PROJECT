@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { headers } from "next/headers";
 import { DemoBanner } from "@/components/demo-banner";
+import { ID_DO_CONTEUDO } from "@/components/layout/page-shell";
 import { RouteProgress } from "@/components/motion/route-progress";
 import { SCRIPT_PEDIDO_DE_INSTALACAO } from "@/lib/instalacao";
 import { SCRIPT_TEMA_INICIAL } from "@/lib/theme";
@@ -125,6 +126,19 @@ export default async function RootLayout({
         />
       </head>
       <body className="flex min-h-full flex-col bg-bg text-ink">
+        {/*
+         * Pular para o conteúdo (#479): o primeiro item da ordem de Tab, e
+         * só aparece quando recebe foco. Sem ele, quem navega por teclado
+         * passa pelo cabeçalho inteiro (seis paradas na home) antes de
+         * chegar na busca, em toda página. O destino é o `<main>` do
+         * `PageShell`.
+         */}
+        <a
+          href={`#${ID_DO_CONTEUDO}`}
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:border focus:border-line focus:bg-panel focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-ink focus:shadow-lg"
+        >
+          Pular para o conteúdo
+        </a>
         <RouteProgress />
         <DemoBanner />
         {children}

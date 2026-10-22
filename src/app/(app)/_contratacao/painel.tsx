@@ -419,7 +419,9 @@ export async function PainelDeContratacao({
                     className="flex min-w-0 flex-1 items-center gap-3"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">
+                      {/* Duas linhas, e não uma cortada: ao lado há o selo de
+                          estado e o botão (#479). */}
+                      <p className="line-clamp-2 text-sm font-semibold">
                         {job.title}
                       </p>
                       <p className="mt-0.5 text-[11px] text-muted">
