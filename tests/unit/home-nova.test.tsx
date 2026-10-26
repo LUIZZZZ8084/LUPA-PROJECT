@@ -89,8 +89,10 @@ describe("BannerDaHome", () => {
     });
 
     it("vem depois da foto, para ficar por cima dela, e abaixo do texto", () => {
-      const { container, foto, desfoque } = camada();
-      const ordem = [...(container.querySelector("section")?.children ?? [])];
+      const { foto, desfoque } = camada();
+      // Foto e desfoque moram no fundo do banner, que é um item da grade
+      // desde a #465; a ordem que importa é a de dentro dele.
+      const ordem = [...(foto.parentElement?.children ?? [])];
 
       expect(ordem.indexOf(desfoque)).toBeGreaterThan(ordem.indexOf(foto));
       // O texto é `z-10`, a camada não tem z-index: o texto nunca é borrado.
@@ -107,6 +109,10 @@ describe("BannerDaHome", () => {
         expect(foto.className).toContain(classe);
       }
       expect(desfoque.className).toContain(`aspect-[${largura}/${altura}]`);
+      // O teto de altura do computador (#465) também vale para os dois: sem
+      // ele numa das camadas, o desfoque fica mais alto que a foto.
+      const tetos = (c: string) => c.match(/\S*max-h-\S+/g) ?? [];
+      expect(tetos(desfoque.className)).toEqual(tetos(foto.className));
     });
 
     it("borra, mas não pinta: nenhuma cor, então é a mesma nos dois temas", () => {
@@ -132,6 +138,50 @@ describe("BannerDaHome", () => {
     expect(frase.className).toContain("var(--banner-texto)");
     expect(titulo.className).not.toMatch(/text-ink|text-\[#/);
     expect(frase.className).not.toMatch(/text-muted|text-\[#/);
+  });
+});
+
+/**
+ * No computador o banner é o hero inteiro (#465): a busca e os números
+ * entram nele. O selo de lugar existe duas vezes, uma para cada tamanho de
+ * tela, e só uma pode estar à vista — senão o leitor de tela lê duas vezes.
+ */
+describe("BannerDaHome, o hero do computador", () => {
+  it("a busca e o rodapé entram no banner", () => {
+    const { container } = render(
+      <BannerDaHome
+        busca={<form aria-label="busca de teste" />}
+        rodape={<p>números de teste</p>}
+      />,
+    );
+    const banner = container.querySelector("section");
+
+    expect(
+      banner?.contains(screen.getByRole("form", { name: "busca de teste" })),
+    ).toBe(true);
+    expect(banner?.contains(screen.getByText("números de teste"))).toBe(true);
+  });
+
+  it("o selo aparece uma vez em cada tamanho de tela", () => {
+    render(<BannerDaHome local="Sinop - MT" />);
+    const selos = screen.getAllByText("Sinop - MT");
+
+    expect(selos).toHaveLength(2);
+    const classes = selos.map((s) => s.closest("span, div")?.className ?? "");
+    // Um só no computador (some abaixo de `lg`), o outro só fora dele.
+    expect(
+      classes.filter(
+        (c) => /(^|\s)hidden(\s|$)/.test(c) && c.includes("lg:inline-flex"),
+      ),
+    ).toHaveLength(1);
+    expect(selos.filter((s) => s.closest('[class~="lg:hidden"]')).length).toBe(
+      1,
+    );
+  });
+
+  it("sem selo, nenhum pino solto", () => {
+    const { container } = render(<BannerDaHome />);
+    expect(container.querySelector("svg")).toBeNull();
   });
 });
 
@@ -228,6 +278,30 @@ describe("ProfissionaisEmLinha", () => {
       />,
     );
     expect(screen.getByRole("link")).not.toHaveTextContent("0,0");
+  });
+
+  /**
+   * O número sozinho não diz o que é: "5,0" podia ser preço, idade, código
+   * (#481). Ao lado vai a estrela, e quem ouve a tela escuta "Nota".
+   */
+  it("a nota vem com a estrela, e o leitor de tela ouve 'Nota'", () => {
+    const [p] = quatro;
+    const { container, rerender } = render(
+      <ProfissionaisEmLinha
+        providers={[{ ...p, review_count: 3, avg_rating: 4.5 }]}
+      />,
+    );
+    const estrela = container.querySelector("svg.text-star");
+    expect(estrela).not.toBeNull();
+    expect(estrela).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByRole("link")).toHaveTextContent("Nota 4,5");
+
+    rerender(
+      <ProfissionaisEmLinha
+        providers={[{ ...p, review_count: 0, avg_rating: 0 }]}
+      />,
+    );
+    expect(container.querySelector("svg.text-star")).toBeNull();
   });
 
   it("o alvo de toque tem 44 px de altura mínima", () => {

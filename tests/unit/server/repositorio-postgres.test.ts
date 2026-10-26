@@ -43,6 +43,7 @@ function construtor(tabela: string) {
     "insert",
     "update",
     "upsert",
+    "delete",
   ]) {
     builder[metodo] = (...args: unknown[]) => {
       chamadas.push({ tabela, metodo, args });
@@ -762,6 +763,15 @@ describe("teste grátis", () => {
     expect(await repo.reivindicarTesteGratis(ID)).toBe(false);
   });
 
+  it("liberar devolve o teste: grava nulo, e só nesta conta (#406)", async () => {
+    await repo.liberarTesteGratis(ID);
+
+    const atualizacao = chamadas.find((c) => c.metodo === "update");
+    expect(atualizacao?.tabela).toBe("usuarios");
+    expect(atualizacao?.args[0]).toEqual({ teste_gratis_usado_em: null });
+    expect(chamadas.find((c) => c.metodo === "eq")?.args).toEqual(["id", ID]);
+  });
+
   it("falha no banco não passa em silêncio", async () => {
     resposta = { data: null, error: { message: "conexão caiu" } };
     await expect(repo.testeGratisJaUsado(ID)).rejects.toMatchObject({
@@ -770,5 +780,88 @@ describe("teste grátis", () => {
     await expect(repo.reivindicarTesteGratis(ID)).rejects.toMatchObject({
       codigo: "indisponivel",
     });
+    await expect(repo.liberarTesteGratis(ID)).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
+  });
+});
+
+/** Sair dos outros aparelhos grava só o corte, e não a senha (#402). */
+describe("corte de sessões pelo dono", () => {
+  const repo = new RepositorioPostgres();
+  const ID = "11111111-1111-4111-8111-000000000001";
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    resposta = { data: null, error: null };
+  });
+
+  it("grava sessoes_validas_desde, e nada mais", async () => {
+    await repo.cortarSessoes(ID);
+
+    const update = chamadas.find((c) => c.metodo === "update");
+    expect(update?.tabela).toBe("usuarios");
+    expect(Object.keys(update?.args[0] as object)).toEqual([
+      "sessoes_validas_desde",
+    ]);
+    expect(chamadas.find((c) => c.metodo === "eq")?.args).toEqual(["id", ID]);
+  });
+
+  it("falha ao gravar não passa em silêncio", async () => {
+    resposta = { data: null, error: { message: "conexão recusada" } };
+    await expect(repo.cortarSessoes(ID)).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
+  });
+});
+
+/**
+ * Um token vivo por pessoa e finalidade (#398): o novo apaga os
+ * anteriores **antes** de ser gravado, para o próprio token novo não
+ * cair no `delete`. Apagar, e não marcar como usado, é o que mantém a
+ * tabela em um por pessoa e finalidade (#419).
+ */
+describe("token de recuperação", () => {
+  const repo = new RepositorioPostgres();
+  const ID = "11111111-1111-4111-8111-000000000001";
+
+  beforeEach(() => {
+    chamadas.length = 0;
+    resposta = { data: null, error: null };
+  });
+
+  it("apaga os anteriores da mesma finalidade, e depois grava", async () => {
+    await repo.criarTokenDeRecuperacao({
+      usuarioId: ID,
+      tokenHash: "hash-novo",
+      finalidade: "recuperacao",
+      expiraEm: "2026-10-08T13:00:00.000Z",
+    });
+
+    const metodos = chamadas.map((c) => c.metodo);
+    expect(metodos).not.toContain("update");
+    expect(metodos.indexOf("delete")).toBeLessThan(metodos.indexOf("insert"));
+
+    const filtros = chamadas
+      .slice(0, metodos.indexOf("insert"))
+      .filter((c) => c.metodo === "eq" || c.metodo === "is")
+      .map((c) => c.args);
+    expect(filtros).toEqual([
+      ["usuario_id", ID],
+      ["finalidade", "recuperacao"],
+    ]);
+  });
+
+  it("falha ao apagar os anteriores não grava o token novo", async () => {
+    resposta = { data: null, error: { message: "conexão recusada" } };
+    await expect(
+      repo.criarTokenDeRecuperacao({
+        usuarioId: ID,
+        tokenHash: "hash-novo",
+        finalidade: "verificacao_email",
+        expiraEm: "2026-10-08T13:00:00.000Z",
+      }),
+    ).rejects.toMatchObject({ codigo: "indisponivel" });
+    expect(chamadas.some((c) => c.metodo === "insert")).toBe(false);
   });
 });

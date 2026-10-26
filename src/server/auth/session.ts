@@ -23,7 +23,41 @@ import { ehPapel, type Papel } from "./rbac";
  * sessão continua fora do banco; o que entrou foi uma data.
  */
 
-export const NOME_COOKIE = "lupa_sessao";
+/**
+ * `__Host-` onde o cookie é `Secure` (#408).
+ *
+ * O prefixo é uma regra do navegador, não nossa: cookie com esse nome só é
+ * aceito com `Secure`, `Path=/` e sem `Domain`. Sem ele, um subdomínio de
+ * `lupapp.com.br`, ou uma resposta em http antes de o HSTS valer, podia
+ * gravar um `lupa_sessao` para o domínio inteiro — e a pessoa navegaria na
+ * sessão de outro sem saber (fixação de sessão).
+ *
+ * Só em produção porque fora de HTTPS o cookie não é `Secure`
+ * (`opcoesDoCookie`), e o navegador recusaria o nome. A condição é a mesma
+ * do `secure`, para os dois não divergirem.
+ *
+ * Trocar o nome deslogou todo mundo uma vez, no deploy de 09/10/2026:
+ * o cookie antigo continua no navegador até vencer, e ninguém o lê.
+ */
+export const NOME_COOKIE =
+  process.env.NODE_ENV === "production" ? "__Host-lupa_sessao" : "lupa_sessao";
+
+/**
+ * A audiência do token diz de qual ambiente ele veio (#408).
+ *
+ * Era `lupa-app` em todo lugar. Com o mesmo `SESSION_SECRET` em preview e
+ * produção, um token assinado num deploy de preview valia em produção — e
+ * o preview pode rodar em modo demonstração, onde qualquer um cria conta,
+ * com o papel que quiser escrito no próprio token. Conferir na Vercel que
+ * os segredos são diferentes é o certo, e continua sendo; isto é o que
+ * segura o dia em que alguém copiar a variável de um ambiente para o
+ * outro.
+ *
+ * Fora da Vercel (`npm run dev`, a suíte) o ambiente é `local`.
+ */
+function audiencia(): string {
+  return `lupa-app:${process.env.VERCEL_ENV ?? "local"}`;
+}
 
 /**
  * Sete dias sem abrir o app, e a pessoa entra de novo.
@@ -72,6 +106,19 @@ export interface Sessao {
    * senha nascer de novo depois do corte, e escapar dele.
    */
   emitidoEm: number;
+  /**
+   * Quando a pessoa digitou a senha, em epoch de segundos (#413).
+   *
+   * Quase sempre igual a `emitidoEm`. Difere depois de uma reemissão sem
+   * senha — sair dos outros aparelhos, virar prestador —, que precisa de
+   * `iat` novo para escapar do corte gravado na mesma ação, mas não pode
+   * recomeçar a contagem dos trinta dias: repetida, ela manteria a mesma
+   * sessão viva para sempre. É daqui que o teto conta.
+   *
+   * Opcional porque token emitido antes do campo existir não o carrega; aí
+   * vale o `emitidoEm`, como sempre valeu.
+   */
+  entrouEm?: number;
 }
 
 /**
@@ -131,26 +178,36 @@ export function limparCacheDoSegredo(): void {
  * Sem `emitidoEm`, é um login: a sessão começa agora. Com ele, é uma
  * renovação, e o token novo carrega o começo da sessão antiga — e nunca
  * vai além do teto contado dali (`DURACAO_MAXIMA_SEGUNDOS`).
+ *
+ * `entrouEm` é o login de uma sessão reemitida sem senha (#413): o `iat`
+ * é novo, e o teto continua contado do login. Nunca depois do `iat` — um
+ * login no futuro só serviria para esticar o teto.
  */
 export async function assinarSessao(
   usuarioId: string,
   papel: Papel,
   emitidoEm?: number,
+  entrouEm?: number,
 ): Promise<{ token: string; expiraEm: number }> {
   const agora = Math.floor(Date.now() / 1000);
   const inicio = emitidoEm ?? agora;
+  const login = Math.min(entrouEm ?? inicio, inicio);
   const expiraEm = Math.min(
     agora + VALIDADE_SEGUNDOS,
-    inicio + DURACAO_MAXIMA_SEGUNDOS,
+    login + DURACAO_MAXIMA_SEGUNDOS,
   );
 
-  const token = await new SignJWT({ papel })
+  // `lg` só existe quando difere do `iat`: num login comum o payload
+  // continua sendo só id e papel.
+  const claims = login < inicio ? { papel, lg: login } : { papel };
+
+  const token = await new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(usuarioId)
     .setIssuedAt(inicio)
     .setExpirationTime(expiraEm)
     .setIssuer("lupa")
-    .setAudience("lupa-app")
+    .setAudience(audiencia())
     .sign(segredo());
 
   return { token, expiraEm };
@@ -167,7 +224,7 @@ export async function lerSessao(token: string): Promise<Sessao | null> {
   try {
     const { payload } = await jwtVerify(token, segredo(), {
       issuer: "lupa",
-      audience: "lupa-app",
+      audience: audiencia(),
       algorithms: ["HS256"],
     });
 
@@ -181,6 +238,10 @@ export async function lerSessao(token: string): Promise<Sessao | null> {
       papel: payload.papel,
       expiraEm: payload.exp,
       emitidoEm: payload.iat,
+      entrouEm:
+        typeof payload.lg === "number"
+          ? Math.min(payload.lg, payload.iat)
+          : payload.iat,
     };
   } catch {
     // Token inválido é rotina: expirou, veio de outro ambiente, foi mexido.
@@ -215,7 +276,8 @@ function opcoesDoCookie(maxAge: number) {
  *
  * O `iat` e o papel são os da sessão antiga. O papel porque quem o troca
  * (virar prestador) já reemite a sessão na mesma action; o `iat` porque é
- * ele que a revogação compara — ver `Sessao.emitidoEm`.
+ * ele que a revogação compara — ver `Sessao.emitidoEm`. E o login também,
+ * porque é dele que o teto conta (#413).
  */
 export async function renovarSeNecessario(
   sessao: Sessao,
@@ -223,12 +285,13 @@ export async function renovarSeNecessario(
   const agora = Math.floor(Date.now() / 1000);
   if (sessao.expiraEm - agora > RENOVAR_QUANDO_FALTAR) return null;
 
-  const teto = sessao.emitidoEm + DURACAO_MAXIMA_SEGUNDOS;
+  const login = sessao.entrouEm ?? sessao.emitidoEm;
+  const teto = login + DURACAO_MAXIMA_SEGUNDOS;
   if (Math.min(agora + VALIDADE_SEGUNDOS, teto) <= sessao.expiraEm) {
     return null;
   }
 
-  return assinarSessao(sessao.usuarioId, sessao.papel, sessao.emitidoEm);
+  return assinarSessao(sessao.usuarioId, sessao.papel, sessao.emitidoEm, login);
 }
 
 export const CONFIG_SESSAO = {

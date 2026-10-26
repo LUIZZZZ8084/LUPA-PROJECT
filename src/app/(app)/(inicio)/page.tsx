@@ -3,7 +3,6 @@ import {
   BadgeCheck,
   Briefcase,
   Building2,
-  MapPin,
   MessageCircle,
   ShieldCheck,
   Star,
@@ -115,58 +114,72 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
+      {/*
+       * A largura é a do cabeçalho (`max-w-6xl`) desde a #443. Era
+       * `max-w-4xl`, e no computador a home ficava mais estreita que o
+       * cabeçalho logo acima dela: logo e menu não alinhavam com nada.
+       */}
       <section className="aurora border-b border-line">
-        <div className="mx-auto max-w-4xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
-          <BannerDaHome />
-
-          <div className="mt-4 sm:mt-6">
-            {/*
-             * O pino de localização promete "aqui é onde você está" — e até
-             * a #107 dizia sempre "Mato Grosso · começando por Sinop",
-             * pra quem quer que fosse, de qualquer cidade. `origemDoUsuario()`
-             * já lê a cidade da conta para ordenar a busca por perto; usar o
-             * mesmo valor aqui é a diferença entre um selo de abrangência e
-             * uma promessa que o ícone já fazia sem cumprir.
-             *
-             * Sem sessão (a home é pública desde a #241), ou com uma conta
-             * sem cidade, o selo diz o alcance do app — o Brasil inteiro
-             * desde a #301 — em vez de mostrar um pino sem legenda. A cidade
-             * já é gravada com o estado ("Sinop - MT"), então não há rótulo
-             * a montar.
-             */}
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel/60 px-3 py-1 text-[11px] font-medium text-muted">
-              <MapPin size={12} className="text-vagas" />
-              {origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
-            </span>
-          </div>
-
-          <BuscaDoHero
-            ufs={UFS.map((u) => ({ sigla: u.sigla, nome: u.nome }))}
-            visitante={!sessao}
-          />
-
-          <FaixaDeNumeros
-            vagas={totals.jobs}
-            vagasAoMenos={totals.jobsAoMenos}
-            profissionais={totals.providers}
-            profissionaisAoMenos={totals.providersAoMenos}
-          />
-
+        <div className="mx-auto max-w-6xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
           {/*
-           * Para quem não tem conta, o card de conta fica aqui no alto, que
-           * é onde converte (#241). Para quem já entrou, ele é um atalho
-           * para o próprio perfil, e vai para o fim da lista.
+           * O banner é o hero inteiro no computador (#465): selo, título,
+           * busca e números numa coluna dentro dele, e a foto à direita. No
+           * celular ele é só a faixa do título, e o resto vem embaixo, na
+           * ordem de antes. Quem decide onde cada parte fica é a grade do
+           * banner; aqui só se diz o que vai em cada lugar.
+           *
+           * O selo usa a cidade da conta, a mesma que `origemDoUsuario()`
+           * usa para ordenar a busca por perto. Sem sessão (a home é pública
+           * desde a #241), ou com uma conta sem cidade, ele diz o alcance do
+           * app em vez de mostrar um pino sem legenda.
            */}
-          {!sessao && (
-            <div className="mt-3 max-w-sm">
-              <CardDeConta card={terceiroCard} />
-            </div>
-          )}
+          <BannerDaHome
+            local={origem?.cidade ?? "Vagas e serviços em todo o Brasil"}
+            busca={
+              <BuscaDoHero
+                ufs={UFS.map((u) => ({ sigla: u.sigla, nome: u.nome }))}
+                visitante={!sessao}
+              />
+            }
+            rodape={
+              /*
+               * Números e conta empilhados, embaixo da busca. Lado a lado, no
+               * computador, os dois ficavam com uns 280 px cada: "vagas
+               * abertas" quebrava em duas linhas e a legenda do card era
+               * cortada. Para quem não tem conta, o card de conta fica aqui
+               * no alto, que é onde converte (#241); para quem já entrou,
+               * ele é um atalho para o próprio perfil, e vai para o fim da
+               * lista.
+               */
+              <>
+                <FaixaDeNumeros
+                  vagas={totals.jobs}
+                  vagasAoMenos={totals.jobsAoMenos}
+                  profissionais={totals.providers}
+                  profissionaisAoMenos={totals.providersAoMenos}
+                />
+                {!sessao && (
+                  <div className="mt-3 max-w-sm lg:max-w-none">
+                    <CardDeConta card={terceiroCard} />
+                  </div>
+                )}
+              </>
+            }
+          />
         </div>
       </section>
 
-      <PageShell>
-        <div className="space-y-8">
+      <PageShell width="wide">
+        {/*
+         * Na tela larga (#443), vagas e profissionais lado a lado: as vagas
+         * na coluna larga, os profissionais numa lateral. Empilhados, metade
+         * da tela ficava vazia ao lado de cada seção, e os quatro avatares
+         * se espalhavam com vãos enormes entre eles. A lateral começa em
+         * `xl`: em 1024 px ela deixaria cada card de vaga com 330 px e o
+         * título cortado. Abaixo disso a seção fica embaixo, com os quatro
+         * avatares juntos (`sm:max-w-lg`) em vez de espalhados.
+         */}
+        <div className="grid grid-cols-1 gap-y-8 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start xl:gap-x-8">
           {/*
            * No celular as vagas rolam para o lado, uma e meia à vista, para
            * dizer que há mais sem ocupar a tela. A partir de `sm` viram a
@@ -199,29 +212,41 @@ export default async function HomePage() {
             ))}
           </FeedSection>
 
-          <FeedSection
-            title="Profissionais bem avaliados"
-            href="/servicos"
-            accent="text-servicos"
-            listaClassName=""
-            vazio={
-              providers.length === 0 && (
-                <Vazio
-                  texto="Nenhum profissional na vitrine ainda."
-                  acao="Oferece um serviço? Apareça aqui"
-                  href={terceiroCard.href}
-                />
-              )
-            }
-          >
-            <ProfissionaisEmLinha providers={providers} />
-          </FeedSection>
+          <div className="space-y-8">
+            <FeedSection
+              title="Profissionais bem avaliados"
+              href="/servicos"
+              accent="text-servicos"
+              listaClassName=""
+              vazio={
+                providers.length === 0 && (
+                  <Vazio
+                    texto="Nenhum profissional na vitrine ainda."
+                    acao="Oferece um serviço? Apareça aqui"
+                    href={terceiroCard.href}
+                  />
+                )
+              }
+            >
+              <ProfissionaisEmLinha
+                providers={providers}
+                className="grid-cols-4 sm:max-w-lg xl:max-w-none xl:grid-cols-2 xl:gap-3"
+              />
+            </FeedSection>
 
-          {sessao && (
-            <div className="max-w-sm">
-              <CardDeConta card={terceiroCard} />
-            </div>
-          )}
+            {/*
+             * Só no celular (#467). No computador o card ficava solto embaixo
+             * dos profissionais, no meio da página, e o que ele oferece já tem
+             * lugar fixo: o perfil está no avatar do cabeçalho, e o convite
+             * para virar prestador, no fim de `/servicos`. No celular ele fica,
+             * porque é o atalho à mão para quem rola a home.
+             */}
+            {sessao && (
+              <div className="max-w-sm lg:hidden">
+                <CardDeConta card={terceiroCard} />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Chamada para empresas */}
@@ -318,7 +343,7 @@ export default async function HomePage() {
               />
             </div>
 
-            <p className="mt-5 border-t border-line pt-4 text-xs leading-relaxed text-muted">
+            <p className="mt-5 border-t border-line pt-4 text-sm leading-relaxed text-muted">
               A Lupa confere o cadastro. O resto você combina direto com a outra
               pessoa, pelo WhatsApp: valor, prazo e detalhes. E se candidatar é
               grátis.
@@ -464,7 +489,7 @@ function ActionCard({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold">{title}</span>
-        <span className="mt-0.5 block truncate text-[11px] text-muted">
+        <span className="mt-0.5 block truncate text-xs text-muted">
           {subtitle}
         </span>
       </span>
@@ -556,7 +581,7 @@ function TrustItem({
         {icon}
       </div>
       <p className="text-[13px] font-semibold">{title}</p>
-      <p className="mt-1 text-[11px] leading-snug text-muted">{description}</p>
+      <p className="mt-1 text-[13px] leading-snug text-muted">{description}</p>
     </div>
   );
 }

@@ -203,12 +203,34 @@ de uma empresa grava o nome da empresa, não o do responsável — a seção
 envelhece porque o nome deixou de ser editável; a única troca que sobrou,
 a da Receita, leva junto as avaliações já feitas (`renomearAvaliacoesDe`).
 
-**E quem exclui a conta sai do comentário (#235).** A avaliação continua no
-perfil do prestador — é informação dele —, mas o gatilho
-`usuarios_anonimizam_avaliacoes` troca o nome por "Conta excluída" antes de
-a conta sair. É o que a Política de Privacidade promete, e a exclusão é
-feita pelo suporte direto no banco: por isso a garantia mora no banco, e não
-numa tela que o suporte não usa.
+**E quem exclui a conta sai do comentário (#235, #423).** A avaliação
+continua no perfil do prestador — é informação dele —, com "Conta excluída"
+no lugar do nome. Quem troca o nome é `excluir_conta`, o caminho do botão no
+perfil; o gatilho `usuarios_anonimizam_avaliacoes` cobre o que não passa por
+ela — uma linha de `usuarios` apagada à mão no banco. É o que a Política de
+Privacidade promete, e a promessa vale pelos dois caminhos.
+
+**Só se avalia quem é prestador (#439).** A chave estrangeira aponta para
+`usuarios`, não para `perfis_prestador`, e o serviço não conferia: dava
+para gravar avaliação na conta de um candidato, que não aparecia em lugar
+nenhum até ele virar prestador — e aí passava a contar na nota dele. Hoje
+o caminho com banco confere o perfil antes de gravar. Na demonstração não
+há essa conferência, porque os prestadores de exemplo não estão no
+repositório de contas.
+
+**Até 3 avaliações do mesmo prestador por rede a cada 24 horas (#441).**
+Decisão do Luiz em 13/10/2026. Criar conta é barato — 20 por rede a cada
+15 minutos, sem confirmar e-mail —, e cada conta avalia uma vez: de uma
+conexão só, um concorrente afundava a nota de alguém com uma rajada de
+contas novas, e a denúncia (#435) só desfazia uma por uma, depois do
+estrago. A chave é o prestador e a rede (`avaliacao-rede:<id>:<origem>`),
+não quem avalia, porque cada conta falsa tem a própria sessão. O teto vem
+depois de toda validação, para que um envio inválido não gaste a cota da
+rede de ninguém, e a mensagem fala em "amanhã", não em segundos.
+
+Descartadas: exigir e-mail confirmado para avaliar (atrito em quem avalia
+e gasto da cota de e-mail) e deixar só com a denúncia. O que isto não
+fecha: quem usa várias redes. Encarece, não impede.
 
 **A confirmação é renderizada pelo servidor.** A action revalida a rota,
 e a revalidação desmonta o formulário levando junto o "enviado" que ele
@@ -326,6 +348,21 @@ depois de ele ter cogitado cinco.
 quer fazer; por baixo, o registro fica e volta pelo botão ao lado.
 Apagar de verdade tiraria dela um trabalho que ela teve — e arquivar já
 libera a vaga no feed, que é o efeito que ela procurava.
+
+**E o guardado pode ser apagado de vez (#454).** Arquivado, o trabalho sai
+do perfil, mas o arquivo continua no bucket público, acessível pelo
+endereço — e às vezes a foto precisa deixar de existir: a foto errada, a
+casa de um cliente que pediu para tirar. Decisão do Luiz em 13/10/2026:
+"Apagar de vez", só no que já está fora do feed. Os dois passos seguram o
+clique errado, a confirmação diz que não tem volta, e o servidor confere o
+estado além do dono. O registro sai primeiro e o arquivo depois, pela
+mesma conferência de caminho da denúncia de foto (#452); arquivo que fica
+vai ao Sentry.
+
+O cartão guardado usava `opacity-70` para parecer apagado, e a varredura
+de contraste nunca o via, porque rodava com tudo no feed. Saiu a
+opacidade — o selo "Fora do feed" já diz o estado —, e o e2e agora varre
+a tela com um trabalho guardado aberto.
 
 **A foto tem caminho próprio, ao contrário do avatar.** `caminhoDoArquivo`
 usa caminho fixo por pessoa para avatar, logo e currículo, e é de
@@ -765,6 +802,52 @@ endereço e sem o corpo da resposta do Resend**, que pode ecoar o
 destinatário: a regra do log de recuperação vale em dobro no momento em
 que mais se lê log.
 
+**E a cota do dia é dividida (#407).** Os 100 e-mails por dia do Resend
+são uma cota só para o app inteiro, e o limite de 5 em 15 minutos por
+origem deixava um mesmo IP mandar 480 por dia. Hoje há tetos diários por
+cima dele, em `src/server/auth/cota-de-email.ts`: por origem, **separado
+por fluxo** (20 confirmações e 10 recuperações), e por conta de destino. O
+da origem conta todo pedido, exista a conta ou não — contando só os que
+enviam, o bloqueio chegaria mais cedo para quem testa e-mails com conta, e
+diria quais têm. O da conta, na recuperação, não muda a resposta: passa do
+teto, não envia, e responde o mesmo "se existe uma conta". Na confirmação a
+pessoa tem sessão, e a tela diz que passou da cota. Nos dois casos nenhum
+token novo é emitido, e o último link enviado continua valendo.
+
+**A cota é de quem recebe, e quem pede não pode gastá-la toda.** A
+primeira versão contava 5 por conta, de qualquer lugar: cinco pedidos com o
+e-mail de alguém deixavam essa pessoa um dia sem recuperar a senha, lendo
+"enviamos" sem receber nada. Hoje são 3 por conta **e** origem, e 10 por
+conta somando as origens — o par vem antes, então o que passa dele não
+gasta o total. Travar a caixa de alguém de propósito passa a pedir quatro
+origens. E os dois fluxos não dividem o balde da origem porque um IP de
+operadora móvel, num dia de divulgação, gastava a cota com confirmações de
+cadastro, e a recuperação passava a recusar quem nunca tinha pedido nada.
+*Teto que protege uma pessoa não pode ser gasto por outra: confira quem
+paga a conta antes de escolher a chave.*
+
+O bloqueio dura até a janela vencer, contada do primeiro pedido, porque
+quem decide é só `consumirOrcamento`. Conferir antes, como o login faz,
+seria pior aqui: `conferirLimite` lê `bloqueado_ate`, que cada pedido
+acima do teto empurra para frente.
+
+Para a janela de um dia existir, o banco precisou guardar a janela de cada
+chave (`tentativas_de_acesso.janela_segundos`): a limpeza apagava toda
+linha com mais de uma hora que não estivesse bloqueada, e o contador
+diário recomeçava do zero. *Quando um mecanismo ganha uma janela mais
+longa, confira quem apaga as linhas dele.*
+
+**Mas a cota avisa uma vez por janela, não a cada e-mail (#417).** Cota
+estourada é o mesmo fato repetido em todo cadastro dali em diante, e cada
+repetição virava um evento: um dia de lançamento acima dos 100 do Resend
+gastava a cota do Sentry, e o erro de pagamento que viesse depois não
+chegava a ninguém. O primeiro 429 vai ao Sentry; os seguintes, por 15
+minutos, ficam no log comum. É por instância — cada função fria avisa de
+novo —, e basta: o que importa é saber, não contar. O que não é cota
+continua indo toda vez, porque cada um é um defeito. *Alarme que dispara a
+cada repetição do mesmo fato gasta o canal por onde chegaria o próximo
+fato.*
+
 **O token na URL não vai ao Sentry (#360).** O link leva o token na
 query, e a URL entra no evento (`request.url`, `query_string`, atributos
 de span). A máscara por nome de chave não alcançava: a chave ali é `url`,
@@ -777,6 +860,20 @@ e o segredo está dentro do valor. Hoje `scrubSensitiveData` também mascara
 celular, e template com imagem e botão colorido é o formato que os
 provedores mais pontuam como promoção — justamente o e-mail que precisa
 chegar na caixa de entrada, e rápido.
+
+**E o nome de quem se cadastrou não entra cru nele (#445).** A saudação
+cortava o nome no espaço comum e levava o resto como veio. Com outro
+espaço Unicode entre as palavras, uma frase inteira com link cabia ali, e
+como a conta pode ser criada com o e-mail de outra pessoa — a confirmação
+sai sozinha no cadastro —, a Lupa entregava o texto de um estranho, com o
+remetente dela, na caixa de quem não pediu nada. Hoje `saudacao`
+(`src/server/email/saudacao.ts`) leva só o primeiro nome, só letras,
+apóstrofo e hífen, com teto; sem nada aproveitável, "Olá.". Mora no
+e-mail, e não só no cadastro, para valer também para as contas que já
+existem. O cadastro, por sua vez, normaliza espaços e recusa caractere de
+controle e invisível no nome (`zNome`). *Texto que sai com o nome da Lupa
+não leva nada que um estranho escreveu sem passar por um filtro de
+saída.*
 
 ### Confirmar o e-mail, e o que isso resolve de verdade (#227)
 
@@ -832,6 +929,21 @@ registro de visualização. Quem acabou de se cadastrar quer entrar no app; e
 nenhum provedor de terceiro pode decidir se alguém consegue criar conta
 aqui — a mesma razão que mantém a lista de municípios versionada em vez de
 buscada no IBGE em execução.
+
+**Um token vivo por pessoa e finalidade (#398).** Emitir um token apaga os
+anteriores, em `criarTokenDeRecuperacao`, nos dois repositórios. Quem pede
+outro link é porque o primeiro se perdeu, ou foi parar onde não devia: o de
+recuperação de uma hora atrás não pode continuar trocando a senha. Até a
+#419 eles eram marcados como usados e ficavam na tabela para sempre;
+apagando, ela guarda no máximo um por pessoa e finalidade, sem rotina de
+limpeza.
+
+**Abrir o link não confirma nada (#398).** A página mostra um botão, e só
+a action gasta o token. Filtro de e-mail corporativo e prévia de link
+abrem os endereços da mensagem antes da pessoa, e com o consumo na
+renderização o primeiro deles gastava o token — quem clicava depois lia
+"Este link não vale mais". Esta seção já defendeu o contrário ("pedir mais
+um clique seria cerimônia"), e estava errada sobre quem abre o link.
 
 **A tela de confirmação é aberta**, em `(auth)`, e isso não é descuido: a
 pessoa quase sempre clica no link do celular, que pode não ser o aparelho
@@ -933,6 +1045,26 @@ responde a um por requisição.*
 
 O preço novo, aceito: uma sessão revogada pode sobreviver até 60 segundos.
 
+**E o corte tem botão próprio (#402).** "Sair dos outros aparelhos", no
+perfil, grava o mesmo corte sem trocar a senha — para quem esqueceu a conta
+aberta numa lan house e não desconfia de que alguém saiba a senha. A ordem
+é a da troca de senha: corte, cache derrubado, sessão nova para o aparelho
+onde se clicou. O outro aparelho não é mandado para `/entrar`: o proxy só
+vê que há cookie, e é a página, por `sessaoAtual()`, que o trata como
+deslogado.
+
+**Reemitir sem senha não recomeça os trinta dias (#413).** A sessão nova
+desse botão precisa de `iat` novo — é o que a tira do corte gravado no
+mesmo clique —, e o teto contava do `iat`. Sem pedir senha, repetir o
+clique a cada poucas semanas mantinha o mesmo cookie vivo para sempre,
+que é o que o teto existe para impedir. Hoje o token guarda o login à
+parte (`lg`, lido como `Sessao.entrouEm`) sempre que ele difere do `iat`,
+e o teto conta dali; a renovação do proxy e a troca de papel o preservam.
+Quem prova a senha — entrar, cadastrar, redefinir — começa a contagem de
+novo. Token sem `lg` conta do `iat`, como sempre contou. *Dois relógios
+num token só: o que a revogação compara e o que o teto conta não precisam
+ser o mesmo, e confundi-los é o que fazia um dos dois mentir.*
+
 **A lista tem teto próprio, e o teto avisa (#352).** Ela lia com o teto
 genérico das listas do dono, 200, sem ordem. Passando disso, quem ficou
 de fora era lido como "não revogado" — o erro silencioso de sempre. Hoje
@@ -975,6 +1107,17 @@ reproduzir.
 
 Sem `SESSION_SECRET`, produção recusa subir. Segredo padrão versionado
 significa sessão de admin forjável por qualquer um que leia o repositório.
+
+**O token diz de qual ambiente veio, e o cookie é `__Host-` (#408).** A
+audiência era `lupa-app` em todo lugar: com o mesmo segredo em preview e
+produção, um token assinado num preview — que pode rodar em demonstração,
+onde qualquer um cria conta — valia em produção. Hoje ela é
+`lupa-app:<VERCEL_ENV>` (`local` fora da Vercel). E o cookie se chama
+`__Host-lupa_sessao` em produção: o navegador só aceita esse nome com
+`Secure`, `Path=/` e sem `Domain`, então nenhum subdomínio nem resposta em
+http grava uma sessão por cima da da pessoa. Fora de produção o nome fica
+sem prefixo, porque o cookie não é `Secure` e o navegador o recusaria. O
+custo, aceito em 09/10/2026: todo mundo entrou de novo uma vez.
 
 **Até a #271 esta frase era falsa.** A recusa morava só em `segredo()`,
 que roda quando alguém lê ou assina uma sessão — e `lerSessao` a chama
@@ -1030,6 +1173,15 @@ a única ação que mudava dado sem checar a capacidade, e ficava a uma
 mudança de chave de ser a porta aberta. Hoje confere `admin:decidir_verificacao`
 antes de abrir qualquer cliente de banco. *Toda action confere a
 capacidade dentro dela, mesmo quando "só o admin vê a tela".*
+
+**E ela usa a chave de serviço (#419).** Usava o cliente da chave
+anônima, que não lê `pedidos_verificacao` nem grava em `usuarios`: toda
+decisão respondia "Pedido não encontrado", e ninguém viu porque nenhum
+pedido chegou à fila. A página que lista a fila já lia com a chave de
+serviço — a ação ao lado ficou para trás. Falha ao apagar documento e
+selfie, que é a obrigação de retenção, vai ao Sentry sem os caminhos.
+*Leitura e escrita da mesma tabela, em arquivos vizinhos, precisam da
+mesma chave; conferir uma não confere a outra.*
 
 ### Arquivos: o caminho vem da sessão, nunca do nome enviado
 
@@ -1099,6 +1251,109 @@ aplica é `supabase/aplica-limites-dos-buckets.sql`, rodado à mão.
 
 **Sem Supabase não há Storage.** A tela diz isso em vez de aceitar o envio
 e perder o arquivo — aceitar em silêncio faria a pessoa achar que salvou.
+
+### Excluir a própria conta, e o que fica depois (#423)
+
+Direito do titular na LGPD (art. 18, VI), e até 12/10/2026 não havia como
+— nem pela tela, nem por uma página que dissesse a quem pedir. Decisão do
+Luiz nesse dia: botão no perfil. Ele mora abaixo dos dois "sair", fechado
+até a pessoa pedir, e diz o que sai e o que fica **antes** do botão.
+
+**A conta é anonimizada, não apagada.** Apagar a linha de `usuarios`
+levaria junto, em cascata, `pagamentos` e `assinaturas` — o histórico do
+caixa que a #179 passou a registrar. A linha fica sem nada que identifique
+a pessoa: nome "Conta excluída", e-mail num domínio `.invalid` que ninguém
+recebe, telefone zerado, CPF nulo, uma senha que nenhum hash produz, e as
+sessões cortadas. E-mail e CPF ficam livres para uma conta nova.
+
+**Sai tudo o que é da pessoa**: perfis, currículo, candidaturas,
+publicações, avaliações recebidas, vagas (com as candidaturas a elas),
+avisos, aparelhos, tokens, créditos e pedidos de verificação. **Fica, sem
+nome, o que é de outra pessoa**: a avaliação que ela escreveu é reputação
+de quem foi avaliado, e continua com "Conta excluída" no lugar do nome —
+a mesma razão do `on delete set null` em `avaliador_id`.
+
+**Uma função só no banco** (`excluir_conta`), numa transação: metade
+excluída e metade não é o pior estado possível — a pessoa não entra mais
+e os dados continuam aqui. `mensagens_suporte` existe em produção e não
+no `schema.sql`, e por isso entra por `execute` condicionado à tabela
+existir.
+
+**A ordem é a que deixa a pior falha recuperável**, em
+`src/server/conta/servico.ts`: a senha primeiro (a sessão pode ser de um
+aparelho esquecido aberto), com o limite do login **pela mesma chave**
+(`login:<e-mail>`, #425) — um limite próprio daria a quem tem o cookie
+cinco tentativas de senha a mais por janela; depois a assinatura,
+cancelada no Mercado Pago — e, se o cancelamento falhar, **nada é
+excluído**, porque a cobrança continuaria para alguém sem conta para
+cancelá-la; depois o banco; e os arquivos por último, como em toda
+remoção do app. Arquivo que sobra é dado pessoal sem dono, e a falha vai
+ao Sentry.
+
+**O admin não se exclui pela tela** (`conta:excluir` não está no papel
+dele): a conta de administração é a que opera a ferramenta, e tirá-la do
+ar é caso de suporte. Em demonstração, o repositório em memória anonimiza
+a conta e o que ele mesmo guarda; o caminho que apaga tudo é o do banco, e
+é ele que o `schema.test.ts` exercita num Postgres de verdade.
+
+### Denunciar vaga e avaliação, e só o admin decide (#435)
+
+A Lupa não tinha como alguém avisar "esta vaga pede pix para marcar
+entrevista" nem "esta avaliação é de quem nunca foi atendido". Golpe de
+taxa é o risco que o CNPJ obrigatório existe para conter, e nada dentro
+do app levava o aviso até o admin. Decisão do Luiz em 13/10/2026:
+denúncia por qualquer conta com sessão, e um painel em `/admin`.
+
+**Nada sai do ar sozinho.** Ocultar depois de N denúncias seria mais
+rápido contra golpe, e daria a um concorrente o botão de derrubar o
+anúncio de outro — três contas bastariam. Quem decide é o admin, por
+`decidir_denuncia`, numa transação: tirar do ar **encerra** a vaga (o
+mesmo estado de quando o dono encerra) ou **apaga** a avaliação (a nota
+sai da média pelo trigger de sempre), e fecha as denúncias daquele alvo.
+
+**O denunciante nunca aparece para o denunciado.** A tabela é fechada
+para `anon` e `authenticated`, e só o painel do admin a lê, com a chave de
+serviço. A tela diz isso depois do envio, porque é o que faz alguém
+denunciar o patrão da cidade pequena.
+
+**Uma aberta por pessoa e alvo, no banco.** O índice único parcial é o
+que impede dez cliques da mesma pessoa de parecerem dez pessoas — a
+checagem da aplicação não segura dois envios simultâneos. Depois da
+decisão a pessoa pode denunciar de novo: a vaga pode ter mudado.
+
+**O dono não denuncia o que é dele, e o admin não denuncia.** O admin
+decide; denunciar a própria vaga não faz sentido, porque encerrá-la é um
+botão. O prestador denuncia avaliação do próprio perfil — avaliação
+falsa contra ele é o caso mais provável.
+
+**O alvo que some leva a denúncia aberta.** Quando a conta do dono é
+excluída (#423), a vaga e as avaliações do perfil vão junto; um trigger
+apaga as denúncias **abertas** delas, senão o painel mostraria algo que
+ninguém abre. As decididas ficam, como registro — e por isso
+`decidir_denuncia` fecha as denúncias **antes** de apagar a avaliação.
+
+**O botão é discreto, e fechado até a pessoa pedir.** Um botão vermelho em
+toda vaga ensinaria a desconfiar de todas. É um link pequeno ao fim da
+vaga e de cada avaliação; o formulário só abre no clique.
+
+**E a foto de trabalho também (#452).** Decisão do Luiz em 13/10/2026.
+Foto é o conteúdo que pode exigir retirada rápida — imagem íntima, foto de
+outra pessoa sem autorização —, e nada no admin apagava uma. O link fica na
+foto ampliada, para quem olha o perfil de outra pessoa; o painel mostra a
+miniatura, porque decidir sobre imagem pela legenda é decidir às cegas.
+
+**Tirar a foto do ar apaga, não arquiva.** Arquivada, a publicação sai do
+perfil mas o arquivo continua no bucket público, acessível pelo endereço,
+e o dono pode trazê-la de volta. `decidir_denuncia` apaga a linha, e a
+aplicação apaga o arquivo depois, por `apagarFotoDeTrabalho` — só se o
+endereço for do nosso bucket e da pasta do próprio autor, com o nome que o
+servidor sorteia. Apagar o arquivo errado é pior que deixar um órfão; se o
+Storage recusar, a falha vai ao Sentry. O dono do perfil vem da
+publicação, nunca do formulário.
+
+**A função de decisão mora em três arquivos** — o schema e os dois
+`aplica-*.sql` —, e um teste exige que sejam iguais: um script velho rodado
+de novo desfaria a foto sem ninguém ver.
 
 ### O que se edita depois, e o que nunca
 
@@ -1226,6 +1481,91 @@ aceita coluna nova no fim, e é assim que `aplica-modalidade-vaga.sql`
 chega a um banco vivo sem derrubar a view. **Rode a migração antes do
 deploy**: o `insert` de vaga passa a mandar `modalidade`, e sem a coluna
 publicar vaga falha.
+
+### Áreas de vaga e profissões de prestador (#457)
+
+Pedido do Luiz em 13/10/2026: mais áreas e mais profissões. Com o app
+aberto ao Brasil inteiro, a lista de dezessete profissões e a de vinte e
+uma áreas deixavam de fora quem é marceneiro, soldador, babá ou tratorista,
+e a vaga de atendimento ou de recursos humanos.
+
+**As duas listas são coisas diferentes, e crescem de jeitos diferentes.**
+`JOB_CATEGORIES` é só uma constante: a área gravada numa vaga ou num perfil
+é o próprio texto, e adicionar item é mudar o arquivo. `SERVICE_CATEGORIES`
+tem chave estrangeira — o id de cada profissão é o `categoria_id` de
+`perfis_prestador` —, então cada profissão nova entra por SQL
+(`aplica-mais-profissoes.sql`) com o **id fixo**, igual ao da constante, e
+não o que a sequência daria. Um teste (`categorias.test.ts`) compara a
+constante, o `schema.sql` e o script: divergir não quebra nada na hora, a
+profissão aparece na tela e falha por chave estrangeira quando alguém a
+escolhe.
+
+**Só se acrescenta; não se renomeia nem se reordena.** O nome gravado é o
+que a busca por categoria compara: trocar "Comércio e Vendas" por outra
+grafia esconderia do filtro tudo que já foi publicado sob a antiga.
+
+### Vaga para PCD, e a vaga por sexo que não existe (#456)
+
+Pedido do Luiz em 13/10/2026: a empresa informa ao publicar se a vaga é para
+pessoa com deficiência (PCD), e a busca filtra por isso. Quem tem a vaga —
+inclusive para cumprir a cota da Lei 8.213/91, art. 93 — não tinha onde
+dizer, e quem procura não tinha como achar.
+
+**A resposta é obrigatória e não tem valor marcado de antemão.** Dois
+rádios, "Sim, é para PCD" e "Não é para PCD", como a modalidade (#300): um
+padrão marcado faria a resposta sair sem ninguém ter respondido, e o filtro
+passaria a prometer o que ninguém conferiu. Chega do formulário como `"sim"`
+ou `"nao"`, porque checkbox desmarcado é ausência, e ausência não é
+resposta.
+
+**No banco é `boolean not null default false`**, ao contrário da modalidade,
+que é opcional. Aqui o valor neutro existe e é verdadeiro para tudo que já
+foi publicado — vaga antiga não era para PCD —, então não há linha "sem
+resposta" para tratar. A coluna entra por último em `job_listings`, pela
+regra do `create or replace view`, e `aplica-vaga-pcd.sql` roda **antes do
+deploy**: o `insert` passa a mandar `para_pcd`.
+
+**O filtro entra na chave do cache da listagem.** É do que se pergunta, e
+ficar de fora serviria a lista de todas as vagas a quem pediu só as de PCD —
+pelo cache, sem erro nenhum.
+
+**Mora dentro de "Tipo", como `?tipo=pcd` (#463).** Decisão do Luiz em
+14/10/2026: ele não precisa de um filtro separado na barra. A página traduz
+o valor para o booleano que a camada de dados já recebia, e não o repassa à
+consulta como tipo de contrato — o banco compara `contract_type` com o
+texto, e "pcd" nunca casaria. O custo, que ele aceitou ao pedir: é uma
+escolha só, dá para filtrar por "CLT" **ou** por "Vaga para PCD", não pelos
+dois juntos, e PCD não é tipo de contrato. O endereço antigo, `?pcd=sim`,
+viveu um dia e hoje é "todas as vagas".
+
+**A barra de filtros não esconde nenhum chip (#460).** O filtro de PCD
+nasceu como o quarto chip de uma fileira que rolava para o lado, sem barra:
+num celular de 412 px ficava cortado na borda ("Todas a…"), e o rótulo não
+dizia PCD. Quem abriu a busca no dia do deploy não o achou e concluiu que a
+atualização não tinha subido, quando tinha. Hoje os chips quebram de linha, e
+a #463 tirou o chip de PCD de vez. A spec da #458 achava o filtro pelo
+`<select>` escondido, que existe mesmo com o chip fora da tela; a nova
+confere que cada filtro cabe inteiro na largura do aparelho, com um estado
+escolhido (são quatro chips, e é aí que a fileira antiga cortava). *Teste que
+encontra o controle por baixo da tela não prova que a pessoa o encontra por
+cima.*
+
+**E a lista que o filtro abre era branca no tema escuro (#462).** O preflight do Tailwind deixa o `select` sem fundo e com a cor do texto herdada, e a lista que o navegador desenha pegava o texto claro do tema sobre o branco padrão: só se lia o item sob o mouse. `color-scheme: dark` já estava no `<html>` e não resolvia, porque a cor do texto é a do tema. Hoje `option` tem fundo e cor dos tokens em `globals.css`, e o e2e (`lista-dos-filtros.spec.ts`) confere fundo opaco e contraste de 4,5:1 nos dois temas pelo estilo calculado — o popup nativo não sai em captura de tela. *Controle nativo herda a cor do tema, mas não o fundo: confira os dois.*
+
+**A Lupa não guarda se o candidato é PCD.** É dado de saúde, e o filtro
+funciona sem isso: quem procura filtra, quem tem a vaga responde. Se um dia
+o perfil do candidato pedir isso, é decisão nova, com a LGPD à frente.
+
+**Vaga só para mulher ou só para homem não existe, de propósito.** O pedido
+veio junto, e o Luiz decidiu deixar tudo geral depois de ver o risco: a CLT
+(art. 373-A) proíbe anúncio de emprego com referência a sexo, salvo quando a
+natureza da atividade exigir isso pública e notoriamente — e abre exceção
+para medidas que corrijam a desigualdade de acesso da mulher —, e a Lei
+9.029/95 pune a discriminação na contratação. Uma plataforma que oferece o
+campo oferece a infração. Não é parecer jurídico: se a pergunta voltar,
+**um advogado lê junto com os Termos de Uso (#235)** antes de qualquer
+campo. A alternativa que se avaliou foi "só mulheres e geral", com o motivo
+escrito, para a vaga afirmativa.
 
 ### Estágio da candidatura: o nome depende de quem lê
 
@@ -1373,6 +1713,13 @@ Use `termoParaFiltro()` em `src/lib/data.ts`, que envolve o valor em
 aspas. Já vazou: `zzzznaoexiste,full_name.ilike.*a*` devolvia a base
 inteira.
 
+**E o termo tem teto (#439).** A URL não tem limite, e o `?q=` entrava
+inteiro no `ilike` e na chave do cache das listagens: cada variação de um
+termo de vários KB era uma consulta e uma entrada de cache novas.
+`termoDeBusca` (`src/lib/limites-de-lista.ts`) apara, colapsa espaço e
+corta em 100 caracteres na entrada de `getJobs` e `getProviders` — antes
+do escape, para nunca partir uma sequência de escape ao meio.
+
 **A CSP é a última linha.** Se algum escape falhar em qualquer lugar, é
 ela que impede o script injetado de rodar ou de exfiltrar. `script-src`
 ainda precisa de `'unsafe-inline'` porque o Next injeta hidratação inline
@@ -1455,6 +1802,12 @@ de uma, e quem usa conexão compartilhada é justamente o público deste app.
 Como tudo é fechado por login, todo abuso carrega sessão — e quem não tem
 sessão cai no IP, que é o certo nas três de autenticação, onde a conta
 ainda não existe.
+
+**E o `GET` que mais gasta CPU também tem teto (#425).** `/api/curriculo`
+monta o PDF do zero a cada chamada, e o teto de `criarAcao` não alcança
+rota. `ORCAMENTO_DO_CURRICULO_PDF` mora fora de `ORCAMENTOS` porque lá só
+entra nome de action — há teste cobrando isso —, e é cobrado na rota antes
+de montar o documento, com a mesma chave que uma action teria.
 
 **A cobrança vem antes da validação**, e antes de qualquer trabalho: o que
 garante que a ação recusada não teve efeito nenhum, nem parcial. Teto que
@@ -1576,6 +1929,20 @@ guarda só o valor.
 cria conta em massa troca de e-mail a cada tentativa. E o sucesso conta
 para o limite — no login sucesso zera o contador, porque lá o que se
 contém é adivinhação de senha; aqui o que se contém é a criação em si.
+
+**E o número é do cadastro, não da senha (#415).** Eram os mesmos 5 a
+cada 15 minutos da tentativa de senha, e o IP do cadastro pode ser uma
+sala inteira: posto do SINE ou RH cadastrando gente no mesmo computador,
+feira de emprego no Wi-Fi do local, 4G atrás de CGNAT num pico de
+divulgação. A sexta pessoa lia "muitas tentativas" e desistia — o
+primeiro teto que um lançamento encontraria. Hoje são 20
+(`LIMITE_DE_CADASTROS_POR_ORIGEM`). O que segura o abuso que o número
+maior deixaria passar é o IPv6 agrupado pela rede /64
+(`agruparOrigem`, em `origem-da-requisicao.ts`): quem tem IPv6 escolhe
+qualquer endereço da própria rede, e pelo endereço cada troca era um teto
+novo — em todo teto por origem, não só no cadastro. Endereço que não se
+reconhece passa como veio: uma chave estranha limita uma pessoa, e um
+erro ali derrubaria o cadastro de todo mundo.
 
 **O limite de login reserva a tentativa antes do Argon2 (#386).** Ele
 conferia o bloqueio, gastava o Argon2 e só então registrava a falha:
@@ -1746,6 +2113,11 @@ Registro de outro dono e área administrativa respondem "não encontrado". Um
 403 confirma que o recurso existe — informação de graça para quem sonda ids
 ou procura o painel de admin.
 
+**E o `robots.txt` não a anuncia (#439).** Ele listava `/admin` entre as
+áreas bloqueadas — o arquivo mais público do site dizendo o que o 404
+existe para não dizer. Nenhum crawler chega lá sem sessão de qualquer
+forma: o muro do login responde antes.
+
 ### Enumeração de contas
 
 O cadastro avisa que o e-mail já existe; o login, não. No cadastro o aviso é
@@ -1779,6 +2151,73 @@ não resolve o CPF ser conferido só pelo dígito — qualquer CPF válido pode
 ser ocupado por quem não é o dono, e a correção disso é a verificação paga
 da #120. A chave aparece como linha própria no painel de pressão (a view
 agrupa pelo texto antes do primeiro `:`), sem mudança de SQL.
+
+### O painel do admin responde de onde vem a conta e se o Lupa se paga (#471)
+
+Pedido do Luiz em 15/10/2026: contas por região, separadas por papel, e,
+na conversa antes, "precisamos que o Lupa se pague pelo menos o
+Supabase". O painel já existia em `/admin/painel` — quem entra com a conta
+de admin cai direto nele —, e o Luiz nunca o tinha visto porque usa outra
+conta no dia a dia.
+
+**Contas por estado e por cidade, cada uma com os três papéis.** Trocaram
+`metricas_por_local`, que somava por cidade **e bairro** (o bairro de pessoa
+saiu na #321) e não dizia o papel. O estado sai do próprio valor gravado
+("Sinop - MT"); o que não tem esse formato aparece como "sem estado", em vez
+de sumir. Os estados vêm todos e as cidades, as quinze maiores: a soma do
+estado não pode sair das cidades recortadas.
+
+**O funil é por papel, e a porcentagem é sobre o primeiro passo da
+coluna.** Candidato: conta, visível para empresas, candidatou-se. Prestador:
+conta, na vitrine (a regra de `getProviders`), assinante. Empresa: conta,
+conferida, publicou vaga, comprou. "20% das empresas compraram" se lê sem
+conta; a porcentagem sobre o passo anterior obrigaria a lembrar o número de
+cima.
+
+**"O Lupa já se paga?" compara a receita que se repete com o custo
+mensal.** A receita é a soma das assinaturas ativas pelo valor de cada uma
+— quem assinou antes de uma mudança de preço continua pagando o que
+assinou —, com o teste grátis incluído. O que entrou nos últimos 30 dias
+aparece à parte, pela mesma razão que o caixa separa recorrente de compra
+única. Os custos são uma lista, e a receita cobre o primeiro antes do
+segundo, porque a pergunta era "pelo menos o Supabase". A tela diz que o
+valor é bruto, antes da taxa do Mercado Pago e do imposto.
+
+**E os custos se editam no próprio bloco (#473).** Nasceram como constante
+no código; no mesmo dia o Luiz pediu para acrescentar contador, aluguel e o
+que mais vier sem depender de deploy. Moram em `custos_mensais`, fechada
+para as duas chaves públicas, e só `admin:custos` lê e mexe. A lista nasce
+com as estimativas do Supabase Pro e do Vercel Pro (`CUSTOS_INICIAIS`, a
+mesma no `schema.sql` e no script de produção). A ordem de cobertura é a de
+cadastro, pela coluna `ordem`, e não pelo `criado_em`: dois custos gravados
+no mesmo instante empatariam. O valor é digitado como se escreve no Brasil
+("1.234,56") e guardado em centavos; sem vírgula, "1.500" é milhar, mas
+"133.50" é R$ 133,50, porque ler o ponto como milhar ali multiplicaria o
+custo por cem. Depois de salvar, a tela pede as métricas de novo, e a conta
+é refeita no servidor com a lista nova. O formulário é controlado e usa
+`onSubmit`, sem `action` no `<form>`, para o React 19 não apagar o que foi
+digitado quando o valor vem errado. Em demonstração a lista mora em
+`globalThis`, porque a ação que salva e a rota que o painel consulta são
+bundles diferentes.
+
+**Conta excluída não é conta.** A linha anonimizada da #423 fica em
+`usuarios`, marcada por `senha_hash = '!conta-excluida'`, e
+`metricas_totais` a somava como gente; também somava a vaga vencida como
+aberta. As views novas e a corrigida conferem as duas coisas, e o teste
+exclui a conta pela própria `excluir_conta`, para provar que a marca que a
+view lê é a que a função grava.
+
+**As mesmas contas existem duas vezes, e um teste prova que concordam.**
+O modo demonstração não tem banco, então `agregarContasPorLugar` e
+`montarFunil` repetem as views em TypeScript; o `schema.test.ts` roda as
+duas sobre as mesmas linhas, lidas de um Postgres de verdade. E o
+`aplica-painel-admin.sql` é aplicado por cima do schema no teste: o que o
+banco guarda de cada view não pode mudar, senão os dois arquivos divergem.
+
+**A conta de admin é criada por quem vai usá-la.** `npm run admin:criar`
+imprime a senha uma vez no terminal de quem roda; criá-la por um agente
+poria a senha numa conversa, que é o que a #69 registra como garantia
+perdida.
 
 ### Polling, não websocket, no painel do admin
 
@@ -1845,6 +2284,13 @@ aberta a qualquer conta com sessão, como o serviço já permitia: quem
 decide mostrar o atalho é o cabeçalho, não o portão, e quem chega por
 link não cai num 404.
 
+**O título da vaga não aceita link (#447).** Ele é o texto da notificação,
+para até 500 pessoas, e a notificação aparece como sendo da Lupa: um link
+ali é texto de um estranho com o nome dela. Publicar exige crédito pago e
+documento, e a denúncia tira a vaga do ar — mas a notificação já saiu
+quando alguém denuncia. Cargo nunca precisa de link; o lugar dele é a
+descrição.
+
 **Ninguém é avisado da própria vaga.** Parece óbvio e não é: quem publica
 está na mesma cidade e quase sempre na mesma categoria, então sem essa
 linha a primeira notificação que a pessoa recebe é a dela mesma — e a
@@ -1886,6 +2332,60 @@ login: cache mal desenhado aqui mostra a vaga de ontem como se fosse a de
 hoje, ou o conteúdo da sessão de outra pessoa no mesmo aparelho. Ele existe
 para receber push e para ser o requisito de instalação no iPhone, que é do
 que o APK/TWA depende.
+
+### O convite para instalar, e o que cada aparelho deixa (#475)
+
+Pedido do Luiz em 20/10/2026: um botão para instalar na hora, no iPhone e
+no Android, só para quem está no navegador do celular. O iPhone nunca
+mostrou botão de instalar — o Safari não tem um para site nenhum —, e quem
+não conhece o caminho do Compartilhar não instala.
+
+**O botão diz a verdade sobre o que o toque faz.** No Android que já
+entregou o pedido de instalação (`beforeinstallprompt`), o toque abre a
+janela do navegador. A Apple não dá a site nenhum um jeito de instalar, e
+no iPhone o toque troca a frase da faixa por uma dica: o desenho do botão
+Compartilhar e "Adicionar à Tela de Início". Dentro do Instagram e do
+Facebook nada instala, e a dica é abrir no navegador. No Android antes de
+o pedido chegar — o Chrome só o entrega depois de a pessoa interagir com a
+página —, a dica é o menu ⋮.
+
+**A dica cabe na faixa, e a faixa não cresce (#477).** A primeira versão
+abria embaixo dela uma caixa com três passos e uma nota, e no iPhone isso
+ocupava quase metade da tela. O Luiz achou que poluía e pediu só o botão.
+Só o botão não basta onde ele não instala, então ficou o mínimo, no lugar
+da frase: um desenho e o nome da opção. O caso raro — o iPhone que esconde
+o Compartilhar atrás do ⋯, a opção que não aparece dentro de um app — saiu
+junto: explicá-lo custava a tela de todo mundo.
+
+**O aparelho sai do que o navegador diz de si** (`aparelhoDoNavegador`, em
+`src/lib/instalacao.ts`), e não da largura da tela: o pedido era "no
+celular sim, no PC não", e janela estreita no PC não é celular. O iPad, que
+se apresenta como Mac, é separado pela tela de toque.
+
+**O pedido é guardado por um script no `<head>`**, assinado com o nonce da
+CSP, porque o Chrome o entrega uma vez por carregamento e pode entregá-lo
+antes de o React montar a página. O e2e do Android só passa se esse script
+rodou: sem o nonce, ele morreria em silêncio e o botão nunca instalaria
+direto.
+
+**Não aparece dentro do app instalado**, nem quando o Android diz que o app
+já está no aparelho (`related_applications` no manifesto, lido por
+`getInstalledRelatedApps`). O iPhone não diz; ali, quem já instalou e voltou
+pelo Safari fecha com "Agora não".
+
+**"Agora não" vale para a visita, e só para ela.** Trocar de tela não traz
+o convite de volta; abrir a Lupa de novo, sim. Nasceu escondendo por 30
+dias, gravado no aparelho, e o Luiz achou tempo demais no mesmo dia
+(20/10/2026): quem tocou "Agora não" não disse "nunca". Por isso a
+dispensa mora no módulo do componente, e não no `localStorage`.
+
+**O preço, aceito:** o `preventDefault` no pedido tira a barrinha do próprio
+Chrome, para a mesma oferta não aparecer duas vezes. Quem tocou "Agora não"
+continua tendo o "Instalar app" no menu do Chrome.
+
+**O projeto `mobile` do e2e vê a faixa em toda tela**, porque o Pixel 7 se
+apresenta como Android. A varredura de contraste das rotas a mede sem a dica;
+a dica, nos dois temas, fica em `instalar-app.spec.ts`.
 
 ### Busca sem resultado é vocabulário, não histórico de pessoa
 
@@ -1986,6 +2486,22 @@ O preço mora num lugar só, `PRECO_CENTAVOS` em
 repetido na tela e no servidor é como se cobra um valor e se anuncia
 outro.
 
+**A tabela das vagas de empresa mudou em 14/10/2026 (#469).** Decisão do
+Luiz: 1 vaga R$ 19,90, 5 vagas R$ 79,90, 10 vagas R$ 99,90 e plano mensal
+R$ 149,90 — antes eram 29,90, 119,90, 149,90 e 199,90. A mensalidade do
+prestador (R$ 19,90) e o currículo (R$ 14,90) não mudaram. Mexer foi só
+`PRECO_CENTAVOS`: as telas de compra, o fim do cadastro e o chamado da home
+leem dali, e o preço por vaga sai da conta (15,98 e 9,99). A conferência no
+banco antes de mudar achou **nenhuma assinatura de empresa** e só uma compra
+aprovada, então ninguém em andamento muda de preço — e, em geral, a
+cobrança aberta guarda o valor de quando foi criada, e o Mercado Pago o da
+assinatura: quem já assinou o mensal por 199,90 continuaria pagando 199,90
+até cancelar. Um teste (`tabela-de-precos.test.ts`) trava os valores e cobra a
+**escada**: unitário que cai com o pacote maior, e o mensal como teto, mais
+caro que o pacote de 10 e vencendo depois dele (hoje, a partir de 13 vagas).
+O pacote de 5 custa só R$ 20,00 a menos que o de 10, e quem o escolhe
+escolhe pelo valor que sai do bolso, não pela conta por vaga.
+
 **A infraestrutura nasceu com um tipo de cobrança só, não seis.** O brief
 já previa vaga avulsa, planos de empresa, mensalidade de prestador e
 currículo pago — mas declarar um `tipo_pagamento` com valores para coisas
@@ -2079,7 +2595,7 @@ estimado" a partir de `perfis_empresa.plano` — a coluna que este arquivo
 já cita como exemplo de estado declarado sem produtor. Nada nunca escreveu
 nela, então "assinaturas ativas" era sempre zero, "em teste" contava todas
 as empresas, e a receita era zero vezes um preço de tabela que também
-estava errado (R$ 149, quando o plano mensal custa R$ 199,90).
+estava errado (R$ 149, quando o plano mensal custava R$ 199,90).
 
 Hoje a fonte é `pagamentos`, na view `metricas_caixa`, e o bloco deixou de
 se chamar "estimado" — não é projeção, é o que entrou e o que saiu.
@@ -2145,6 +2661,14 @@ recurso diferente.** `payment` traz um pagamento;
 carrega o pagamento por dentro — consultar `/v1/payments/{id}` com o id
 dela responde 404, e a renovação nunca é registrada. Cada um tem a própria
 rota de leitura, e o despacho está no route handler.
+
+**A fatura só diz qual é o pagamento (#405).** A parcela decidia pelo
+`payment.status` embutido nela — um resumo, e o único caminho de
+confirmação que não relia o registro do dinheiro. Lida depois de um
+estorno, ela ainda dizia `approved`. Hoje a fatura serve para achar a
+assinatura e o id do pagamento; status e valor vêm de `/v1/payments/{id}`,
+e o valor passa pela conferência da #331. Se o pagamento não volta da
+API, é erro: o webhook responde 5xx e o Mercado Pago reenvia.
 
 **A parcela é registrada por dois caminhos, e isso é deliberado.** Os
 tópicos são marcados **à mão** no painel do Mercado Pago, e uma renovação
@@ -2261,8 +2785,8 @@ que bate no índice único do `mp_payment_id` e agora, se a encontra
 reaberta, aprova de novo. O preço, aceito: se o efeito chegou a gravar e só
 a resposta se perdeu, a nova tentativa aplica de novo — erro para o lado de
 quem pagou, e visível, em vez de para o lado de quem não recebeu e não
-tem como saber. O teste grátis (`confirmarAssinatura`) segue com o mesmo
-buraco, registrado como pendência.
+tem como saber. O teste grátis (`confirmarAssinatura`) tinha o mesmo
+buraco, fechado na #406 — ver "O teste grátis é um por conta".
 
 **O cron recusa sem segredo em qualquer deploy da Vercel (#358).** Só
 `VERCEL_ENV === "production"` recusava; num preview a rota rodava aberta
@@ -2392,12 +2916,16 @@ ficaria implícita, dependente do que "zerar a validade" significar amanhã.
 *Aceitar e acompanhar*: custo zero e sem assinante hoje, mas o dia em que
 houver o primeiro o buraco já estará aberto.
 
-O que continua aberto. Se `estenderMensalidade` falhar depois de a
-reivindicação ter sido gravada, o teste é gasto sem dar os dias — o mesmo
-tipo de buraco do efeito que falha depois do status (#384), e a nova
-tentativa do webhook não refaz, porque a assinatura já está ativa. E não
-sabemos se o Mercado Pago barra teste repetido no mesmo cartão: isso não
-está no nosso código.
+**Extensão que falha devolve o teste (#406).** A reivindicação vem antes
+dos dias, e é essa ordem que barra a concessão dupla. O outro lado era o
+buraco da #384: se `estenderMensalidade` falhasse depois, a assinatura
+ficava ativa e o teste gasto, e o reenvio do webhook não refazia nada.
+Hoje `concederTesteOuDesfazer` libera o teste
+(`liberarTesteGratis`) e devolve a assinatura a `pendente` antes de
+subir o erro; o reenvio passa pela transição *pendente → ativa* de novo.
+
+O que continua aberto: não sabemos se o Mercado Pago barra teste repetido
+no mesmo cartão. Isso não está no nosso código.
 
 **A vitrine só mostra quem está com a mensalidade em dia**, mesma família
 de regra que `doc_verified`: o filtro mora em `getProviders`
@@ -2589,6 +3117,29 @@ a essa tela não traz currículo nem resumo.
 vaga, porque o alcance é outro: as de vaga terminam em quem se candidatou
 àquela vaga, e esta começa em quem nunca se candidatou a nada.
 
+**E só para empresa conferida, com teto por dia (#433).** Decisão do Luiz
+em 13/10/2026. Até ali, qualquer conta de empresa abria a busca e o
+WhatsApp de cada pessoa: a cadastrada por CPF nasce verificada na hora, e
+a de CNPJ chegava à busca só com o dígito verificador. Criar uma conta e
+colher o telefone de todo mundo que pediu para ser encontrado levava
+minutos — o primeiro passo do golpe da vaga com taxa, o mais comum contra
+quem procura emprego. Hoje `acessoABuscaDeCandidatos` libera a busca só
+para empresa com CNPJ conferido na Receita, e cada uma abre até 30 perfis
+por dia (`ORCAMENTO_DE_PERFIS_DE_CANDIDATO`); o 31º mostra que o teto foi
+atingido, sem o contato.
+
+A empresa por CPF fica de fora pela mesma razão que a #251 deu ao
+prestador: quem liga a caixa consente ser encontrado por **empresas**, e
+ela é pessoa física. Quem não está conferido lê o que falta, em vez de um
+404 — a capacidade continua no papel, e o link no painel também. O perfil
+de quem se candidatou à empresa **não** conta no teto: candidatura é outro
+consentimento, e continua chegando como sempre. O admin passa direto, por
+não contratar.
+
+O que isto não resolve: conferir o CNPJ prova que a empresa existe, não
+que quem a cadastrou é dono dela. O teto é o que limita quem usa o CNPJ de
+outra empresa.
+
 **Fora do escopo por decisão, não por esquecimento:** testes e triagem
 automática, e múltiplos usuários por empresa. Os dois fazem sentido num
 produto maduro; num piloto de uma cidade, cada um é uma superfície a mais
@@ -2712,6 +3263,15 @@ Bugs reais deste projeto, cada um com um teste que impede a volta:
 - **`truncate` num elemento que também é `flex` não corta o texto** — o
   ellipsis não se aplica e o `nowrap` trava a largura, empurrando a página
   para fora da tela. O truncate vai num `<span>` de texto dentro do flex.
+- **No Tailwind v4, `row-span-N` e `col-span-N` apagam o início da linha e
+  da coluna.** Eles geram o atalho `grid-row: span N / span N`, que reescreve
+  o `grid-row-start` posto por `row-start-1`. No hero da home (#465) o fundo do
+  banner, que devia ocupar as três primeiras linhas, foi parar depois do
+  conteúdo, com altura zero, e a foto sumiu. Para pôr um item numa área fixa
+  da grade, use início e fim juntos: `row-[1/4]`, `col-[1/-1]`. E coluna
+  flexível que guarda campo de formulário é `minmax(0,1fr)`, não `1fr`: o
+  `1fr` não encolhe abaixo da largura mínima do campo, e o botão ao lado vaza
+  pela borda do cartão.
 - **Grade responsiva sem `grid-cols-1` explícito** dimensiona a coluna
   implícita por `min-content`, e o card impõe largura maior que a tela.
 - **`loading.tsx` num segmento faz todo `notFound()` daquele ramo
@@ -2827,6 +3387,26 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   ambiente, pergunte se o ambiente de teste responde igual ao de
   produção** — e, quando a resposta é "não", teste o artefato que viaja
   para produção, não o comportamento local.
+
+  **E a escrita ficou de fora por um mês (#421).** O mesmo padrão do
+  Supabase concede `insert`, `update`, `delete` e `truncate` a `anon` e
+  `authenticated` em toda tabela e view, e o schema só revogava o
+  `select`: em produção eram 32 relações graváveis pela chave anônima,
+  barradas só pelo RLS sem policy de escrita. A aplicação nunca escreve
+  com essa chave, então o `revoke` no fim do `schema.sql` não muda nada
+  para ela — é a segunda camada que já existia para a leitura. O teste
+  concede tudo, como o Supabase, roda `aplica-anon-sem-escrita.sql` por
+  cima numa transação e confere que sobrou só o `select` público.
+
+  **E a execução de funções (#449).** O Supabase publica toda função do
+  schema público pela API e concede execução às duas chaves. Nenhuma das
+  nossas roda com o privilégio do dono, e as chaves não escrevem em nada,
+  então isso não alcançava coisa alguma — mas a garantia morava numa
+  propriedade de cada função. Hoje só a chave de serviço executa função:
+  o fim do `schema.sql` revoga das duas, e `aplica-funcoes-so-servico.sql`
+  faz o mesmo em banco existente. **Rode-o de novo depois de qualquer
+  `aplica-*.sql` que crie função**, porque o `revoke ... on all functions`
+  só alcança as que já existem.
 
 - **Repositório em memória numa variável de módulo não atravessa
   bundles.** Server action e route handler viram bundles diferentes no
@@ -2944,6 +3524,14 @@ Os dois do meio têm contrato automático em `tests/unit/cards.test.tsx`, e o
   colorido e botão `danger` na mesma tela (#144). **Toda cor que serve de
   texto E de fundo tingido de si mesma precisa ser conferida contra as
   duas combinações — a mais clara das duas é a que decide.**
+
+  **E contra o fundo do quadro onde ela mora (#435).** `--color-danger`
+  passava sobre o selo em branco e reprovava com o mesmo selo sobre
+  `panel-2` (4,30:1): o botão de perigo dos formulários de excluir conta e
+  de denunciar mora num quadro `bg-panel-2`, e os dois ficam fechados até
+  o clique — a varredura das rotas nunca os via abertos. Hoje os dois
+  specs rodam o axe com o formulário aberto. *Formulário que só abre no
+  clique precisa ser varrido aberto.*
 
 - **`setState` no corpo de um efeito é reprovado mesmo quando o motivo é
   legítimo.** `AlternarTema` nascia com estado `null` porque o servidor

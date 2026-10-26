@@ -16,7 +16,11 @@ import { JOB_CATEGORIES } from "@/lib/constants";
 import { pluralize } from "@/lib/format";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
-import { candidatosDisponiveis } from "@/server/candidatos/servico";
+import {
+  acessoABuscaDeCandidatos,
+  candidatosDisponiveis,
+} from "@/server/candidatos/servico";
+import { ORCAMENTO_DE_PERFIS_DE_CANDIDATO } from "@/server/limites";
 
 export const metadata: Metadata = {
   title: "Candidatos disponíveis",
@@ -37,6 +41,33 @@ export default async function CandidatosPage({
    */
   if (!pode(sessao.papel, "candidato:buscar_disponiveis")) {
     notFound();
+  }
+
+  /*
+   * A busca é de empresa conferida (#433). Quem tem a capacidade mas não
+   * conferiu o CNPJ — ou se cadastrou por CPF — lê o que falta, em vez de
+   * um 404: a capacidade é dela, e o link no painel é o mesmo.
+   */
+  if ((await acessoABuscaDeCandidatos(sessao)) === "falta_cnpj_conferido") {
+    return (
+      <PageShell>
+        <PageTitle
+          title="Candidatos"
+          accent="text-empresas"
+          description="Quem pediu para ser encontrado por empresas."
+        />
+        <EmptyState
+          icon={<UserSearch size={22} />}
+          title="A busca é para empresa com CNPJ conferido"
+          description="Quem liga a opção de ser encontrado escolhe aparecer para empresas, e o telefone dessas pessoas aparece aqui. Por isso a busca abre depois que o CNPJ é conferido na Receita, pelo botão no seu perfil. Conta cadastrada com CPF recebe candidaturas às vagas que publica, mas não busca quem não se candidatou."
+          action={
+            <ButtonLink href="/perfil" variant="empresas" size="sm">
+              Ir para o perfil
+            </ButtonLink>
+          }
+        />
+      </PageShell>
+    );
   }
 
   const params = await searchParams;
@@ -75,6 +106,13 @@ export default async function CandidatosPage({
           "pessoas disponíveis",
         )}
         {candidatos.length > 0 && <> · mais perto de você primeiro</>}
+        {candidatos.length > 0 && (
+          <>
+            {" "}
+            · até {ORCAMENTO_DE_PERFIS_DE_CANDIDATO.chamadas} perfis abertos por
+            dia
+          </>
+        )}
       </p>
 
       {candidatos.length === 0 ? (
@@ -127,7 +165,7 @@ export default async function CandidatosPage({
                   <p className="truncate text-sm font-semibold underline-offset-2 group-hover:underline">
                     {c.full_name}
                   </p>
-                  <p className="truncate text-[11px] text-muted">
+                  <p className="truncate text-xs text-muted">
                     {c.desired_area ?? "Área não informada"}
                     {` · ${c.city}`}
                   </p>

@@ -105,7 +105,7 @@ export async function FichaDaCandidatura({
 
         {c.email && <CopiarEmail email={c.email} />}
         {c.phone && (
-          <p className="mt-1 text-[11px] text-muted">
+          <p className="mt-1 text-xs text-muted">
             WhatsApp: {formatPhone(c.phone)}
           </p>
         )}
@@ -138,7 +138,7 @@ export async function FichaDaCandidatura({
               {c.experiences.map((e) => (
                 <li key={`${e.company}-${e.role}-${e.period}`}>
                   <p className="font-semibold">{e.role}</p>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted">
                     {e.company} · {e.period}
                   </p>
                   {e.description && (
@@ -241,7 +241,7 @@ function Linha({
    */
   return (
     <div className="min-w-0">
-      <dt className="flex items-center gap-2 text-[11px] text-muted">
+      <dt className="flex items-center gap-2 text-xs text-muted">
         <span className="flex-none">{icone}</span>
         {rotulo}
       </dt>
@@ -260,7 +260,7 @@ function Secao({
 }) {
   return (
     <section className="mt-5 border-t border-line pt-4 text-sm">
-      <h3 className="mb-2 text-[11px] font-semibold tracking-wide text-muted uppercase">
+      <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">
         {titulo}
       </h3>
       {children}

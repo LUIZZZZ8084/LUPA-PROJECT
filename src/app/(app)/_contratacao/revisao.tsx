@@ -3,7 +3,7 @@
 import { AlertTriangle, Banknote, MapPin, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
-import { WORK_MODE_LABELS } from "@/lib/constants";
+import { ROTULO_PCD, WORK_MODE_LABELS } from "@/lib/constants";
 import { formatSalaryRange } from "@/lib/format";
 import type { WorkMode } from "@/lib/types";
 
@@ -29,6 +29,8 @@ export interface DadosDaVaga {
   categoria: string;
   tipoContrato: string;
   modalidade: string;
+  /** "sim" ou "nao" — vem do rádio, e sem resposta fica vazio (#456). */
+  paraPcd: string;
   cidade: string;
   bairro: string;
   endereco: string;
@@ -45,6 +47,7 @@ export function lerDoFormulario(formData: FormData): DadosDaVaga {
     categoria: ler("categoria"),
     tipoContrato: ler("tipoContrato"),
     modalidade: ler("modalidade"),
+    paraPcd: ler("paraPcd"),
     cidade: ler("cidade"),
     bairro: ler("bairro"),
     endereco: ler("endereco"),
@@ -125,6 +128,7 @@ export function RevisaoDaVaga({ dados }: { dados: DadosDaVaga }) {
           {ehModalidade(dados.modalidade) && (
             <Badge>{WORK_MODE_LABELS[dados.modalidade]}</Badge>
           )}
+          {dados.paraPcd === "sim" && <Badge tone="vagas">{ROTULO_PCD}</Badge>}
         </div>
 
         <dl className="mt-4 space-y-2.5 text-sm">

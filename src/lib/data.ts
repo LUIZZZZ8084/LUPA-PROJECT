@@ -19,6 +19,7 @@ import {
   TETO_BUSCA,
   TETO_CANDIDATOS,
   TETO_CANDIDATURAS,
+  termoDeBusca,
 } from "./limites-de-lista";
 import {
   DEMO_COMPANY_ID,
@@ -206,6 +207,7 @@ function vagaDoMock(job: JobListing): Vaga {
     endereco: job.address,
     tipoContrato: job.contract_type,
     modalidade: job.work_mode,
+    paraPcd: job.for_pcd,
     salarioMin: job.salary_min,
     salarioMax: job.salary_max,
     habilidades: job.skills,
@@ -228,6 +230,7 @@ function jobListingDaVaga(vaga: Vaga): JobListing {
     address: vaga.endereco,
     contract_type: vaga.tipoContrato as JobListing["contract_type"],
     work_mode: vaga.modalidade,
+    for_pcd: vaga.paraPcd,
     salary_min: vaga.salarioMin,
     salary_max: vaga.salarioMax,
     skills: vaga.habilidades,
@@ -260,8 +263,10 @@ async function jobsEmDemonstracao(): Promise<JobListing[]> {
 }
 
 export async function getJobs(
-  filters: JobFilters = {},
+  pedidos: JobFilters = {},
 ): Promise<Recorte<JobListing>> {
+  // O termo da URL não tem teto; a consulta e a chave do cache, sim (#439).
+  const filters = { ...pedidos, q: termoDeBusca(pedidos.q) };
   if (isSupabaseConfigured) {
     /*
      * Cliente **sem cookie**, de propósito: o de `./supabase/server` chama
@@ -285,6 +290,10 @@ export async function getJobs(
         filters.uf ?? "",
         filters.category ?? "",
         filters.contract_type ?? "",
+        // O filtro de PCD entra na chave (#456): é do que se pergunta, e
+        // ficar de fora serviria a lista de todas as vagas a quem pediu só
+        // as de PCD — pelo cache, sem erro nenhum.
+        filters.pcd ? "pcd" : "",
         filters.q ?? "",
       ];
 
@@ -309,6 +318,7 @@ export async function getJobs(
           if (filters.category) query = query.eq("category", filters.category);
           if (filters.contract_type)
             query = query.eq("contract_type", filters.contract_type);
+          if (filters.pcd) query = query.eq("for_pcd", true);
           if (filters.q) {
             const t = termoParaFiltro(filters.q);
             query = query.or(`title.ilike.${t},description.ilike.${t}`);
@@ -364,6 +374,7 @@ export async function getJobs(
       if (filters.category && job.category !== filters.category) return false;
       if (filters.contract_type && job.contract_type !== filters.contract_type)
         return false;
+      if (filters.pcd && !job.for_pcd) return false;
       if (
         filters.q &&
         !matches(
@@ -472,8 +483,10 @@ function comAvaliacoesDaSessao(provider: ProviderListing): ProviderListing {
 }
 
 export async function getProviders(
-  filters: ProviderFilters = {},
+  pedidos: ProviderFilters = {},
 ): Promise<Recorte<ProviderListing>> {
+  // O termo da URL não tem teto; a consulta e a chave do cache, sim (#439).
+  const filters = { ...pedidos, q: termoDeBusca(pedidos.q) };
   if (isSupabaseConfigured) {
     // Sem cookie, pela mesma razão de `getJobs` (#206).
     const supabase = clientePublico();

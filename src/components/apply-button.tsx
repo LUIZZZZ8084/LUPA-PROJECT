@@ -21,7 +21,8 @@ export function ApplyButton({ jobId }: { jobId: string }) {
 
   if (applied) {
     return (
-      <div className="space-y-2">
+      // `data-acao-concluida`: a barra fixa da tela solta (#479).
+      <div data-acao-concluida className="space-y-2">
         <Button variant="outline" size="lg" block disabled>
           <Check size={18} className="text-vagas" />
           Candidatura enviada

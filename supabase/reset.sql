@@ -29,6 +29,9 @@
 drop view if exists metricas_pressao cascade;
 drop view if exists metricas_caixa cascade;
 drop view if exists metricas_planos cascade;
+drop view if exists metricas_funil cascade;
+drop view if exists metricas_contas_por_cidade cascade;
+drop view if exists metricas_contas_por_estado cascade;
 drop view if exists metricas_por_local cascade;
 drop view if exists metricas_cadastros_por_dia cascade;
 drop view if exists metricas_totais cascade;
@@ -42,6 +45,8 @@ drop view if exists provider_listings cascade;
 -- As tabelas. O `cascade` leva junto índices, constraints e triggers.
 -- Notificação push (#48). Antes de `usuarios`, como todo o resto:
 -- a ordem aqui é da folha para a raiz.
+drop table if exists custos_mensais cascade;
+drop table if exists denuncias cascade;
 drop table if exists inscricoes_push cascade;
 drop table if exists preferencias_notificacao cascade;
 drop table if exists pagamentos cascade;
@@ -67,6 +72,9 @@ drop table if exists usuarios cascade;
 -- As funções dos triggers. Sobrevivem ao `drop table`, porque a função é
 -- do schema e não da tabela — é justamente o tipo de objeto órfão que faz
 -- a segunda execução do schema falhar de um jeito difícil de entender.
+drop function if exists decidir_denuncia(alvo_denuncia, uuid, boolean) cascade;
+drop function if exists denuncias_somem_com_o_alvo() cascade;
+drop function if exists excluir_conta(uuid) cascade;
 drop function if exists limpar_tentativas_vencidas(integer) cascade;
 drop function if exists registrar_falha_de_acesso(text, integer, integer, integer) cascade;
 drop function if exists registrar_busca_sem_resultado(text, text) cascade;
@@ -81,6 +89,9 @@ drop function if exists tocar_atualizado_em() cascade;
 
 -- Os tipos enum por último: as colunas que os usavam já se foram.
 drop type if exists assunto_suporte cascade;
+drop type if exists status_denuncia cascade;
+drop type if exists motivo_denuncia cascade;
+drop type if exists alvo_denuncia cascade;
 drop type if exists finalidade_token cascade;
 drop type if exists status_assinatura cascade;
 drop type if exists status_pagamento cascade;

@@ -23,7 +23,7 @@ export function MoverCandidaturaSelect({
     <div className="flex shrink-0 flex-col items-end gap-1">
       <Select
         aria-label="Estágio da candidatura"
-        className="h-9 py-0 pl-3 text-xs"
+        className="h-9 py-0 pl-3 pointer-coarse:h-11 text-xs"
         value={status}
         disabled={pending}
         onChange={(e) => {
@@ -46,7 +46,7 @@ export function MoverCandidaturaSelect({
           </option>
         ))}
       </Select>
-      {erro && <p className="text-[11px] text-danger">{erro}</p>}
+      {erro && <p className="text-xs text-danger">{erro}</p>}
     </div>
   );
 }

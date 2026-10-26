@@ -26,7 +26,6 @@ export default function robots(): MetadataRoute.Robots {
         "/empresa",
         "/contratar",
         "/candidatos",
-        "/admin",
         "/pagamento",
         "/api/",
       ],

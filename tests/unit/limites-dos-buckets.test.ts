@@ -107,7 +107,12 @@ describe("limites dos buckets", () => {
  * A URL pública de bucket público não passa por policy; uma policy de
  * `select` em `storage.objects` só serve para listar o bucket pela API com
  * a chave anônima — e o caminho de cada arquivo começa pelo id da conta.
- * O app não lista nada: tudo passa pelo servidor, com a chave de serviço.
+ * Tudo passa pelo servidor, com a chave de serviço, que não depende de
+ * policy.
+ *
+ * A única listagem é a da pasta de fotos de quem exclui a conta (#423): a
+ * foto trocada na edição fica no bucket sem nada apontando para ela, e só
+ * listando a pasta dá para apagar tudo o que é da pessoa.
  */
 describe("storage sem listagem", () => {
   const semComentarios = (sql: string) =>
@@ -134,11 +139,20 @@ describe("storage sem listagem", () => {
     }
   });
 
-  it("o app não lista bucket nenhum", () => {
+  it("o app só lista para apagar a conta, e com a chave de serviço", () => {
     const servico = readFileSync(
       join(process.cwd(), "src/server/arquivos/servico.ts"),
       "utf8",
     );
-    expect(servico).not.toMatch(/\.list\(/);
+    const listagens = [...servico.matchAll(/\.list\(/g)];
+    expect(listagens).toHaveLength(1);
+
+    const inicio = servico.indexOf(
+      "export async function apagarArquivosDaConta",
+    );
+    const fim = servico.indexOf("\n}\n", inicio);
+    expect(listagens[0].index).toBeGreaterThan(inicio);
+    expect(listagens[0].index).toBeLessThan(fim);
+    expect(servico.slice(inicio, fim)).toContain("clienteDeServico()");
   });
 });

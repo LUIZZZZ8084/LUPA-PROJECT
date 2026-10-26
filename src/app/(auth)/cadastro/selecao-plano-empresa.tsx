@@ -21,6 +21,12 @@ import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
  * celular comum sem rolar — o que fica abaixo da dobra é o que a pessoa
  * não vê, e aqui o que ela não via era justamente a opção grátis.
  *
+ * **Botões de 44 px sem perder a dobra (#481).** Em aparelho de toque os
+ * botões pequenos passaram de 36 para 44 px. Cada linha de compra tinha 52 px
+ * (36 do botão e 16 de respiro) e continua com 52 (44 e 8), e o espaço entre
+ * os blocos caiu de 16 para 12 para pagar os 8 px do "Continuar grátis". A
+ * tela inteira continua cabendo em 844 px de altura, que o teste confere.
+ *
  * As opções e os botões continuam os mesmos de `/empresa/creditos` — mesma
  * lista (`OPCOES_DE_VAGA`), mesmo `ComprarButton`, mesma action. O saldo
  * não entra: quem acabou de criar a conta tem zero.
@@ -36,7 +42,7 @@ export function SelecaoDePlanoEmpresa() {
   const mensal = formatPrecoBRL(PRECO_CENTAVOS.empresa_mensal / 100);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div
         role="status"
         className="flex items-start gap-3 rounded-[var(--radius-panel)] border border-line bg-panel p-4"
@@ -134,7 +140,7 @@ function LinhaDeCompra({
   children: React.ReactNode;
 }) {
   return (
-    <li className="flex items-center justify-between gap-3 rounded-xl border border-line bg-panel px-3 py-2">
+    <li className="flex items-center justify-between gap-3 rounded-xl border border-line bg-panel px-3 py-1">
       <div className="min-w-0">
         <p className="font-semibold text-sm">
           {nome}

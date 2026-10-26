@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { VerifiedMark } from "@/components/verified-badge";
-import { WORK_MODE_LABELS } from "@/lib/constants";
+import { ROTULO_PCD, WORK_MODE_LABELS } from "@/lib/constants";
 import { formatSalaryRange, timeAgo } from "@/lib/format";
 import type { JobListing } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -39,12 +39,17 @@ export function JobCard({
       />
 
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <h3 className="min-w-0 truncate text-[15px] leading-snug font-semibold text-ink group-hover:text-vagas">
-            {job.title}
-          </h3>
-          {isNew(job.created_at) && <Badge tone="vagas">Novo</Badge>}
-        </div>
+        {/*
+         * O título tem até duas linhas, e o selo "Novo" não divide a largura
+         * com ele (#479). Ao lado do título o selo tirava uns 50 px, e o
+         * cargo, que é o que a pessoa lê primeiro, aparecia cortado:
+         * "Operador de Máquinas Agríc…" na lista e "Operador de M…" no
+         * carrossel da home, no celular. O selo foi para a linha da empresa,
+         * onde sobra espaço.
+         */}
+        <h3 className="line-clamp-2 min-w-0 text-[15px] leading-snug font-semibold text-ink group-hover:text-vagas">
+          {job.title}
+        </h3>
 
         {/* O truncate precisa ficar no texto, não no contêiner flex: em flex
             o ellipsis não se aplica e o nowrap trava a largura do card. */}
@@ -61,9 +66,19 @@ export function JobCard({
           <span className="truncate">{job.company.company_name}</span>
           {job.company.doc_verified && <VerifiedMark size={13} />}
           {job.company.pessoa_fisica && (
-            <span className="flex-none text-[11px] text-faint">
+            <span className="flex-none text-xs text-faint">
               · Pessoa física
             </span>
+          )}
+          {isNew(job.created_at) && (
+            // Compacto de propósito: com o padding do selo comum a linha
+            // cresceria uns 6 px só nos cartões novos.
+            <Badge
+              tone="vagas"
+              className="ml-1 flex-none px-2 py-0.5 leading-none"
+            >
+              Novo
+            </Badge>
           )}
         </p>
 
@@ -71,7 +86,7 @@ export function JobCard({
           {formatSalaryRange(job.salary_min, job.salary_max)}
         </p>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-faint">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-faint">
           <span className="inline-flex items-center gap-1">
             <MapPin size={12} />
             {job.neighborhood ? `${job.neighborhood}, ` : ""}
@@ -86,6 +101,7 @@ export function JobCard({
           {job.work_mode && (
             <Badge tone="outline">{WORK_MODE_LABELS[job.work_mode]}</Badge>
           )}
+          {job.for_pcd && <Badge tone="vagas">{ROTULO_PCD}</Badge>}
           <span>{timeAgo(job.created_at)}</span>
         </div>
       </div>

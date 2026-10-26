@@ -165,7 +165,9 @@ create table usuarios (
    * apagar dado de producao e decisao do Luiz, e a coluna e inofensiva:
    * `usuarios` nao tem grant para `anon`. Sai numa migracao futura, junto
    * com as views que ainda a expoem (`provider_listings`,
-   * `company_applications`, `candidatos_disponiveis`, `metricas_por_local`).
+   * `company_applications`, `candidatos_disponiveis`). A
+   * `metricas_por_local` saiu na #471, trocada por contas por estado e por
+   * cidade.
    */
   bairro               text,
   avatar_url           text,
@@ -275,7 +277,40 @@ insert into categorias_servico (id, slug, nome) values
   (14, 'manicure',           'Manicure'),
   (15, 'fotografo',          'Fotógrafo(a)'),
   (16, 'personal-trainer',   'Personal Trainer'),
-  (17, 'mecanico',           'Mecânico(a)');
+  (17, 'mecanico',           'Mecânico(a)'),
+  (18, 'marceneiro', 'Marceneiro(a)'),
+  (19, 'serralheiro', 'Serralheiro(a)'),
+  (20, 'soldador', 'Soldador(a)'),
+  (21, 'gesseiro', 'Gesseiro(a)'),
+  (22, 'vidraceiro', 'Vidraceiro(a)'),
+  (23, 'azulejista', 'Azulejista'),
+  (24, 'tecnico-ar-condicionado', 'Técnico(a) de Ar-condicionado'),
+  (25, 'tecnico-informatica', 'Técnico(a) de Informática'),
+  (26, 'tecnico-celular', 'Técnico(a) de Celular'),
+  (27, 'chaveiro', 'Chaveiro(a)'),
+  (28, 'montador-moveis', 'Montador(a) de Móveis'),
+  (29, 'instalador-energia-solar', 'Instalador(a) de Energia Solar'),
+  (30, 'instalador-cameras', 'Instalador(a) de Câmeras e Alarmes'),
+  (31, 'dedetizador', 'Dedetizador(a)'),
+  (32, 'piscineiro', 'Piscineiro(a)'),
+  (33, 'motoboy', 'Motoboy / Entregador(a)'),
+  (34, 'motorista-particular', 'Motorista Particular'),
+  (35, 'baba', 'Babá'),
+  (36, 'passadeira', 'Passadeira'),
+  (37, 'costureira', 'Costureira(o)'),
+  (38, 'cozinheiro', 'Cozinheiro(a)'),
+  (39, 'confeiteiro', 'Confeiteiro(a) / Padeiro(a)'),
+  (40, 'churrasqueiro', 'Churrasqueiro(a)'),
+  (41, 'garcom', 'Garçom / Garçonete'),
+  (42, 'barbeiro', 'Barbeiro(a)'),
+  (43, 'maquiador', 'Maquiador(a)'),
+  (44, 'massoterapeuta', 'Massoterapeuta'),
+  (45, 'esteticista', 'Esteticista'),
+  (46, 'contador', 'Contador(a)'),
+  (47, 'professor-particular', 'Professor(a) Particular'),
+  (48, 'veterinario', 'Veterinário(a)'),
+  (49, 'tosador', 'Banho e Tosa'),
+  (50, 'tratorista', 'Tratorista / Operador(a) de Máquinas');
 
 select setval('categorias_servico_id_seq', (select max(id) from categorias_servico));
 
@@ -425,6 +460,19 @@ create table vagas (
    * continua válida e só não mostra o selo. A tela de publicação exige.
    */
   modalidade    modalidade_vaga,
+  /*
+   * Vaga para pessoa com deficiência (#456). A empresa responde na hora de
+   * publicar, e a busca filtra por isto.
+   *
+   * `not null default false`, ao contrário da modalidade: aqui o valor
+   * neutro existe e é verdadeiro para o que já foi publicado — vaga antiga
+   * não era para PCD —, então não há linha "sem resposta" para tratar. A
+   * tela é que exige a escolha explícita em vaga nova.
+   *
+   * É só da vaga. A Lupa não guarda se o candidato é PCD: é dado de saúde,
+   * e o filtro funciona sem isso.
+   */
+  para_pcd      boolean not null default false,
   salario_min   numeric(10,2),
   salario_max   numeric(10,2),
 
@@ -703,6 +751,10 @@ create table tentativas_de_acesso (
   tentativas    integer not null default 0,
   primeira_em   timestamptz not null default now(),
   bloqueado_ate timestamptz,
+  -- A janela com que a chave foi registrada (#407). A limpeza a respeita:
+  -- sem isto, a cota diária de e-mail era apagada depois de uma hora e
+  -- recomeçava do zero.
+  janela_segundos integer,
 
   constraint tentativas_nao_negativas check (tentativas >= 0)
 );
@@ -729,9 +781,10 @@ returns timestamptz
 language sql
 set search_path = public, pg_temp
 as $$
-  insert into tentativas_de_acesso (chave, tentativas, primeira_em)
-  values (p_chave, 1, now())
+  insert into tentativas_de_acesso (chave, tentativas, primeira_em, janela_segundos)
+  values (p_chave, 1, now(), p_janela_segundos)
   on conflict (chave) do update set
+    janela_segundos = p_janela_segundos,
     -- Janela vencida recomeça do 1; dentro da janela, soma.
     tentativas = case
       when now() - tentativas_de_acesso.primeira_em
@@ -765,6 +818,13 @@ $$;
  * cron, a alternativa seria a tabela crescer com toda chave vista uma vez
  * e nunca mais. Custa um `delete` por índice que quase sempre não apaga
  * nada.
+ *
+ * **Nenhuma linha sai antes de a própria janela vencer (#407).** O corte
+ * era só "quatro janelas de login", uma hora. Servia enquanto toda janela
+ * era de minutos; a cota diária de e-mail é de um dia, e era apagada aos
+ * 60 minutos sem ter batido no teto — quem mandasse um pouco abaixo dele a
+ * cada hora nunca era barrado. A primeira condição continua sendo a do
+ * índice; a segunda só poupa quem declarou janela mais longa.
  */
 create or replace function limpar_tentativas_vencidas(p_janela_segundos integer)
 returns void
@@ -773,6 +833,8 @@ set search_path = public, pg_temp
 as $$
   delete from tentativas_de_acesso
    where primeira_em < now() - make_interval(secs => p_janela_segundos * 4)
+     and (janela_segundos is null
+          or primeira_em < now() - make_interval(secs => janela_segundos))
      and (bloqueado_ate is null or bloqueado_ate < now());
 $$;
 
@@ -1288,6 +1350,231 @@ create index tokens_recuperacao_usuario_idx
 alter table tokens_recuperacao enable row level security;
 
 -- ============================================================================
+-- 9z. Excluir a própria conta (#423)
+--
+-- LGPD, art. 18, VI. Uma função só, para tudo acontecer na mesma transação:
+-- metade excluída e metade não é o pior estado possível — a pessoa não
+-- consegue mais entrar e os dados dela continuam aqui. A aplicação cancela
+-- a assinatura no Mercado Pago **antes** de chamar, e apaga os arquivos do
+-- Storage **depois**.
+--
+-- Não é `security definer`: quem chama é a chave de serviço.
+-- ============================================================================
+
+create or replace function excluir_conta(p_usuario uuid)
+returns void
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  -- O que a pessoa publicou, pediu ou guardou aqui.
+  delete from candidaturas             where candidato_id = p_usuario;
+  delete from publicacoes              where autor_id     = p_usuario;
+  delete from avaliacoes               where prestador_id = p_usuario;
+  delete from perfis_candidato         where usuario_id   = p_usuario;
+  delete from perfis_prestador         where usuario_id   = p_usuario;
+  -- Leva junto as vagas dela, e as candidaturas a elas.
+  delete from perfis_empresa           where usuario_id   = p_usuario;
+  delete from pedidos_verificacao      where usuario_id   = p_usuario;
+  delete from preferencias_notificacao where usuario_id   = p_usuario;
+  delete from inscricoes_push          where usuario_id   = p_usuario;
+  delete from tokens_recuperacao       where usuario_id   = p_usuario;
+  delete from carteiras_vaga           where usuario_id   = p_usuario;
+  delete from admins                   where usuario_id   = p_usuario;
+
+  -- A avaliação que ela escreveu é reputação de outra pessoa: fica, sem
+  -- o nome de quem escreveu.
+  update avaliacoes
+     set avaliador_id = null, nome_avaliador = 'Conta excluída'
+   where avaliador_id = p_usuario;
+
+  -- Mensagens ao suporte: a tabela existe em produção e não neste
+  -- arquivo, por isso o `execute`.
+  if to_regclass('public.mensagens_suporte') is not null then
+    execute 'delete from public.mensagens_suporte where usuario_id = $1'
+      using p_usuario;
+  end if;
+
+  -- A linha fica, sem nada que identifique a pessoa: pagamentos e
+  -- assinaturas apontam para ela, e apagá-la levaria o histórico do caixa
+  -- junto, em cascata. Senha que nenhum hash produz, e-mail e CPF livres
+  -- para uma conta nova, e toda sessão cortada.
+  update usuarios
+     set email                 = 'excluida-' || id || '@excluida.lupapp.invalid',
+         nome_completo         = 'Conta excluída',
+         telefone              = '0000000000',
+         cpf                   = null,
+         bairro                = null,
+         avatar_url            = null,
+         senha_hash            = '!conta-excluida',
+         email_verificado      = false,
+         telefone_verificado   = false,
+         doc_verificado        = false,
+         ultimo_acesso_em      = null,
+         sessoes_validas_desde = now()
+   where id = p_usuario;
+end;
+$$;
+
+-- ============================================================================
+-- 9y. Denúncias (#435)
+--
+-- Vaga golpista e avaliação abusiva chegam ao admin por aqui, e só ele
+-- decide: nada sai do ar sozinho. A tabela é fechada para as chaves
+-- anônima e autenticada (revoke lá embaixo); quem escreve e lê é a chave
+-- de serviço, e o denunciante nunca aparece para o denunciado.
+-- ============================================================================
+
+create type alvo_denuncia as enum ('vaga', 'avaliacao', 'publicacao');
+create type motivo_denuncia as enum ('golpe', 'falsa', 'ofensiva', 'outro');
+create type status_denuncia as enum ('aberta', 'procedente', 'descartada');
+
+create table denuncias (
+  id             uuid primary key default gen_random_uuid(),
+  alvo           alvo_denuncia not null,
+  alvo_id        uuid not null,
+  -- Para a avaliação e a foto (#452), de quem é o perfil onde ela aparece:
+  -- é o caminho que o admin abre para ver o contexto. Nulo na vaga, cujo
+  -- id já é o caminho.
+  prestador_id   uuid references usuarios(id) on delete cascade,
+  -- `set null`: a conta anonimizada não é apagada (#423), mas se um dia
+  -- for, a denúncia que ela fez continua valendo como sinal.
+  denunciante_id uuid references usuarios(id) on delete set null,
+  motivo         motivo_denuncia not null,
+  detalhe        text check (detalhe is null or char_length(detalhe) <= 500),
+  status         status_denuncia not null default 'aberta',
+  criada_em      timestamptz not null default now(),
+  decidida_em    timestamptz
+);
+
+-- Uma denúncia aberta por pessoa e por alvo: a segunda não soma nada, e
+-- dez cliques da mesma pessoa não podem parecer dez pessoas.
+create unique index denuncias_uma_aberta_por_pessoa
+  on denuncias (alvo, alvo_id, denunciante_id)
+  where status = 'aberta' and denunciante_id is not null;
+
+create index denuncias_abertas_idx
+  on denuncias (criada_em)
+  where status = 'aberta';
+
+create index denuncias_denunciante_idx on denuncias (denunciante_id);
+
+alter table denuncias enable row level security;
+
+-- Tirar do ar e fechar as denúncias do mesmo alvo numa transação só:
+-- metade feita seria a vaga fora do ar com a denúncia ainda aberta no
+-- painel, ou o contrário — a denúncia fechada com a vaga no ar.
+create or replace function decidir_denuncia(
+  p_alvo        alvo_denuncia,
+  p_alvo_id     uuid,
+  p_tirar_do_ar boolean
+)
+returns integer
+language plpgsql
+set search_path = public, pg_temp
+as $$
+declare
+  fechadas integer;
+begin
+  -- As denúncias primeiro: apagar a avaliação antes levaria junto as
+  -- abertas, pelo trigger logo abaixo, e a decisão não ficaria registrada.
+  update denuncias
+     set status = case when p_tirar_do_ar
+                       then 'procedente'::status_denuncia
+                       else 'descartada'::status_denuncia end,
+         decidida_em = now()
+   where alvo = p_alvo
+     and alvo_id = p_alvo_id
+     and status = 'aberta';
+
+  get diagnostics fechadas = row_count;
+
+  if p_tirar_do_ar then
+    if p_alvo = 'vaga' then
+      update vagas set status = 'fechada' where id = p_alvo_id;
+    elsif p_alvo = 'avaliacao' then
+      -- O trigger de `avaliacoes` recalcula a nota do prestador.
+      delete from avaliacoes where id = p_alvo_id;
+    else
+      -- A foto sai de vez, e não arquivada (#452): arquivada, ela seguiria
+      -- no ar pelo endereço, e o dono poderia trazê-la de volta. O
+      -- arquivo no Storage a aplicação apaga em seguida.
+      delete from publicacoes where id = p_alvo_id;
+    end if;
+  end if;
+
+  return fechadas;
+end;
+$$;
+
+-- O alvo sumiu — a conta do dono foi excluída (#423), e a vaga e as
+-- avaliações do perfil foram junto —, e a denúncia aberta sumiria com ele:
+-- sem isso o painel mostraria algo que ninguém consegue mais abrir. As já
+-- decididas ficam, como registro.
+create or replace function denuncias_somem_com_o_alvo()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  delete from denuncias
+   where alvo = tg_argv[0]::alvo_denuncia
+     and alvo_id = old.id
+     and status = 'aberta';
+  return old;
+end;
+$$;
+
+drop trigger if exists denuncias_da_vaga on vagas;
+create trigger denuncias_da_vaga
+  after delete on vagas
+  for each row execute function denuncias_somem_com_o_alvo('vaga');
+
+drop trigger if exists denuncias_da_avaliacao on avaliacoes;
+create trigger denuncias_da_avaliacao
+  after delete on avaliacoes
+  for each row execute function denuncias_somem_com_o_alvo('avaliacao');
+
+drop trigger if exists denuncias_da_publicacao on publicacoes;
+create trigger denuncias_da_publicacao
+  after delete on publicacoes
+  for each row execute function denuncias_somem_com_o_alvo('publicacao');
+
+-- ============================================================================
+-- 9x. Custos mensais (#473)
+--
+-- O que o Lupa precisa pagar todo mês, para o painel comparar com a receita
+-- que se repete ("O Lupa já se paga?", #471). Era uma constante no código;
+-- o Luiz pediu para acrescentar contador, aluguel e o que mais vier sem
+-- depender de deploy. Dado da empresa, não de ninguém do app: só a chave
+-- de serviço alcança, e só o admin edita, pela tela.
+-- ============================================================================
+
+create table custos_mensais (
+  id             uuid primary key default gen_random_uuid(),
+  -- A ordem de cobertura é a de cadastro: a receita paga o primeiro custo
+  -- inteiro antes de chegar ao segundo.
+  ordem          bigint generated by default as identity,
+  nome           text not null check (char_length(btrim(nome)) between 2 and 60),
+  -- Em centavos, por mês. Até R$ 100.000,00: acima disso é engano.
+  valor_centavos integer not null
+                 check (valor_centavos between 1 and 10000000),
+  criado_em      timestamptz not null default now(),
+  atualizado_em  timestamptz not null default now()
+);
+
+create trigger custos_mensais_atualizado_em
+  before update on custos_mensais
+  for each row execute function tocar_atualizado_em();
+
+alter table custos_mensais enable row level security;
+
+-- Nasce com os dois custos que a #471 deixou escritos no código, os mesmos
+-- de `CUSTOS_INICIAIS`: estimativas do Supabase Pro e do Vercel Pro.
+insert into custos_mensais (nome, valor_centavos) values ('Supabase Pro', 13300);
+insert into custos_mensais (nome, valor_centavos) values ('Vercel Pro', 10700);
+
+-- ============================================================================
 -- 10. Views que a aplicação consulta
 --
 -- `security_invoker = false` de propósito: as views rodam com a permissão do
@@ -1366,7 +1653,9 @@ select
   v.expira_em                 as expires_at,
   -- Por último: `create or replace view` só aceita coluna nova no fim, e é
   -- assim que `aplica-modalidade-vaga.sql` chega a um banco vivo (#300).
-  v.modalidade                as work_mode
+  v.modalidade                as work_mode,
+  -- E depois dela, pela mesma regra (#456): coluna nova só no fim.
+  v.para_pcd                  as for_pcd
 from vagas v
 join perfis_empresa e on e.usuario_id = v.empresa_id
 join usuarios u on u.id = e.usuario_id;
@@ -1489,14 +1778,26 @@ left join categorias_servico cs on cs.id = pp.categoria_id;
 -- continua barato quando a base crescer.
 -- ============================================================================
 
+/*
+ * Conta é quem pode entrar (#471). A linha de quem excluiu a própria conta
+ * (#423) fica em `usuarios`, anonimizada e com a senha que nenhum hash
+ * produz, porque `pagamentos` aponta para ela — e as views de métrica a
+ * somavam como gente. E vaga aberta é a que ainda aparece na busca: vencida
+ * continua `aberta` no status (#157), e contava.
+ */
 create view metricas_totais
 with (security_invoker = false) as
+with contas as (
+  select papel from usuarios
+  where papel <> 'admin' and senha_hash <> '!conta-excluida'
+)
 select
-  (select count(*) from usuarios where papel <> 'admin')            as usuarios,
-  (select count(*) from usuarios where papel = 'candidato_clt')     as candidatos,
-  (select count(*) from usuarios where papel = 'prestador_servico') as prestadores,
-  (select count(*) from usuarios where papel = 'empresa')           as empresas,
-  (select count(*) from vagas where status = 'aberta')              as vagas_abertas;
+  (select count(*) from contas)                                     as usuarios,
+  (select count(*) from contas where papel = 'candidato_clt')       as candidatos,
+  (select count(*) from contas where papel = 'prestador_servico')   as prestadores,
+  (select count(*) from contas where papel = 'empresa')             as empresas,
+  (select count(*) from vagas
+     where status = 'aberta' and expira_em > now())                 as vagas_abertas;
 
 /*
  * Fuso de Cuiabá, não UTC: um cadastro às 21h em Sinop precisa contar no dia
@@ -1512,12 +1813,116 @@ from usuarios
 where papel <> 'admin'
 group by 1, 2;
 
-create view metricas_por_local
+/*
+ * Contas por estado e por cidade, separadas por papel (#471).
+ *
+ * Substituem `metricas_por_local`, que agrupava por cidade **e bairro** —
+ * o bairro de pessoa saiu do produto na #321 — e não dizia o papel. O
+ * estado sai do próprio valor gravado ("Sinop - MT", #301); o que não tem
+ * esse formato fica com estado nulo, e a tela o mostra como "sem estado",
+ * em vez de sumir com a conta.
+ *
+ * A mesma conta existe em TypeScript, para a demonstração
+ * (`agregarContasPorLugar`), e o `schema.test.ts` roda as duas sobre a
+ * mesma entrada: o recorte do estado é regra de texto, e regra de texto
+ * escrita em duas linguagens é a que diverge sem ninguém ver.
+ */
+create view metricas_contas_por_estado
 with (security_invoker = false) as
-select cidade, bairro, count(*) as total
+select
+  substring(cidade from ' - ([A-Z]{2})$')              as uf,
+  count(*) filter (where papel = 'candidato_clt')      as candidatos,
+  count(*) filter (where papel = 'prestador_servico')  as prestadores,
+  count(*) filter (where papel = 'empresa')            as empresas,
+  count(*)                                             as total
 from usuarios
-where papel <> 'admin'
-group by cidade, bairro;
+where papel <> 'admin' and senha_hash <> '!conta-excluida'
+group by 1;
+
+create view metricas_contas_por_cidade
+with (security_invoker = false) as
+select
+  cidade,
+  count(*) filter (where papel = 'candidato_clt')      as candidatos,
+  count(*) filter (where papel = 'prestador_servico')  as prestadores,
+  count(*) filter (where papel = 'empresa')            as empresas,
+  count(*)                                             as total
+from usuarios
+where papel <> 'admin' and senha_hash <> '!conta-excluida'
+group by cidade;
+
+/*
+ * O funil de cada papel e a receita que se repete (#471).
+ *
+ * A pergunta é a do Luiz em 15/10/2026: quanto falta para o Lupa pagar o
+ * próprio custo. Cada papel tem o caminho dele até virar receita, e o
+ * funil mostra onde ele para:
+ *
+ * - candidato: conta → visível para empresas → se candidatou;
+ * - prestador: conta → na vitrine (CPF conferido e mensalidade em dia,
+ *   a mesma regra de `getProviders`) → assinante;
+ * - empresa: conta → conferida (CNPJ na Receita, ou CPF no cadastro) →
+ *   publicou vaga → comprou.
+ *
+ * `recorrente_ativo_centavos` soma as assinaturas ativas pelo valor de
+ * cada uma, não pela tabela de hoje: quem assinou antes de um preço mudar
+ * continua pagando o que assinou. Inclui quem está no teste grátis, que é
+ * `ativa` antes da primeira cobrança. `entrou_30_dias_centavos` é o que foi
+ * aprovado nos últimos 30 dias, pacotes inclusive.
+ *
+ * Só contagem sai daqui. A mesma regra existe em TypeScript
+ * (`montarFunil`), e o `schema.test.ts` compara as duas.
+ */
+create view metricas_funil
+with (security_invoker = false) as
+with contas as (
+  select id, papel, doc_verificado from usuarios
+  where papel <> 'admin' and senha_hash <> '!conta-excluida'
+)
+select
+  (select count(*) from contas where papel = 'candidato_clt')
+    as candidatos,
+  (select count(*) from contas c
+     join perfis_candidato pc on pc.usuario_id = c.id
+    where c.papel = 'candidato_clt' and pc.visivel_para_empresas)
+    as candidatos_visiveis,
+  (select count(distinct ca.candidato_id) from candidaturas ca
+     join contas c on c.id = ca.candidato_id
+    where c.papel = 'candidato_clt')
+    as candidatos_que_se_candidataram,
+  (select count(*) from contas where papel = 'prestador_servico')
+    as prestadores,
+  (select count(*) from contas c
+     join perfis_prestador pp on pp.usuario_id = c.id
+    where c.papel = 'prestador_servico' and c.doc_verificado
+      and pp.mensalidade_valida_ate > now())
+    as prestadores_na_vitrine,
+  (select count(distinct a.usuario_id) from assinaturas a
+     join contas c on c.id = a.usuario_id
+    where a.tipo = 'prestador_mensalidade' and a.status = 'ativa')
+    as prestadores_assinantes,
+  (select count(*) from contas where papel = 'empresa')
+    as empresas,
+  (select count(*) from contas where papel = 'empresa' and doc_verificado)
+    as empresas_verificadas,
+  (select count(distinct v.empresa_id) from vagas v
+     join contas c on c.id = v.empresa_id
+    where c.papel = 'empresa')
+    as empresas_com_vaga,
+  (select count(distinct p.usuario_id) from pagamentos p
+     join contas c on c.id = p.usuario_id
+    where c.papel = 'empresa' and p.status = 'aprovado'
+      and p.tipo in ('empresa_vaga_avulsa', 'empresa_pacote_5',
+                     'empresa_pacote_10', 'empresa_mensal'))
+    as empresas_que_compraram,
+  (select count(*) from assinaturas where status = 'ativa')
+    as assinaturas_ativas,
+  (select coalesce(sum(valor_centavos), 0) from assinaturas
+    where status = 'ativa')
+    as recorrente_ativo_centavos,
+  (select coalesce(sum(valor_centavos), 0) from pagamentos
+    where status = 'aprovado' and criado_em > now() - interval '30 days')
+    as entrou_30_dias_centavos;
 
 /*
  * O caixa: o que entrou e o que saiu, de verdade (#179).
@@ -1708,6 +2113,9 @@ begin
   if not exists (select from pg_roles where rolname = 'authenticated') then
     create role authenticated;
   end if;
+  if not exists (select from pg_roles where rolname = 'service_role') then
+    create role service_role;
+  end if;
 end $$;
 
 grant usage on schema public to anon, authenticated;
@@ -1735,7 +2143,9 @@ revoke select on candidatos_disponiveis        from anon, authenticated;
 revoke select on verification_queue            from anon, authenticated;
 revoke select on metricas_totais               from anon, authenticated;
 revoke select on metricas_cadastros_por_dia    from anon, authenticated;
-revoke select on metricas_por_local            from anon, authenticated;
+revoke select on metricas_contas_por_estado    from anon, authenticated;
+revoke select on metricas_contas_por_cidade    from anon, authenticated;
+revoke select on metricas_funil                from anon, authenticated;
 revoke select on metricas_caixa                from anon, authenticated;
 
 /*
@@ -1794,3 +2204,42 @@ revoke select on pagamentos       from anon, authenticated;
 revoke select on assinaturas      from anon, authenticated;
 revoke select on carteiras_vaga   from anon, authenticated;
 revoke select on tokens_recuperacao from anon, authenticated;
+
+-- Denúncia diz quem denunciou quem (#435): só a chave de serviço.
+revoke select on denuncias from anon, authenticated;
+revoke select on custos_mensais from anon, authenticated;
+
+/*
+ * E a escrita, em tudo (#421). O Supabase concede a `anon` e
+ * `authenticated` insert, update, delete, truncate, references e trigger em
+ * toda tabela e view do schema público, e a aplicação nunca escreve com
+ * essas chaves — toda escrita passa pela de serviço. O RLS sem policy de
+ * escrita já barra; isto é a segunda camada, como o `revoke select` acima é
+ * para a leitura. O `alter default privileges` cobre as tabelas criadas
+ * depois. Em banco existente: `aplica-anon-sem-escrita.sql`.
+ */
+revoke insert, update, delete, truncate, references, trigger
+  on all tables in schema public from anon, authenticated;
+
+alter default privileges in schema public
+  revoke insert, update, delete, truncate, references, trigger
+  on tables from anon, authenticated;
+
+/*
+ * E as funções (#449). O Supabase publica toda função do schema público
+ * pela API, e por padrão as duas chaves podem executá-las. Nenhuma daqui
+ * roda com o privilégio do dono, e as chaves não escrevem em nada, então
+ * hoje isso não alcança coisa alguma — mas a garantia moraria numa
+ * propriedade de cada função, e uma `security definer` criada por engano
+ * viraria porta aberta. Quem chama função é só a chave de serviço.
+ *
+ * Fica no fim do arquivo para alcançar toda função criada acima. Em banco
+ * existente, e depois de qualquer `aplica-*.sql` que crie função:
+ * `aplica-funcoes-so-servico.sql`.
+ */
+revoke execute on all functions in schema public
+  from public, anon, authenticated;
+grant execute on all functions in schema public to service_role;
+
+alter default privileges in schema public
+  revoke execute on functions from anon, authenticated;

@@ -10,13 +10,15 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { ApplyButton } from "@/components/apply-button";
+import { BarraDeAcaoFixa } from "@/components/barra-de-acao-fixa";
+import { Denunciar } from "@/components/denunciar";
 import { JobCard } from "@/components/job-card";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { VerifiedMark } from "@/components/verified-badge";
-import { WORK_MODE_LABELS } from "@/lib/constants";
+import { ROTULO_PCD, WORK_MODE_LABELS } from "@/lib/constants";
 import { getJobById, getRelatedJobs } from "@/lib/data";
 import {
   formatSalaryRange,
@@ -80,6 +82,9 @@ export default async function JobDetailPage({
 
   const related = await getRelatedJobs(job);
   const expirada = job.status === "aberta" && vagaExpirada(job.expires_at);
+  // Aberta, no prazo e com quem pode candidatar-se: é quando o botão existe.
+  const abertaParaCandidatar =
+    job.status === "aberta" && !expirada && podeCandidatar;
 
   return (
     <PageShell width="narrow">
@@ -122,7 +127,7 @@ export default async function JobDetailPage({
                     href={redes.site}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
+                    className="-my-3.5 inline-flex items-center py-3.5 text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
                   >
                     Site
                   </a>
@@ -132,7 +137,7 @@ export default async function JobDetailPage({
                     href={redes.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
+                    className="-my-3.5 inline-flex items-center py-3.5 text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
                   >
                     Instagram
                   </a>
@@ -142,7 +147,7 @@ export default async function JobDetailPage({
                     href={redes.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
+                    className="-my-3.5 inline-flex items-center py-3.5 text-xs text-muted underline-offset-2 transition-colors hover:text-vagas hover:underline"
                   >
                     Facebook
                   </a>
@@ -183,6 +188,7 @@ export default async function JobDetailPage({
           {job.work_mode && (
             <Badge tone="outline">{WORK_MODE_LABELS[job.work_mode]}</Badge>
           )}
+          {job.for_pcd && <Badge tone="vagas">{ROTULO_PCD}</Badge>}
           <Badge tone="outline">
             <Users size={11} />
             {pluralize(job.applicant_count, "candidato", "candidatos")}
@@ -212,31 +218,55 @@ export default async function JobDetailPage({
           </div>
         </div>
 
-        <div className="mt-6 border-t border-line pt-5">
-          {job.status !== "aberta" || expirada ? (
-            <p className="text-center text-muted text-sm">
-              Esta vaga não está mais recebendo candidaturas.
-            </p>
-          ) : podeCandidatar ? (
-            <ApplyButton jobId={job.id} />
-          ) : (
-            /*
-             * Sem a capacidade, nada de botão.
-             *
-             * Ele aparecia para todo mundo e só recusava depois do clique
-             * — inclusive para empresa e para quem virou prestador. É a
-             * mesma armadilha que os atalhos do perfil já evitam:
-             * "mostrar um link que devolve sem permissão ao ser clicado é
-             * pior do que não mostrar; a pessoa conclui que o app está
-             * quebrado". Aqui era pior ainda, porque a tela de virar
-             * prestador promete que este botão some.
-             */
-            <p className="text-center text-muted text-sm">
-              Contas de prestador e de empresa não se candidatam a vagas.
-            </p>
-          )}
-        </div>
+        {/*
+          Só as mensagens ficam no painel. O botão de candidatar-se vive na
+          barra fixa logo abaixo (#479): no fim do painel ele ficava mais de
+          mil pixels abaixo do topo no celular.
+        */}
+        {!abertaParaCandidatar && (
+          <div className="mt-6 border-t border-line pt-5">
+            {job.status !== "aberta" || expirada ? (
+              <p className="text-center text-muted text-sm">
+                Esta vaga não está mais recebendo candidaturas.
+              </p>
+            ) : (
+              /*
+               * Sem a capacidade, nada de botão.
+               *
+               * Ele aparecia para todo mundo e só recusava depois do clique
+               * — inclusive para empresa e para quem virou prestador. É a
+               * mesma armadilha que os atalhos do perfil já evitam:
+               * "mostrar um link que devolve sem permissão ao ser clicado é
+               * pior do que não mostrar; a pessoa conclui que o app está
+               * quebrado". Aqui era pior ainda, porque a tela de virar
+               * prestador promete que este botão some.
+               */
+              <p className="text-center text-muted text-sm">
+                Contas de prestador e de empresa não se candidatam a vagas.
+              </p>
+            )}
+          </div>
+        )}
       </Panel>
+
+      {abertaParaCandidatar && (
+        <BarraDeAcaoFixa>
+          <ApplyButton jobId={job.id} />
+        </BarraDeAcaoFixa>
+      )}
+
+      {/*
+        Denunciar (#435): para quem tem sessão e não é o dono. Fica fora do
+        painel da vaga e discreto — é recurso de exceção, e não pode
+        disputar atenção com "Candidatar-se".
+      */}
+      {sessao &&
+        pode(sessao.papel, "denuncia:criar") &&
+        sessao.usuarioId !== job.company_id && (
+          <div className="mt-3 flex justify-end">
+            <Denunciar alvo="vaga" alvoId={job.id} />
+          </div>
+        )}
 
       {related.length > 0 && (
         <section className="mt-8">
@@ -265,7 +295,7 @@ function Fact({
 }) {
   return (
     <div className="rounded-xl border border-line bg-panel-2 p-3">
-      <p className="flex items-center gap-1.5 text-[11px] text-faint">
+      <p className="flex items-center gap-1.5 text-xs text-faint">
         {icon}
         {label}
       </p>

@@ -42,15 +42,31 @@ test.describe("confirmação de e-mail", () => {
     page,
   }) => {
     await page.goto("/verificar-email?token=nao-existe");
+    await page.getByRole("button", { name: "Confirmar meu e-mail" }).click();
 
-    await expect(page.getByText("Link inválido")).toBeVisible();
+    await expect(page.getByText("Este link não vale mais.")).toBeVisible();
     await expect(page.getByText(/vale por 24 horas/)).toBeVisible();
+  });
+
+  /**
+   * Abrir o link não confirma nada (#398): filtro de e-mail e prévia de
+   * link abrem os endereços da mensagem antes da pessoa, e o primeiro a
+   * abrir gastava o token. O que a tela oferece é o botão, e só ele gasta.
+   */
+  test("abrir o link mostra o botão, e não um resultado", async ({ page }) => {
+    await page.goto("/verificar-email?token=qualquer");
+
+    await expect(
+      page.getByRole("button", { name: "Confirmar meu e-mail" }),
+    ).toBeVisible();
+    await expect(page.getByText("E-mail confirmado.")).toHaveCount(0);
+    await expect(page.getByText("Este link não vale mais.")).toHaveCount(0);
   });
 
   /** Sem token nenhum é o mesmo caso, e não uma tela quebrada. */
   test("sem token, não quebra", async ({ page }) => {
     const resposta = await page.goto("/verificar-email");
     expect(resposta?.status()).toBe(200);
-    await expect(page.getByText("Link inválido")).toBeVisible();
+    await expect(page.getByText("Este link não vale mais.")).toBeVisible();
   });
 });

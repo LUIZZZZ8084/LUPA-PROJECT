@@ -8,12 +8,154 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 08/10/2026.**
+**Última atualização: 22/10/2026.**
 
 ## Concluído
 
+Em 22/10/2026:
+
+- Terceira rodada da revisão de design: o texto do banner da home não passa
+  mais por baixo do ombro do homem (media-se pelos pixels da foto: cobria o
+  homem a 640 a 700 px e a 320 px, e hoje não cobre em nenhuma das 17 larguras
+  testadas); os títulos equilibram as linhas, sem palavra sozinha na última;
+  e os testes do hero esperam a hidratação, o que acaba com a falha
+  intermitente do alternador Vagas/Serviços no celular. A aba "Empresa" do
+  candidato fica como está, porque o código registra que ela é de propósito —
+  [#483](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/483)
+- Segunda rodada da revisão de design, com os cinco itens que ficaram da
+  primeira: no celular os alvos de toque passam a 44 px (botões pequenos,
+  filtros, logo e botão de tema, estrelas de nota e links soltos; o desktop
+  mantém a densidade); nenhum texto que informa tem menos de 12 px (eram 10 e
+  11 em chips, selos, navegação e no bloco de confiança da home); os
+  placeholders de exemplo começam com "Ex.:" para não parecerem preenchidos;
+  "Encerrar" vaga é um botão discreto que confirma na própria tela, sem a
+  caixa do navegador e sem o vermelho cheio; e a estrela do tema claro é
+  dourada, com a nota da home acompanhada do ícone —
+  [#481](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/481)
+- Cinco ajustes de uma revisão de design, medidos no navegador em celular e
+  desktop: o título da vaga tem até duas linhas e o selo "Novo" foi para a
+  linha da empresa (antes cortava o cargo, como "Operador de M…" no
+  carrossel); "Candidatar-se" e "Conversar no WhatsApp" ficam presos no pé da
+  tela, acima da navegação, em vez de no fim da página; a barra do navegador
+  e a do app instalado acompanham o tema escuro; o foco por teclado deixou de
+  deformar botões e cartões (a regra global forçava `border-radius: 6px`); e
+  entrou o link "Pular para o conteúdo" —
+  [#479](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/479)
+
+Em 21/10/2026:
+
+- O convite de instalar deixou de abrir a caixa de passos: no iPhone, o
+  toque troca a frase da faixa por uma dica de uma linha, e a faixa não
+  cresce —
+  [#477](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/477)
+
+Em 20/10/2026:
+
+- Convite para instalar o app no navegador do celular: no Android o toque
+  instala, no iPhone mostra os passos do Compartilhar, dentro do Instagram
+  e do Facebook explica como abrir no navegador; no computador não
+  aparece —
+  [#475](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/475)
+
+Em 15/10/2026:
+
+- Painel do admin com contas por estado e por cidade, separadas em
+  candidato, prestador e empresa, o funil de cada papel e quanto da receita
+  recorrente cobre os custos de Supabase e Vercel —
+  [#471](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/471)
+- Custos mensais editáveis no painel do admin (contador, aluguel, o que
+  vier), com a cobertura recalculada na hora —
+  [#473](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/473)
+
+Em 14/10/2026:
+
+- Nova tabela de preços das vagas de empresa: 1 vaga R$ 19,90, 5 vagas
+  R$ 79,90, 10 vagas R$ 99,90 e plano mensal R$ 149,90 —
+  [#469](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/469)
+- No computador, a busca e os números da home entram no banner, e o card de
+  conta de quem está logado sai da home —
+  [#465](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/465),
+  [#467](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/467)
+- O filtro de PCD passa a ser uma opção dentro de Tipo, e a lista dos filtros
+  fica legível no tema escuro —
+  [#460](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/460),
+  [#462](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/462),
+  [#463](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/463)
+
+Em 13/10/2026:
+
+- Mais áreas de vaga (de 21 para 36) e mais profissões de prestador (de 17
+  para 50) —
+  [#457](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/457)
+- Vaga para PCD: a empresa informa ao publicar, a vaga ganha selo e a busca
+  ganha o filtro. Vaga por sexo ficou de fora, por decisão, pelo risco da CLT
+  art. 373-A —
+  [#456](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/456)
+- "Apagar de vez" um trabalho guardado, com a foto: arquivado, o arquivo
+  seguia no ar pelo endereço —
+  [#454](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/454)
+- Denunciar foto de trabalho, e o admin apaga a foto de vez (a publicação e
+  o arquivo) —
+  [#452](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/452)
+- A home se organiza no computador: usa a largura do cabeçalho, a busca fica
+  ao lado dos números e, a partir de 1280 px, as vagas ao lado dos
+  profissionais. No celular nada muda —
+  [#443](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/443)
+- Até 3 avaliações do mesmo prestador por conexão a cada 24 horas: contas
+  falsas da mesma rede não afundam a nota de ninguém —
+  [#441](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/441)
+- Denunciar vaga e avaliação, e um painel no admin para tirar do ar ou
+  descartar: nada sai do ar sozinho, e o denunciado não sabe quem
+  denunciou —
+  [#435](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/435)
+- A busca de candidatos fica só para empresa com CNPJ conferido na Receita,
+  com teto de 30 perfis abertos por dia: ninguém colhe em série o WhatsApp
+  de quem pediu para ser encontrado —
+  [#433](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/433)
+
+Em 12/10/2026:
+
+- Excluir a própria conta pelo perfil (LGPD, art. 18): a conta é
+  anonimizada, a assinatura é cancelada antes, e saem perfis, currículo,
+  candidaturas, fotos e avisos; pagamentos ficam, sem dados pessoais —
+  [#423](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/423)
+- A `main` passou a exigir PR com tipos, testes, Playwright e roadmap
+  verdes; sem force-push
+
+Em 09/10/2026:
+
+- O cookie de sessão vira `__Host-lupa_sessao` em produção, e o token diz de
+  qual ambiente veio: o de um preview não vale mais em produção, mesmo com o
+  mesmo segredo. Todo mundo entra de novo uma vez —
+  [#408](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/408)
+- O matcher do proxy deixa de ter prefixos sem âncora e de excluir por
+  extensão: `/iconografia` ou `/vagas/abc.png` passariam sem login e sem
+  CSP. O estático entra por pasta (`avatares`, `banner`) —
+  [#404](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/404)
+- A parcela da assinatura relê o pagamento em vez de confiar no resumo da
+  fatura: lida depois de um estorno, ela ainda dizia aprovado —
+  [#405](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/405)
+- Teste grátis que falha ao dar os dias é devolvido, e a assinatura volta a
+  pendente para o reenvio do webhook conceder de novo —
+  [#406](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/406)
+- A cota diária de e-mail é dividida: por origem, separada entre
+  confirmação (20) e recuperação (10), e por conta de destino (3 por
+  origem, 10 no total), para um IP não gastar os 100 do Resend de todo
+  mundo, nem encher ou travar a caixa de ninguém. Pede
+  `aplica-cota-de-email.sql` (antes ou depois do deploy) — [#407](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/407)
+
 Em 08/10/2026:
 
+- "Sair dos outros aparelhos" no perfil: corta as sessões dos outros
+  aparelhos sem trocar a senha, e mantém dentro o aparelho onde se clicou —
+  [#402](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/402)
+- A CSP deixa de liberar conexão com qualquer projeto Supabase: o
+  navegador não fala com ele, e o curinga era destino pronto para um
+  script injetado — [#400](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/400)
+- Tokens de e-mail: abrir o link de confirmação não gasta mais o token (a
+  tela mostra um botão), e pedir um link novo aposenta o anterior, na
+  recuperação de senha e na confirmação —
+  [#398](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/398)
 - Os dez PRs da auditoria de 06/10 mergeados, e as seis áreas que tinham
   ficado sem leitura lidas: buckets públicos deixam de ser listáveis, saem
   duas actions mortas que aceitavam endereço de imagem, e o workflow declara

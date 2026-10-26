@@ -31,7 +31,7 @@ export function ReativarVagaButton({ id }: { id: string }) {
         )}
         Reativar
       </Button>
-      {erro && <p className="text-[11px] text-danger">{erro}</p>}
+      {erro && <p className="text-xs text-danger">{erro}</p>}
     </div>
   );
 }

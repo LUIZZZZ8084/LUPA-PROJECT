@@ -10,29 +10,29 @@ export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
   prestador_mensalidade: 1990,
 
   /*
-   * Publicar vaga (#172), decidido pelo Luiz em 09/09/2026 e revisado por
-   * ele duas vezes no mesmo dia, depois de a tela mostrar o preço por vaga.
+   * Publicar vaga (#172), e a tabela de agora é a de 14/10/2026 (#469),
+   * decisão do Luiz: 19,90 / 79,90 / 99,90 e mensal de 149,90.
    *
-   * A primeira tabela era 29,90 / 100 / 149,90 por 15 vagas, e o preço por
-   * vaga saía 29,90 / 20,00 / 9,99: a avulsa custava **três vezes** o
-   * unitário do pacote maior. Quem tinha uma vaga só olhava aquilo como
-   * punição, e quem tinha três comprava quinze sem precisar.
+   * O preço por vaga sai 19,90 / 15,98 / 9,99: a avulsa custa o **dobro**
+   * do unitário do pacote de 10, e o de 5 fica no meio. A tabela anterior
+   * era 29,90 / 119,90 / 149,90 e mensal de 199,90 (a primeira, de 09/09,
+   * tinha pacote de 15 e avulsa a três vezes o unitário dele — quem tinha
+   * uma vaga só olhava aquilo como punição).
    *
-   * A tabela de agora fecha essa distância pelo outro lado: o pacote
-   * maior encolheu de 15 para 10 vagas, então o unitário dele sobe para
-   * R$ 14,99 e a avulsa passa a custar o **dobro**, não o triplo. Dez
-   * também é um número que quem contrata consegue projetar — quinze era
-   * estoque que ninguém sabia se ia usar.
+   * **O teto é o plano mensal**, e é ele que segura a escada: 12 vagas
+   * saem por 139,70 (o pacote de 10 e duas avulsas), e 13 já custam 159,60,
+   * mais que os 149,90 do mensal. É exatamente aí que ele deve ganhar. Um pacote que custasse perto
+   * dos 149,90 não venderia, porque a essa altura vale mais assinar — e há
+   * teste que reprova uma tabela em que o unitário não cai com o pacote ou
+   * o mensal sai mais barato que o pacote de 10.
    *
-   * **O teto é o plano mensal**, e é ele que segura a escada: a partir de
-   * ~14 vagas assinar sai mais barato que comprar o pacote de 10, e é
-   * exatamente aí que o mensal deve ganhar. Um pacote que custasse perto
-   * de R$ 199,90 não venderia, porque a essa altura vale mais assinar.
+   * O pacote de 10 custa só 20,00 a mais que o de 5: quem escolhe o de 5
+   * escolhe pelo valor que sai do bolso, não pela conta por vaga.
    */
-  empresa_vaga_avulsa: 2990,
-  empresa_pacote_5: 11990,
-  empresa_pacote_10: 14990,
-  empresa_mensal: 19990,
+  empresa_vaga_avulsa: 1990,
+  empresa_pacote_5: 7990,
+  empresa_pacote_10: 9990,
+  empresa_mensal: 14990,
 
   /** Currículo em PDF (#47), compra única e permanente. */
   curriculo_pdf: 1490,

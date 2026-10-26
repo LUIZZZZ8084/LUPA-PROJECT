@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ExcluirConta } from "@/components/excluir-conta";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
 import { LinksInstitucionais } from "@/components/links-institucionais";
 import {
@@ -20,6 +21,7 @@ import {
   PerfilPrestador,
 } from "@/components/perfil-profissional";
 import { SairButton } from "@/components/sair-button";
+import { SairDosOutrosButton } from "@/components/sair-dos-outros-button";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -270,9 +272,26 @@ export default async function PerfilPage() {
           */}
           <ConfirmarEmail verificado={usuario.emailVerificado} />
 
-          <div className="mt-5 border-t border-line pt-4">
+          {/*
+            Sair dos outros aparelhos mora ao lado do sair daqui (#402): é a
+            mesma pergunta — onde a conta está aberta — feita para os
+            aparelhos que a pessoa não tem na mão.
+          */}
+          <div className="mt-5 flex flex-wrap items-start gap-3 border-t border-line pt-4">
             <SairButton />
+            <SairDosOutrosButton />
           </div>
+
+          {/*
+            Excluir a conta (#423), direito do titular na LGPD. Por último,
+            separado dos dois "sair", e só para quem a matriz deixa: a conta
+            de administração não se exclui pela tela.
+          */}
+          {sessao && pode(sessao.papel, "conta:excluir") && (
+            <div className="mt-4 border-t border-line pt-4">
+              <ExcluirConta />
+            </div>
+          )}
         </Panel>
       ) : (
         <Panel className="mb-5 text-center">

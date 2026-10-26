@@ -74,7 +74,15 @@ export function politicaDeSeguranca(
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co https://*.ingest.sentry.io",
+    /*
+     * Sem Supabase (#400): o navegador não fala com ele, toda leitura e
+     * escrita passa pelo servidor. O curinga `*.supabase.co` aceitava o
+     * projeto de qualquer pessoa — o destino perfeito para um script
+     * injetado gravar o que lesse. O Sentry fica: sem o túnel
+     * (`/monitoring`, só com a configuração de build), o cliente envia
+     * direto para o ingest.
+     */
+    "connect-src 'self' https://*.ingest.sentry.io",
     "worker-src 'self' blob:",
     "form-action 'self'",
     "frame-ancestors 'none'",

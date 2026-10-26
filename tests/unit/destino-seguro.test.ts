@@ -33,6 +33,11 @@ describe("destinoSeguro", () => {
     ["https://evil.com", "URL absoluta externa"],
     ["https://evil.com/perfil", "externa com caminho que imita o nosso"],
     ["javascript:alert(1)", "esquema que não é http"],
+    // #437: estes resolvem dentro da origem, mas o caminho resultante é
+    // `//evil.com`, que o navegador relê como protocolo relativo.
+    ["/.//evil.com", "ponto antes da barra dupla"],
+    ["https://lupapp.com.br//evil.com", "barra dupla depois da própria origem"],
+    ["/.\\/evil.com", "ponto e barra invertida antes da barra"],
   ])("recusa %s (%s)", (entrada) => {
     expect(destinoSeguro(entrada, ORIGEM)).toBeNull();
   });

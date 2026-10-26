@@ -167,6 +167,23 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     if (error) throw erros.indisponivel(`regravação de hash: ${error.message}`);
   }
 
+  async cortarSessoes(id: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({ sessoes_validas_desde: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) throw erros.indisponivel(`corte de sessões: ${error.message}`);
+  }
+
+  /** Uma chamada só: a função faz tudo na mesma transação (#423). */
+  async excluirConta(id: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase.rpc("excluir_conta", { p_usuario: id });
+    if (error) throw erros.indisponivel(`exclusão de conta: ${error.message}`);
+  }
+
   async cortesDeSessao(dias: number): Promise<Map<string, number>> {
     const supabase = await cliente();
     const desde = new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
@@ -199,6 +216,24 @@ export class RepositorioPostgres implements RepositorioUsuarios {
 
   async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
     const supabase = await cliente();
+
+    /*
+     * Um token vivo por pessoa e finalidade: o novo apaga os anteriores,
+     * usados ou não (#419). Marcá-los como usados tirava o valor deles e
+     * os deixava na tabela para sempre; apagando, ela guarda no máximo um
+     * por pessoa e finalidade, e o link antigo deixa de valer do mesmo
+     * jeito.
+     */
+    const aposentar = await supabase
+      .from("tokens_recuperacao")
+      .delete()
+      .eq("usuario_id", dados.usuarioId)
+      .eq("finalidade", dados.finalidade);
+    if (aposentar.error)
+      throw erros.indisponivel(
+        `token de recuperação: ${aposentar.error.message}`,
+      );
+
     const { error } = await supabase.from("tokens_recuperacao").insert({
       usuario_id: dados.usuarioId,
       token_hash: dados.tokenHash,
@@ -495,6 +530,16 @@ export class RepositorioPostgres implements RepositorioUsuarios {
 
     if (error) throw erros.indisponivel(`teste grátis: ${error.message}`);
     return data !== null;
+  }
+
+  async liberarTesteGratis(usuarioId: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("usuarios")
+      .update({ teste_gratis_usado_em: null })
+      .eq("id", usuarioId);
+
+    if (error) throw erros.indisponivel(`teste grátis: ${error.message}`);
   }
 
   /**

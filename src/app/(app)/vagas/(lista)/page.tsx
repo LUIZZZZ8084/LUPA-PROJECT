@@ -12,7 +12,12 @@ import {
 import { ButtonLink } from "@/components/ui/button";
 import { filtrosDeLugar, lugarDaBusca, umParametro } from "@/lib/busca";
 import { UFS } from "@/lib/cidades";
-import { CONTRACT_TYPES, JOB_CATEGORIES } from "@/lib/constants";
+import {
+  CONTRACT_TYPES,
+  JOB_CATEGORIES,
+  PCD_NO_TIPO,
+  ROTULO_PCD,
+} from "@/lib/constants";
 import { getJobs } from "@/lib/data";
 import { pluralize } from "@/lib/format";
 import { origemDoUsuario } from "@/server/auth/origem";
@@ -75,11 +80,21 @@ export default async function VagasPage({
    */
   const perto = await origemDoUsuario();
 
+  /*
+   * PCD mora dentro de "Tipo" (#463), mas não é tipo de contrato: uma vaga
+   * para PCD pode ser CLT, estágio ou qualquer outro. Por isso `tipo=pcd`
+   * liga o filtro de PCD e não vai para a consulta como contrato — o
+   * banco compara `contract_type` com o texto, e "pcd" nunca casaria.
+   */
+  const tipo = single("tipo");
+  const soPcd = tipo === PCD_NO_TIPO;
+
   const filters = {
     city: lugar.cidade,
     uf: lugar.uf,
     category: single("categoria"),
-    contract_type: single("tipo"),
+    contract_type: soPcd ? undefined : tipo,
+    pcd: soPcd,
     q: single("q"),
     perto,
   };
@@ -116,7 +131,11 @@ export default async function VagasPage({
    */
   const ordenadoPorProximidade = Boolean(perto && !filters.city);
   const temFiltro = Boolean(
-    filters.uf || filters.category || filters.contract_type || filters.q,
+    filters.uf ||
+      filters.category ||
+      filters.contract_type ||
+      filters.pcd ||
+      filters.q,
   );
 
   return (
@@ -141,7 +160,7 @@ export default async function VagasPage({
           uf: lugar.uf,
           cidade: lugar.cidade,
           categoria: single("categoria"),
-          tipo: single("tipo"),
+          tipo,
           q: single("q"),
         }}
         filters={[
@@ -154,7 +173,10 @@ export default async function VagasPage({
           {
             key: "tipo",
             placeholder: "Tipo",
-            options: CONTRACT_TYPES.map((c) => ({ value: c, label: c })),
+            options: [
+              ...CONTRACT_TYPES.map((c) => ({ value: c, label: c })),
+              { value: PCD_NO_TIPO, label: ROTULO_PCD },
+            ],
           },
         ]}
       />

@@ -194,7 +194,8 @@ describe("contrato de quem usa o limite", () => {
   const fonte = readFileSync("src/server/auth/servico.ts", "utf8");
   const semComentarios = fonte.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
 
-  it.each(["conferirLimite", "registrarFalha", "registrarSucesso"])(
+  // `somarUso` tomou o lugar de `registrarFalha` no cadastro (#415).
+  it.each(["conferirLimite", "somarUso", "registrarSucesso"])(
     "%s é sempre chamada com await",
     (funcao) => {
       const chamadas = [

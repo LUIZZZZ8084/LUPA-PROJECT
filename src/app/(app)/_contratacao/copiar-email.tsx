@@ -15,7 +15,7 @@ export function CopiarEmail({ email }: { email: string }) {
   const [copiado, setCopiado] = useState(false);
 
   return (
-    <p className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+    <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
       <span className="break-all">{email}</span>
       <button
         type="button"

@@ -112,6 +112,47 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     if (usuario) this.usuarios.set(id, { ...usuario, senhaHash });
   }
 
+  async cortarSessoes(id: string): Promise<void> {
+    if (this.usuarios.has(id)) this.cortes.set(id, Date.now());
+  }
+
+  /**
+   * O que este repositório guarda, como a função `excluir_conta` faz no
+   * Postgres (#423). As publicações, candidaturas e avisos moram noutros
+   * repositórios de demonstração e não são tocados aqui; o caminho que
+   * apaga tudo é o do banco, e é ele que o teste de schema exercita.
+   */
+  async excluirConta(id: string): Promise<void> {
+    const usuario = this.usuarios.get(id);
+    if (!usuario) return;
+
+    this.porEmailIndice.delete(usuario.email);
+    if (usuario.cpf) this.cpfs.delete(usuario.cpf);
+    this.empresas.delete(id);
+    this.prestadores.delete(id);
+    this.candidatos.delete(id);
+    for (const [hash, token] of this.tokensDeRecuperacao) {
+      if (token.usuarioId === id) this.tokensDeRecuperacao.delete(hash);
+    }
+
+    const email = `excluida-${id}@excluida.lupapp.invalid`;
+    this.usuarios.set(id, {
+      ...usuario,
+      email,
+      nomeCompleto: "Conta excluída",
+      telefone: "0000000000",
+      cpf: null,
+      avatarUrl: null,
+      senhaHash: "!conta-excluida",
+      emailVerificado: false,
+      telefoneVerificado: false,
+      docVerificado: false,
+      ultimoAcessoEm: null,
+    });
+    this.porEmailIndice.set(email, id);
+    this.cortes.set(id, Date.now());
+  }
+
   async cortesDeSessao(dias: number): Promise<Map<string, number>> {
     const desde = Date.now() - dias * 24 * 60 * 60 * 1000;
     const recentes = new Map<string, number>();
@@ -122,6 +163,15 @@ export class RepositorioMemoria implements RepositorioUsuarios {
   }
 
   async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
+    // Apaga os anteriores, usados ou não, como o Postgres (#419).
+    for (const [hash, token] of this.tokensDeRecuperacao) {
+      if (
+        token.usuarioId === dados.usuarioId &&
+        token.finalidade === dados.finalidade
+      ) {
+        this.tokensDeRecuperacao.delete(hash);
+      }
+    }
     this.tokensDeRecuperacao.set(dados.tokenHash, {
       usuarioId: dados.usuarioId,
       expiraEm: dados.expiraEm,
@@ -265,6 +315,10 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     if (this.testesGratisUsados.has(usuarioId)) return false;
     this.testesGratisUsados.add(usuarioId);
     return true;
+  }
+
+  async liberarTesteGratis(usuarioId: string): Promise<void> {
+    this.testesGratisUsados.delete(usuarioId);
   }
 
   /**
@@ -414,6 +468,16 @@ export class RepositorioMemoria implements RepositorioUsuarios {
   /** Todos os usuários. Usado pelas métricas do painel administrativo. */
   todos(): Usuario[] {
     return [...this.usuarios.values()];
+  }
+
+  /** Os perfis de candidato, para o funil do painel em demonstração (#471). */
+  perfisDeCandidato(): PerfilCandidato[] {
+    return [...this.candidatos.values()];
+  }
+
+  /** Os perfis de prestador, para o funil do painel em demonstração (#471). */
+  perfisDePrestador(): PerfilPrestador[] {
+    return [...this.prestadores.values()];
   }
 
   limpar(): void {

@@ -25,6 +25,7 @@ function vaga(over: Partial<JobListing> = {}): JobListing {
     address: null,
     contract_type: "CLT",
     work_mode: "presencial" as const,
+    for_pcd: false,
     salary_min: null,
     salary_max: null,
     skills: ["Colheitadeira", "CNH D", "Manutenção básica"],

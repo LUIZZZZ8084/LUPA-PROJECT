@@ -87,6 +87,18 @@ function porJanela(chamadas: number): Orcamento {
 export const ORCAMENTOS: Record<string, Orcamento> = {
   // Sair é barato, mas não precisa de rajada.
   "auth.sair": porJanela(20),
+  "auth.sair_dos_outros": porJanela(5),
+  // Por baixo dele há o limite de tentativa de senha, por conta (#423).
+  "conta.excluir": porJanela(5),
+  // Denunciar é raro; quem denuncia em rajada está usando o botão contra alguém.
+  "denuncia.criar": porJanela(5),
+  // O admin decide em lote quando a fila acumula.
+  "denuncia.decidir": porJanela(60),
+  // Cadastrar os custos do mês é coisa de poucos cliques (#473); acima disto
+  // é um script, não uma pessoa no painel.
+  "custo.criar": porJanela(30),
+  "custo.editar": porJanela(60),
+  "custo.remover": porJanela(30),
 
   /*
    * Candidatar-se é o verbo mais usado do app, e por quem tem menos
@@ -114,6 +126,7 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
   // O limite de 10 ativas mora no banco; este contém a repetição.
   "publicacao.arquivar": porJanela(20),
   "publicacao.reativar": porJanela(20),
+  "publicacao.apagar": porJanela(20),
   "publicacao.publicar-trabalho": porJanela(15),
   "publicacao.editar-trabalho": porJanela(20),
 
@@ -148,6 +161,44 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
  * de fora, e confundir as duas foi o que deixou a fila de verificação
  * prometendo uma tela que nunca existiu.
  */
+/**
+ * Quantos currículos em PDF uma pessoa gera por janela (#425).
+ *
+ * Mora fora de `ORCAMENTOS` porque não é server action: é o `GET` de
+ * `/api/curriculo`, que o teto de `criarAcao` não alcança. E é o pedido
+ * mais caro de CPU do app — o documento é montado do zero a cada chamada.
+ * Dez cabem em quem ajusta o perfil e baixa de novo para conferir; quem
+ * passa disso está chamando em laço.
+ */
+export const ORCAMENTO_DO_CURRICULO_PDF = porJanela(10);
+
+/**
+ * Quantos perfis de candidato uma empresa abre por dia (#433).
+ *
+ * O perfil traz o WhatsApp de quem pediu para ser encontrado, e colher
+ * esses telefones em série é o primeiro passo do golpe da vaga com taxa.
+ * Trinta cabem num dia de recrutamento de verdade; quem passa disso está
+ * colhendo. Conta só o perfil de quem **não** se candidatou à empresa —
+ * candidatura é outro consentimento, e continua chegando como sempre.
+ */
+export const ORCAMENTO_DE_PERFIS_DE_CANDIDATO: Orcamento = {
+  chamadas: 30,
+  janelaSegundos: 24 * 60 * 60,
+};
+
+/**
+ * Quantas avaliações do mesmo prestador saem da mesma rede por dia (#441).
+ *
+ * A chave é o prestador e a rede (`avaliacao-rede:<id>:<origem>`), não
+ * quem avalia: a rajada que isto barra é de contas novas, cada uma com a
+ * sua sessão. Sem multiplicador da suíte — nenhum spec avalia o mesmo
+ * prestador mais de uma vez.
+ */
+export const ORCAMENTO_DE_AVALIACOES_POR_REDE: Orcamento = {
+  chamadas: 3,
+  janelaSegundos: 24 * 60 * 60,
+};
+
 export const SEM_ORCAMENTO: Record<string, string> = {
   "auth.entrar":
     "tem limite próprio, por e-mail, em `rate-limit.ts` — e a regra lá é " +
@@ -172,4 +223,8 @@ export const SEM_ORCAMENTO: Record<string, string> = {
   "auth.redefinir_senha":
     "o token é gasto na mesma instrução que o valida, e vale uma vez só — " +
     "não há volume a conter depois disso.",
+  "auth.confirmar_email":
+    "mesma razão da redefinição de senha: o token é gasto na mesma " +
+    "instrução que o valida, e é um segredo de 256 bits — não há o que " +
+    "adivinhar, nem volume a conter (#398).",
 };

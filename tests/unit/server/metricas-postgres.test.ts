@@ -119,27 +119,134 @@ describe("RepositorioMetricasPostgres", () => {
   });
 
   /*
-   * A view ainda agrupa por cidade e bairro — o banco não mudou (#321) —, e
-   * a tela mostra só a cidade. As linhas de bairros diferentes da mesma
-   * cidade somam, e a ordem é pelo total já somado.
+   * Estados e cidades vêm de duas views, já somadas por papel no banco
+   * (#471). Os estados vêm todos; as cidades, só até o limite, e o banco
+   * as ordena — a soma do estado não pode sair das cidades recortadas.
    */
-  it("locais somam por cidade, ordenados e limitados", async () => {
-    respostas.set("metricas_por_local", {
+  it("contas por lugar: estados todos, cidades até o limite, números convertidos", async () => {
+    respostas.set("metricas_contas_por_estado", {
       data: [
-        { cidade: "Sinop - MT", bairro: "Centro", total: "12" },
-        { cidade: "Sinop - MT", bairro: null, total: "3" },
-        { cidade: "Sorriso - MT", bairro: null, total: "10" },
-        { cidade: "Cuiabá - MT", bairro: null, total: "1" },
+        {
+          uf: "MT",
+          candidatos: "10",
+          prestadores: "4",
+          empresas: "2",
+          total: "16",
+        },
+        {
+          uf: null,
+          candidatos: "1",
+          prestadores: "0",
+          empresas: "0",
+          total: "1",
+        },
+      ],
+      error: null,
+    });
+    respostas.set("metricas_contas_por_cidade", {
+      data: [
+        {
+          cidade: "Sinop - MT",
+          candidatos: "8",
+          prestadores: "3",
+          empresas: "2",
+          total: "13",
+        },
       ],
       error: null,
     });
 
-    const locais = await repo.distribuicaoPorLocal(2);
+    const lugares = await repo.contasPorLugar(15);
 
-    expect(locais).toEqual([
-      { cidade: "Sinop - MT", total: 15 },
-      { cidade: "Sorriso - MT", total: 10 },
-    ]);
+    expect(lugares).toEqual({
+      estados: [
+        { lugar: "MT", candidatos: 10, prestadores: 4, empresas: 2, total: 16 },
+        {
+          lugar: "Sem estado",
+          candidatos: 1,
+          prestadores: 0,
+          empresas: 0,
+          total: 1,
+        },
+      ],
+      cidades: [
+        {
+          lugar: "Sinop - MT",
+          candidatos: 8,
+          prestadores: 3,
+          empresas: 2,
+          total: 13,
+        },
+      ],
+    });
+    expect(
+      chamadas.find(
+        (c) =>
+          c.tabela === "metricas_contas_por_cidade" && c.metodo === "limit",
+      )?.args,
+    ).toEqual([15]);
+    expect(
+      chamadas.filter(
+        (c) =>
+          c.tabela === "metricas_contas_por_estado" && c.metodo === "order",
+      )[0]?.args,
+    ).toEqual(["total", { ascending: false }]);
+  });
+
+  it("contas por lugar: erro de uma das views vira indisponível", async () => {
+    respostas.set("metricas_contas_por_cidade", {
+      data: null,
+      error: { message: "caiu" },
+    });
+
+    await expect(repo.contasPorLugar(15)).rejects.toMatchObject({
+      codigo: "indisponivel",
+    });
+  });
+
+  it("o funil vem da view, convertido para número", async () => {
+    respostas.set("metricas_funil", {
+      data: {
+        candidatos: "20",
+        candidatos_visiveis: "5",
+        candidatos_que_se_candidataram: "7",
+        prestadores: "9",
+        prestadores_na_vitrine: "4",
+        prestadores_assinantes: "3",
+        empresas: "6",
+        empresas_verificadas: "4",
+        empresas_com_vaga: "2",
+        empresas_que_compraram: "1",
+        assinaturas_ativas: "3",
+        recorrente_ativo_centavos: "5970",
+        entrou_30_dias_centavos: "15960",
+      },
+      error: null,
+    });
+
+    expect(await repo.funil()).toEqual({
+      candidatos: 20,
+      candidatosVisiveis: 5,
+      candidatosQueSeCandidataram: 7,
+      prestadores: 9,
+      prestadoresNaVitrine: 4,
+      prestadoresAssinantes: 3,
+      empresas: 6,
+      empresasVerificadas: 4,
+      empresasComVaga: 2,
+      empresasQueCompraram: 1,
+      receita: {
+        assinaturasAtivas: 3,
+        recorrenteAtivoCentavos: 5970,
+        entrouUltimos30DiasCentavos: 15960,
+      },
+    });
+  });
+
+  it("sem linha na view, o funil é zero e não NaN", async () => {
+    const funil = await repo.funil();
+    expect(funil.candidatos).toBe(0);
+    expect(funil.receita.recorrenteAtivoCentavos).toBe(0);
   });
 
   /**

@@ -114,11 +114,29 @@ export const zSenha = z
   .min(SENHA_MINIMA, `Use pelo menos ${SENHA_MINIMA} caracteres.`)
   .max(200, "Senha longa demais.");
 
+/**
+ * Nome da pessoa: espaços normalizados, e nada invisível (#445).
+ *
+ * O nome vai para a saudação dos e-mails, para a avaliação assinada e para
+ * a tela de quem contrata. Quebra de linha, espaço Unicode e caractere de
+ * formato (largura zero, inversão da direção do texto) não pertencem a
+ * nome nenhum e servem para disfarçar texto — a saudação do e-mail chegou
+ * a levar uma frase inteira escrita assim. Espaço de qualquer tipo vira o
+ * espaço comum; controle e formato são recusados.
+ */
 export const zNome = z
   .string()
-  .trim()
-  .min(3, "Informe o nome completo.")
-  .max(120, "Nome longo demais.");
+  .transform((s) => s.normalize("NFC").replace(/\s+/gu, " ").trim())
+  .pipe(
+    z
+      .string()
+      .min(3, "Informe o nome completo.")
+      .max(120, "Nome longo demais.")
+      .refine(
+        (s) => !/[\p{Cc}\p{Cf}]/u.test(s),
+        "O nome tem um caractere que não se escreve.",
+      ),
+  );
 
 export const zCelular = z
   .string()

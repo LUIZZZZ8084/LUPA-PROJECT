@@ -38,6 +38,16 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
+    /*
+     * O próprio site, para o Android responder se ele já está instalado
+     * (`getInstalledRelatedApps`, #475): sem isto, quem instalou e voltou
+     * pelo Chrome veria o convite de instalar o que já tem. O endereço é
+     * resolvido a partir do manifesto, então vale em qualquer domínio.
+     */
+    related_applications: [
+      { platform: "webapp", url: "/manifest.webmanifest" },
+    ],
+    prefer_related_applications: false,
     shortcuts: [
       { name: "Vagas", url: "/vagas" },
       { name: "Serviços", url: "/servicos" },

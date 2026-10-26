@@ -117,7 +117,7 @@ export function BuscaDoHero({
   }
 
   return (
-    <div className="mt-4 max-w-2xl">
+    <div className="mt-4 max-w-2xl lg:max-w-none">
       {/*
        * O cartão é o próprio formulário: alternador, termo, estado e botão
        * dentro de uma moldura só, como na referência da home (#372).
@@ -154,9 +154,12 @@ export function BuscaDoHero({
         <div
           className={cn(
             "grid grid-cols-1 gap-2",
+            // `minmax(0, …)`, e não `1fr` puro: o `1fr` não encolhe abaixo da
+            // largura mínima do campo, e numa coluna estreita (o hero do
+            // computador, #465) o botão vazava pela borda do cartão.
             uf
-              ? "sm:grid-cols-[1fr_1fr_auto]"
-              : "sm:grid-cols-[1fr_13rem_auto]",
+              ? "sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+              : "sm:grid-cols-[minmax(0,1fr)_13rem_auto]",
           )}
         >
           <div

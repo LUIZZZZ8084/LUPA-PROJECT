@@ -22,7 +22,11 @@ export default function AuthLayout({
   return (
     <div className="flex flex-1 flex-col">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <Link href="/" aria-label="Lupa — início" className="inline-flex">
+        <Link
+          href="/"
+          aria-label="Lupa — início"
+          className="inline-flex h-11 items-center"
+        >
           <LupaLogo size={26} />
         </Link>
         <AlternarTema />

@@ -1,5 +1,7 @@
-import { ShieldCheck } from "lucide-react";
+import { Flag, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   EmptyState,
@@ -11,10 +13,21 @@ import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { ROLE_LABELS, VERIFICATION_LABELS } from "@/lib/constants";
 import { getVerificationQueue } from "@/lib/data";
-import { formatPhone, timeAgo } from "@/lib/format";
+import { formatPhone, pluralize, timeAgo } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
-import { VerificationActions } from "./actions-ui";
+import {
+  denunciasAbertas,
+  MOTIVOS_DE_DENUNCIA,
+  type MotivoDenuncia,
+} from "@/server/denuncias/servico";
+import { DecisaoDeDenuncia, VerificationActions } from "./actions-ui";
+
+const ROTULO_DO_ALVO = {
+  vaga: "Vaga",
+  avaliacao: "Avaliação",
+  publicacao: "Foto de trabalho",
+} as const;
 
 export const metadata: Metadata = {
   title: "Fila de verificação",
@@ -31,7 +44,12 @@ export default async function AdminPage() {
   // administrativa neste endereço.
   if (!sessao || !pode(sessao.papel, "admin:decidir_verificacao")) notFound();
 
-  const queue = await getVerificationQueue();
+  const [queue, denuncias] = await Promise.all([
+    getVerificationQueue(),
+    pode(sessao.papel, "admin:moderar")
+      ? denunciasAbertas(sessao)
+      : Promise.resolve([]),
+  ]);
 
   return (
     <PageShell width="narrow">
@@ -40,6 +58,83 @@ export default async function AdminPage() {
         accent="text-warn"
         description="Fila de revisão manual. Hoje ela fica vazia de propósito: a verificação é automática."
       />
+
+      {/*
+        Denúncias (#435): vaga golpista e avaliação abusiva chegam aqui, e
+        só daqui saem do ar. Vem antes da fila de verificação porque é a
+        fila que de fato recebe trabalho.
+      */}
+      <section className="mb-8" aria-labelledby="titulo-denuncias">
+        <h2
+          id="titulo-denuncias"
+          className="mb-3 flex items-center gap-2 text-base font-bold"
+        >
+          <Flag size={16} className="text-danger" />
+          Denúncias em aberto
+        </h2>
+        {denuncias.length === 0 ? (
+          <p className="text-sm text-muted">
+            Nenhuma denúncia esperando decisão.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {denuncias.map((d) => (
+              <li key={`${d.alvo}:${d.alvoId}`}>
+                <Panel>
+                  <p className="text-[11px] tracking-wide text-muted uppercase">
+                    {ROTULO_DO_ALVO[d.alvo]} ·{" "}
+                    {pluralize(d.total, "denúncia", "denúncias")}
+                  </p>
+                  <Link
+                    href={d.caminho}
+                    className="mt-1 block font-semibold break-words underline-offset-2 hover:underline"
+                  >
+                    {d.titulo}
+                  </Link>
+                  {d.imagemUrl && (
+                    /*
+                     * A foto denunciada à vista (#452): decidir sobre uma
+                     * imagem pela legenda seria decidir às cegas.
+                     */
+                    <Image
+                      src={d.imagemUrl}
+                      alt={d.titulo}
+                      width={256}
+                      height={256}
+                      sizes="128px"
+                      className="mt-2 h-32 w-32 rounded-lg object-cover"
+                    />
+                  )}
+                  <p className="mt-1 text-xs text-muted">
+                    {Object.entries(d.motivos)
+                      .map(
+                        ([motivo, n]) =>
+                          `${MOTIVOS_DE_DENUNCIA[motivo as MotivoDenuncia]} (${n})`,
+                      )
+                      .join(" · ")}
+                  </p>
+                  {d.detalhes.slice(0, 3).map((detalhe) => (
+                    <blockquote
+                      key={detalhe}
+                      className="mt-2 border-l-2 border-line pl-3 text-sm break-words text-muted"
+                    >
+                      {detalhe}
+                    </blockquote>
+                  ))}
+                  <p className="mt-2 text-[11px] text-faint">
+                    Primeira denúncia {timeAgo(d.primeiraEm)}
+                  </p>
+                  <DecisaoDeDenuncia
+                    alvo={d.alvo}
+                    alvoId={d.alvoId}
+                    className="mt-4"
+                  />
+                </Panel>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/*
         A fila existe e não tem remetente, e a tela passou a dizer isso

@@ -1,7 +1,7 @@
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { RepositorioPagamentosMemoria } from "./memoria";
 import { RepositorioPagamentosPostgres } from "./postgres";
-import type { Pagamento, RepositorioPagamentos } from "./tipos";
+import type { Assinatura, Pagamento, RepositorioPagamentos } from "./tipos";
 
 /**
  * O repositório em memória mora em `globalThis`, e não numa variável de
@@ -60,6 +60,14 @@ export function repositorioPagamentos(): RepositorioPagamentos {
 export function pagamentosEmMemoria(): Pagamento[] {
   const repo = repositorioPagamentos();
   return repo instanceof RepositorioPagamentosMemoria ? repo.todos() : [];
+}
+
+/** As assinaturas em demonstração, para o funil do painel (#471). */
+export function assinaturasEmMemoria(): Assinatura[] {
+  const repo = repositorioPagamentos();
+  return repo instanceof RepositorioPagamentosMemoria
+    ? repo.todasAsAssinaturas()
+    : [];
 }
 
 /** Só para teste: injeta uma implementação e devolve o restaurador. */

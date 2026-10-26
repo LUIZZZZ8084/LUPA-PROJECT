@@ -55,6 +55,57 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
   { id: 15, slug: "fotografo", name: "Fotógrafo(a)" },
   { id: 16, slug: "personal-trainer", name: "Personal Trainer" },
   { id: 17, slug: "mecanico", name: "Mecânico(a)" },
+  /*
+   * As trinta e três de baixo entraram em 13/10/2026 (#457). Com o app
+   * aberto ao Brasil inteiro, quem é marceneiro, soldador, babá ou
+   * tratorista não achava a própria profissão. Os ids batem com os de
+   * `categorias_servico`, e um teste compara as duas listas.
+   */
+  { id: 18, slug: "marceneiro", name: "Marceneiro(a)" },
+  { id: 19, slug: "serralheiro", name: "Serralheiro(a)" },
+  { id: 20, slug: "soldador", name: "Soldador(a)" },
+  { id: 21, slug: "gesseiro", name: "Gesseiro(a)" },
+  { id: 22, slug: "vidraceiro", name: "Vidraceiro(a)" },
+  { id: 23, slug: "azulejista", name: "Azulejista" },
+  {
+    id: 24,
+    slug: "tecnico-ar-condicionado",
+    name: "Técnico(a) de Ar-condicionado",
+  },
+  { id: 25, slug: "tecnico-informatica", name: "Técnico(a) de Informática" },
+  { id: 26, slug: "tecnico-celular", name: "Técnico(a) de Celular" },
+  { id: 27, slug: "chaveiro", name: "Chaveiro(a)" },
+  { id: 28, slug: "montador-moveis", name: "Montador(a) de Móveis" },
+  {
+    id: 29,
+    slug: "instalador-energia-solar",
+    name: "Instalador(a) de Energia Solar",
+  },
+  {
+    id: 30,
+    slug: "instalador-cameras",
+    name: "Instalador(a) de Câmeras e Alarmes",
+  },
+  { id: 31, slug: "dedetizador", name: "Dedetizador(a)" },
+  { id: 32, slug: "piscineiro", name: "Piscineiro(a)" },
+  { id: 33, slug: "motoboy", name: "Motoboy / Entregador(a)" },
+  { id: 34, slug: "motorista-particular", name: "Motorista Particular" },
+  { id: 35, slug: "baba", name: "Babá" },
+  { id: 36, slug: "passadeira", name: "Passadeira" },
+  { id: 37, slug: "costureira", name: "Costureira(o)" },
+  { id: 38, slug: "cozinheiro", name: "Cozinheiro(a)" },
+  { id: 39, slug: "confeiteiro", name: "Confeiteiro(a) / Padeiro(a)" },
+  { id: 40, slug: "churrasqueiro", name: "Churrasqueiro(a)" },
+  { id: 41, slug: "garcom", name: "Garçom / Garçonete" },
+  { id: 42, slug: "barbeiro", name: "Barbeiro(a)" },
+  { id: 43, slug: "maquiador", name: "Maquiador(a)" },
+  { id: 44, slug: "massoterapeuta", name: "Massoterapeuta" },
+  { id: 45, slug: "esteticista", name: "Esteticista" },
+  { id: 46, slug: "contador", name: "Contador(a)" },
+  { id: 47, slug: "professor-particular", name: "Professor(a) Particular" },
+  { id: 48, slug: "veterinario", name: "Veterinário(a)" },
+  { id: 49, slug: "tosador", name: "Banho e Tosa" },
+  { id: 50, slug: "tratorista", name: "Tratorista / Operador(a) de Máquinas" },
 ];
 
 /**
@@ -89,6 +140,24 @@ export const JOB_CATEGORIES = [
   "Mineração",
   "Telecomunicações",
   "Frigorífico e Agroindústria",
+  // As quinze de baixo entraram em 13/10/2026 (#457). Sem renomear nem
+  // reordenar o que já existe: a área gravada num perfil ou numa vaga é o
+  // próprio texto, e mudar um nome esconderia o que já foi publicado.
+  "Atendimento ao Cliente",
+  "Recursos Humanos",
+  "Engenharia e Arquitetura",
+  "Limpeza e Conservação",
+  "Manutenção e Reparos",
+  "Automotivo e Mecânica",
+  "Veterinária e Pecuária",
+  "Energia e Utilidades",
+  "Madeira e Móveis",
+  "Esportes e Lazer",
+  "Artes, Design e Criação",
+  "Imobiliário e Seguros",
+  "Compras e Suprimentos",
+  "Assistência Social e Cuidados",
+  "Serviço Público e Terceiro Setor",
 ] as const;
 
 export const CONTRACT_TYPES: ContractType[] = [
@@ -107,6 +176,19 @@ export const WORK_MODE_LABELS: Record<WorkMode, string> = {
 };
 
 export const WORK_MODES = Object.keys(WORK_MODE_LABELS) as WorkMode[];
+
+/**
+ * O selo da vaga para pessoa com deficiência (#456). Num lugar só: o card,
+ * a página, a revisão e o filtro dizem a mesma coisa.
+ */
+export const ROTULO_PCD = "Vaga para PCD";
+
+/**
+ * Valor de `?tipo=` que liga o filtro de PCD (#463). O filtro mora dentro
+ * da lista de Tipo, mas PCD não é tipo de contrato: a página traduz este
+ * valor e não o repassa à consulta como contrato.
+ */
+export const PCD_NO_TIPO = "pcd";
 
 export const ROLE_LABELS = {
   candidato_clt: "Candidato",

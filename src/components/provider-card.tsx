@@ -67,7 +67,7 @@ export function ProviderCard({
           </span>
         </div>
 
-        <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-faint">
+        <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-faint">
           <MapPin size={12} />
           {provider.city}
           {provider.years_experience
@@ -87,7 +87,7 @@ export function ProviderCard({
           <Link
             href={`/entrar?destino=/servicos/${provider.profile_id}`}
             aria-label={`Entrar para ver o contato de ${provider.full_name}`}
-            className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-panel-2 text-muted transition-colors hover:bg-panel-3"
+            className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-panel-2 text-muted transition-colors hover:bg-panel-3"
           >
             <Lock size={16} />
           </Link>

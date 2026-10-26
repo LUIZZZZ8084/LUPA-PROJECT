@@ -1,13 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 import { criarAcao } from "@/server/action";
-import { criarSessao, encerrarSessao } from "@/server/auth/cookies";
+import {
+  criarSessao,
+  encerrarSessao,
+  sessaoAtual,
+} from "@/server/auth/cookies";
+import { derrubarCacheDeRevogacoes } from "@/server/auth/revogacao";
 import { schemaCadastro, schemaLogin } from "@/server/auth/schemas";
-import { cadastrar, entrar } from "@/server/auth/servico";
+import {
+  cadastrar,
+  entrar,
+  sairDosOutrosAparelhos,
+} from "@/server/auth/servico";
 import { enviarVerificacaoDeEmail } from "@/server/auth/verificacao-email";
+import { excluirConta } from "@/server/conta/servico";
 import { origemDaRequisicao } from "@/server/origem-da-requisicao";
 import { urlPublica } from "@/server/url-publica";
 
@@ -93,6 +104,56 @@ export const sairDaConta = criarAcao({
   },
 });
 
+/**
+ * Corta as sessões dos outros aparelhos e mantém este dentro (#402).
+ *
+ * A ordem é a da troca de senha: o corte primeiro, o cache derrubado, e
+ * só então a sessão nova. Invertida, a pessoa seria deslogada do aparelho
+ * onde clicou.
+ */
+export const sairDosOutrosAparelhosAction = criarAcao({
+  nome: "auth.sair_dos_outros",
+  entrada: z.object({}),
+  executar: async () => {
+    const sessao = await sessaoAtual();
+    await sairDosOutrosAparelhos(sessao?.usuarioId ?? null);
+    derrubarCacheDeRevogacoes();
+    // Sem senha, então sem teto novo: o login continua o da sessão que
+    // clicou (#413). Repetir a ação não pode manter um cookie vivo para
+    // sempre.
+    if (sessao) {
+      await criarSessao(sessao.usuarioId, sessao.papel, sessao.entrouEm);
+    }
+    return { cortadas: true };
+  },
+});
+
+/**
+ * Exclui a conta de quem está logado (#423).
+ *
+ * A confirmação viaja junto e é conferida aqui, não só na tela: excluir é
+ * irreversível, e um formulário forjado sem a caixa marcada não pode
+ * passar. Depois de excluir, o cookie sai e o cache de revogações cai —
+ * a função do banco já gravou o corte das sessões dos outros aparelhos.
+ */
+export const excluirContaAction = criarAcao({
+  nome: "conta.excluir",
+  entrada: z.object({
+    senha: z.string().min(1, "Digite sua senha.").max(200),
+    confirmo: z.literal("sim", {
+      message: "Marque que você entende que não dá para desfazer.",
+    }),
+  }),
+  executar: async ({ senha }) => {
+    const sessao = await sessaoAtual();
+    await excluirConta(sessao, senha);
+    derrubarCacheDeRevogacoes();
+    await encerrarSessao();
+    revalidatePath("/", "layout");
+    return { excluida: true };
+  },
+});
+
 /* ============================================================
    Adaptadores para useActionState
    ============================================================ */
@@ -138,6 +199,26 @@ export async function entrarComEstado(
   const resposta = await entrarNaConta(formData);
 
   if (resposta.ok) return { ok: true, papel: resposta.dados.papel };
+
+  return {
+    erro: resposta.mensagem,
+    campos: Object.fromEntries(
+      (resposta.campos ?? []).map((c) => [c.campo, c.mensagem]),
+    ),
+  };
+}
+
+/**
+ * Excluída a conta, a pessoa vai para o login com o aviso de que deu
+ * certo (#423): a tela de onde ela veio é de quem tem conta, e a sessão
+ * acabou de sair.
+ */
+export async function excluirContaComEstado(
+  _anterior: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  const resposta = await excluirContaAction(formData);
+  if (resposta.ok) redirect("/entrar?conta=excluida");
 
   return {
     erro: resposta.mensagem,

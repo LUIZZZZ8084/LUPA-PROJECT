@@ -24,6 +24,11 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
     for (const vaga of vagas) this.itens.set(vaga.id, vaga);
   }
 
+  /** Todas as vagas, para o funil do painel em demonstração (#471). */
+  todas(): Vaga[] {
+    return [...this.itens.values()];
+  }
+
   async porId(id: string): Promise<Vaga | null> {
     return this.itens.get(id) ?? null;
   }
@@ -52,6 +57,7 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
       endereco: dados.endereco,
       tipoContrato: dados.tipoContrato,
       modalidade: dados.modalidade,
+      paraPcd: dados.paraPcd,
       salarioMin: dados.salarioMin ?? null,
       salarioMax: dados.salarioMax ?? null,
       habilidades: dados.habilidades ?? [],

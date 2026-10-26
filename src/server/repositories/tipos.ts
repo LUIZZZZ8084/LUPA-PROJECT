@@ -264,6 +264,27 @@ export interface RepositorioUsuarios {
    */
   cortesDeSessao(dias: number): Promise<Map<string, number>>;
 
+  /**
+   * Corta as sessões da pessoa sem trocar a senha (#402) — "sair dos
+   * outros aparelhos". É o mesmo corte que a troca de senha e a de papel
+   * gravam; quem chama emite a sessão nova do aparelho atual **depois**.
+   */
+  cortarSessoes(id: string): Promise<void>;
+
+  /**
+   * Exclui a conta da pessoa (#423), numa transação só.
+   *
+   * Saem perfis, currículo, candidaturas, publicações, avaliações
+   * recebidas, avisos, aparelhos, tokens, créditos e pedidos de
+   * verificação. Nome, e-mail, telefone, CPF e senha são substituídos, e
+   * as sessões, cortadas. Pagamentos e assinaturas ficam, ligados à conta
+   * sem nome: são o histórico do caixa.
+   *
+   * Não cancela assinatura nem apaga arquivo: o serviço faz os dois, um
+   * antes e outro depois.
+   */
+  excluirConta(id: string): Promise<void>;
+
   // ── Recuperação de senha (#174) ───────────────────────────────────────
 
   /**
@@ -271,6 +292,14 @@ export interface RepositorioUsuarios {
    *
    * Quem lesse a tabela poderia trocar a senha de qualquer conta; o valor
    * original só existe no e-mail que a pessoa recebeu.
+   *
+   * **E aposenta os anteriores** da mesma pessoa e finalidade (#398). Quem
+   * pede um link novo é porque o antigo se perdeu — ou foi parar onde não
+   * devia. Sem isso, o link de recuperação de uma hora atrás continuava
+   * trocando a senha depois de a pessoa ter pedido outro.
+   *
+   * Aposentar é apagar (#419): marcá-los como usados os deixava na tabela
+   * para sempre. Assim ela guarda no máximo um por pessoa e finalidade.
    */
   criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void>;
 
@@ -413,6 +442,15 @@ export interface RepositorioUsuarios {
    * usou" e concederiam o teste duas vezes.
    */
   reivindicarTesteGratis(usuarioId: string): Promise<boolean>;
+
+  /**
+   * Devolve o teste grátis reivindicado agora há pouco (#406).
+   *
+   * Só para quando a extensão dos dias falha logo depois da reivindicação:
+   * sem isto, o teste fica gasto sem ter dado nada, e o reenvio do webhook
+   * não tem como concedê-lo de novo.
+   */
+  liberarTesteGratis(usuarioId: string): Promise<void>;
 
   /**
    * Liga ou desliga o gerador de currículo (#47) — compra única, sem data

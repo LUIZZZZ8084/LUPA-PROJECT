@@ -3,6 +3,15 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * O `id` do `<main>`, destino do link "Pular para o conteúdo" (#479).
+ *
+ * Mora aqui, junto do `<main>`, para o link do `layout.tsx` e o elemento que
+ * ele aponta não poderem divergir: renomear um sem o outro deixaria o link
+ * sem destino, e quem usa teclado só descobriria apertando Enter.
+ */
+export const ID_DO_CONTEUDO = "conteudo";
+
 /** Container padrão das páginas: largura máxima, respiro e espaço da bottom nav. */
 export function PageShell({
   children,
@@ -21,6 +30,10 @@ export function PageShell({
 
   return (
     <main
+      id={ID_DO_CONTEUDO}
+      // -1: recebe foco por código (o link de pular), mas fica fora da ordem
+      // de Tab, que é o que o atributo faz.
+      tabIndex={-1}
       className={cn(
         "mx-auto w-full px-4 pt-6 pb-28 sm:px-6 md:pb-16",
         max,
@@ -37,7 +50,7 @@ export function BackLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="mb-4 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-ink"
+      className="-mt-3 mb-1 inline-flex items-center gap-1 py-3 text-sm text-muted transition-colors hover:text-ink"
     >
       <ChevronLeft size={16} />
       {label}
@@ -64,7 +77,7 @@ export function PageTitle({
       {back && (
         <Link
           href={back.href}
-          className="mb-3 inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-ink"
+          className="-mt-3 mb-0 inline-flex items-center gap-1 py-3 text-sm text-muted transition-colors hover:text-ink"
         >
           <ChevronLeft size={16} />
           {back.label}

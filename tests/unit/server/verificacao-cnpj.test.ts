@@ -262,7 +262,7 @@ describe("verificação automática", () => {
    */
   it("o nome da Receita chega às avaliações que a empresa já fez", async () => {
     const prestadorId = "prestador-avaliado";
-    await avaliarPrestador(sessao(), { prestadorId, nota: 5 });
+    await avaliarPrestador(sessao(), { prestadorId, nota: 5 }, "203.0.113.1");
     expect(avaliacoesEmMemoria(prestadorId)[0]?.nome).toBe(
       "Agro Norte Comércio de Insumos Ltda.",
     );

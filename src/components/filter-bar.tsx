@@ -187,7 +187,13 @@ export function FilterBar({
         )}
       </div>
 
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+      {/*
+       * Os chips quebram de linha, não rolam para o lado (#460). Com rolagem
+       * horizontal e sem barra, o quarto filtro nascia cortado na borda do
+       * celular, sem pista nenhuma de que existia — e o de PCD, o último,
+       * ficava invisível para quem não adivinhasse arrastar.
+       */}
+      <div className="flex flex-wrap gap-2">
         {filters.map((filter) => (
           <FilterSelect
             key={filter.key}
@@ -202,7 +208,7 @@ export function FilterBar({
           <button
             type="button"
             onClick={clearFilters}
-            className="inline-flex h-9 flex-none items-center gap-1.5 rounded-full px-3 text-[13px] text-muted transition-colors hover:text-ink"
+            className="inline-flex h-9 flex-none items-center gap-1.5 rounded-full px-3 pointer-coarse:h-11 text-[13px] text-muted transition-colors hover:text-ink"
           >
             <X size={14} />
             Limpar filtros
@@ -261,7 +267,7 @@ function FilterSelect({
       </select>
       <span
         className={cn(
-          "pointer-events-none inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium",
+          "pointer-events-none inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 pointer-coarse:h-11 text-[13px] font-medium",
           "transition-colors duration-200",
           active ? activeStyle : "border-line bg-panel text-muted",
           // O chip travado se distingue pelo fundo e pela ausência da seta,

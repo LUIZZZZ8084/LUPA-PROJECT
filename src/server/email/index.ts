@@ -129,8 +129,33 @@ export async function enviarEmail(
  *
  * O 429 ganha mensagem própria porque é o único caso com remédio na mão de
  * quem opera: é cota, não defeito, e se resolve no plano do provedor.
+ *
+ * **E vai ao Sentry uma vez por janela, não a cada e-mail (#417).** Cota
+ * estourada num dia de lançamento é o mesmo fato repetido em todo cadastro
+ * dali em diante, e cada repetição era um evento: um dia acima da cota do
+ * Resend gastava a do Sentry, e o erro de pagamento ou de login que viesse
+ * depois não chegava a ninguém. O primeiro 429 avisa; os seguintes, dentro
+ * de `JANELA_DO_AVISO_DE_COTA_MS`, ficam no log comum. A conta é por
+ * instância — cada função fria avisa de novo —, o que basta para não
+ * perder o fato e não inunda nada.
  */
+const JANELA_DO_AVISO_DE_COTA_MS = 15 * 60 * 1000;
+let ultimoAvisoDeCota = Number.NEGATIVE_INFINITY;
+
 function registrarFalha(tipo: Email["tipo"], status: number | null) {
+  if (status === 429) {
+    const agora = Date.now();
+    if (agora - ultimoAvisoDeCota < JANELA_DO_AVISO_DE_COTA_MS) {
+      log.warn("e-mail recusado por cota, já avisada", {
+        acao: "email.enviar",
+        tipo,
+        status,
+      });
+      return;
+    }
+    ultimoAvisoDeCota = agora;
+  }
+
   const detalhe =
     status === 429
       ? "Resend recusou por limite de envio (429): cota do plano ou excesso de pedidos"

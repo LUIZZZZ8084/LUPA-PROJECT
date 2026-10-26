@@ -3,11 +3,15 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Autenticado, Papel } from "@/server/auth/rbac";
+import {
+  RepositorioCustosMemoria,
+  usarRepositorioCustos,
+} from "@/server/custos";
 import { ehAppError } from "@/server/errors";
 import { usarRepositorioMetricas } from "@/server/metrics";
 import { RepositorioMetricasMemoria } from "@/server/metrics/memoria";
 import { painelAdmin, somarCadastros } from "@/server/metrics/servico";
-import type { RepositorioMetricas } from "@/server/metrics/tipos";
+import type { Funil, RepositorioMetricas } from "@/server/metrics/tipos";
 import { RepositorioMemoria } from "@/server/repositories/memoria";
 
 const admin: Autenticado = { usuarioId: "adm", papel: "admin" };
@@ -26,7 +30,8 @@ function repoFalso(
       vagasAbertas: 0,
     }),
     cadastrosPorDia: async () => [],
-    distribuicaoPorLocal: async () => [],
+    contasPorLugar: async () => ({ estados: [], cidades: [] }),
+    funil: async () => funilZerado(),
     caixa: async () => ({
       entrouCentavos: 0,
       estornadoCentavos: 0,
@@ -207,31 +212,63 @@ describe("painel administrativo", () => {
     });
   });
 
-  describe("distribuição por local", () => {
-    it("agrupa por cidade e ordena do maior", async () => {
-      const usuarios = new RepositorioMemoria();
-      for (const cidade of ["Sorriso - MT", "Sorriso - MT", "Cuiabá - MT"]) {
-        await usuarios.criar({
-          email: `${cidade}-${Math.random()}@teste.lupa`,
-          senhaHash: "x",
-          papel: "candidato_clt",
-          nomeCompleto: "Teste",
-          telefone: "66999110001",
-          cidade,
-        });
-      }
-
+  describe("contas por lugar e funil (#471)", () => {
+    it("pede quinze cidades, e repassa estados e cidades como vieram", async () => {
+      const pedidos: number[] = [];
+      const lugares = {
+        estados: [
+          { lugar: "MT", candidatos: 2, prestadores: 1, empresas: 0, total: 3 },
+        ],
+        cidades: [
+          {
+            lugar: "Sinop - MT",
+            candidatos: 2,
+            prestadores: 1,
+            empresas: 0,
+            total: 3,
+          },
+        ],
+      };
       restaurar = usarRepositorioMetricas(
-        new RepositorioMetricasMemoria(usuarios),
+        repoFalso({
+          contasPorLugar: async (limite) => {
+            pedidos.push(limite);
+            return lugares;
+          },
+        }),
       );
 
-      const locais = (await painelAdmin(admin)).locais;
-      const totais = locais.map((l) => l.total);
+      const painel = await painelAdmin(admin);
 
-      expect(totais).toEqual([...totais].sort((a, b) => b - a));
-      expect(
-        locais.find((l) => l.cidade === "Sorriso - MT")?.total,
-      ).toBeGreaterThan(1);
+      expect(pedidos).toEqual([15]);
+      expect(painel.lugares).toEqual(lugares);
+    });
+
+    /*
+     * Os custos vêm do repositório deles desde a #473, editados no próprio
+     * painel: o que o admin acabou de cadastrar é o que a tela recebe.
+     */
+    it("leva o funil e os custos cadastrados para a tela", async () => {
+      const funil = { ...funilZerado(), candidatos: 7 };
+      const custos = new RepositorioCustosMemoria();
+      await custos.criar({ nome: "Contador", centavos: 30_000 });
+      const restaurarCustos = usarRepositorioCustos(custos);
+      restaurar = usarRepositorioMetricas(
+        repoFalso({ funil: async () => funil }),
+      );
+
+      try {
+        const painel = await painelAdmin(admin);
+
+        expect(painel.funil).toEqual(funil);
+        expect(painel.custos).toEqual(await custos.listar());
+        expect(painel.custos.at(-1)).toMatchObject({
+          nome: "Contador",
+          centavos: 30_000,
+        });
+      } finally {
+        restaurarCustos();
+      }
     });
   });
 
@@ -301,20 +338,78 @@ describe("métricas no modo demonstração", () => {
     });
   });
 
-  it("respeita o limite de locais pedido", async () => {
-    expect((await repo.distribuicaoPorLocal(2)).length).toBeLessThanOrEqual(2);
+  it("respeita o limite de cidades pedido", async () => {
+    expect((await repo.contasPorLugar(2)).cidades.length).toBeLessThanOrEqual(
+      2,
+    );
   });
 
-  it("a mesma cidade aparece uma vez só, com tudo somado", async () => {
+  it("a mesma cidade aparece uma vez só, com cada papel no seu lugar", async () => {
+    const antes = (await repo.contasPorLugar(50)).cidades.find(
+      (l) => l.lugar === "Sinop - MT",
+    );
     await criar("candidato_clt");
     await criar("empresa");
-    const locais = await repo.distribuicaoPorLocal(20);
-    const sinop = locais.filter((l) => l.cidade === "Sinop - MT");
+    const sinop = (await repo.contasPorLugar(50)).cidades.filter(
+      (l) => l.lugar === "Sinop - MT",
+    );
 
     expect(sinop).toHaveLength(1);
-    expect(sinop[0].total).toBeGreaterThanOrEqual(2);
+    expect(sinop[0].candidatos).toBe((antes?.candidatos ?? 0) + 1);
+    expect(sinop[0].empresas).toBe((antes?.empresas ?? 0) + 1);
+  });
+
+  /*
+   * Conta excluída (#423) fica anonimizada no repositório, como no banco,
+   * e não é gente: não conta no total, no lugar nem no funil.
+   */
+  it("conta excluída não conta em lugar nenhum", async () => {
+    const conta = await criar("candidato_clt");
+    const antes = {
+      totais: await repo.totais(),
+      lugares: await repo.contasPorLugar(50),
+      funil: await repo.funil(),
+    };
+
+    await usuarios.excluirConta(conta.id);
+
+    expect((await repo.totais()).usuarios).toBe(antes.totais.usuarios - 1);
+    expect((await repo.funil()).candidatos).toBe(antes.funil.candidatos - 1);
+    const mt = (l: Awaited<ReturnType<typeof repo.contasPorLugar>>) =>
+      l.estados.find((e) => e.lugar === "MT")?.candidatos ?? 0;
+    expect(mt(await repo.contasPorLugar(50))).toBe(mt(antes.lugares) - 1);
+  });
+
+  it("o funil conta quem tem conta, e os prestadores de exemplo estão nele", async () => {
+    const antes = await repo.funil();
+    await criar("empresa");
+    const depois = await repo.funil();
+
+    expect(depois.empresas).toBe(antes.empresas + 1);
+    expect(depois.prestadores).toBeGreaterThan(0);
+    expect(depois.prestadoresNaVitrine).toBeLessThanOrEqual(depois.prestadores);
   });
 });
+
+function funilZerado(): Funil {
+  return {
+    candidatos: 0,
+    candidatosVisiveis: 0,
+    candidatosQueSeCandidataram: 0,
+    prestadores: 0,
+    prestadoresNaVitrine: 0,
+    prestadoresAssinantes: 0,
+    empresas: 0,
+    empresasVerificadas: 0,
+    empresasComVaga: 0,
+    empresasQueCompraram: 0,
+    receita: {
+      assinaturasAtivas: 0,
+      recorrenteAtivoCentavos: 0,
+      entrouUltimos30DiasCentavos: 0,
+    },
+  };
+}
 
 function zerado(candidatos: number, prestadores: number, empresas: number) {
   return {

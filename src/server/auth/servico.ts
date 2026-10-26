@@ -11,11 +11,14 @@ import {
 import {
   conferirLimite,
   consumirOrcamento,
-  registrarFalha,
   registrarSucesso,
   reservarTentativa,
+  somarUso,
 } from "./rate-limit";
-import { LIMITE_DE_CONFLITOS_NO_CADASTRO } from "./rate-limit-tipos";
+import {
+  LIMITE_DE_CADASTROS_POR_ORIGEM,
+  LIMITE_DE_CONFLITOS_NO_CADASTRO,
+} from "./rate-limit-tipos";
 import type { DadosCadastro, DadosLogin } from "./schemas";
 
 /**
@@ -231,8 +234,11 @@ export async function cadastrar(
    * de senha, então sucesso zera o contador; aqui o que se contém é a
    * criação em si, e zerar a cada conta criada deixaria o limite inútil
    * justamente contra quem consegue criar.
+   *
+   * O teto é o do cadastro, não o da senha (#415): a origem aqui é um IP,
+   * e um IP pode ser uma sala inteira.
    */
-  await registrarFalha(chave);
+  await somarUso(chave, LIMITE_DE_CADASTROS_POR_ORIGEM);
 
   return semSenha(usuario);
 }
@@ -316,4 +322,25 @@ export async function usuarioDaSessao(
 ): Promise<UsuarioPublico | null> {
   const usuario = await repositorioUsuarios().porId(usuarioId);
   return usuario ? semSenha(usuario) : null;
+}
+
+/**
+ * Sair dos outros aparelhos (#402).
+ *
+ * Grava o corte de sessões — o mesmo que a troca de senha e a de papel
+ * gravam (#225, #352) — sem mexer na senha. É para quem esqueceu a conta
+ * aberta numa lan house, ou perdeu o celular, e não desconfia de que
+ * alguém saiba a senha: trocá-la seria pedir uma senha nova a quem só
+ * queria fechar uma porta.
+ *
+ * Quem chama emite a sessão nova do aparelho atual **depois** do corte. A
+ * comparação é estrita (`emitidoEm < corte`, em segundos), então a sessão
+ * emitida no mesmo segundo do corte continua valendo.
+ */
+export async function sairDosOutrosAparelhos(
+  usuarioId: string | null,
+): Promise<void> {
+  if (!usuarioId) throw erros.naoAutenticado("sem sessão");
+  await repositorioUsuarios().cortarSessoes(usuarioId);
+  log.info("sessões cortadas pelo dono", { acao: "auth.sair_dos_outros" });
 }

@@ -51,7 +51,7 @@ export default async function MinhasCandidaturasPage() {
             <li key={c.id} className="flex items-center gap-3 p-4">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{c.job_title}</p>
-                <p className="mt-0.5 text-[11px] text-muted">
+                <p className="mt-0.5 text-xs text-muted">
                   {c.company_name} · {timeAgo(c.created_at)}
                 </p>
               </div>

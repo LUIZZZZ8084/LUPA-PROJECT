@@ -354,7 +354,7 @@ export function SignUpForm({ role }: { role: Role }) {
                   min={0}
                   step={10}
                   inputMode="numeric"
-                  placeholder="150"
+                  placeholder="Ex.: 150"
                 />
               </Field>
             </div>
@@ -369,7 +369,7 @@ export function SignUpForm({ role }: { role: Role }) {
                 name="descricao"
                 rows={5}
                 required
-                placeholder="Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo minha cidade e a região."
+                placeholder="Ex.: Trabalho com instalações elétricas residenciais e comerciais, manutenção e reparos em geral. Atendo minha cidade e a região."
               />
             </Field>
           </>

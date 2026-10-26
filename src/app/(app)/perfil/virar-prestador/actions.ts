@@ -37,7 +37,8 @@ export const ativarPrestador = criarAcao({
     // 60 s e precisa cair antes da sessão nova, ou ela nasceria dentro da
     // janela em que o corte ainda não é visto.
     derrubarCacheDeRevogacoes();
-    await criarSessao(sessao.usuarioId, papel);
+    // Papel novo, login antigo: o teto de trinta dias não recomeça (#413).
+    await criarSessao(sessao.usuarioId, papel, sessao.entrouEm);
 
     /*
      * O layout inteiro depende do papel: menu, atalhos do perfil, o que a

@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatoDaImagem,
   ImagemIlegivel,
+  LIMITE_DE_PIXELS,
   reduzirImagem,
   TIPO_REDUZIDO,
 } from "@/server/arquivos/imagem";
@@ -316,4 +317,32 @@ describe("assinatura aceita com SVG escondido", () => {
       );
     },
   );
+});
+
+/**
+ * Imagem-bomba (#427): arquivo pequeno que declara pixels demais.
+ *
+ * Um PNG liso se comprime quase a nada, e o tamanho do arquivo não diz
+ * nada sobre a memória que decodificá-lo pede. O teto é de pixels, e a
+ * recusa vem do cabeçalho, sem decodificar.
+ */
+describe("imagem-bomba", () => {
+  it("PNG pequeno que declara pixels demais é recusado", async () => {
+    const bomba = await sharp({
+      create: { width: 10_000, height: 5_001, channels: 3, background: "#000" },
+    })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+    expect(bomba.length).toBeLessThan(2 * 1024 * 1024);
+    expect(10_000 * 5_001).toBeGreaterThan(LIMITE_DE_PIXELS);
+
+    await expect(
+      reduzirImagem(new Uint8Array(bomba), "avatar"),
+    ).rejects.toBeInstanceOf(ImagemIlegivel);
+  }, 30_000);
+
+  /** Câmera de 48 MP (8000 × 6000), a comum de celular, cabe. */
+  it("o teto cobre a câmera de celular comum", () => {
+    expect(LIMITE_DE_PIXELS).toBeGreaterThanOrEqual(8000 * 6000);
+  });
 });

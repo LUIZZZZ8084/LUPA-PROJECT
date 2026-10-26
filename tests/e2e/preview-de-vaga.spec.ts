@@ -22,12 +22,18 @@ test.describe("revisão antes de publicar", () => {
   const DESCRICAO =
     "Conferência de carga e apoio à expedição.\n\nRequisitos: ensino médio completo.";
 
-  async function preencher(page: import("@playwright/test").Page) {
+  /** `pcd` é o que a empresa responde; `null` deixa a pergunta em branco. */
+  async function preencher(
+    page: import("@playwright/test").Page,
+    pcd: "sim" | "nao" | null = "nao",
+  ) {
     await page.goto("/empresa/vagas/nova");
     await page.getByLabel("Cargo").fill(CARGO);
     await page.getByLabel("Categoria").selectOption("Logística e Transporte");
     await page.getByLabel("Tipo de contrato").selectOption("CLT");
     await page.getByLabel("Presencial").check();
+    if (pcd === "sim") await page.getByLabel("Sim, é para PCD").check();
+    if (pcd === "nao") await page.getByLabel("Não é para PCD").check();
     await page.getByLabel("Endereço").fill("Rua da Revisão, 500");
     await page.getByLabel("Salário de (R$)").fill("2200");
     await page.getByLabel("Descrição da vaga").fill(DESCRICAO);
@@ -104,6 +110,47 @@ test.describe("revisão antes de publicar", () => {
     await expect(page.getByLabel("Cargo")).toHaveValue(CARGO);
     await expect(page.getByLabel("Descrição da vaga")).toHaveValue(DESCRICAO);
     await expect(page.getByLabel("Presencial")).toBeChecked();
+  });
+
+  /*
+   * A pergunta do PCD é obrigatória e sem resposta de antemão (#456): a
+   * empresa não chega à revisão sem ter dito sim ou não. Um padrão marcado
+   * faria a resposta sair sem ninguém ter respondido.
+   */
+  test("sem responder se é para PCD, não chega à revisão", async ({ page }) => {
+    await preencher(page, null);
+
+    await expect(page.getByLabel("Sim, é para PCD")).not.toBeChecked();
+    await expect(page.getByLabel("Não é para PCD")).not.toBeChecked();
+
+    await page
+      .getByRole("button", { name: /revisar antes de publicar/i })
+      .click();
+
+    await expect(
+      page.getByRole("region", { name: "Revisão da vaga" }),
+    ).toHaveCount(0);
+  });
+
+  test("vaga para PCD ganha o selo na revisão", async ({ page }) => {
+    await preencher(page, "sim");
+    await page
+      .getByRole("button", { name: /revisar antes de publicar/i })
+      .click();
+
+    const revisao = page.getByRole("region", { name: "Revisão da vaga" });
+    await expect(revisao.getByText("Vaga para PCD")).toBeVisible();
+  });
+
+  test("vaga que não é para PCD não leva o selo", async ({ page }) => {
+    await preencher(page);
+    await page
+      .getByRole("button", { name: /revisar antes de publicar/i })
+      .click();
+
+    const revisao = page.getByRole("region", { name: "Revisão da vaga" });
+    await expect(revisao.getByRole("heading", { name: CARGO })).toBeVisible();
+    await expect(revisao.getByText("Vaga para PCD")).toHaveCount(0);
   });
 
   test("confirmar publica de verdade", async ({ page }) => {

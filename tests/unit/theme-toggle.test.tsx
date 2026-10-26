@@ -17,7 +17,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AlternarTema } from "@/components/theme-toggle";
-import { CHAVE_TEMA } from "@/lib/theme";
+import { CHAVE_TEMA, COR_DA_BARRA } from "@/lib/theme";
 
 function estaEscuro(): boolean {
   return document.documentElement.getAttribute("data-theme") === "dark";
@@ -25,6 +25,9 @@ function estaEscuro(): boolean {
 
 beforeEach(() => {
   document.documentElement.removeAttribute("data-theme");
+  for (const m of document.head.querySelectorAll('meta[name="theme-color"]')) {
+    m.remove();
+  }
   localStorage.clear();
 });
 
@@ -108,5 +111,29 @@ describe("AlternarTema", () => {
     for (const botao of [primeiro, segundo]) {
       expect(botao).toHaveAttribute("aria-label", "Mudar para o tema claro");
     }
+  });
+});
+
+/**
+ * A barra do navegador acompanha o clique (#479). A cor que vale é a da
+ * primeira `<meta name="theme-color">` do documento.
+ */
+describe("AlternarTema, barra do navegador", () => {
+  const corQueVale = () =>
+    document.head
+      .querySelector('meta[name="theme-color"]')
+      ?.getAttribute("content");
+
+  it("escurecer o tema escurece a barra, e voltar ao claro a clareia", async () => {
+    render(<AlternarTema />);
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    const botao = () => screen.getByRole("button", { name: /tema/i });
+
+    await user.click(botao());
+    expect(corQueVale()).toBe(COR_DA_BARRA.dark);
+
+    await user.click(botao());
+    expect(corQueVale()).toBe(COR_DA_BARRA.light);
   });
 });

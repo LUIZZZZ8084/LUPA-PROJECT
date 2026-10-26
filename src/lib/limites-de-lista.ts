@@ -43,6 +43,27 @@
 export const TETO_BUSCA = 100;
 
 /**
+ * O termo de busca chega à consulta com no máximo isto (#439).
+ *
+ * Ele entra num `ilike` de título e descrição e na chave do cache das
+ * listagens, e a URL não tem teto: um termo de vários KB virava uma
+ * consulta e uma entrada de cache nova a cada variação. Cem caracteres
+ * passam qualquer busca de verdade — a estatística de busca sem resultado
+ * já descarta acima de 80.
+ */
+export const TAMANHO_MAXIMO_DO_TERMO = 100;
+
+/** O termo aparado, com espaço repetido colapsado e cortado no teto. */
+export function termoDeBusca(bruto: string | undefined): string | undefined {
+  const termo = bruto
+    ?.replace(/\s+/g, " ")
+    .trim()
+    .slice(0, TAMANHO_MAXIMO_DO_TERMO)
+    .trim();
+  return termo || undefined;
+}
+
+/**
  * Candidatos que pediram para ser encontrados.
  *
  * Mesmo raciocínio da busca, e a mesma tela de filtros por habilidade e

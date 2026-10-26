@@ -35,6 +35,19 @@ export type Capacidade =
   | "perfil:editar_proprio"
   | "perfil:enviar_documento"
   /*
+   * Excluir a própria conta (#423), direito do titular na LGPD (art. 18).
+   *
+   * Todo papel de quem usa o app tem; o admin não, pela regra da casa: a
+   * conta de administração é a que opera a ferramenta, e tirá-la do ar é
+   * caso de suporte, com gente olhando.
+   */
+  | "conta:excluir"
+  /*
+   * Denunciar vaga ou avaliação (#435). Quem usa o app denuncia; só o
+   * admin decide, por `admin:moderar`. O admin não denuncia: ele decide.
+   */
+  | "denuncia:criar"
+  /*
    * Ativar o lado prestador de uma conta que já existe.
    *
    * Só o candidato tem: a empresa não vira prestador (é outra pessoa
@@ -93,6 +106,7 @@ export type Capacidade =
   | "publicacao:criar"
   | "publicacao:editar_propria"
   | "publicacao:arquivar_propria"
+  | "publicacao:apagar_propria"
   // Avaliações
   | "avaliacao:receber"
   /*
@@ -108,7 +122,12 @@ export type Capacidade =
   | "admin:painel"
   | "admin:metricas"
   | "admin:decidir_verificacao"
-  | "admin:moderar";
+  | "admin:moderar"
+  /*
+   * Os custos mensais que o painel compara com a receita (#473): ler e
+   * editar. É dado da empresa, não de ninguém do app.
+   */
+  | "admin:custos";
 
 const NENHUMA: readonly Capacidade[] = [];
 
@@ -117,6 +136,8 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
   candidato_clt: [
     "perfil:editar_proprio",
     "perfil:enviar_documento",
+    "conta:excluir",
+    "denuncia:criar",
     "candidatura:criar",
     "candidatura:ver_propria",
     "prestador:ativar",
@@ -137,11 +158,14 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "publicacao:criar",
     "publicacao:editar_propria",
     "publicacao:arquivar_propria",
+    "publicacao:apagar_propria",
   ],
 
   prestador_servico: [
     "perfil:editar_proprio",
     "perfil:enviar_documento",
+    "conta:excluir",
+    "denuncia:criar",
     "prestador:gerenciar_assinatura",
     /*
      * Ver as candidaturas antigas, sem poder criar novas.
@@ -156,6 +180,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "publicacao:criar",
     "publicacao:editar_propria",
     "publicacao:arquivar_propria",
+    "publicacao:apagar_propria",
     "avaliacao:receber",
     "avaliacao:escrever",
     /*
@@ -182,6 +207,8 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
   empresa: [
     "perfil:editar_proprio",
     "perfil:enviar_documento",
+    "conta:excluir",
+    "denuncia:criar",
     "vaga:publicar",
     "vaga:encerrar_propria",
     "vaga:reativar_propria",
@@ -218,6 +245,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "admin:metricas",
     "admin:decidir_verificacao",
     "admin:moderar",
+    "admin:custos",
     "perfil:editar_proprio",
     "candidato:buscar_disponiveis",
   ],

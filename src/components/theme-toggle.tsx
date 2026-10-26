@@ -2,7 +2,7 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useSyncExternalStore } from "react";
-import { CHAVE_TEMA, type Tema } from "@/lib/theme";
+import { CHAVE_TEMA, pintarBarraDoNavegador, type Tema } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 /**
@@ -72,6 +72,10 @@ export function AlternarTema({ className }: { className?: string }) {
       document.documentElement.removeAttribute("data-theme");
     }
 
+    // A barra do navegador acompanha: sem isto ela ficaria na cor do tema
+    // com que a página abriu (#479).
+    pintarBarraDoNavegador(proximo ? "dark" : "light");
+
     try {
       const tema: Tema = proximo ? "dark" : "light";
       localStorage.setItem(CHAVE_TEMA, tema);
@@ -96,7 +100,7 @@ export function AlternarTema({ className }: { className?: string }) {
       }
       title={escuro ? "Tema claro" : "Tema escuro"}
       className={cn(
-        "relative flex h-10 w-10 flex-none items-center justify-center rounded-full text-muted transition-colors hover:bg-panel-2 hover:text-ink",
+        "relative flex h-11 w-11 flex-none items-center justify-center rounded-full text-muted transition-colors hover:bg-panel-2 hover:text-ink",
         className,
       )}
     >

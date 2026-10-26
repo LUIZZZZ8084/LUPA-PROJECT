@@ -38,6 +38,40 @@ describe("JobCard", () => {
     expect(screen.queryByText("Novo")).not.toBeInTheDocument();
   });
 
+  /**
+   * O cargo não divide a largura com o selo "Novo" (#479). Ao lado do título o
+   * selo tirava uns 50 px, e o cargo, o que a pessoa lê primeiro, aparecia
+   * cortado numa linha só. Agora o título tem até duas linhas, e o selo vive
+   * na linha da empresa.
+   */
+  it("o título tem até duas linhas e não divide a linha com o selo 'Novo'", () => {
+    render(<JobCard job={job} />);
+    const titulo = screen.getByRole("heading", { level: 3 });
+
+    expect(titulo.className).toContain("line-clamp-2");
+    expect(titulo.className).not.toContain("truncate");
+    // A coluna do texto não é uma linha com `justify-between`: o título está
+    // sozinho nela, e o selo vem depois, na linha da empresa.
+    expect(titulo.parentElement?.className).not.toContain("justify-between");
+    const linhaDaEmpresa = titulo.nextElementSibling;
+    expect(linhaDaEmpresa).toHaveTextContent(job.company.company_name);
+    expect(linhaDaEmpresa).toHaveTextContent("Novo");
+  });
+
+  it("sem selo, a linha da empresa fica como estava", () => {
+    const antiga = {
+      ...job,
+      created_at: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+    };
+    render(<JobCard job={antiga} />);
+    const linhaDaEmpresa = screen.getByRole("heading", {
+      level: 3,
+    }).nextElementSibling;
+
+    expect(linhaDaEmpresa).toHaveTextContent(job.company.company_name);
+    expect(linhaDaEmpresa).not.toHaveTextContent("Novo");
+  });
+
   it("mostra 'A combinar' quando não há salário", () => {
     render(<JobCard job={{ ...job, salary_min: null, salary_max: null }} />);
     expect(screen.getByText("A combinar")).toBeInTheDocument();
@@ -47,6 +81,16 @@ describe("JobCard", () => {
   it("mostra a modalidade como selo", () => {
     render(<JobCard job={{ ...job, work_mode: "home_office" }} />);
     expect(screen.getByText("Home office")).toBeInTheDocument();
+  });
+
+  /** A vaga para PCD ganha o selo no card (#456). */
+  it("vaga para PCD mostra o selo, e a que não é não mostra", () => {
+    const { unmount } = render(<JobCard job={{ ...job, for_pcd: true }} />);
+    expect(screen.getByText("Vaga para PCD")).toBeInTheDocument();
+    unmount();
+
+    render(<JobCard job={{ ...job, for_pcd: false }} />);
+    expect(screen.queryByText("Vaga para PCD")).not.toBeInTheDocument();
   });
 
   /** Vaga publicada antes do campo existir não ganha selo inventado. */

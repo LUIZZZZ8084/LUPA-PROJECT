@@ -21,7 +21,9 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { pode } from "@/server/auth/rbac";
 import { perfilDoCandidato } from "@/server/candidatos/servico";
+import { ORCAMENTO_DE_PERFIS_DE_CANDIDATO } from "@/server/limites";
 import {
   listarPublicacoes,
   resumo as resumoDePublicacoes,
@@ -49,6 +51,30 @@ export default async function CandidatoPage({
    * exatamente o que o opt-in protege.
    */
   if (!perfil) notFound();
+
+  /*
+   * O teto do dia (#433): a empresa já abriu os perfis que cabem hoje. A
+   * tela diz isso, em vez de um 404 que faria pensar que a pessoa sumiu —
+   * e não mostra o contato, que é justamente o que o teto segura.
+   */
+  if (perfil === "limite_do_dia") {
+    return (
+      <PageShell width="narrow">
+        <BackLink href="/candidatos" label="Voltar para candidatos" />
+        <Panel className="mt-4">
+          <h1 className="font-bold text-lg">
+            Você chegou ao limite de perfis de hoje
+          </h1>
+          <p className="mt-2 text-muted text-sm leading-relaxed">
+            Cada empresa abre até {ORCAMENTO_DE_PERFIS_DE_CANDIDATO.chamadas}{" "}
+            perfis de candidatos por dia. O limite protege o contato de quem
+            pediu para ser encontrado. Amanhã ele recomeça, e quem se candidatar
+            às suas vagas continua chegando no painel.
+          </p>
+        </Panel>
+      </PageShell>
+    );
+  }
 
   const { candidato: c, candidaturaId, ehDono, visivelParaEmpresas } = perfil;
 
@@ -166,6 +192,13 @@ export default async function CandidatoPage({
             ehDono
               ? { editar: editarComFotoComEstado, excluir: arquivarPelaAba }
               : undefined
+          }
+          /*
+           * Denunciar a foto (#452): quem olha o perfil de outra pessoa e
+           * pode denunciar. O dono tira a própria foto; o admin decide.
+           */
+          denunciar={
+            !ehDono && Boolean(sessao && pode(sessao.papel, "denuncia:criar"))
           }
           sobre={
             <div className="pt-5">

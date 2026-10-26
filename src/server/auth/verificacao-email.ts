@@ -2,9 +2,11 @@ import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
 import { enviarEmail, temEmailConfigurado } from "../email";
+import { saudacao } from "../email/saudacao";
 import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
+import { cabeEmailParaConta, reservarEmailDaOrigem } from "./cota-de-email";
 import { conferirLimite, reservarTentativa } from "./rate-limit";
 
 /**
@@ -101,6 +103,7 @@ export async function enviarVerificacaoDeEmail(
 
   await conferirLimite(`verificacao:${opcoes.origem}`);
   await reservarTentativa(`verificacao:${opcoes.origem}`);
+  await reservarEmailDaOrigem("verificacao", opcoes.origem);
 
   const repo = repositorioUsuarios();
   const usuario = await repo.porId(usuarioId);
@@ -109,6 +112,18 @@ export async function enviarVerificacaoDeEmail(
   // Já confirmado é sucesso, não erro: quem clicou duas vezes em
   // "reenviar" não precisa de uma mensagem vermelha.
   if (usuario.emailVerificado) return { ok: true };
+
+  /*
+   * Aqui a pessoa tem sessão e o endereço é dela: dizer que passou da cota
+   * não revela nada (#407). Sem token novo, o último link continua valendo.
+   */
+  if (!(await cabeEmailParaConta(usuario.id, opcoes.origem))) {
+    return {
+      ok: false,
+      motivo:
+        "Você já pediu muitos e-mails hoje. Use o último link que chegou ou tente amanhã.",
+    };
+  }
 
   const token = randomBytes(BYTES_DO_TOKEN).toString("base64url");
   await repo.criarTokenDeRecuperacao({
@@ -124,7 +139,7 @@ export async function enviarVerificacaoDeEmail(
       assunto: "Confirme seu e-mail na Lupa",
       tipo: "verificacao_email",
       corpo: [
-        `Olá, ${usuario.nomeCompleto.split(" ")[0]}.`,
+        saudacao(usuario.nomeCompleto),
         "",
         "Confirme que este e-mail é seu abrindo o link abaixo:",
         "",

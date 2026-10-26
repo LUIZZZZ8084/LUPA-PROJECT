@@ -1,4 +1,5 @@
 import { CanalDeContato } from "@/components/canal-de-contato";
+import { InstalarApp } from "@/components/instalar-app";
 import { AppHeader } from "@/components/layout/app-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { sessaoAtual } from "@/server/auth/cookies";
@@ -37,6 +38,11 @@ export default async function AppLayout({
           sessao && usuario && pode(sessao.papel, "candidatura:criar"),
         )}
       />
+      {/*
+       * O convite para instalar (#475): só aparece no navegador do celular,
+       * e decide sozinho, no cliente, o que oferecer àquele aparelho.
+       */}
+      <InstalarApp />
       <div className="flex-1">{children}</div>
       {/*
        * Instagram e e-mail, agora também aqui (#241).

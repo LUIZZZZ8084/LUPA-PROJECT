@@ -12,6 +12,8 @@
  * o de recuperação — no cadastro e a cada "reenviar" —, e sem a separação
  * cada reenvio seria mais um link de redefinição circulando.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { limparLimites } from "@/server/auth/rate-limit";
 import { redefinirSenha } from "@/server/auth/recuperacao";
@@ -79,6 +81,34 @@ describe("verificação de e-mail", () => {
 
     // Uso único: o segundo clique não faz nada, e não explode.
     expect(await confirmarEmail(token)).toBe(false);
+  });
+
+  /** Reenviar aposenta o link anterior, como na recuperação (#398). */
+  it("reenviar aposenta o link anterior", async () => {
+    await enviarVerificacaoDeEmail(usuarioId, OPCOES);
+    const antigo = tokenDoUltimoEmail();
+    await enviarVerificacaoDeEmail(usuarioId, {
+      ...OPCOES,
+      origem: "203.0.113.201",
+    });
+    const novo = tokenDoUltimoEmail();
+
+    expect(await confirmarEmail(antigo)).toBe(false);
+    expect(await confirmarEmail(novo)).toBe(true);
+  });
+
+  /**
+   * Abrir o link não confirma nada (#398). A página que o link abre só
+   * mostra o botão; quem gasta o token é a action. Filtro de e-mail e
+   * prévia de link abrem os endereços antes da pessoa, e com o consumo na
+   * renderização o primeiro deles gastava o token.
+   */
+  it("a página do link não gasta o token", () => {
+    const pagina = readFileSync(
+      join(process.cwd(), "src/app/(auth)/verificar-email/page.tsx"),
+      "utf8",
+    );
+    expect(pagina).not.toMatch(/confirmarEmail\b/);
   });
 
   /**

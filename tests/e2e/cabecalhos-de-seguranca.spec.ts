@@ -17,6 +17,7 @@ test.describe("cabeçalhos de segurança", () => {
     expect(h["x-frame-options"]).toBe("SAMEORIGIN");
     expect(h["referrer-policy"]).toBe("strict-origin-when-cross-origin");
     expect(h["permissions-policy"]).toContain("camera=()");
+    expect(h["cross-origin-opener-policy"]).toBe("same-origin");
     /*
      * HSTS fecha o SSL-stripping da primeira visita (#350). A asserção
      * confere os dois pedaços que importam — o prazo e o includeSubDomains

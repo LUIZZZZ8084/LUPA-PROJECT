@@ -311,6 +311,30 @@ describe("recuperação de senha", () => {
       ).rejects.toMatchObject({ codigo: "validacao" });
     });
 
+    /**
+     * Pedir um link novo aposenta o anterior (#398). Quem pede outro é
+     * porque o primeiro se perdeu — ou foi parar onde não devia —, e ele
+     * não pode continuar trocando a senha pela hora que ainda tinha.
+     */
+    it("o link novo aposenta o anterior", async () => {
+      const antigo = await pedirEPegarToken();
+      // O limite é por origem: o segundo pedido vem de outra.
+      await pedirRecuperacao("maria@teste.lupa", {
+        ...OPCOES,
+        origem: "203.0.113.200",
+      });
+      const novo = tokenDoUltimoEmail();
+      expect(novo).not.toBe(antigo);
+
+      await expect(
+        redefinirSenha(antigo, "senhaNova123"),
+      ).rejects.toMatchObject({ codigo: "validacao" });
+      await expect(redefinirSenha(novo, "senhaNova123")).resolves.toEqual({
+        usuarioId,
+        papel: "candidato_clt",
+      });
+    });
+
     it("token expirado não vale", async () => {
       const token = await pedirEPegarToken();
 
