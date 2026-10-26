@@ -170,6 +170,14 @@ export default function TermosPage() {
           divulgação.
         </p>
         <p>
+          <strong>A vaga publicada pode ser lida sem conta.</strong> O link de
+          cada vaga abre para qualquer pessoa, só para leitura, e aparece com o
+          cargo, a empresa e a cidade na prévia de quem o compartilha. Sem conta
+          não se vê telefone, e-mail nem WhatsApp, e candidatar-se pede entrar.
+          Escreva a vaga sabendo que quem tem o link a lê — e que a empresa pode
+          compartilhá-lo, e baixar uma arte da vaga para postar.
+        </p>
+        <p>
           Você garante que tem direito sobre o que publica, e responde pelo
           conteúdo. Nos termos do{" "}
           <strong>art. 19 da Lei 12.965/2014 (Marco Civil da Internet)</strong>,

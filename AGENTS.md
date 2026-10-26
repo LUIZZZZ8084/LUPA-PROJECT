@@ -1706,6 +1706,59 @@ responderia com um redirecionamento para `/entrar` que nenhum crawler segue
 para descobrir a política — a mesma armadilha do item esquecido no matcher,
 registrada mais abaixo neste arquivo.
 
+**E a vaga individual abriu em 26/10/2026 (#490) — a terceira mudança desta
+decisão.** As duas anteriores abriram ou fecharam a *vitrine*; esta abre uma
+*página*, e o motivo é de canal: as vagas da cidade circulam em perfis de
+Instagram e grupos de WhatsApp, e é por eles que a empresa já tem alcance. O
+link da vaga mandava quem clicava para uma tela de entrar — e o robô que monta
+a prévia do link, que não tem sessão, junto —, então a Lupa não era o destino
+do que a empresa postava.
+
+**O recorte é `/vagas/<id>` e a miniatura dela, e nada em volta** (`VAGA_PUBLICA`
+em `src/proxy.ts`, com âncora nas duas pontas). A lista `/vagas`, os perfis, o
+contato e a candidatura continuam fechados; `/vagas/<id>/qualquer-coisa`
+também. Sem sessão a página mostra cargo, empresa, local, salário, endereço e
+descrição — **e nenhum contato**: nem telefone, nem e-mail, nem WhatsApp, nem
+as **redes da empresa**, que a página já mostrava a quem tem conta e que
+passaram a depender de sessão. Não é desconfiança de quem lê: é o argumento de
+21/08 aplicado ao que sobrou — contato é o que faz o cadastro virar lead. O
+botão "Candidatar-se" vira "Entrar para se candidatar" e "Criar conta grátis",
+os dois com `destino` de volta à vaga (o cadastro também passou a carregá-lo; o
+valor é validado por `destinoSeguro` antes de virar o botão "Voltar para a
+vaga"). Vaga encerrada ou vencida abre dizendo que não recebe candidaturas, com
+o caminho das vagas da cidade, e sai do índice dos buscadores (`robots`).
+
+**A prévia do link tem miniatura própria** (`opengraph-image.tsx` ao lado da
+página, 1200 × 630, com cargo, empresa, cidade e salário) e a rota dela entra
+na lista de abertas pelo mesmo motivo do `opengraph-image` da home (#259): quem
+a busca é o servidor da rede social. **O `robots.txt` deixou de bloquear
+`/vagas` por prefixo**: o rastreador do Facebook e do Instagram obedece a ele,
+e a vaga compartilhada sairia sem miniatura. Fecha-se só a lista (`/vagas$` e
+`/vagas?`, extensões do Google e do Bing). Não entrou no `sitemap.xml`: a Issue
+é de compartilhar, e indexar a vaga pelo Google é outra decisão, com o custo de
+uma consulta por rastreio.
+
+**A visita do robô de prévia não conta como visualização** (`ehRastreador`, em
+`src/lib/rastreador.ts`): colar o link numa conversa manda um servidor buscar a
+página, e contar isso faria o número da empresa subir quando ela divulga. O
+`User-Agent` é declaratório, então robô que finge ser navegador passa — erro
+para o lado de contar a mais, o mesmo que a recarga já provoca.
+
+**A empresa dona divulga:** WhatsApp (o `wa.me/?text=` abre o aplicativo com a
+mensagem pronta, e a pessoa edita na própria conversa — um campo a mais seria
+atrito), copiar link e **baixar a arte de story** (1080 × 1920). O painel de
+divulgação aparece na página da vaga para o dono e logo depois de publicar, que
+é quando ela mais quer espalhar. A arte é uma rota de dono
+(`/api/vagas/[id]/arte`): o que está na imagem é público, mas uma imagem de
+1080 × 1920 renderizada a cada chamada não se oferece a anônimo, e vaga de
+outra empresa responde 404 igual a "não existe". Tem teto por pessoa
+(`ORCAMENTO_DA_ARTE_DA_VAGA`), pela mesma razão do currículo em PDF — é um
+`GET`, e o teto de `criarAcao` não alcança. A imagem não leva emoji (o
+renderizador o busca numa CDN a cada imagem) nem contato, e o download é um `<a>`
+comum: o `Link` do Next pré-busca o destino, e este endpoint renderiza uma
+imagem a cada chamada. Os Termos e a Política de Privacidade dizem que a vaga é
+visível sem conta (a lição da #235: texto legal sai do que o produto faz).
+
 ### A vitrine de produção mostra só quem existe (#302)
 
 As contas de exemplo do `seed.sql` — 9 prestadores, 3 empresas e as vagas

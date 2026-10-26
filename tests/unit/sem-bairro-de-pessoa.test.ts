@@ -65,6 +65,8 @@ const FALA_DA_VAGA = [
   // A vaga na tela: card e detalhe.
   /^components\/job-card\.tsx$/,
   /^app\/\(app\)\/vagas\/\[id\]\/page\.tsx$/,
+  // A imagem da vaga (#490): o local escrito na miniatura e na arte de story.
+  /^components\/brand\/imagem-da-vaga\.tsx$/,
   // O tipo `Job` e o mapa vaga ↔ mock; o mock em si é só de vaga.
   /^lib\/types\.ts$/,
   /^lib\/data\.ts$/,

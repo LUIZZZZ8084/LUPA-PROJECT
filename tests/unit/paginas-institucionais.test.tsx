@@ -274,6 +274,30 @@ describe("os documentos, na publicação", () => {
     expect(privacidade).toMatch(/De denúncia:/);
   });
 
+  /*
+   * A vaga abre sem conta (#490), e o texto legal diz o que isso inclui e o
+   * que não: a pessoa que publica precisa saber que quem tem o link a lê, e
+   * a que lê precisa saber que contato continua pedindo conta.
+   */
+  it("a Privacidade diz que a vaga abre sem conta, e sem nenhum contato", () => {
+    const { container } = render(<PrivacidadePage />);
+    const texto = (container.textContent ?? "").replace(/\s+/g, " ");
+
+    expect(texto).toMatch(/A vaga publicada abre sem conta/);
+    expect(texto).toMatch(
+      /nada de contato: nem telefone, nem e-mail, nem WhatsApp/,
+    );
+    expect(texto).toMatch(/Candidatar-se continua pedindo conta/);
+  });
+
+  it("os Termos avisam quem publica que quem tem o link lê a vaga", () => {
+    const { container } = render(<TermosPage />);
+    const texto = (container.textContent ?? "").replace(/\s+/g, " ");
+
+    expect(texto).toMatch(/A vaga publicada pode ser lida sem conta/);
+    expect(texto).toMatch(/candidatar-se pede entrar/);
+  });
+
   it("ser encontrado chega só a empresa com CNPJ conferido", () => {
     const { container } = render(<PrivacidadePage />);
     expect(container.textContent).toMatch(
