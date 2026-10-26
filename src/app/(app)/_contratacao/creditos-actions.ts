@@ -6,7 +6,13 @@ import { z } from "zod";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { exigirCapacidade } from "@/server/auth/rbac";
-import { assinar, comprar } from "@/server/pagamentos/servico";
+import { erros } from "@/server/errors";
+import { ehRecorrente } from "@/server/pagamentos/planos";
+import {
+  assinar,
+  cancelarPlanoDeVagas,
+  comprar,
+} from "@/server/pagamentos/servico";
 import { BASES_DE_CONTRATACAO } from "./area";
 
 /**
@@ -33,18 +39,18 @@ function revalidarContratacao(sufixo = "") {
  */
 const COMPRAVEL = z.enum([
   "empresa_vaga_avulsa",
-  "empresa_pacote_5",
-  "empresa_pacote_10",
+  "empresa_plano_5",
+  "empresa_plano_10",
   "empresa_mensal",
 ]);
 
 /**
- * Compra crédito de vaga, ou assina o plano mensal (#172).
+ * Compra uma vaga avulsa, ou assina um plano (#172, #489).
  *
  * Os dois caminhos moram na mesma action porque, para quem clica, é o
  * mesmo gesto — escolher uma opção e pagar. A diferença entre pagamento
  * único e assinatura é do Mercado Pago, e é o servidor que decide qual,
- * a partir do tipo: `ehRecorrente` manda o mensal para `preapproval` e o
+ * a partir do tipo: `ehRecorrente` manda os planos para `preapproval` e o
  * resto para o Checkout Pro.
  */
 export const comprarCreditos = criarAcao({
@@ -54,7 +60,7 @@ export const comprarCreditos = criarAcao({
     const sessao = await sessaoAtual();
     exigirCapacidade(sessao, "vaga:publicar");
 
-    if (tipo === "empresa_mensal") {
+    if (ehRecorrente(tipo)) {
       const { checkoutUrl, assinatura } = await assinar(sessao, tipo);
       revalidarContratacao("/creditos");
       revalidarContratacao();
@@ -65,5 +71,33 @@ export const comprarCreditos = criarAcao({
     revalidarContratacao("/creditos");
     revalidarContratacao();
     redirect(checkoutUrl ?? `/pagamento/retorno?compra=${pagamento.id}`);
+  },
+});
+
+/**
+ * Cancela a renovação do plano de vagas (#489).
+ *
+ * Cancelar interrompe as cobranças futuras e **não** tira os dias já
+ * pagos: o plano segue valendo até o fim do período. É também o primeiro
+ * passo de quem quer trocar de plano — assinar outro com um ativo é
+ * recusado até aqui.
+ */
+export const cancelarPlano = criarAcao({
+  nome: "empresa.cancelar_plano",
+  entrada: z.object({}),
+  executar: async () => {
+    const sessao = await sessaoAtual();
+    exigirCapacidade(sessao, "vaga:publicar");
+
+    const resultado = await cancelarPlanoDeVagas(sessao);
+    if (!resultado.ok) {
+      throw erros.validacao([
+        { campo: "renovacao", mensagem: resultado.motivo },
+      ]);
+    }
+
+    revalidarContratacao("/creditos");
+    revalidarContratacao();
+    return {};
   },
 });

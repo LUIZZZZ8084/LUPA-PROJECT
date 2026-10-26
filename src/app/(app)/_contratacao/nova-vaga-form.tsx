@@ -20,6 +20,7 @@ import {
   WORK_MODE_LABELS,
   WORK_MODES,
 } from "@/lib/constants";
+import { type DireitoParaTela, resumoDoDireito } from "@/lib/planos-empresa";
 import { cn } from "@/lib/utils";
 import type { AreaDeContratacao } from "./area";
 import { type EstadoVaga, publicarVagaComEstado } from "./nova-vaga-actions";
@@ -60,9 +61,10 @@ export function NewJobForm({
    * alguns segundos, e isso é aceitável para um aviso; seria inaceitável
    * para um portão.
    */
-  direito: { mensalAtivo: boolean; creditos: number };
+  direito: DireitoParaTela;
 }) {
-  const semSaldo = !direito.mensalAtivo && direito.creditos === 0;
+  const semSaldo = !direito.pode;
+  const resumo = resumoDoDireito(direito);
   const [state, action, pending] = useActionState(
     publicarVagaComEstado,
     inicial,
@@ -116,30 +118,18 @@ export function NewJobForm({
       {!revisao && (
         <Panel className={cn("mb-4", semSaldo && "border-warn/40 bg-warn/10")}>
           <div className="flex items-start gap-3">
-            {direito.mensalAtivo ? (
-              <Infinito size={18} className="mt-0.5 flex-none text-empresas" />
-            ) : semSaldo ? (
+            {semSaldo ? (
               <AlertTriangle size={18} className="mt-0.5 flex-none text-warn" />
+            ) : direito.mensalAtivo ? (
+              <Infinito size={18} className="mt-0.5 flex-none text-empresas" />
             ) : (
               <Ticket size={18} className="mt-0.5 flex-none text-empresas" />
             )}
 
             <div className="min-w-0 flex-1">
-              <p className="font-bold text-sm">
-                {direito.mensalAtivo
-                  ? "Plano mensal ativo"
-                  : direito.creditos === 0
-                    ? "Você não tem vagas para publicar"
-                    : direito.creditos === 1
-                      ? "Você tem 1 vaga para publicar"
-                      : `Você tem ${direito.creditos} vagas para publicar`}
-              </p>
+              <p className="font-bold text-sm">{resumo.titulo}</p>
               <p className="mt-0.5 text-muted text-sm leading-relaxed">
-                {direito.mensalAtivo
-                  ? "Publique quantas quiser enquanto o plano estiver ativo, sem tirar do saldo."
-                  : direito.creditos === 0
-                    ? "Compre antes de escrever a vaga — assim você não preenche tudo para ser barrado no fim."
-                    : "Publicar usa uma delas. Cada vaga fica 30 dias no ar."}
+                {resumo.detalhe}
               </p>
 
               {semSaldo && (
@@ -150,7 +140,7 @@ export function NewJobForm({
                   className="mt-3"
                 >
                   <Ticket size={15} />
-                  Comprar vagas
+                  Ver planos e vagas
                 </ButtonLink>
               )}
             </div>
@@ -193,7 +183,7 @@ export function NewJobForm({
                   className="mt-3"
                 >
                   <Ticket size={15} />
-                  Comprar vagas
+                  Ver planos e vagas
                 </ButtonLink>
               )}
             </div>

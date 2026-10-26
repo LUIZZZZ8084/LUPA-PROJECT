@@ -18,6 +18,8 @@ import type {
  */
 export class RepositorioVagasMemoria implements RepositorioVagas {
   private itens = new Map<string, Vaga>();
+  /** Quem publicou cada vaga, para o limite do plano em demonstração. */
+  private autores = new Map<string, string>();
 
   semear(vagas: Vaga[]): void {
     if (this.itens.size > 0) return;
@@ -37,6 +39,27 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
     return [...this.itens.values()]
       .filter((v) => v.empresaId === empresaId)
       .sort((a, b) => +new Date(b.criadoEm) - +new Date(a.criadoEm));
+  }
+
+  /**
+   * Quando a conta é a própria empresa (produção, e os testes que ligam o
+   * banco), conta tudo o que é da empresa. Quando não é — a demonstração,
+   * onde toda conta publica sob a empresa fictícia —, conta só o que aquela
+   * conta publicou: as vagas de exemplo e as das outras contas não ocupam o
+   * lugar de ninguém.
+   */
+  async contarNoAr(empresaId: string, publicadaPor?: string): Promise<number> {
+    const agora = Date.now();
+    const separaPorConta =
+      publicadaPor !== undefined && publicadaPor !== empresaId;
+
+    return [...this.itens.values()].filter(
+      (v) =>
+        v.empresaId === empresaId &&
+        v.status === "aberta" &&
+        new Date(v.expiraEm).getTime() > agora &&
+        (!separaPorConta || this.autores.get(v.id) === publicadaPor),
+    ).length;
   }
 
   async listar(): Promise<Vaga[]> {
@@ -67,6 +90,7 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
     };
 
     this.itens.set(vaga.id, vaga);
+    if (dados.publicadaPor) this.autores.set(vaga.id, dados.publicadaPor);
     return vaga;
   }
 

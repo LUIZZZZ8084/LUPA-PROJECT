@@ -171,3 +171,29 @@ export async function avisarVagaNova(vaga: {
     removidos: mortas.length,
   });
 }
+
+/**
+ * Menos gente que isto não se mostra (#489).
+ *
+ * Dois motivos, e os dois pesam. O primeiro é de privacidade: "3 pessoas em
+ * Sorriso pediram aviso de vaga" deixa a cidade pequena demais para o número
+ * não ser rastreável a alguém, e quem pede aviso de vaga é quem pode estar
+ * procurando sair do emprego atual. O segundo é de venda: um público de três
+ * não convence ninguém, e dizê-lo seria a Lupa mostrando o que tem de mais
+ * fraco no lugar de ter o que mostrar.
+ */
+export const MINIMO_DO_PUBLICO = 10;
+
+/**
+ * Quantas pessoas da cidade pediram para ser avisadas de vaga nova — para a
+ * empresa ver, na hora de comprar, para quem a vaga dela vai.
+ *
+ * Devolve `null` abaixo do mínimo: quem chama não mostra nada, e a tela não
+ * precisa saber por quê. Só o número sai daqui; nunca quem são.
+ */
+export async function publicoQuePediuAviso(
+  cidade: string,
+): Promise<number | null> {
+  const total = await repositorioNotificacoes().contarComAvisoNaCidade(cidade);
+  return total >= MINIMO_DO_PUBLICO ? total : null;
+}

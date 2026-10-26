@@ -20,6 +20,13 @@ export function carteiraInfinita(): RepositorioCarteiras {
     usuarioId,
     creditosVaga: Number.MAX_SAFE_INTEGER,
     mensalidadeValidaAte: null,
+    planoVagasNoAr: null,
+    /*
+     * Já usou a primeira vaga grátis: é o que faz a carteira não consultar
+     * a conta (#489). Estes testes publicam como preparação, e a pergunta
+     * "esta empresa tem CNPJ conferido?" não é deles.
+     */
+    primeiraVagaGratisUsadaEm: agora,
     criadoEm: agora,
     atualizadoEm: agora,
   });
@@ -31,5 +38,7 @@ export function carteiraInfinita(): RepositorioCarteiras {
     debitar: async (id) => carteira(id),
     estenderMensalidade: async (id) => carteira(id),
     revogarMensalidade: async (id) => carteira(id),
+    reivindicarPrimeiraVagaGratis: async () => false,
+    liberarPrimeiraVagaGratis: async () => {},
   };
 }

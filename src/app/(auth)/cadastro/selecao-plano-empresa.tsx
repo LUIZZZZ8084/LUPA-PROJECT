@@ -3,8 +3,11 @@ import { ComprarButton } from "@/app/(app)/_contratacao/comprar-button";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL } from "@/lib/format";
-import { OPCOES_DE_VAGA } from "@/lib/planos-empresa";
-import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
+import { OPCAO_AVULSA, PLANOS_DE_VAGA } from "@/lib/planos-empresa";
+import {
+  PRECO_CENTAVOS,
+  VAGAS_NO_AR_POR_PLANO,
+} from "@/server/pagamentos/planos";
 
 /**
  * Último passo do cadastro de empresa: a conta já existe, e comprar é
@@ -28,19 +31,17 @@ import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
  * tela inteira continua cabendo em 844 px de altura, que o teste confere.
  *
  * As opções e os botões continuam os mesmos de `/empresa/creditos` — mesma
- * lista (`OPCOES_DE_VAGA`), mesmo `ComprarButton`, mesma action. O saldo
- * não entra: quem acabou de criar a conta tem zero.
+ * lista (`PLANOS_DE_VAGA` e `OPCAO_AVULSA`), mesmo `ComprarButton`, mesma
+ * action. O saldo não entra: quem acabou de criar a conta tem zero.
  */
 
 const BENEFICIOS_GRATIS = [
   "Perfil da empresa no ar",
   "Buscar entre quem pediu para ser encontrado",
-  "Pague só quando tiver vaga para publicar",
+  "Primeira vaga grátis, com o CNPJ conferido",
 ];
 
 export function SelecaoDePlanoEmpresa() {
-  const mensal = formatPrecoBRL(PRECO_CENTAVOS.empresa_mensal / 100);
-
   return (
     <div className="space-y-3">
       <div
@@ -93,31 +94,34 @@ export function SelecaoDePlanoEmpresa() {
         </p>
 
         <ul className="mt-2 space-y-2">
-          {OPCOES_DE_VAGA.map((opcao) => (
-            <LinhaDeCompra
-              key={opcao.tipo}
-              nome={opcao.nome}
-              preco={formatPrecoBRL(PRECO_CENTAVOS[opcao.tipo] / 100)}
-              nota={opcao.destaque ? "melhor preço" : undefined}
-            >
-              <ComprarButton
-                tipo={opcao.tipo}
-                rotulo="Comprar"
-                ariaLabel={`Comprar ${opcao.nome}`}
-                destaque={false}
-                compacto
-              />
-            </LinhaDeCompra>
-          ))}
+          {PLANOS_DE_VAGA.map((plano) => {
+            const limite = VAGAS_NO_AR_POR_PLANO[plano.tipo];
+            return (
+              <LinhaDeCompra
+                key={plano.tipo}
+                nome={plano.nome}
+                preco={`${formatPrecoBRL(PRECO_CENTAVOS[plano.tipo] / 100)}/mês`}
+                nota={limite ? `até ${limite} vagas no ar` : "vagas sem contar"}
+              >
+                <ComprarButton
+                  tipo={plano.tipo}
+                  rotulo="Assinar"
+                  ariaLabel={`Assinar o ${plano.nome}`}
+                  destaque={false}
+                  compacto
+                />
+              </LinhaDeCompra>
+            );
+          })}
           <LinhaDeCompra
-            nome="Vagas ilimitadas"
-            preco={`${mensal}/mês`}
-            nota="para quem contrata todo mês"
+            nome={OPCAO_AVULSA.nome}
+            preco={formatPrecoBRL(PRECO_CENTAVOS[OPCAO_AVULSA.tipo] / 100)}
+            nota="compra única"
           >
             <ComprarButton
-              tipo="empresa_mensal"
-              rotulo="Assinar"
-              ariaLabel="Assinar o plano mensal de vagas ilimitadas"
+              tipo={OPCAO_AVULSA.tipo}
+              rotulo="Comprar"
+              ariaLabel="Comprar 1 vaga"
               destaque={false}
               compacto
             />
