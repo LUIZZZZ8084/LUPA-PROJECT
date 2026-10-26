@@ -14,6 +14,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ExcluirConta } from "@/components/excluir-conta";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
+import { LinksInstitucionais } from "@/components/links-institucionais";
 import {
   PerfilCandidato,
   PerfilEmpresa,
@@ -392,6 +393,8 @@ export default async function PerfilPage() {
           <p>Não pedimos documento nem selfie, e nunca pedimos.</p>
         </div>
       </Panel>
+
+      <LinksInstitucionais className="mt-5 text-center" />
     </PageShell>
   );
 }

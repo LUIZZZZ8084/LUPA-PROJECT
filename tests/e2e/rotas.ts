@@ -59,6 +59,14 @@ export const ROTAS: readonly RotaVarrida[] = [
    * produção.
    */
   { path: "/avisos", nome: "Avisos de vaga" },
+  /*
+   * As três institucionais (#235), publicadas desde que a PALU foi
+   * registrada. Texto longo, lido no celular: é onde contraste ruim e
+   * rolagem horizontal doem mais.
+   */
+  { path: "/termos", nome: "Termos de Uso" },
+  { path: "/privacidade", nome: "Política de Privacidade" },
+  { path: "/suporte", nome: "Suporte" },
 ] as const;
 
 /**

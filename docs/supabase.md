@@ -94,6 +94,8 @@ e repetível, ao lado do `schema.sql`:
 | [`supabase/aplica-vaga-pcd.sql`](../supabase/aplica-vaga-pcd.sql) | Uma vez, em banco criado antes da Issue #456 — acrescenta a coluna da vaga para PCD e a expõe na view; **antes do deploy**, ou publicar vaga falha |
 | [`supabase/aplica-denuncia-de-foto.sql`](../supabase/aplica-denuncia-de-foto.sql) | Uma vez, em banco criado antes da Issue #452 — estende a denúncia às fotos de trabalho; **antes do deploy**, ou denunciar foto falha |
 | [`supabase/aplica-funcoes-so-servico.sql`](../supabase/aplica-funcoes-so-servico.sql) | Uma vez, em banco criado antes da Issue #449 — tira das chaves anônima e autenticada a execução de funções; a de serviço continua. Antes ou depois do deploy, tanto faz, e **de novo depois de qualquer `aplica-*.sql` que crie função** |
+| [`supabase/aplica-indice-denuncia-prestador.sql`](../supabase/aplica-indice-denuncia-prestador.sql) | Uma vez, em banco criado antes da Issue #235 — cria o índice que faltava na chave estrangeira `denuncias.prestador_id`; só índice, nenhum dado é tocado. Antes ou depois do deploy, tanto faz |
+| [`supabase/aplica-avaliacao-sem-nome-ao-excluir.sql`](../supabase/aplica-avaliacao-sem-nome-ao-excluir.sql) | Uma vez, em banco criado antes da Issue #235 — tira o nome da avaliação de quem exclui a conta; antes ou depois do deploy, tanto faz |
 
 Banco novo não precisa de nenhum deles: o `schema.sql` já traz tudo.
 

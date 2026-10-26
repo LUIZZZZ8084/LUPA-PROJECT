@@ -41,7 +41,7 @@ export interface Email {
    * Existe para não ser preciso pôr o assunto, e muito menos o endereço,
    * no registro da falha.
    */
-  tipo: "recuperacao" | "verificacao_email";
+  tipo: "recuperacao" | "verificacao_email" | "suporte";
 }
 
 export type ResultadoEnvio =

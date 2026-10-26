@@ -8,9 +8,19 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 22/10/2026.**
+**Última atualização: 26/10/2026.**
 
 ## Concluído
+
+Em 26/10/2026:
+
+- Termos de Uso, Política de Privacidade e página de Suporte no ar, com a
+  PALU (PALU DESENVOLVIMENTO DE SOFTWARE SOB ENCOMENDA LTDA, CNPJ
+  69.787.370/0001-17, sede em Curitiba/PR) identificada como controladora
+  dos dados. O texto de 08/10 foi conferido contra o produto de hoje:
+  exclusão de conta pelo perfil, denúncias, busca de candidatos só para
+  empresa conferida e a tabela de preços nova —
+  [#235](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/235)
 
 Em 22/10/2026:
 
@@ -665,22 +675,6 @@ duas redes de proteção que o episódio da primeira venda expôs.
 **Tudo o que sobrou vai junto com o empacotamento em APK** — decisão do
 Luiz em 01/09/2026, que reúne numa etapa só o que antes estava
 espalhado.
-
-Antes do lançamento, fora disso:
-
-- [ ] Termos de Uso, Política de Privacidade e página de suporte —
-      [#235](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/235)
-
-      O texto está pronto no PR #236. Espera o CNPJ da PALU, a empresa por
-      trás da Lupa, para ter quem assina como controladora dos dados. É o
-      item mais sério da lista: o cadastro já diz "ao criar a conta você
-      concorda com os termos de uso", e a página ainda não existe.
-
-      **O SQL do #236 já está em produção**, antes do merge: a tabela
-      `mensagens_suporte` existe lá e não existe no `schema.sql` da `main`
-      (achado B10 da auditoria, #334). Está fechada — RLS ligada, sem
-      acesso para a chave anônima —, e o `aplica-suporte.sql` do PR usa
-      `if not exists`, então rodá-lo de novo no merge não quebra nada.
 
 ## Depende de decisão, não de código
 
