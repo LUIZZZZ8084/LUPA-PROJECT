@@ -84,7 +84,7 @@ async function elegivelParaPrimeiraGratis(
 
   const usuarios = repositorioUsuarios();
   const usuario = await usuarios.porId(usuarioId);
-  if (!usuario || usuario.papel !== "empresa" || !usuario.docVerificado) {
+  if (usuario?.papel !== "empresa" || !usuario.docVerificado) {
     return false;
   }
 
