@@ -1459,6 +1459,12 @@ create index denuncias_abertas_idx
 
 create index denuncias_denunciante_idx on denuncias (denunciante_id);
 
+-- O dono do perfil da avaliação ou da foto denunciada (#452). É chave
+-- estrangeira com `on delete cascade`: sem índice, excluir qualquer conta
+-- varreria a tabela de denúncias inteira atrás dos filhos. Faltou na #452,
+-- e o teste de chave estrangeira sem índice (#235) pegou.
+create index denuncias_prestador_idx on denuncias (prestador_id);
+
 alter table denuncias enable row level security;
 
 -- Tirar do ar e fechar as denúncias do mesmo alvo numa transação só:

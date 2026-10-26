@@ -73,6 +73,9 @@ export function Identificacao() {
       <div className="mt-2 space-y-0.5 text-sm text-ink">
         {CONTROLADOR.razaoSocial && <p>{CONTROLADOR.razaoSocial}</p>}
         {cnpj && <p className="text-muted text-xs">CNPJ {cnpj}</p>}
+        {CONTROLADOR.endereco && (
+          <p className="text-muted text-xs">{CONTROLADOR.endereco}</p>
+        )}
         <p className="text-muted text-xs">
           {CONTROLADOR.cidade}/{CONTROLADOR.uf}
         </p>

@@ -6,27 +6,23 @@
  * identidade do responsável escrita em três lugares é documento que um dia
  * diverge. É a mesma razão de `PRECO_CENTAVOS` morar num arquivo só.
  *
- * ## Os campos pendentes, e por que não invento nenhum
+ * ## De onde vem cada campo
  *
- * `razaoSocial` e `cnpj` estão nulos porque **ainda não existem**: a PALU
- * está em constituição (decisão do Luiz em 14/09/2026). A razão social não
- * é o que o rodapé já diz ("Palu Soluções Digitais") até o registro sair —
- * ela precisa ser a da Receita, letra por letra, porque é o que identifica
- * o controlador perante o titular.
+ * Razão social, CNPJ, endereço e cidade são os do comprovante de inscrição
+ * da Receita, emitido em 24/10/2026, letra por letra: é o que identifica o
+ * controlador perante o titular (art. 9º da LGPD), e um documento legal que
+ * diz um nome diferente do registro não identifica ninguém. A cidade é a
+ * da sede, e é ela que define o foro dos Termos — por isso é Curitiba/PR, e
+ * não Sinop, onde a Lupa começou.
  *
- * O `email` estava nulo pelo mesmo motivo, e deixou de estar em 22/09/2026:
- * a #240 criou e testou `suporte@lupapp.com.br`. Vem de `contato-lupa.ts`,
- * e não é repetido aqui, para o endereço do rodapé e o do documento legal
- * não divergirem.
+ * O telefone do registro fica de fora de propósito: o canal de direitos do
+ * titular é o e-mail, que vem de `contato-lupa.ts` (#240) para o endereço do
+ * rodapé e o do documento legal não divergirem.
  *
- * Política de privacidade sem controlador identificável não cumpre o
- * art. 9º da LGPD, e endereço de contato que ninguém lê é a mesma
- * promessa quebrada que este projeto registra quatro vezes — só que num
- * documento que promete um canal de direitos do titular.
- *
- * Por isso as páginas **não são publicadas** enquanto faltar qualquer um:
- * `PRONTO_PARA_PUBLICAR` responde isso, e há teste que trava. Preencher
- * razão social e CNPJ é o que libera.
+ * As páginas só são publicadas com razão social, CNPJ e e-mail preenchidos:
+ * `PRONTO_PARA_PUBLICAR` responde isso, e há teste que trava. Política de
+ * privacidade sem controlador identificável não cumpre o art. 9º, e dá
+ * aparência de conformidade sem entregar nenhuma.
  */
 
 import { EMAIL_SUPORTE } from "./contato-lupa";
@@ -38,6 +34,8 @@ export interface Controlador {
   razaoSocial: string | null;
   /** Só dígitos. Nulo enquanto a inscrição não sair. */
   cnpj: string | null;
+  /** Endereço da sede, como está no registro. */
+  endereco: string | null;
   /** Onde o titular exerce os direitos do art. 18 da LGPD. */
   email: string | null;
   /** Cidade-sede, que define o foro. */
@@ -47,11 +45,13 @@ export interface Controlador {
 
 export const CONTROLADOR: Controlador = {
   nomeFantasia: "Lupa",
-  razaoSocial: null,
-  cnpj: null,
+  razaoSocial: "PALU DESENVOLVIMENTO DE SOFTWARE SOB ENCOMENDA LTDA",
+  cnpj: "69787370000117",
+  endereco:
+    "Rua Visconde do Rio Branco, 1488, conj. 909 — Centro — CEP 80420-210",
   email: EMAIL_SUPORTE,
-  cidade: "Sinop",
-  uf: "MT",
+  cidade: "Curitiba",
+  uf: "PR",
 };
 
 /**
@@ -61,7 +61,7 @@ export const CONTROLADOR: Controlador = {
  * de quando é o texto — e porque a LGPD exige avisar mudança relevante, o
  * que só faz sentido contra uma data.
  */
-export const REVISADO_EM = "2026-10-08";
+export const REVISADO_EM = "2026-10-26";
 
 /**
  * As páginas legais só podem ir ao ar com o controlador identificado.

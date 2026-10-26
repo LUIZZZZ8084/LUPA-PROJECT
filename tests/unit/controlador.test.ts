@@ -10,10 +10,10 @@
  * `PRONTO_PARA_PUBLICAR` existe e as páginas respondem 404 até ele ser
  * verdadeiro.
  *
- * Razão social e CNPJ são nulos de propósito: a PALU está em constituição.
- * O e-mail já existe (#240) e vem de `contato-lupa.ts`. **O teste do estado atual é
- * temporário por construção** — ele sai quando os campos forem preenchidos,
- * e é o lembrete de que existe uma pendência real.
+ * Os dados são os do comprovante de inscrição da PALU na Receita, emitido
+ * em 24/10/2026. O teste os confere contra o próprio validador do app: um
+ * dígito trocado ao copiar o CNPJ publicaria um documento legal com um
+ * número que não existe.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -22,26 +22,25 @@ import {
   PRONTO_PARA_PUBLICAR,
   REVISADO_EM,
 } from "@/lib/controlador";
+import { cnpjValido } from "@/server/validation";
 
 describe("controlador", () => {
   /**
-   * Enquanto isto for falso, `/termos`, `/privacidade` e `/suporte`
-   * respondem 404. Quando alguém preencher os três campos, este teste passa
-   * a falhar — e é o sinal de que as páginas subiram, não um defeito.
+   * Com a PALU registrada, `/termos`, `/privacidade` e `/suporte` existem.
+   * Se algum dos três campos voltar a ficar vazio, as páginas voltam a
+   * responder 404 — e este teste avisa antes.
    */
-  it("hoje não está pronto para publicar, e as três páginas sabem disso", () => {
-    const faltando = [
-      !CONTROLADOR.razaoSocial && "razaoSocial",
-      !CONTROLADOR.cnpj && "cnpj",
-      !CONTROLADOR.email && "email",
-    ].filter(Boolean);
+  it("está pronto para publicar, com os dados da Receita", () => {
+    expect(PRONTO_PARA_PUBLICAR).toBe(true);
+    expect(CONTROLADOR.razaoSocial).toBe(
+      "PALU DESENVOLVIMENTO DE SOFTWARE SOB ENCOMENDA LTDA",
+    );
+    expect(cnpjFormatado()).toBe("69.787.370/0001-17");
+  });
 
-    expect(
-      PRONTO_PARA_PUBLICAR,
-      faltando.length
-        ? `Ainda faltam: ${faltando.join(", ")}. Quando preencher, troque a expectativa deste teste para true e tire a exclusão de /termos, /privacidade e /suporte de ROTAS_NAO_VARRIDAS.`
-        : "O controlador foi preenchido — atualize este teste.",
-    ).toBe(false);
+  it("o CNPJ publicado passa no dígito verificador", () => {
+    expect(CONTROLADOR.cnpj).toMatch(/^\d{14}$/);
+    expect(cnpjValido(CONTROLADOR.cnpj ?? "")).toBe(true);
   });
 
   /**
@@ -65,11 +64,6 @@ describe("controlador", () => {
     expect(pronto({ ...completo, email: null })).toBe(false);
   });
 
-  /** Sem CNPJ não há o que formatar, e a página simplesmente não o mostra. */
-  it("sem CNPJ, não inventa formatação", () => {
-    expect(cnpjFormatado()).toBeNull();
-  });
-
   /**
    * A data existe porque a LGPD obriga a avisar mudança relevante — e
    * "mudou" só significa alguma coisa contra uma data anterior. Formato
@@ -80,9 +74,13 @@ describe("controlador", () => {
     expect(Number.isNaN(Date.parse(REVISADO_EM))).toBe(false);
   });
 
-  /** O foro sai daqui, então cidade e UF não podem ficar vazias. */
-  it("a sede está preenchida, porque é ela que define o foro", () => {
-    expect(CONTROLADOR.cidade).toBeTruthy();
-    expect(CONTROLADOR.uf).toHaveLength(2);
+  /**
+   * O foro sai daqui. É a sede do registro, Curitiba/PR — não Sinop, onde a
+   * Lupa começou, que era o valor provisório antes de a PALU existir.
+   */
+  it("a sede é a do registro, porque é ela que define o foro", () => {
+    expect(CONTROLADOR.cidade).toBe("Curitiba");
+    expect(CONTROLADOR.uf).toBe("PR");
+    expect(CONTROLADOR.endereco).toContain("80420-210");
   });
 });

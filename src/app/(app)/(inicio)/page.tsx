@@ -360,11 +360,13 @@ export default async function HomePage() {
          *
          * "Palu" é "Lupa" com as duas metades trocadas: LU (Luiz) + PA
          * (Paulinho) virou PA + LU — a mesma lógica de fundação do nome
-         * do produto, agora para a pessoa jurídica por trás dele.
+         * do produto, agora para a pessoa jurídica por trás dele. O nome
+         * é o fantasia do registro na Receita (#235); "Palu Soluções
+         * Digitais" era o provisório, de antes de a empresa existir.
          */}
         <p className="mt-8 text-center text-xs text-faint">
-          Lupa · © {new Date().getFullYear()} Palu Soluções Digitais. Todos os
-          direitos reservados.
+          Lupa · © {new Date().getFullYear()} PALU TECH. Todos os direitos
+          reservados.
         </p>
       </PageShell>
     </>

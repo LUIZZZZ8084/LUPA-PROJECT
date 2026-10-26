@@ -200,6 +200,12 @@ export default function TermosPage() {
             <li>Raspar, copiar em massa ou automatizar acesso à plataforma.</li>
           </ul>
         </Bloco>
+        <p>
+          Viu uma vaga, uma avaliação ou uma foto que descumpre isto? Use o
+          botão <strong>Denunciar</strong> que fica nela. Quem decide é a equipe
+          da Lupa — nada sai do ar sozinho por número de denúncias —, e quem foi
+          denunciado não fica sabendo quem denunciou.
+        </p>
       </Artigo>
 
       <Artigo n={7} titulo="Pagamentos, e o que cada um compra">
@@ -214,9 +220,13 @@ export default function TermosPage() {
               por conta.
             </li>
             <li>
-              <strong>Quem contrata</strong> — publicação de vaga a partir de{" "}
-              {preco(PRECO_CENTAVOS.empresa_vaga_avulsa)} por vaga, com pacotes,
-              ou plano mensal de {preco(PRECO_CENTAVOS.empresa_mensal)}.
+              <strong>Quem contrata</strong> — uma vaga por{" "}
+              {preco(PRECO_CENTAVOS.empresa_vaga_avulsa)}, pacote de 5 vagas por{" "}
+              {preco(PRECO_CENTAVOS.empresa_pacote_5)}, pacote de 10 por{" "}
+              {preco(PRECO_CENTAVOS.empresa_pacote_10)}, ou plano mensal com
+              vagas ilimitadas por {preco(PRECO_CENTAVOS.empresa_mensal)}. Cada
+              vaga publicada fica no ar por 30 dias; reativá-la depois disso usa
+              uma vaga do saldo, como publicar.
             </li>
             <li>
               <strong>Candidato</strong> — gerador de currículo em PDF, compra
@@ -263,8 +273,10 @@ export default function TermosPage() {
       <Artigo n={9} titulo="Suspensão e encerramento">
         <p>
           Podemos suspender ou encerrar uma conta que descumpra estes termos,
-          avisando o motivo. Você pode encerrar a sua quando quiser, pelo
-          suporte.
+          avisando o motivo. Você pode excluir a sua quando quiser, no perfil,
+          em <strong>Excluir minha conta</strong> — a tela diz o que sai e o que
+          fica antes de você confirmar — ou pelo suporte. Se houver assinatura
+          ativa, ela é cancelada junto.
         </p>
         <p>
           Encerrar a conta não apaga o que já produziu efeito para outra pessoa

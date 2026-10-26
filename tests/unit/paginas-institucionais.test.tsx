@@ -19,6 +19,7 @@ vi.mock("@/lib/controlador", () => ({
     nomeFantasia: "Lupa",
     razaoSocial: "PALU LTDA",
     cnpj: "11222333000181",
+    endereco: "Rua de Exemplo, 100 — Centro — CEP 00000-000",
     email: "contato@exemplo.test",
     cidade: "Sinop",
     uf: "MT",
@@ -214,8 +215,9 @@ describe("Política de Privacidade", () => {
   it("diz que a avaliação de conta excluída fica sem o nome", () => {
     const { container } = render(<PrivacidadePage />);
     expect(container.textContent).toMatch(
-      /continua no perfil dela, sem o seu nome/,
+      /avaliação que alguém\s+recebeu continua no perfil dela/,
     );
+    expect(container.textContent).toMatch(/as duas sem o seu nome/);
   });
 });
 
@@ -232,5 +234,63 @@ describe("Termos de Uso, depois de setembro", () => {
     const texto = container.textContent ?? "";
     expect(texto).toMatch(/não se altera pela tela/);
     expect(texto).toMatch(/o teste vale uma vez por conta/);
+  });
+});
+
+/**
+ * O que o produto passou a fazer entre o texto de 08/10 e a publicação, em
+ * 26/10/2026 (#235): exclusão de conta pelo perfil (#423), denúncia (#435,
+ * #452), busca de candidatos só para empresa conferida (#433), a tabela de
+ * preços nova (#469) e a vaga que vale 30 dias.
+ */
+describe("os documentos, na publicação", () => {
+  it("a identificação abre as duas páginas com razão social, CNPJ e endereço", () => {
+    for (const Pagina of [TermosPage, PrivacidadePage]) {
+      const { container, unmount } = render(<Pagina />);
+      const texto = container.textContent ?? "";
+      expect(texto).toMatch(/Quem responde pela Lupa/);
+      expect(texto).toMatch(/PALU LTDA/);
+      expect(texto).toMatch(/CNPJ 11\.222\.333\/0001-81/);
+      expect(texto).toMatch(/Rua de Exemplo, 100/);
+      unmount();
+    }
+  });
+
+  it("excluir a conta se faz pelo perfil, e os dois documentos dizem onde", () => {
+    for (const Pagina of [TermosPage, PrivacidadePage]) {
+      const { container, unmount } = render(<Pagina />);
+      expect(container.textContent).toMatch(/Excluir minha conta/);
+      unmount();
+    }
+  });
+
+  it("a denúncia não revela quem denunciou, e nada sai do ar sozinho", () => {
+    const termos = render(<TermosPage />).container.textContent ?? "";
+    expect(termos).toMatch(/nada sai do ar sozinho/);
+    expect(termos).toMatch(/não fica sabendo quem denunciou/);
+
+    const privacidade = render(<PrivacidadePage />).container.textContent ?? "";
+    expect(privacidade).toMatch(/Quem denunciou\./);
+    expect(privacidade).toMatch(/De denúncia:/);
+  });
+
+  it("ser encontrado chega só a empresa com CNPJ conferido", () => {
+    const { container } = render(<PrivacidadePage />);
+    expect(container.textContent).toMatch(
+      /Só empresa com o CNPJ\s+conferido na Receita/,
+    );
+  });
+
+  /*
+   * "A partir de R$ 19,90 por vaga" era falso: no pacote de 10 a vaga sai
+   * por R$ 9,99. Cada pacote aparece com o próprio preço.
+   */
+  it("cada pacote de vaga aparece com o próprio preço, e a vaga dura 30 dias", () => {
+    const { container } = render(<TermosPage />);
+    const texto = (container.textContent ?? "").replace(/\s+/g, " ");
+    expect(texto).not.toMatch(/a partir de/);
+    expect(texto).toMatch(/pacote de 5 vagas/);
+    expect(texto).toMatch(/pacote de 10/);
+    expect(texto).toMatch(/fica no ar por 30 dias/);
   });
 });

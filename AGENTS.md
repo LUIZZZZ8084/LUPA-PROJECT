@@ -1296,6 +1296,44 @@ ar é caso de suporte. Em demonstração, o repositório em memória anonimiza
 a conta e o que ele mesmo guarda; o caminho que apaga tudo é o do banco, e
 é ele que o `schema.test.ts` exercita num Postgres de verdade.
 
+### Termos, Privacidade e Suporte, e quem responde pela Lupa (#235)
+
+Os três documentos nasceram em setembro e ficaram fora do ar até a PALU
+existir: documento legal sem responsável identificado dá aparência de
+conformidade sem entregar nenhuma, e promete um canal de direitos do
+titular sem dizer a quem se dirigir. `PRONTO_PARA_PUBLICAR`, em
+`src/lib/controlador.ts`, decide — sem razão social, CNPJ e e-mail as três
+páginas respondem 404 —, e há teste que trava.
+
+**O responsável mora num arquivo só**, porque aparece nos três documentos
+e no rodapé, e documento legal com a identidade escrita em três lugares é
+documento que um dia diverge. Os dados são os do comprovante de inscrição
+da Receita (24/10/2026), letra por letra: razão social, CNPJ e o endereço
+da sede. O telefone do registro fica de fora; o canal do titular é o
+e-mail de suporte da Lupa. O teste confere o CNPJ contra o próprio
+validador do app, porque um dígito trocado publicaria um número que não
+existe.
+
+**O foro é Curitiba/PR, a sede**, e não Sinop, onde a Lupa começou — era o
+valor provisório antes de a empresa existir. O texto ressalva o foro do
+domicílio do consumidor quando a lei o garantir.
+
+**Documento legal se escreve a partir do banco, não do que o produto diz
+de si.** Foi escrevendo estes textos que a #233 apareceu, e foi
+conferindo-os de novo na publicação, três semanas depois, que apareceram
+cinco frases que tinham deixado de ser verdade: exclusão de conta "pelo
+suporte" (hoje é pelo perfil, #423), nenhuma palavra sobre denúncia
+(#435), a busca de candidatos sem a trava da empresa conferida (#433),
+"vaga a partir de R$ 19,90" (no pacote de 10 ela sai por R$ 9,99) e
+tentativa de acesso que "se apaga em algumas horas" (até um dia, desde a
+#407). *Texto de setembro sobre o produto de outubro é texto sobre outro
+produto: a data de revisão só vale se a revisão aconteceu.*
+
+**E não é parecer jurídico.** O texto foi escrito com cuidado, a partir
+do código, e cita os artigos para quem lê poder conferir. Um advogado
+ainda precisa lê-lo — junto com a pergunta da vaga por sexo, na seção do
+PCD.
+
 ### Denunciar vaga e avaliação, e só o admin decide (#435)
 
 A Lupa não tinha como alguém avisar "esta vaga pede pix para marcar

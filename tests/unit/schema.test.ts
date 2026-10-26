@@ -3585,3 +3585,32 @@ describe("excluir a conta tira o nome das avaliações que ela escreveu", () => 
     expect(r.rows[0].total).toBe(1);
   });
 });
+
+/**
+ * O índice que faltava em `denuncias.prestador_id` (#235). Num banco de
+ * antes dele, o script cria; rodado de novo, não muda nada.
+ */
+describe("aplica-indice-denuncia-prestador.sql", () => {
+  it("cria o índice num banco que não tem, e repete sem erro", async () => {
+    const banco = await PGlite.create();
+    try {
+      await banco.exec(SCHEMA);
+      await banco.exec("drop index denuncias_prestador_idx");
+
+      const script = readFileSync(
+        join(process.cwd(), "supabase/aplica-indice-denuncia-prestador.sql"),
+        "utf8",
+      );
+      await banco.exec(script);
+      await banco.exec(script);
+
+      const r = await banco.query<{ total: number }>(
+        `select count(*)::int as total from pg_indexes
+          where schemaname = 'public' and indexname = 'denuncias_prestador_idx'`,
+      );
+      expect(r.rows[0].total).toBe(1);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
+});

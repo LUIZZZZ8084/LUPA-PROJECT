@@ -95,6 +95,15 @@ export default function PrivacidadePage() {
           </strong>
         </p>
         <p>
+          <strong>De denúncia:</strong> quando você denuncia uma vaga, uma
+          avaliação ou uma foto, guardamos o que foi denunciado, o motivo, o que
+          você escreveu e que foi você quem denunciou.
+        </p>
+        <p>
+          <strong>De suporte:</strong> o nome, o e-mail e a mensagem que você
+          manda pela página de Suporte.
+        </p>
+        <p>
           <strong>De pagamento:</strong> valor, tipo, situação e o identificador
           da transação no Mercado Pago.{" "}
           <strong>Não recebemos nem guardamos dado de cartão.</strong>
@@ -129,14 +138,20 @@ export default function PrivacidadePage() {
           <p className="mt-1">
             <strong>Seu e-mail e sua senha.</strong>
           </p>
+          <p className="mt-1">
+            <strong>Quem denunciou.</strong> Só a equipe da Lupa lê a denúncia;
+            a pessoa denunciada nunca sabe quem foi.
+          </p>
         </Bloco>
         <p>
           <strong>Ser encontrado por empresas nasce desligado.</strong> Existe
           uma opção no perfil do candidato que permite a empresas encontrarem
           você sem que você tenha se candidatado. Ela vem desligada, e mesmo
-          ligada entrega <em>contato</em>, não currículo. O motivo de nascer
-          desligada é concreto: numa cidade deste tamanho, o seu patrão atual
-          pode estar entre as empresas cadastradas.
+          ligada entrega <em>contato</em>, não currículo. Só empresa com o CNPJ
+          conferido na Receita faz essa busca, e cada uma abre um número
+          limitado de perfis por dia. O motivo de nascer desligada é concreto:
+          numa cidade pequena, o seu patrão atual pode estar entre as empresas
+          cadastradas.
         </p>
       </Artigo>
 
@@ -160,7 +175,8 @@ export default function PrivacidadePage() {
             </li>
             <li>
               <strong>Legítimo interesse</strong> (inciso IX) — conter fraude e
-              ataque de senha, e entender o que as pessoas buscam sem achar.
+              ataque de senha, analisar denúncias, e entender o que as pessoas
+              buscam sem achar.
             </li>
           </ul>
         </Bloco>
@@ -217,19 +233,22 @@ export default function PrivacidadePage() {
 
       <Artigo n={6} titulo="Por quanto tempo">
         <p>
-          Enquanto sua conta existir. Pedindo a exclusão, apagamos o que
-          identifica você.
+          Enquanto sua conta existir. Quando você a exclui — no perfil, em{" "}
+          <strong>Excluir minha conta</strong>, ou pedindo ao suporte —,
+          apagamos o que identifica você: perfil, currículo, candidaturas,
+          fotos, vagas, avisos e mensagens de suporte.
         </p>
         <p>
           O que fica, e por quê: registros de pagamento, pelo prazo fiscal e
-          legal; registros de acesso, pelo prazo do Marco Civil da Internet; e
-          conteúdo que já produziu efeito para outra pessoa — uma avaliação que
-          alguém recebeu continua no perfil dela, sem o seu nome.
+          legal; registros de acesso, pelo prazo do Marco Civil da Internet; e o
+          que já produziu efeito para outra pessoa — uma avaliação que alguém
+          recebeu continua no perfil dela, e uma denúncia que você fez continua
+          como registro, as duas sem o seu nome.
         </p>
         <p>
-          As tentativas de acesso se apagam sozinhas em algumas horas. As
-          contagens de visualização e de busca não identificam ninguém, então
-          permanecem como estatística.
+          As tentativas de acesso se apagam sozinhas em até um dia. As contagens
+          de visualização e de busca não identificam ninguém, então permanecem
+          como estatística.
         </p>
       </Artigo>
 
@@ -255,8 +274,10 @@ export default function PrivacidadePage() {
             Boa parte disso você faz sozinho: editar o perfil corrige telefone,
             anúncio e currículo — nome e cidade não se editam pela tela e se
             corrigem pelo suporte —, desligar &quot;ser encontrado por
-            empresas&quot; retira aquele consentimento na hora, e desligar o
-            aviso de vaga apaga junto a preferência e os aparelhos registrados.
+            empresas&quot; retira aquele consentimento na hora, desligar o aviso
+            de vaga apaga junto a preferência e os aparelhos registrados, e{" "}
+            <strong>Excluir minha conta</strong>, no perfil, faz a exclusão sem
+            precisar escrever para ninguém.
           </p>
         </Bloco>
       </Artigo>
