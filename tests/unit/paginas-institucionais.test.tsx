@@ -298,6 +298,30 @@ describe("os documentos, na publicação", () => {
     expect(texto).toMatch(/candidatar-se pede entrar/);
   });
 
+  /*
+   * As respostas de triagem (#491) são dado pessoal que chega à empresa: a
+   * Política diz onde ficam e até onde vão, e os Termos dizem o que
+   * "eliminatória" faz — e o que não faz.
+   */
+  it("a Privacidade diz que as respostas de triagem chegam à empresa da vaga", () => {
+    const { container } = render(<PrivacidadePage />);
+    const texto = (container.textContent ?? "").replace(/\s+/g, " ");
+
+    expect(texto).toMatch(
+      /respostas ficam na candidatura e chegam à empresa dona da vaga/,
+    );
+    expect(texto).toMatch(/some se você excluir a conta/);
+  });
+
+  it("os Termos dizem que eliminatória não esconde nem barra ninguém", () => {
+    const { container } = render(<TermosPage />);
+    const texto = (container.textContent ?? "").replace(/\s+/g, " ");
+
+    expect(texto).toMatch(/até três perguntas de sim ou não/);
+    expect(texto).toMatch(/Eliminatória não esconde nem barra ninguém/);
+    expect(texto).toMatch(/não aceitam link, e não mudam depois de publicadas/);
+  });
+
   it("ser encontrado chega só a empresa com CNPJ conferido", () => {
     const { container } = render(<PrivacidadePage />);
     expect(container.textContent).toMatch(
@@ -306,15 +330,34 @@ describe("os documentos, na publicação", () => {
   });
 
   /*
-   * "A partir de R$ 19,90 por vaga" era falso: no pacote de 10 a vaga sai
-   * por R$ 9,99. Cada pacote aparece com o próprio preço.
+   * "A partir de R$ 19,90 por vaga" era falso: no plano de 10 a vaga sai por
+   * R$ 7,99. Cada plano aparece com o próprio preço e o próprio teto, e o
+   * que o teto conta (vagas no ar ao mesmo tempo) está escrito (#489).
    */
-  it("cada pacote de vaga aparece com o próprio preço, e a vaga dura 30 dias", () => {
+  it("cada plano de vaga aparece com o próprio preço e teto, e a vaga dura 30 dias", () => {
     const { container } = render(<TermosPage />);
     const texto = (container.textContent ?? "").replace(/\s+/g, " ");
     expect(texto).not.toMatch(/a partir de/);
-    expect(texto).toMatch(/pacote de 5 vagas/);
-    expect(texto).toMatch(/pacote de 10/);
+    expect(texto).toMatch(
+      /Plano 5, com até 5 vagas no ar ao mesmo tempo, por R\$\s?49,90/,
+    );
+    expect(texto).toMatch(/Plano 10, com até 10, por R\$\s?79,90/);
+    expect(texto).toMatch(/plano ilimitado por R\$\s?99,90/);
+    expect(texto).toMatch(/uma vaga avulsa por R\$\s?19,90/);
     expect(texto).toMatch(/fica no ar por 30 dias/);
+  });
+
+  it("os Termos dizem como trocar de plano e quem ganha a primeira vaga grátis", () => {
+    const { container } = render(<TermosPage />);
+    const texto = (container.textContent ?? "").replace(/\s+/g, " ");
+    expect(texto).toMatch(/primeira vaga de uma empresa com CNPJ conferido/);
+    expect(texto).toMatch(/cancele a renovação do atual/);
+  });
+
+  it("a Privacidade diz que a empresa vê só uma contagem de quem pediu aviso", () => {
+    const { container } = render(<PrivacidadePage />);
+    const texto = (container.textContent ?? "").replace(/\s+/g, " ");
+    expect(texto).toMatch(/contagem que a empresa vê ao escolher um plano/);
+    expect(texto).toMatch(/dez pessoas ou mais/);
   });
 });

@@ -61,6 +61,7 @@ export class RepositorioCandidaturasMemoria implements RepositorioCandidaturas {
       candidatoId: dados.candidatoId,
       status: "enviada",
       criadoEm: new Date().toISOString(),
+      respostas: dados.respostas ?? null,
     };
 
     this.itens.set(candidatura.id, candidatura);

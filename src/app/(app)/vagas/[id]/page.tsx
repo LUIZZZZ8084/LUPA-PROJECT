@@ -339,7 +339,10 @@ export default async function JobDetailPage({
 
       {abertaParaCandidatar && (
         <BarraDeAcaoFixa>
-          <ApplyButton jobId={job.id} />
+          <ApplyButton
+            jobId={job.id}
+            perguntas={job.screening_questions ?? []}
+          />
         </BarraDeAcaoFixa>
       )}
 

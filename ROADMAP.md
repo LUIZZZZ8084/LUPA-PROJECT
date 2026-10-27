@@ -14,6 +14,19 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 26/10/2026:
 
+- Perguntas de triagem na vaga: até três de sim ou não, escritas ao publicar e
+  marcadas como eliminatórias ou informativas. Quem se candidata responde
+  antes de enviar; na lista da empresa, quem respondeu o que a vaga exigia vem
+  primeiro e os outros ficam num grupo à parte, com o motivo à vista — ninguém
+  é escondido nem barrado —
+  [#491](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/491)
+- Planos de vaga no lugar dos pacotes: vaga avulsa R$ 19,90 e três planos
+  mensais — Plano 5 (R$ 49,90), Plano 10 (R$ 79,90) e Ilimitado (R$ 99,90) —
+  que limitam quantas vagas ficam no ar ao mesmo tempo. A primeira vaga é
+  grátis para empresa com CNPJ conferido, a tela de planos mostra para
+  quantas pessoas da cidade a vaga vai quando há dez ou mais, e trocar de
+  plano é cancelar a renovação do atual e assinar o novo —
+  [#489](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/489)
 - Termos de Uso, Política de Privacidade e página de Suporte no ar, com a
   PALU (PALU DESENVOLVIMENTO DE SOFTWARE SOB ENCOMENDA LTDA, CNPJ
   69.787.370/0001-17, sede em Curitiba/PR) identificada como controladora

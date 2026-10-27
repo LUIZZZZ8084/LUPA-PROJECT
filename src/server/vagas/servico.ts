@@ -1,11 +1,14 @@
-import { empresaDoPainel } from "@/lib/data";
 import { vagaExpirada } from "@/lib/format";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { type Autenticado, exigirCapacidade, exigirDono } from "../auth/rbac";
-import { devolverCredito, gastarParaPublicar } from "../carteiras/servico";
+import {
+  devolverCobranca,
+  direitoDePublicar,
+  gastarParaPublicar,
+} from "../carteiras/servico";
 import { erros } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
+import { idDaEmpresaDoUsuario } from "./dono";
 import { repositorioVagas } from "./index";
 import type { DadosNovaVaga, Vaga } from "./tipos";
 
@@ -18,16 +21,8 @@ import type { DadosNovaVaga, Vaga } from "./tipos";
  * alcançar a vaga de outra trocando o id na URL.
  */
 
-/**
- * Em produção a empresa é sempre a da sessão. Em demonstração o painel
- * mostra sempre a mesma empresa fictícia (`empresaDoPainel`, em
- * `src/lib/data.ts`) — sem isso, uma vaga publicada por uma conta de
- * demonstração recém-criada nunca apareceria no painel que a exibe.
- */
 function idDaEmpresa(sessao: Autenticado): string {
-  return isSupabaseConfigured
-    ? sessao.usuarioId
-    : empresaDoPainel(sessao.usuarioId);
+  return idDaEmpresaDoUsuario(sessao.usuarioId);
 }
 
 async function vagaDaEmpresa(sessao: Autenticado, id: string): Promise<Vaga> {
@@ -96,15 +91,16 @@ async function garantirPerfilDeContratante(sessao: Autenticado): Promise<void> {
 }
 
 /**
- * Publicar custa um crédito, ou nada se o plano mensal estiver ativo
- * (#172).
+ * Publicar custa um crédito, ou nada se o plano ativo ainda tem lugar, ou
+ * se é a primeira vaga grátis (#172, #489).
  *
  * **A cobrança vem antes da gravação**, e não depois. Na ordem inversa, a
  * vaga entraria no ar e um erro na carteira a deixaria publicada de graça
  * — e "de graça por acidente" é o tipo de coisa que ninguém descobre até
  * conferir a receita no fim do mês. Se a gravação falhar depois de
- * cobrado, o crédito volta: perder um crédito por uma falha nossa é pior
- * do que a conta não fechar por um instante.
+ * cobrado, o que foi gasto volta: perder um crédito, ou a primeira vaga
+ * grátis, por uma falha nossa é pior do que a conta não fechar por um
+ * instante.
  */
 export async function publicarVaga(
   sessao: Autenticado | null,
@@ -114,10 +110,11 @@ export async function publicarVaga(
 
   await garantirPerfilDeContratante(autenticado);
 
-  if (!(await gastarParaPublicar(autenticado.usuarioId))) {
+  const cobranca = await gastarParaPublicar(autenticado.usuarioId);
+  if (!cobranca) {
     throw erros.validacao(
       [{ campo: "creditos", mensagem: "Você não tem vagas para publicar." }],
-      "Para publicar, compre uma vaga ou assine o plano mensal.",
+      await motivoDaRecusa(autenticado.usuarioId),
     );
   }
 
@@ -126,9 +123,10 @@ export async function publicarVaga(
     vaga = await repositorioVagas().criar({
       ...dados,
       empresaId: idDaEmpresa(autenticado),
+      publicadaPor: autenticado.usuarioId,
     });
   } catch (e) {
-    await devolverCredito(autenticado.usuarioId);
+    await devolverCobranca(autenticado.usuarioId, cobranca);
     throw e;
   }
 
@@ -137,6 +135,28 @@ export async function publicarVaga(
     papel: autenticado.papel,
   });
   return vaga;
+}
+
+/**
+ * O que dizer a quem foi recusado, a partir do porquê.
+ *
+ * Plano cheio e sem plano são recusas diferentes, e a saída de cada uma
+ * também: quem está no limite do plano precisa saber que **o plano
+ * funciona**, e que o que falta é lugar. Dizer "assine um plano" a quem
+ * já assinou é a mensagem que faz a pessoa concluir que o app não sabe
+ * que ela existe.
+ */
+async function motivoDaRecusa(usuarioId: string): Promise<string> {
+  const direito = await direitoDePublicar(usuarioId);
+
+  if (direito.mensalAtivo && direito.limiteNoAr !== null) {
+    return (
+      `O seu plano deixa ${direito.limiteNoAr} vagas no ar ao mesmo tempo, ` +
+      "e já são todas. Encerre uma vaga, compre uma avulsa ou mude de plano."
+    );
+  }
+
+  return "Para publicar, compre uma vaga avulsa ou assine um plano.";
 }
 
 /*
@@ -200,10 +220,11 @@ export async function reativarVaga(
     );
   }
 
-  if (!(await gastarParaPublicar(autenticado.usuarioId))) {
+  const cobranca = await gastarParaPublicar(autenticado.usuarioId);
+  if (!cobranca) {
     throw erros.validacao(
       [{ campo: "creditos", mensagem: "Você não tem vagas para publicar." }],
-      "Reativar gasta uma vaga do saldo, como publicar. Compre mais uma ou assine o plano mensal.",
+      `Reativar conta como publicar. ${await motivoDaRecusa(autenticado.usuarioId)}`,
     );
   }
 
@@ -211,7 +232,7 @@ export async function reativarVaga(
   try {
     vaga = await repositorioVagas().reativar(id);
   } catch (e) {
-    await devolverCredito(autenticado.usuarioId);
+    await devolverCobranca(autenticado.usuarioId, cobranca);
     throw e;
   }
 

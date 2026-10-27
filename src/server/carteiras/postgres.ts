@@ -10,6 +10,12 @@ function paraCarteira(linha: Record<string, unknown>): Carteira {
     creditosVaga: Number(linha.creditos_vaga),
     mensalidadeValidaAte:
       (linha.mensalidade_valida_ate as string | null) ?? null,
+    planoVagasNoAr:
+      linha.plano_vagas_no_ar === null || linha.plano_vagas_no_ar === undefined
+        ? null
+        : Number(linha.plano_vagas_no_ar),
+    primeiraVagaGratisUsadaEm:
+      (linha.primeira_vaga_gratis_usada_em as string | null) ?? null,
     criadoEm: String(linha.criado_em),
     atualizadoEm: String(linha.atualizado_em),
   };
@@ -79,17 +85,46 @@ export class RepositorioCarteirasPostgres implements RepositorioCarteiras {
   async estenderMensalidade(
     usuarioId: string,
     dias: number,
+    vagasNoAr: number | null,
   ): Promise<Carteira> {
     return this.chamar("estender_mensalidade_vaga", {
       p_usuario: usuarioId,
       p_dias: dias,
+      p_limite: vagasNoAr,
     });
+  }
+
+  /**
+   * `reivindicar_primeira_vaga_gratis` é uma função do banco, e não um
+   * `select` seguido de `update`: a condição está dentro da instrução, e
+   * duas publicações simultâneas não passam as duas.
+   */
+  async reivindicarPrimeiraVagaGratis(usuarioId: string): Promise<boolean> {
+    const supabase = await cliente();
+    const { data, error } = await supabase.rpc(
+      "reivindicar_primeira_vaga_gratis",
+      { p_usuario: usuarioId },
+    );
+
+    if (error) throw erros.indisponivel(error.message);
+    return data === true;
+  }
+
+  async liberarPrimeiraVagaGratis(usuarioId: string): Promise<void> {
+    const supabase = await cliente();
+    const { error } = await supabase
+      .from("carteiras_vaga")
+      .update({ primeira_vaga_gratis_usada_em: null })
+      .eq("usuario_id", usuarioId);
+
+    if (error) throw erros.indisponivel(error.message);
   }
 
   async revogarMensalidade(usuarioId: string): Promise<Carteira> {
     return this.chamar("estender_mensalidade_vaga", {
       p_usuario: usuarioId,
       p_dias: null,
+      p_limite: null,
     });
   }
 

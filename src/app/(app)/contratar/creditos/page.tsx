@@ -9,7 +9,7 @@ import { AREA_PRESTADOR } from "../../_contratacao/area";
 import { ComprarVagas } from "../../_contratacao/creditos";
 
 export const metadata: Metadata = {
-  title: "Comprar vagas",
+  title: "Planos e vagas",
 };
 
 export default function Page() {

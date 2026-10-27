@@ -1,10 +1,11 @@
 /**
- * A carteira de quem publica vaga (#172).
+ * A carteira de quem publica vaga (#172, #489).
  *
- * Duas formas de ter direito a publicar, e elas não se somam: créditos
- * comprados avulsos ou em pacote, e o plano mensal, que enquanto vale
- * dispensa crédito. Quem tem mensal ativo publica sem gastar nada — e os
- * créditos que já tinha continuam lá para quando o mensal acabar.
+ * Três formas de ter direito a publicar, e elas não se somam: a primeira
+ * vaga grátis, créditos comprados avulsos, e o plano mensal, que enquanto
+ * vale dispensa crédito dentro do seu limite de vagas no ar. Quem tem plano
+ * ativo publica sem gastar nada — e os créditos que já tinha continuam lá
+ * para quando o plano acabar, ou para quando ele estiver cheio.
  *
  * A chave é `usuarioId`, não um `empresaId`: desde a #129 quem publica
  * vaga também pode ser prestador contratando ajudante, e ele não tem
@@ -24,6 +25,18 @@ export interface Carteira {
   usuarioId: string;
   creditosVaga: number;
   mensalidadeValidaAte: string | null;
+  /**
+   * Quantas vagas o plano deixa no ar **ao mesmo tempo** (#489). `null` é
+   * sem limite — o ilimitado. Só vale enquanto `mensalidadeValidaAte`
+   * vale; vencido o plano, o número fica e ninguém o lê.
+   */
+  planoVagasNoAr: number | null;
+  /**
+   * Quando a empresa usou a primeira vaga grátis, ou `null` se ainda não.
+   * Uma por conta, e a conta com CNPJ é uma por CNPJ — ver
+   * `elegivelParaPrimeiraGratis`, em `servico.ts`.
+   */
+  primeiraVagaGratisUsadaEm: string | null;
   criadoEm: string;
   atualizadoEm: string;
 }
@@ -72,9 +85,31 @@ export interface RepositorioCarteiras {
   /**
    * Estende o plano mensal a partir do maior entre "agora" e o que já
    * valia — quem renova antes de vencer não perde os dias pagos, mesma
-   * regra da mensalidade de prestador.
+   * regra da mensalidade de prestador — e grava o limite do plano que
+   * acabou de ser pago (`null`, sem limite).
+   *
+   * Quem troca de plano passa a ter o limite do novo na hora, e a validade
+   * soma: a troca é cobrar o plano novo e cancelar a renovação do antigo,
+   * e os dias já pagos do antigo não se perdem.
    */
-  estenderMensalidade(usuarioId: string, dias: number): Promise<Carteira>;
+  estenderMensalidade(
+    usuarioId: string,
+    dias: number,
+    vagasNoAr: number | null,
+  ): Promise<Carteira>;
+
+  /**
+   * Usa a primeira vaga grátis, **e só se ainda não foi usada**.
+   *
+   * Devolve `false` quando já tinha sido: a condição mora na própria
+   * instrução (`where primeira_vaga_gratis_usada_em is null`), pelo mesmo
+   * motivo do consumo de crédito — duas publicações simultâneas passariam
+   * as duas por uma leitura anterior, e a empresa publicaria duas de graça.
+   */
+  reivindicarPrimeiraVagaGratis(usuarioId: string): Promise<boolean>;
+
+  /** Devolve a primeira vaga grátis quando a publicação falhou depois. */
+  liberarPrimeiraVagaGratis(usuarioId: string): Promise<void>;
 
   /** Derruba o plano mensal na hora — estorno e chargeback. */
   revogarMensalidade(usuarioId: string): Promise<Carteira>;

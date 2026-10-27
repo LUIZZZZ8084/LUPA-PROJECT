@@ -270,9 +270,10 @@ export default async function HomePage() {
                       gratuita" meses depois de publicar passar a custar.
                     */}
                     Publique vagas, receba currículos organizados e acompanhe
-                    visualizações. A partir de{" "}
-                    {formatPrecoBRL(PRECO_CENTAVOS.empresa_vaga_avulsa / 100)}{" "}
-                    por vaga.
+                    visualizações. Vaga avulsa por{" "}
+                    {formatPrecoBRL(PRECO_CENTAVOS.empresa_vaga_avulsa / 100)},
+                    ou plano mensal a partir de{" "}
+                    {formatPrecoBRL(PRECO_CENTAVOS.empresa_plano_5 / 100)}.
                   </p>
                 </div>
               </div>

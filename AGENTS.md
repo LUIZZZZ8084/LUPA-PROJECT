@@ -1628,6 +1628,55 @@ Os rótulos vivem em `APPLICATION_LABELS` e `APPLICATION_LABELS_CANDIDATO`,
 com teste que trava a divergência. O valor no banco não muda: renomear o
 enum custaria migração e apagaria histórico sem ganhar nada.
 
+### Perguntas de triagem: separar sem esconder (#491)
+
+A triagem de quem se candidata acontecia no WhatsApp pessoal do dono, lendo
+currículo por currículo; o InfoJobs cobra à parte por perguntas de triagem, e o
+grupo de WhatsApp nunca faz. Ao publicar, a empresa acrescenta até três
+perguntas de sim ou não ("Tem CNH D?", "Pode trabalhar à noite?"), e marca cada
+uma como eliminatória ou só informativa. Quem se candidata responde na hora, e
+sem responder todas não envia.
+
+**"Eliminatória" separa e não bloqueia, e isto é a decisão central.** A
+resposta esperada é Sim; quem responde Não **envia a candidatura do mesmo
+jeito** e aparece na lista da empresa num grupo à parte ("Não responderam o que
+a vaga exigia"), com o motivo escrito na linha (`Respondeu Não: Tem CNH D?`) e
+as respostas na ficha. Barrar quem respondeu Não esconderia gente por uma
+pergunta que talvez tenha sido entendida de outro jeito, sem a empresa nunca
+saber que a pessoa existiu — e a candidatura é o que a pessoa fez, não uma
+fase eliminatória que a Lupa decide por ela. A decisão de olhar continua da
+empresa; a pergunta informativa só informa e nunca muda o grupo de ninguém. A
+tela de quem se candidata **diz qual pergunta a empresa considera
+indispensável**, antes da resposta: dizer ajuda quem responde honestamente, e
+quem mente mentiria de qualquer forma.
+
+**Nenhuma resposta vem marcada de antemão.** "Não" como padrão faria uma pessoa
+distraída se candidatar dizendo que não tem a CNH que tem; o envio só se
+habilita com todas respondidas, e a tela diz quantas faltam.
+
+**As perguntas moram na linha da vaga (`vagas.perguntas`, jsonb), e as
+respostas na da candidatura (`candidaturas.respostas`)**, e não em tabelas à
+parte: publicar é uma instrução só, e a vaga não pode ficar no ar sem as
+perguntas que a empresa escreveu — nem a candidatura sem as respostas. O banco
+repete o que a aplicação confere (`candidaturas_confere_triagem`): vaga com
+perguntas não recebe candidatura sem respostas completas (`23514`, que o
+repositório traduz em "responda a todas as perguntas"), e vaga **sem** pergunta
+descarta o que vier. O teto de três também é do banco. A comparação `atende` é
+uma função só (`src/lib/triagem.ts`), compartilhada entre a tela de quem se
+candidata, a lista da empresa e a ficha: três cópias divergiriam no primeiro
+que mudasse. Resposta que falta, numa vaga com pergunta eliminatória, conta
+como "não atende" — "não sabemos" não é "atende".
+
+**A pergunta não aceita link** (a mesma regra do cargo, #447: é texto de
+terceiro que a Lupa mostra a quem tem conta), nem repetida, e **não se edita
+depois de publicada**, como o resto da vaga (#173). A vaga continua
+denunciável. O que isto não é: filtro de candidato, ou triagem automática —
+continua fora do escopo por decisão. A Política de Privacidade diz que as
+respostas ficam na candidatura, chegam à empresa dona da vaga junto do
+currículo e somem com a candidatura (excluir a conta a apaga em cascata); os
+Termos dizem o que "eliminatória" faz e que quem pergunta não pode discriminar
+por critério vedado em lei.
+
 ### Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a
@@ -2577,21 +2626,97 @@ O preço mora num lugar só, `PRECO_CENTAVOS` em
 repetido na tela e no servidor é como se cobra um valor e se anuncia
 outro.
 
-**A tabela das vagas de empresa mudou em 14/10/2026 (#469).** Decisão do
-Luiz: 1 vaga R$ 19,90, 5 vagas R$ 79,90, 10 vagas R$ 99,90 e plano mensal
-R$ 149,90 — antes eram 29,90, 119,90, 149,90 e 199,90. A mensalidade do
-prestador (R$ 19,90) e o currículo (R$ 14,90) não mudaram. Mexer foi só
-`PRECO_CENTAVOS`: as telas de compra, o fim do cadastro e o chamado da home
-leem dali, e o preço por vaga sai da conta (15,98 e 9,99). A conferência no
-banco antes de mudar achou **nenhuma assinatura de empresa** e só uma compra
-aprovada, então ninguém em andamento muda de preço — e, em geral, a
-cobrança aberta guarda o valor de quando foi criada, e o Mercado Pago o da
-assinatura: quem já assinou o mensal por 199,90 continuaria pagando 199,90
-até cancelar. Um teste (`tabela-de-precos.test.ts`) trava os valores e cobra a
-**escada**: unitário que cai com o pacote maior, e o mensal como teto, mais
-caro que o pacote de 10 e vencendo depois dele (hoje, a partir de 13 vagas).
-O pacote de 5 custa só R$ 20,00 a menos que o de 10, e quem o escolhe
-escolhe pelo valor que sai do bolso, não pela conta por vaga.
+**A tabela das vagas de empresa virou plano em 26/10/2026 (#489), e os
+pacotes saíram de venda.** Decisão do Luiz: vaga avulsa R$ 19,90 (compra
+única), Plano 5 R$ 49,90/mês, Plano 10 R$ 79,90/mês e Ilimitado R$ 99,90/mês.
+Em 14/10 (#469) a tabela era avulsa 19,90, pacote de 5 por 79,90, pacote de
+10 por 99,90 e mensal 149,90 — e este parágrafo descrevia isso, com o pacote
+como unidade de compra. **Pacote era compra única de crédito que não
+expira**: quem comprava dez vagas não tinha motivo para voltar, e o mensal
+custava 50% mais que o pacote de 10 sem ser a escolha óbvia de ninguém.
+Plano é receita que se repete, e o preço por vaga cai a cada degrau (9,98 no
+Plano 5, 7,99 no Plano 10).
+
+**O limite do plano é de vagas no ar ao mesmo tempo, não de vagas por mês.**
+O Plano 5 deixa cinco abertas e dentro dos 30 dias; encerrar ou vencer uma
+abre o lugar na hora (`contarNoAr`, em `RepositorioVagas`). A alternativa —
+cinco por mês — obrigaria a guardar o que foi publicado em cada ciclo de
+cobrança, e puniria quem encerra a vaga porque contratou. O número vive na
+carteira (`carteiras_vaga.plano_vagas_no_ar`, nulo é ilimitado) e não é
+deduzido do tipo da assinatura, porque o estorno e a expiração agem sobre a
+carteira, e a carteira não conhece assinatura. A tabela de limites é
+`VAGAS_NO_AR_POR_PLANO`, ao lado dos preços.
+
+**Plano cheio não trava quem tem saldo avulso.** A ordem de
+`gastarParaPublicar` é plano com lugar, primeira vaga grátis, crédito
+avulso. A sexta vaga ocasional de quem tem o Plano 5 sai por R$ 19,90, mais
+barato que subir de plano; a partir da sétima o Plano 10 já compensa — e o
+`tabela-de-precos.test.ts` cobra exatamente isso, junto com o ilimitado como
+teto. Quando o plano está cheio e não há saldo, a mensagem diz que o plano
+**funciona** e falta lugar. Dizer "assine um plano" a quem já assinou é a
+mensagem que faz a pessoa concluir que o app não sabe que ela existe.
+
+**Um plano por vez, e trocar é cancelar a renovação do atual.** Dois planos
+vivos seriam duas cobranças por mês para um benefício só, que só aparece na
+fatura de quem pagou. A regra mora na aplicação (`recusarSegundoPlanoDeVaga`)
+e não num índice único: uma violação de unicidade aconteceria dentro do
+webhook, e webhook que responde 500 é webhook que o Mercado Pago reenvia
+para sempre. Checkout pendente ou suspenso de outro plano é encerrado sem
+perguntar (nada foi pago); plano **ativo** recusa, com a mensagem dizendo o
+caminho, e a tela nem oferece o botão de assinar outro — "botão que só
+recusa depois do clique". **Cancelar não tira os dias pagos**, e quem troca
+soma a validade do plano antigo à do novo: aceito, porque o custo é alguns
+dias com um limite diferente.
+
+**A primeira vaga é grátis, só com CNPJ conferido na Receita, uma por conta.**
+A conta de empresa por CPF nasce verificada sem consulta nenhuma (o CPF é
+conferido só pelo dígito), então vaga grátis atrás disso seria porta de
+abuso: criar conta e publicar de graça, quantas vezes quisesse. O CNPJ
+conferido prova que a empresa existe e está ativa, e `cnpjEmUso` garante
+uma conta por CNPJ. O que isto não impede: excluir a conta e abrir outra com
+o mesmo CNPJ dá outra vaga grátis — custa o histórico todo da empresa e, no
+pior caso, R$ 19,90. A reivindicação é uma instrução só no banco
+(`reivindicar_primeira_vaga_gratis`, `where ... is null`), pela mesma razão
+do consumo de crédito: duas publicações simultâneas não ganham duas. Se a
+gravação da vaga falhar depois, a primeira volta (`devolverCobranca`) — o
+mesmo caminho do crédito devolvido.
+
+**A empresa vê para quantas pessoas a vaga vai, e só com gente suficiente.**
+Na tela de planos, "N pessoas em {cidade} pediram para ser avisadas de vaga
+nova" — de `pessoas_com_aviso_na_cidade`, que conta preferência **com
+aparelho inscrito** (preferência sem aparelho não avisa ninguém) e devolve
+só o número. Abaixo de dez (`MINIMO_DO_PUBLICO`) a tela não diz nada: "3
+pessoas" numa cidade pequena seria rastreável a alguém, e quem pede aviso de
+vaga pode estar procurando sair do emprego atual — a regra de privacidade
+dos avisos —, e um público de três não convence ninguém. A Política de
+Privacidade diz isso (a lição da #235: texto legal sai do banco, não do
+produto).
+
+**Quem comprou pacote não perde nada.** `empresa_pacote_5` e
+`empresa_pacote_10` continuam no enum (o Postgres não tira valor), e o
+histórico das compras antigas fica. Os créditos que sobraram valem como
+avulsa. As views do painel comparam `tipo::text`, e não o enum, por um
+detalhe do Postgres: valor de enum acrescentado na mesma transação não pode
+ser usado nela, e a migração (`aplica-planos-de-vaga.sql`) acrescenta os
+valores e redefine as views junto. Quem já tinha o mensal ilimitado
+continua ilimitado: limite nulo é exatamente isso, e nenhuma linha antiga
+precisa ser tocada.
+
+**Descartado, e por quê.** *Destaque* (vaga no topo da lista): conflita com a
+ordenação por proximidade, que é a promessa do produto, e dar posição por
+dinheiro é o que os Termos dizem que a Lupa não faz ("nenhum pagamento na
+Lupa compra colocação"). *Plano anual com desconto*: precisa de teste real no
+Mercado Pago antes de existir, e não há demanda medida. *Limite de busca de
+candidatos por plano*: o teto de 30 perfis por dia (#433) já faz esse
+trabalho, e diferenciá-lo por plano é outra decisão de produto.
+
+Um teste (`tabela-de-precos.test.ts`) trava os valores e cobra a **escada**:
+cada plano maior custa mais e cada vaga dele custa menos, o Plano 5 passa a
+valer a pena na terceira vaga e o ilimitado custa pouco mais que o Plano 10.
+A conferência no banco antes de mudar achou **nenhuma assinatura de empresa**
+e só uma compra aprovada, então ninguém em andamento muda de preço — e, em
+geral, a cobrança aberta guarda o valor de quando foi criada, e o Mercado
+Pago o da assinatura.
 
 **A infraestrutura nasceu com um tipo de cobrança só, não seis.** O brief
 já previa vaga avulsa, planos de empresa, mensalidade de prestador e
@@ -2706,8 +2831,9 @@ produção — reclassificar depois seria chute.
 
 **`recorrente` é medido à parte do total** porque são as duas metades de
 qualquer projeção: mensalidade de prestador e plano mensal voltam sozinhos
-no mês que vem; pacote de vagas e vaga avulsa não voltam sem alguém
-comprar de novo. Somados, um mês bom de pacotes parece receita previsível.
+no mês que vem; vaga avulsa não volta sem alguém comprar de novo. Somados,
+um mês bom de avulsas parece receita previsível. Os três planos de vaga
+entram no recorrente.
 
 **O líquido é calculado na aplicação, não na view.** A view entrega as
 parcelas; a subtração mora num lugar só, porque escrevê-la em SQL e de
@@ -3157,7 +3283,7 @@ tão importante quanto o que entrou:
 | Buscar entre quem pediu para ser encontrado | Pronto |
 | Publicações no perfil | **Não é da empresa** — o feed é de prestador e candidato desde 03/09/2026; quem representa a empresa é a logo e o cartão |
 | Métricas próprias: visualizações e candidaturas por dia, 30 dias | Pronto |
-| Plano e cobrança | Pronto — Mercado Pago, vaga avulsa, pacotes de 5 e 10, plano mensal ilimitado (#172, #179) |
+| Plano e cobrança | Pronto — Mercado Pago, vaga avulsa e três planos mensais (5, 10 e ilimitado) pelo limite de vagas no ar, com a primeira vaga grátis para CNPJ conferido (#172, #179, #489) |
 
 **"Recomendados para você" é ordenação, não descoberta.** O painel põe na
 frente, entre **quem já se candidatou**, quem tem as habilidades que a vaga

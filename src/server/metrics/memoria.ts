@@ -16,6 +16,7 @@ import {
   montarFunil,
   type PressaoNoTeto,
   type RepositorioMetricas,
+  TIPOS_RECORRENTES_NO_CAIXA,
   type Totais,
 } from "./tipos";
 
@@ -159,8 +160,7 @@ export class RepositorioMetricasMemoria implements RepositorioMetricas {
       recorrenteCentavos: pagamentosEmMemoria()
         .filter(
           (p) =>
-            p.status === "aprovado" &&
-            (p.tipo === "prestador_mensalidade" || p.tipo === "empresa_mensal"),
+            p.status === "aprovado" && TIPOS_RECORRENTES_NO_CAIXA.has(p.tipo),
         )
         .reduce((total, p) => total + p.valorCentavos, 0),
       liquidoCentavos: entrouCentavos - estornadoCentavos - contestadoCentavos,

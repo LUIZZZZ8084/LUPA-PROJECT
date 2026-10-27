@@ -132,8 +132,8 @@ const ATALHOS: {
   {
     href: "/empresa/creditos",
     icon: Ticket,
-    titulo: "Comprar vagas",
-    descricao: "Saldo para publicar, ou plano mensal ilimitado.",
+    titulo: "Planos e vagas",
+    descricao: "Plano mensal para contratar, ou vaga avulsa.",
     cor: "text-empresas",
     exige: "vaga:publicar",
     escondeDe: ["prestador_servico"],
@@ -141,8 +141,8 @@ const ATALHOS: {
   {
     href: "/contratar/creditos",
     icon: Ticket,
-    titulo: "Comprar vagas",
-    descricao: "Saldo para publicar, ou plano mensal ilimitado.",
+    titulo: "Planos e vagas",
+    descricao: "Plano mensal para contratar, ou vaga avulsa.",
     cor: "text-empresas",
     exige: "vaga:publicar",
     escondeDe: ["empresa", "admin"],

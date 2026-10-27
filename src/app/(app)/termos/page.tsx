@@ -186,6 +186,16 @@ export default function TermosPage() {
           não nos impede de remover, por conta própria, o que violar estes
           termos.
         </p>
+        <p>
+          <strong>Perguntas de triagem.</strong> Ao publicar, a empresa pode
+          acrescentar até três perguntas de sim ou não, e marcar cada uma como
+          eliminatória ou só informativa. Quem se candidata responde antes de
+          enviar. Eliminatória não esconde nem barra ninguém: quem responde Não
+          envia a candidatura do mesmo jeito, e aparece à parte na lista da
+          empresa. As perguntas não aceitam link, e não mudam depois de
+          publicadas. É responsabilidade de quem pergunta não discriminar por
+          critério vedado em lei.
+        </p>
       </Artigo>
 
       <Artigo n={6} titulo="O que não é permitido">
@@ -228,13 +238,18 @@ export default function TermosPage() {
               por conta.
             </li>
             <li>
-              <strong>Quem contrata</strong> — uma vaga por{" "}
-              {preco(PRECO_CENTAVOS.empresa_vaga_avulsa)}, pacote de 5 vagas por{" "}
-              {preco(PRECO_CENTAVOS.empresa_pacote_5)}, pacote de 10 por{" "}
-              {preco(PRECO_CENTAVOS.empresa_pacote_10)}, ou plano mensal com
-              vagas ilimitadas por {preco(PRECO_CENTAVOS.empresa_mensal)}. Cada
-              vaga publicada fica no ar por 30 dias; reativá-la depois disso usa
-              uma vaga do saldo, como publicar.
+              <strong>Quem contrata</strong> — uma vaga avulsa por{" "}
+              {preco(PRECO_CENTAVOS.empresa_vaga_avulsa)} (compra única), ou
+              plano mensal: Plano 5, com até 5 vagas no ar ao mesmo tempo, por{" "}
+              {preco(PRECO_CENTAVOS.empresa_plano_5)}; Plano 10, com até 10, por{" "}
+              {preco(PRECO_CENTAVOS.empresa_plano_10)}; e o plano ilimitado por{" "}
+              {preco(PRECO_CENTAVOS.empresa_mensal)}. Cada vaga publicada fica
+              no ar por 30 dias; reativá-la depois disso conta como publicar de
+              novo. Vaga encerrada ou vencida libera o lugar no plano. A
+              primeira vaga de uma empresa com CNPJ conferido na Receita é
+              gratuita, uma vez por conta. Para trocar de plano, cancele a
+              renovação do atual — os dias já pagos continuam valendo — e assine
+              o novo.
             </li>
             <li>
               <strong>Candidato</strong> — gerador de currículo em PDF, compra
