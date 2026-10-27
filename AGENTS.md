@@ -2757,6 +2757,30 @@ renova, não vira plano —, e a tela de depois do cadastro usa a mesma
 ordem, porque as duas leem a mesma lista e divergir é como uma passa a
 dizer o que a outra não diz.
 
+**E as quatro opções são cards num carrossel, não uma lista (#503).**
+Pedido do Luiz em 27/10/2026: no celular a pessoa comparava preço rolando
+por quatro painéis altos e perdia de vista o anterior ao chegar no próximo.
+É rolagem nativa com `scroll-snap` (`src/components/carrossel.tsx`), sem
+biblioteca: toque, inércia e encaixe são do navegador. Um card quase inteiro
+no celular e 60% da faixa no desktop, com o vizinho à vista; pontos mostram
+a posição, e as setas só existem onde há mouse. Os pontos não são botões
+porque quatro alvos de 44 px numa fileira não cabem, e o toque já tem o
+gesto de arrastar. A faixa recebe foco (`tabIndex`), e é isso que deixa o
+teclado rolá-la. A avulsa diz "compra única" no lugar de "por mês", porque
+no mesmo carrossel misturá-la faria parecer "o plano de 1". A tela de depois
+do cadastro não virou carrossel: ela é compacta de propósito, para caber
+sem rolar.
+
+**O ponto aceso errou por um `position`, e só o navegador viu.** O card
+ativo é o que está mais perto do meio da faixa, medido por `offsetLeft`, que
+conta a partir do `offsetParent` — e uma faixa sem `position: relative` não
+é o `offsetParent` dos cards, então a conta erra por quanto a faixa está
+longe da borda da página (no desktop, o terceiro card acendia o segundo
+ponto). O teste unitário usa medidas inventadas e passa com o defeito; o
+e2e de `planos-de-vaga.spec.ts` rola a faixa até o fim num navegador de
+verdade e reprova sem o `relative`. *Conta que depende de geometria se
+confere onde há geometria.*
+
 **Um plano por vez, e trocar é cancelar a renovação do atual.** Dois planos
 vivos seriam duas cobranças por mês para um benefício só, que só aparece na
 fatura de quem pagou. A regra mora na aplicação (`recusarSegundoPlanoDeVaga`)

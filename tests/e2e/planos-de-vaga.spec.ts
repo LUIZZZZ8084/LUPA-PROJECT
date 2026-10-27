@@ -82,6 +82,28 @@ test.describe("planos de vaga", () => {
     expect(titulos.indexOf("1 vaga")).toBeGreaterThanOrEqual(0);
     expect(titulos.indexOf("1 vaga")).toBeLessThan(titulos.indexOf("Plano 5"));
 
+    /*
+     * O ponto aceso segue a rolagem, medida no navegador de verdade (#503). O
+     * teste unitário cobre a conta com medidas inventadas, e foi um navegador
+     * que mostrou o ponto errado quando a faixa não era o `offsetParent` dos
+     * cards. Rola até o fim por script, que é o que o dedo faz.
+     */
+    const pontos = page.locator("[data-ativo]");
+    await expect(pontos).toHaveCount(4);
+    await expect(pontos.nth(0)).toHaveAttribute("data-ativo", "true");
+    await page
+      .getByRole("list", { name: "Opções de vaga e plano" })
+      .evaluate((faixa) => {
+        faixa.scrollLeft = faixa.scrollWidth;
+      });
+    await expect(pontos.nth(3)).toHaveAttribute("data-ativo", "true");
+    await page
+      .getByRole("list", { name: "Opções de vaga e plano" })
+      .evaluate((faixa) => {
+        faixa.scrollLeft = 0;
+      });
+    await expect(pontos.nth(0)).toHaveAttribute("data-ativo", "true");
+
     // Assina o Plano 5.
     await page.getByRole("button", { name: /assinar plano 5/i }).click();
     await page.waitForURL(/\/pagamento\/retorno/, { timeout: 20_000 });
