@@ -6,6 +6,7 @@ import {
   Plus,
   Ticket,
   UserSearch,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -19,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel, Stat } from "@/components/ui/card";
 import { VerifiedMark } from "@/components/verified-badge";
+import { mensagemParaCandidato } from "@/lib/chamada";
 import {
   empresaDoPainel,
   getCompany,
@@ -34,6 +36,10 @@ import {
   whatsappLink,
 } from "@/lib/format";
 import { resumoDoDireito, seloDoDireito } from "@/lib/planos-empresa";
+import {
+  LIMIAR_MUITO_COMPATIVEL,
+  resultadosDasVagas,
+} from "@/lib/resultado-da-vaga";
 import { motivosDeNaoAtender } from "@/lib/triagem";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
@@ -47,12 +53,14 @@ import {
   serieDoPainel,
   temPainelDeEmpresa,
   totaisDaSerie,
+  visualizacoesPorVaga,
 } from "@/server/visualizacoes/servico";
 import { type AreaDeContratacao, areaDoPapel } from "./area";
 import { EncerrarVagaButton } from "./encerrar-vaga-button";
 import { MoverCandidaturaSelect } from "./mover-candidatura-select";
 import { ReativarVagaButton } from "./reativar-vaga-button";
 import { Recomendados } from "./recomendados";
+import { ResultadoDaVagaLinha } from "./resultado-da-vaga";
 import { SerieGrafico } from "./serie-grafico";
 
 /**
@@ -72,7 +80,7 @@ function SeloDeMatch({ match }: { match: MatchDaCandidatura | undefined }) {
   if (!match) return null;
 
   const tone =
-    match.porcentagem >= 70
+    match.porcentagem >= LIMIAR_MUITO_COMPATIVEL
       ? "vagas"
       : match.porcentagem >= 40
         ? "warn"
@@ -166,7 +174,7 @@ export async function PainelDeContratacao({
   }
 
   const companyId = empresaDoPainel(sessao.usuarioId);
-  const [company, jobs, applications, stats, serie, recomendados] =
+  const [company, jobs, applications, stats, serie, porVaga, recomendados] =
     await Promise.all([
       getCompany(companyId),
       getCompanyJobs(companyId),
@@ -175,10 +183,16 @@ export async function PainelDeContratacao({
       // Quem não é empresa cai no estado vazio logo abaixo; pedir a série
       // antes disso trocaria a explicação por uma tela de erro.
       temPainelDeEmpresa(sessao) ? serieDoPainel(sessao) : [],
+      temPainelDeEmpresa(sessao)
+        ? visualizacoesPorVaga(sessao)
+        : new Map<string, number>(),
       recomendadosParaEmpresa(sessao),
     ]);
   const totais = totaisDaSerie(serie);
   const match = matchPorCandidatura(applications, jobs);
+  // O resultado de cada vaga (#492): visualizações, candidaturas e quantas
+  // combinam com o que a vaga pede, juntos, no fim da linha dela.
+  const resultados = resultadosDasVagas(jobs, applications, match, porVaga);
   const direito = await direitoDePublicar(sessao.usuarioId);
   const resumoDoPlano = resumoDoDireito(direito);
 
@@ -334,11 +348,15 @@ export async function PainelDeContratacao({
           <a
             href={whatsappLink(
               app.candidate.phone,
-              `Olá! Vimos sua candidatura para a vaga de ${app.job_title} na Lupa e gostaríamos de conversar.`,
+              mensagemParaCandidato({
+                candidato: app.candidate.full_name,
+                vaga: app.job_title,
+                empresa: company.company_name,
+              }),
             )}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Falar com ${app.candidate.full_name} no WhatsApp`}
+            aria-label={`Chamar ${app.candidate.full_name} no WhatsApp`}
             className="flex h-11 w-11 flex-none items-center justify-center rounded-lg border border-line text-muted transition-colors hover:border-vagas hover:text-vagas"
           >
             <MessageCircle size={16} />
@@ -442,9 +460,7 @@ export async function PainelDeContratacao({
         ganham espaço, e cada um diz o que a pessoa encontra do outro
         lado: atalho sem explicação é atalho que ninguém clica.
       */}
-      <div
-        className={`mt-6 grid grid-cols-1 gap-3 ${buscaCandidatos ? "sm:grid-cols-2" : ""}`}
-      >
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Link
           href={`${area.base}/creditos`}
           className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
@@ -455,6 +471,24 @@ export async function PainelDeContratacao({
           </div>
           <p className="mt-1 text-muted text-sm leading-relaxed">
             {resumoDoPlano.detalhe}
+          </p>
+        </Link>
+
+        {/*
+          Quem já se candidatou (#494): a lista que a empresa já formou, sem
+          repetir. Ao abrir outra vaga parecida ela não começa do zero.
+        */}
+        <Link
+          href={`${area.base}/talentos`}
+          className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
+        >
+          <div className="flex items-center gap-2">
+            <Users size={18} className="flex-none text-empresas" />
+            <h2 className="font-bold text-sm">Quem já se candidatou</h2>
+          </div>
+          <p className="mt-1 text-muted text-sm leading-relaxed">
+            Todo mundo que se candidatou a alguma vaga sua, sem repetir — para
+            começar a próxima com gente que já combina.
           </p>
         </Link>
 
@@ -477,7 +511,18 @@ export async function PainelDeContratacao({
 
       {/* Vagas publicadas */}
       <section className="mt-6">
-        <h2 className="mb-3 text-base font-bold">Vagas publicadas</h2>
+        <h2 className="text-base font-bold">Vagas publicadas</h2>
+        {/*
+          O que a visualização é, dito uma vez, antes dos números (#492): ela
+          serve para comparar uma vaga com outra, e não para contar pessoas —
+          quem recarrega a página conta de novo, porque a Lupa não guarda
+          quem viu.
+        */}
+        <p className="mt-1 mb-3 text-faint text-xs leading-relaxed">
+          Visualização serve para comparar uma vaga com outra, não para contar
+          pessoas: quem abre de novo conta de novo. Muito compatível é quem
+          combina com {LIMIAR_MUITO_COMPATIVEL}% ou mais do que a vaga pede.
+        </p>
         {jobs.length === 0 ? (
           <EmptyState
             icon={<FileText size={22} />}
@@ -499,6 +544,7 @@ export async function PainelDeContratacao({
             {jobs.map((job) => {
               const expirada =
                 job.status === "aberta" && vagaExpirada(job.expires_at);
+              const resultado = resultados.get(job.id);
               return (
                 <li
                   key={job.id}
@@ -554,6 +600,16 @@ export async function PainelDeContratacao({
                     ) : (
                       <EncerrarVagaButton id={job.id} titulo={job.title} />
                     ))}
+                  {resultado && (
+                    <div className="basis-full">
+                      <ResultadoDaVagaLinha
+                        resultado={resultado}
+                        finalizada={job.status !== "aberta" || expirada}
+                        vagaId={job.id}
+                        base={area.base}
+                      />
+                    </div>
+                  )}
                 </li>
               );
             })}

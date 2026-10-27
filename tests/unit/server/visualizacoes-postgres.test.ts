@@ -85,6 +85,57 @@ describe("RepositorioVisualizacoesPostgres", () => {
     expect(chamadas).toEqual([]);
   });
 
+  /*
+   * O total por vaga (#492) é somado aqui, como a série: o PostgREST não
+   * agrupa sem uma view por recorte.
+   */
+  describe("totaisPorVaga", () => {
+    it("soma os dias de cada vaga, separadas por id", async () => {
+      respostas.vagas = { data: [{ id: VAGA_A }, { id: VAGA_B }], error: null };
+      respostas.visualizacoes_vaga = {
+        data: [
+          { vaga_id: VAGA_A, total: 3 },
+          { vaga_id: VAGA_A, total: 4 },
+          { vaga_id: VAGA_B, total: 5 },
+        ],
+        error: null,
+      };
+
+      const totais = await repo.totaisPorVaga(EMPRESA);
+
+      expect(totais.get(VAGA_A)).toBe(7);
+      expect(totais.get(VAGA_B)).toBe(5);
+    });
+
+    it("restringe às vagas da empresa", async () => {
+      respostas.vagas = { data: [{ id: VAGA_A }], error: null };
+
+      await repo.totaisPorVaga(EMPRESA);
+
+      const filtro = chamadas.find(
+        (c) => c.tabela === "visualizacoes_vaga" && c.metodo === "in",
+      );
+      expect(filtro?.args).toEqual(["vaga_id", [VAGA_A]]);
+    });
+
+    it("empresa sem vaga não consulta com lista vazia", async () => {
+      respostas.vagas = { data: [], error: null };
+
+      expect((await repo.totaisPorVaga(EMPRESA)).size).toBe(0);
+      expect(chamadas.some((c) => c.metodo === "in")).toBe(false);
+    });
+
+    it("falha do banco não vira zero", async () => {
+      respostas.vagas = { data: [{ id: VAGA_A }], error: null };
+      respostas.visualizacoes_vaga = {
+        data: null,
+        error: { message: "caiu" },
+      };
+
+      await expect(repo.totaisPorVaga(EMPRESA)).rejects.toSatisfy(ehAppError);
+    });
+  });
+
   it("erro do banco vira AppError, não exceção crua", async () => {
     erroDoRpc = { message: "relation does not exist" };
 

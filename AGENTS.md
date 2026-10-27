@@ -1628,6 +1628,70 @@ Os rótulos vivem em `APPLICATION_LABELS` e `APPLICATION_LABELS_CANDIDATO`,
 com teste que trava a divergência. O valor no banco não muda: renomear o
 enum custaria migração e apagaria histórico sem ganhar nada.
 
+### O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
+
+Três pedidos do Luiz em 26/10/2026, todos do lado de quem contrata, e todos
+respondendo à mesma pergunta: o que a Lupa dá à empresa que o Instagram e o
+grupo de WhatsApp não dão.
+
+**O resultado fica na linha de cada vaga (#492).** Visualizações,
+candidaturas e quantas combinam com o que a vaga pede, juntos, no fim da
+linha dela. A empresa publicava e esperava sem ver o que a Lupa fez por
+ela, e sem prova de resultado não renova. `visualizacoesPorVaga` soma desde
+a publicação (a tela da série continua sendo de 30 dias), e a conta mora
+numa função pura (`src/lib/resultado-da-vaga.ts`), testável. **"Muito
+compatível" é a partir de 70%** — o mesmo corte que pinta o selo da lista de
+currículos de verde (`LIMIAR_MUITO_COMPATIVEL`): o resumo da vaga e o selo da
+linha precisam dizer a mesma coisa, ou a empresa soma os verdes da lista e
+não acha o número do resumo. **E "zero" é uma afirmação**, a mesma lição do
+casamento: o número só aparece quando dá para comparar. Vaga que não declara
+habilidade, ou candidato que não declarou nenhuma, ficam fora da conta, e a
+linha não menciona "muito compatíveis" em vez de mentir com um zero.
+**A tela diz o que a visualização é**, uma vez, antes dos números: serve para
+comparar uma vaga com outra, não para contar pessoas — a Lupa não guarda quem
+viu (a decisão de privacidade das visualizações), então quem abre de novo
+conta de novo, e o robô de prévia do link não conta (#490).
+
+**Vaga encerrada ou vencida mostra o "Resumo final" e o caminho para
+continuar:** "Publicar outra parecida" abre o formulário **preenchido** com o
+texto dela (`?modelo=<id>`). Só preenche: a revisão antes de ir ao ar
+continua, a vaga nova gasta uma vaga do saldo como qualquer outra, e as
+perguntas de triagem não vão junto. O id vem da URL, e por isso só se lê **a
+vaga da própria empresa** (`modeloDeVaga`): vaga alheia ou inexistente abre o
+formulário vazio, sem dizer qual dos dois foi. Reativar (que também custa uma
+vaga) continua ao lado, para a vencida.
+
+**O chamado no WhatsApp já era um link `wa.me` com texto, e a mensagem só
+ganhou o que faltava (#493).** O texto traz o nome da pessoa, o cargo da vaga
+**e o nome de quem chama** — sem o nome da empresa, quem recebe lê um número
+desconhecido falando de uma vaga, e desconfia. Mora em `mensagemParaCandidato`
+(`src/lib/chamada.ts`) porque a ficha e a lista mandam a mesma mensagem, e
+duas cópias do texto divergem. **"A empresa edita antes de enviar" é do
+próprio WhatsApp**: `wa.me/?text=` abre a conversa com o texto no campo de
+escrita, sem enviar. Um campo de edição dentro da Lupa seria atrito sem ganho,
+e a ficha só diz isso ("Edite antes de enviar"). O consentimento é o de
+sempre: a ficha só abre para a empresa dona da vaga a que a pessoa se
+candidatou.
+
+**"Quem já se candidatou" (#494) não é um banco de talentos aberto, e a
+diferença é a decisão.** A busca livre continua fora do escopo, pela mesma
+razão de sempre: numa cidade pequena o patrão atual de alguém pode estar entre
+as empresas cadastradas. A lista (`/empresa/talentos` e `/contratar/talentos`)
+nasce **só das candidaturas da própria empresa da sessão**: a empresa vê a
+pessoa porque ela se candidatou a uma vaga dela, e outra empresa nunca alcança
+aquela candidatura. O que muda é o alcance **dentro da mesma empresa** — a
+candidatura a uma vaga passa a valer para as outras vagas dela, que era a
+queixa ("ao abrir outra vaga parecida a empresa começa do zero"). **Uma linha
+por pessoa, e não por candidatura:** quem se candidatou a três vagas aparece
+uma vez, com a mais recente e a contagem; a linha abre a ficha dessa
+candidatura, que é por onde a empresa tem direito a currículo e contato. Os
+filtros (habilidade e área) são os da busca de candidatos, e a habilidade passa
+pela mesma tabela de sinônimos. **Quem exclui a conta sai da lista**, e não
+por um filtro: a candidatura é apagada em cascata, e a lista é feita delas. O
+teto é o das candidaturas do painel (200, das mais recentes), e a tela diz
+isso, para ninguém concluir que uma pessoa antiga sumiu. A Política de
+Privacidade diz que a candidatura continua disponível à empresa em outras
+vagas dela — a lição da #235: texto legal sai do que o produto faz.
 ### Perguntas de triagem: separar sem esconder (#491)
 
 A triagem de quem se candidata acontecia no WhatsApp pessoal do dono, lendo

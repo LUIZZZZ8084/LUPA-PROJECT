@@ -34,6 +34,7 @@ import {
   DIAS_DA_SERIE,
   serieDoPainel,
   totaisDaSerie,
+  visualizacoesPorVaga,
 } from "@/server/visualizacoes/servico";
 import { diasAte, montarSerie } from "@/server/visualizacoes/tipos";
 import { carteiraInfinita } from "./carteira-de-teste";
@@ -171,6 +172,7 @@ describe("visualizações de vaga", () => {
           throw new Error("banco fora do ar");
         },
         serieDaEmpresa: async () => [],
+        totaisPorVaga: async () => new Map(),
       });
 
       await expect(contarVisualizacao("vaga-1")).resolves.toBeUndefined();
@@ -230,6 +232,64 @@ describe("visualizações de vaga", () => {
       });
       const serie = await serieDoPainel(empresa);
       expect(totaisDaSerie(serie).visualizacoes).toBe(0);
+    });
+  });
+
+  /*
+   * O resultado de cada vaga (#492): quantas visualizações cada vaga recebeu
+   * desde que foi publicada, para ficar ao lado das candidaturas dela.
+   */
+  describe("total por vaga", () => {
+    it("soma as visualizações de cada vaga separadamente", async () => {
+      const a = await publicarVaga(empresa, DADOS_VAGA);
+      const b = await publicarVaga(empresa, { ...DADOS_VAGA, titulo: "Outra" });
+      await contarVisualizacao(a.id);
+      await contarVisualizacao(a.id);
+      await contarVisualizacao(b.id);
+
+      const totais = await visualizacoesPorVaga(empresa);
+
+      expect(totais.get(a.id)).toBe(2);
+      expect(totais.get(b.id)).toBe(1);
+    });
+
+    it("vaga sem visita fica fora do mapa — quem lê trata como zero", async () => {
+      const vaga = await publicarVaga(empresa, DADOS_VAGA);
+
+      expect(
+        (await visualizacoesPorVaga(empresa)).get(vaga.id),
+      ).toBeUndefined();
+    });
+
+    it("bate com o total da série: os dois números dizem a mesma coisa", async () => {
+      const vaga = await publicarVaga(empresa, DADOS_VAGA);
+      for (let i = 0; i < 4; i++) await contarVisualizacao(vaga.id);
+
+      const totais = await visualizacoesPorVaga(empresa);
+      const soma = [...totais.values()].reduce((a, b) => a + b, 0);
+
+      expect(soma).toBe(
+        totaisDaSerie(await serieDoPainel(empresa)).visualizacoes,
+      );
+    });
+
+    it("uma empresa não vê o movimento da outra", async () => {
+      const vaga = await publicarVaga(empresa, DADOS_VAGA);
+      await contarVisualizacao(vaga.id);
+
+      expect((await visualizacoesPorVaga(outraEmpresa)).size).toBe(0);
+    });
+
+    it("sem sessão é 401; candidato e admin não leem", async () => {
+      expect((await capturar(() => visualizacoesPorVaga(null))).codigo).toBe(
+        "nao_autenticado",
+      );
+      expect(
+        (await capturar(() => visualizacoesPorVaga(candidato))).codigo,
+      ).toBe("sem_permissao");
+      expect((await capturar(() => visualizacoesPorVaga(admin))).codigo).toBe(
+        "sem_permissao",
+      );
     });
   });
 

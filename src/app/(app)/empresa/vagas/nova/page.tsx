@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   title: "Publicar vaga",
 };
 
-export default function Page() {
-  return <PublicarVaga area={AREA_EMPRESA} />;
+export default function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return <PublicarVaga area={AREA_EMPRESA} searchParams={searchParams} />;
 }

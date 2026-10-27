@@ -334,6 +334,22 @@ describe("os documentos, na publicação", () => {
    * R$ 7,99. Cada plano aparece com o próprio preço e o próprio teto, e o
    * que o teto conta (vagas no ar ao mesmo tempo) está escrito (#489).
    */
+  /*
+   * "Quem já se candidatou" (#494) reúne as candidaturas da empresa em outras
+   * vagas dela. A Política diz isso, e diz até onde vai: só a empresa a que a
+   * pessoa se candidatou, e some com a conta.
+   */
+  it("a Privacidade diz que a candidatura vale para outras vagas da mesma empresa, e só dela", () => {
+    const { container } = render(<PrivacidadePage />);
+    const texto = (container.textContent ?? "").replace(/\s+/g, " ");
+
+    expect(texto).toMatch(
+      /a candidatura continua disponível para a empresa em outras vagas dela/,
+    );
+    expect(texto).toMatch(/Outra empresa nunca vê a sua candidatura/);
+    expect(texto).toMatch(/some com ela se você excluir a conta/);
+  });
+
   it("cada plano de vaga aparece com o próprio preço e teto, e a vaga dura 30 dias", () => {
     const { container } = render(<TermosPage />);
     const texto = (container.textContent ?? "").replace(/\s+/g, " ");

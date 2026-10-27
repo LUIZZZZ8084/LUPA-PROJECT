@@ -37,6 +37,17 @@ export interface RepositorioVisualizacoes {
    * viram o mesmo desenho de três candidaturas em três meses.
    */
   serieDaEmpresa(empresaId: string, dias: number): Promise<PontoDaSerie[]>;
+
+  /**
+   * Quantas visualizações cada vaga da empresa recebeu desde que foi
+   * publicada (#492), indexado pelo id da vaga. Vaga sem visita não está no
+   * mapa — quem lê trata a ausência como zero.
+   *
+   * É o que o resultado de cada vaga mostra ao lado das candidaturas. Serve
+   * para comparar uma vaga com outra: a contagem não deduplica quem olha,
+   * e a tela diz isso.
+   */
+  totaisPorVaga(empresaId: string): Promise<Map<string, number>>;
 }
 
 /** Datas em `YYYY-MM-DD`, do dia mais antigo até hoje. */

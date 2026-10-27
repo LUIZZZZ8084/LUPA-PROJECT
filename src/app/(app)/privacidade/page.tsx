@@ -149,7 +149,14 @@ export default function PrivacidadePage() {
           <p className="mt-1">
             <strong>Seu currículo, resumo e experiências.</strong> Não entram em
             nenhuma busca pública. Chegam à empresa apenas quando <em>você</em>{" "}
-            se candidata a uma vaga dela.
+            se candidata a uma vaga dela.{" "}
+            <strong>
+              E, depois disso, a candidatura continua disponível para a empresa
+              em outras vagas dela
+            </strong>
+            : ela reúne, numa lista de quem já se candidatou, todo mundo que se
+            candidatou a alguma vaga sua, sem repetir. Outra empresa nunca vê a
+            sua candidatura, e a lista some com ela se você excluir a conta.
           </p>
           <p className="mt-1">
             <strong>Seu e-mail e sua senha.</strong>

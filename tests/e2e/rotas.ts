@@ -80,6 +80,7 @@ export const ROTAS_EMPRESA: readonly RotaVarrida[] = [
   { path: "/empresa", nome: "Painel da empresa" },
   { path: "/empresa/vagas/nova", nome: "Publicar vaga" },
   { path: "/empresa/creditos", nome: "Planos e vagas" },
+  { path: "/empresa/talentos", nome: "Quem já se candidatou" },
   { path: "/candidatos", nome: "Candidatos disponíveis" },
 ] as const;
 
@@ -118,6 +119,8 @@ export const ROTAS_NAO_VARRIDAS: Record<string, string> = {
     "mesma implementação de /empresa/creditos, que é varrida — só muda a base. Exercitada em virar-prestador.spec.ts",
   "/contratar/vagas/nova":
     "mesma implementação de /empresa/vagas/nova, que é varrida — só muda a base. Exercitada em virar-prestador.spec.ts",
+  "/contratar/talentos":
+    "mesma implementação de /empresa/talentos, que é varrida — só muda a base. A área do prestador é exercitada em virar-prestador.spec.ts",
   "/contratar/candidaturas/[id]":
     "id resolvido em tempo de execução, como /empresa/candidaturas/[id]; mesma implementação, que é varrida pela área da empresa",
   "/perfil/publicacoes":

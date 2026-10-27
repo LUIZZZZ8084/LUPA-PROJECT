@@ -61,6 +61,22 @@ export async function serieDoPainel(
   );
 }
 
+/**
+ * Visualizações de cada vaga da empresa da sessão, desde a publicação
+ * (#492). Mesmo gate e mesma regra de `serieDoPainel`: o id da empresa não
+ * vem de fora.
+ */
+export async function visualizacoesPorVaga(
+  sessao: Autenticado | null,
+): Promise<Map<string, number>> {
+  if (!sessao) throw erros.naoAutenticado("sem sessão");
+  if (isSupabaseConfigured) {
+    exigirCapacidade(sessao, "vaga:ver_candidaturas_proprias");
+  }
+
+  return repositorioVisualizacoes().totaisPorVaga(idDaEmpresa(sessao));
+}
+
 /** Totais da janela, para os números grandes acima do gráfico. */
 export function totaisDaSerie(serie: PontoDaSerie[]): {
   visualizacoes: number;
