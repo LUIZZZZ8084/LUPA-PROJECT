@@ -5,6 +5,7 @@ import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL } from "@/lib/format";
+import { ehSemPrazo } from "@/lib/parceria";
 import {
   OPCAO_AVULSA,
   PLANOS_DE_VAGA,
@@ -55,7 +56,19 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
     usuario?.cidade ? publicoQuePediuAviso(usuario.cidade) : null,
   ]);
 
-  const resumo = resumoDoDireito(direito);
+  /*
+   * Parceria sem prazo (#505): o plano ilimitado vale até 2100, e a tela diz
+   * "parceria" em vez da data — e não oferece pagar a quem já tem tudo.
+   */
+  const parceria =
+    direito.mensalAtivo && ehSemPrazo(direito.mensalidadeValidaAte);
+  const resumo = parceria
+    ? {
+        titulo: "Parceria Lupa",
+        detalhe:
+          "Publique quantas vagas quiser, sem cobrança e sem prazo. Não há nada para comprar aqui.",
+      }
+    : resumoDoDireito(direito);
   const validaAte = direito.mensalidadeValidaAte
     ? new Date(direito.mensalidadeValidaAte).toLocaleDateString("pt-BR")
     : null;
@@ -86,7 +99,7 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
             <p className="mt-0.5 text-muted text-sm leading-relaxed">
               {resumo.detalhe}
             </p>
-            {direito.mensalAtivo && validaAte && (
+            {direito.mensalAtivo && validaAte && !parceria && (
               <p className="mt-0.5 text-muted text-sm leading-relaxed">
                 {planoAtual
                   ? `Renova por volta de ${validaAte}.`
@@ -139,116 +152,120 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
         misturá-la faria parecer "o plano de 1", e quem contrata todo mês
         pagaria mais por vaga sem perceber.
       */}
-      <Carrossel rotulo="Opções de vaga e plano">
-        <Panel className="flex h-full flex-col">
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-bold text-base">{OPCAO_AVULSA.nome}</h2>
-              <Badge tone="outline">Compra única</Badge>
+      {!parceria && (
+        <Carrossel rotulo="Opções de vaga e plano">
+          <Panel className="flex h-full flex-col">
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-bold text-base">{OPCAO_AVULSA.nome}</h2>
+                <Badge tone="outline">Compra única</Badge>
+              </div>
+              <p className="mt-0.5 text-muted text-sm">
+                {OPCAO_AVULSA.paraQuem}
+              </p>
+
+              <p className="mt-4 font-bold text-empresas text-2xl">
+                {preco(OPCAO_AVULSA.tipo)}
+              </p>
+              <p className="text-faint text-xs">compra única</p>
+
+              <ul className="mt-3 space-y-1.5 text-muted text-sm">
+                <li className="flex items-start gap-2">
+                  <Check size={15} className="mt-0.5 flex-none text-empresas" />
+                  Uma vaga, 30 dias no ar
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check size={15} className="mt-0.5 flex-none text-empresas" />
+                  Paga uma vez, sem renovar
+                </li>
+              </ul>
             </div>
-            <p className="mt-0.5 text-muted text-sm">{OPCAO_AVULSA.paraQuem}</p>
 
-            <p className="mt-4 font-bold text-empresas text-2xl">
-              {preco(OPCAO_AVULSA.tipo)}
-            </p>
-            <p className="text-faint text-xs">compra única</p>
+            <ComprarButton
+              tipo={OPCAO_AVULSA.tipo}
+              rotulo="Comprar 1 vaga"
+              destaque={false}
+            />
+          </Panel>
 
-            <ul className="mt-3 space-y-1.5 text-muted text-sm">
-              <li className="flex items-start gap-2">
-                <Check size={15} className="mt-0.5 flex-none text-empresas" />
-                Uma vaga, 30 dias no ar
-              </li>
-              <li className="flex items-start gap-2">
-                <Check size={15} className="mt-0.5 flex-none text-empresas" />
-                Paga uma vez, sem renovar
-              </li>
-            </ul>
-          </div>
+          {PLANOS_DE_VAGA.map((plano) => {
+            const porVaga = precoPorVaga(plano.tipo);
+            const ehOAtual = planoAtual?.tipo === plano.tipo;
 
-          <ComprarButton
-            tipo={OPCAO_AVULSA.tipo}
-            rotulo="Comprar 1 vaga"
-            destaque={false}
-          />
-        </Panel>
+            return (
+              <Panel
+                key={plano.tipo}
+                className={cn(
+                  "flex h-full flex-col",
+                  plano.destaque && "border-empresas/40",
+                )}
+              >
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-bold text-base">{plano.nome}</h2>
+                    {plano.destaque && (
+                      <Badge tone="empresas">Mais completo</Badge>
+                    )}
+                    {ehOAtual && <Badge tone="vagas">Seu plano</Badge>}
+                  </div>
+                  <p className="mt-0.5 text-muted text-sm">{plano.paraQuem}</p>
 
-        {PLANOS_DE_VAGA.map((plano) => {
-          const porVaga = precoPorVaga(plano.tipo);
-          const ehOAtual = planoAtual?.tipo === plano.tipo;
+                  <p className="mt-4 font-bold text-empresas text-2xl">
+                    {preco(plano.tipo)}
+                  </p>
+                  <p className="text-faint text-xs">
+                    {porVaga ? `por mês · ${porVaga} por vaga` : "por mês"}
+                  </p>
 
-          return (
-            <Panel
-              key={plano.tipo}
-              className={cn(
-                "flex h-full flex-col",
-                plano.destaque && "border-empresas/40",
-              )}
-            >
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="font-bold text-base">{plano.nome}</h2>
-                  {plano.destaque && (
-                    <Badge tone="empresas">Mais completo</Badge>
-                  )}
-                  {ehOAtual && <Badge tone="vagas">Seu plano</Badge>}
-                </div>
-                <p className="mt-0.5 text-muted text-sm">{plano.paraQuem}</p>
-
-                <p className="mt-4 font-bold text-empresas text-2xl">
-                  {preco(plano.tipo)}
-                </p>
-                <p className="text-faint text-xs">
-                  {porVaga ? `por mês · ${porVaga} por vaga` : "por mês"}
-                </p>
-
-                <ul className="mt-3 space-y-1.5 text-muted text-sm">
-                  <li className="flex items-start gap-2">
-                    <Check
-                      size={15}
-                      className="mt-0.5 flex-none text-empresas"
-                    />
-                    {quantasVagas(plano.tipo)}
-                  </li>
-                  {porVaga && (
+                  <ul className="mt-3 space-y-1.5 text-muted text-sm">
                     <li className="flex items-start gap-2">
                       <Check
                         size={15}
                         className="mt-0.5 flex-none text-empresas"
                       />
-                      Encerrou uma vaga? O lugar dela volta na hora
+                      {quantasVagas(plano.tipo)}
                     </li>
-                  )}
-                  <li className="flex items-start gap-2">
-                    <Check
-                      size={15}
-                      className="mt-0.5 flex-none text-empresas"
-                    />
-                    Renova sozinho todo mês, e você cancela quando quiser
-                  </li>
-                </ul>
-              </div>
+                    {porVaga && (
+                      <li className="flex items-start gap-2">
+                        <Check
+                          size={15}
+                          className="mt-0.5 flex-none text-empresas"
+                        />
+                        Encerrou uma vaga? O lugar dela volta na hora
+                      </li>
+                    )}
+                    <li className="flex items-start gap-2">
+                      <Check
+                        size={15}
+                        className="mt-0.5 flex-none text-empresas"
+                      />
+                      Renova sozinho todo mês, e você cancela quando quiser
+                    </li>
+                  </ul>
+                </div>
 
-              {/*
+                {/*
                 Com um plano ativo, assinar outro só recusaria depois do
                 clique. A tela diz o caminho em vez de oferecer o botão:
                 cancelar a renovação do atual, no bloco de cima.
               */}
-              {!planoAtual && (
-                <ComprarButton
-                  tipo={plano.tipo}
-                  rotulo={`Assinar ${plano.nome}`}
-                  destaque
-                />
-              )}
-              {ehOAtual && (
-                <p className="mt-3 text-faint text-xs">
-                  Este é o plano que você tem agora.
-                </p>
-              )}
-            </Panel>
-          );
-        })}
-      </Carrossel>
+                {!planoAtual && (
+                  <ComprarButton
+                    tipo={plano.tipo}
+                    rotulo={`Assinar ${plano.nome}`}
+                    destaque
+                  />
+                )}
+                {ehOAtual && (
+                  <p className="mt-3 text-faint text-xs">
+                    Este é o plano que você tem agora.
+                  </p>
+                )}
+              </Panel>
+            );
+          })}
+        </Carrossel>
+      )}
 
       <Panel className="mt-5">
         <h2 className="font-bold text-sm">Como funciona</h2>

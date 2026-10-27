@@ -1716,6 +1716,45 @@ insert into custos_mensais (nome, valor_centavos) values ('Supabase Pro', 13300)
 insert into custos_mensais (nome, valor_centavos) values ('Vercel Pro', 10700);
 
 -- ============================================================================
+-- 9y. Parceiros (#505)
+--
+-- Quem usa a Lupa de graça por acordo com o Luiz. A chave é o e-mail, e não a
+-- conta: a parceria costuma ser fechada antes do cadastro. O benefício chega
+-- à conta com aquele e-mail quando ela confirma que o endereço é dela, e mora
+-- nas mesmas colunas que o pagamento usa (a mensalidade do prestador e o plano
+-- de vagas da carteira) — por isso esta tabela não é lida por vitrine nem por
+-- publicação, só pelo admin. Dado da empresa: só a chave de serviço alcança.
+-- ============================================================================
+
+create table parceiros (
+  id            uuid primary key default gen_random_uuid(),
+  -- Minúsculas, como `usuarios.email`, para a comparação ser de igual.
+  email         text not null check (email = lower(btrim(email)) and email like '%_@_%'),
+  nome          text not null check (char_length(btrim(nome)) between 2 and 80),
+  -- Até quando vale; nulo é sem prazo.
+  valido_ate    timestamptz,
+  criado_em     timestamptz not null default now(),
+  criado_por    uuid references usuarios(id) on delete set null,
+  -- Encerrar guarda o registro: quem teve parceria, e até quando.
+  encerrado_em  timestamptz,
+  -- A conta que recebeu o benefício, e a validade gravada nela. Encerrar
+  -- compara com esta data: o que a conta pagou além dela fica.
+  usuario_id    uuid references usuarios(id) on delete set null,
+  concedido_em  timestamptz,
+  concedido_ate timestamptz
+);
+
+-- Uma parceria aberta por e-mail: duas dariam dois prazos para a mesma conta.
+create unique index parceiros_um_aberto_por_email
+  on parceiros (email) where encerrado_em is null;
+
+-- Toda chave estrangeira tem índice: excluir uma conta procura por elas.
+create index parceiros_usuario_idx on parceiros (usuario_id);
+create index parceiros_criado_por_idx on parceiros (criado_por);
+
+alter table parceiros enable row level security;
+
+-- ============================================================================
 -- 10. Views que a aplicação consulta
 --
 -- `security_invoker = false` de propósito: as views rodam com a permissão do
@@ -2357,6 +2396,8 @@ revoke select on tokens_recuperacao from anon, authenticated;
 -- Denúncia diz quem denunciou quem (#435): só a chave de serviço.
 revoke select on denuncias from anon, authenticated;
 revoke select on custos_mensais from anon, authenticated;
+-- Quem tem parceria, e até quando (#505): dado da empresa.
+revoke select on parceiros from anon, authenticated;
 
 /*
  * E a escrita, em tudo (#421). O Supabase concede a `anon` e

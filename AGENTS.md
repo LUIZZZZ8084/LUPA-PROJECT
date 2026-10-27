@@ -2453,6 +2453,54 @@ imprime a senha uma vez no terminal de quem roda; criá-la por um agente
 poria a senha numa conversa, que é o que a #69 registra como garantia
 perdida.
 
+### Parceiros: a Lupa de graça, autorizada pelo e-mail (#505)
+
+Pedido do Luiz em 27/10/2026: ele vai fechar parcerias com quem vai usar a
+Lupa sem pagar, e precisava liberar isso pelo painel, com tempo de uso
+ilimitado. A tela é `/admin/parceiros` (capacidade `admin:parceiros`): nome,
+e-mail e prazo — **sem prazo** é o padrão, ou até uma data.
+
+**O benefício mora onde o pagamento já mora.** A parceria não abre caminho
+novo na vitrine, na publicação nem no painel: ela grava a validade nas mesmas
+colunas que a cobrança aprovada grava — a mensalidade do prestador e o plano
+de vagas da carteira, ilimitado —, e o resto do app funciona sem saber que ela
+existe. A alternativa, perguntar "é parceiro?" em cada lugar que cobra, mexia
+na view da vitrine, no funil do painel e na publicação, e cada lugar esquecido
+seria um parceiro cobrado. **Sem prazo é a validade em 2100**
+(`VALIDADE_SEM_PRAZO`, em `src/lib/parceria.ts`), e as duas telas que mostram
+validade — planos da empresa e assinatura do prestador — a reconhecem por
+`ehSemPrazo`, dizem "parceria" no lugar da data e não oferecem pagar.
+
+**Tudo o que é pago fica grátis, e a matriz decide o quê:** quem publica vaga
+ganha o plano ilimitado; o prestador, a mensalidade que o põe na vitrine;
+quem gera currículo, o gerador.
+
+**Só vale com o e-mail confirmado.** O cadastro não confere e-mail (#227), e
+sem esta trava quem se cadastrasse antes com o endereço do parceiro levaria o
+benefício dele. A concessão (`concederBeneficioDeParceiro`) roda quando o
+admin autoriza — a conta pode já existir e já ter confirmado —, quando a
+pessoa confirma o e-mail (`confirmarEmail`) e quando vira prestador, que é
+quando ganha a vitrine para ligar. Nas duas últimas, falhar não desfaz o que a
+pessoa fez: vai ao Sentry, e a próxima concessão refaz.
+
+**Conceder de novo não estende de novo.** As funções do banco somam dias a
+`max(agora, validade atual)` (#348); a parceria quer "pelo menos até tal
+data", e `diasParaChegarA` traduz uma na outra — a segunda concessão pede zero
+dias. Usar as mesmas funções, e não uma nova, evitou SQL de função em
+produção e manteve a conta atômica num lugar só.
+
+**Encerrar tira o que a parceria deu, e só isso.** A parceria guarda a
+validade que gravou (`concedido_ate`); se a conta vale além dela, a diferença
+foi paga, e fica (`aindaEDaParceria`). O gerador de currículo, compra única
+sem validade, fica com quem o ganhou. O registro encerrado continua na tabela,
+e o e-mail pode ganhar outra parceria — uma aberta por e-mail, garantida por
+índice único parcial no banco.
+
+**O que isto não resolve:** prova que a conta controla o e-mail, não que o
+e-mail é mesmo do parceiro — o admin digita o endereço que o parceiro passou.
+E a parceria com prazo não avisa ninguém quando vence: o benefício expira
+sozinho, pela própria data, como uma mensalidade que não renovou.
+
 ### Polling, não websocket, no painel do admin
 
 Conexão aberta em serverless exige um serviço à parte, com custo e mais uma

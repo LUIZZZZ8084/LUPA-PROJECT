@@ -99,6 +99,9 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
   "custo.criar": porJanela(30),
   "custo.editar": porJanela(60),
   "custo.remover": porJanela(30),
+  // Parcerias se fecham uma a uma, em conversa (#505).
+  "parceiro.autorizar": porJanela(30),
+  "parceiro.encerrar": porJanela(30),
 
   /*
    * Candidatar-se é o verbo mais usado do app, e por quem tem menos
