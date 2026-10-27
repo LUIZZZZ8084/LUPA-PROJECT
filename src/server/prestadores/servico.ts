@@ -2,6 +2,7 @@ import "server-only";
 
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { onlyDigits } from "@/lib/format";
+import { aindaEDaParceria, diasParaChegarA } from "@/lib/parceria";
 import { type Autenticado, exigirCapacidade, type Papel } from "../auth/rbac";
 import { erros } from "../errors";
 import { log } from "../logger";
@@ -240,4 +241,46 @@ export async function revogarMensalidade(usuarioId: string): Promise<void> {
   log.info("mensalidade de prestador revogada", {
     acao: "prestador.mensalidade_revogada",
   });
+}
+
+/**
+ * Deixa a mensalidade valendo pelo menos até `ate` — a parceria (#505).
+ *
+ * Os dias que faltam passam pela mesma função atômica do pagamento, e
+ * conceder de novo pede zero dias. Sem perfil de prestador não há vitrine a
+ * ligar, e devolve `null` em vez de erro: a conta pode virar prestador
+ * depois, e a concessão roda de novo nessa hora.
+ */
+export async function garantirMensalidadeAte(
+  usuarioId: string,
+  ate: string,
+): Promise<string | null> {
+  const repo = repositorioUsuarios();
+  const perfil = await repo.perfilPrestador(usuarioId);
+  if (!perfil) return null;
+
+  const dias = diasParaChegarA(ate, perfil.mensalidadeValidaAte);
+  if (dias <= 0) return perfil.mensalidadeValidaAte;
+
+  await repo.estenderMensalidadePrestador(usuarioId, dias);
+  log.info("mensalidade de parceria concedida", {
+    acao: "prestador.parceria",
+    dias,
+  });
+  return (await repo.perfilPrestador(usuarioId))?.mensalidadeValidaAte ?? null;
+}
+
+/**
+ * Tira a mensalidade que a parceria deu, e só ela (#505): o que a pessoa
+ * pagou além do prazo da parceria fica.
+ */
+export async function encerrarMensalidadeDeParceria(
+  usuarioId: string,
+  concedidoAte: string,
+): Promise<void> {
+  const perfil = await repositorioUsuarios().perfilPrestador(usuarioId);
+  if (!aindaEDaParceria(perfil?.mensalidadeValidaAte ?? null, concedidoAte)) {
+    return;
+  }
+  await revogarMensalidade(usuarioId);
 }

@@ -5,6 +5,7 @@ import { enviarEmail, temEmailConfigurado } from "../email";
 import { saudacao } from "../email/saudacao";
 import { erros } from "../errors";
 import { log } from "../logger";
+import { tentarConcederBeneficioDeParceiro } from "../parceiros/servico";
 import { repositorioUsuarios } from "../repositories";
 import { cabeEmailParaConta, reservarEmailDaOrigem } from "./cota-de-email";
 import { conferirLimite, reservarTentativa } from "./rate-limit";
@@ -184,5 +185,12 @@ export async function confirmarEmail(token: string): Promise<boolean> {
 
   await repo.definirEmailVerificado(consumido.usuarioId);
   log.info("e-mail confirmado", { acao: "auth.verificar_email" });
+
+  /*
+   * Confirmar o e-mail é o que prova que o endereço é desta pessoa, e é a
+   * trava do benefício de parceiro (#505): ele só vale para quem provou ser
+   * dono do e-mail que o admin autorizou.
+   */
+  await tentarConcederBeneficioDeParceiro(consumido.usuarioId);
   return true;
 }

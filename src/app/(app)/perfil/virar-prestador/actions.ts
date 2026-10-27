@@ -7,6 +7,7 @@ import { temArmazenamento } from "@/server/arquivos/servico";
 import { criarSessao, sessaoAtual } from "@/server/auth/cookies";
 import { derrubarCacheDeRevogacoes } from "@/server/auth/revogacao";
 import { erros } from "@/server/errors";
+import { tentarConcederBeneficioDeParceiro } from "@/server/parceiros/servico";
 import { schemaAtivacaoPrestador } from "@/server/prestadores/schemas";
 import { virarPrestador } from "@/server/prestadores/servico";
 
@@ -32,6 +33,10 @@ export const ativarPrestador = criarAcao({
     const { papel } = await virarPrestador(sessao, dados, {
       temArmazenamento,
     });
+
+    // O parceiro que vira prestador ganha a vitrine na mesma hora (#505):
+    // até agora ele não tinha perfil de prestador onde a validade morasse.
+    await tentarConcederBeneficioDeParceiro(sessao.usuarioId);
 
     // O corte já foi gravado com a troca de papel (#352). O cache dele dura
     // 60 s e precisa cair antes da sessão nova, ou ela nasceria dentro da

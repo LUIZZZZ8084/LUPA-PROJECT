@@ -5,6 +5,7 @@ import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL, passouDoPrazo } from "@/lib/format";
+import { ehSemPrazo } from "@/lib/parceria";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { DIAS_TESTE_GRATIS, PRECO_CENTAVOS } from "@/server/pagamentos/planos";
@@ -46,6 +47,10 @@ export default async function AssinaturaPage() {
 
   const preco = formatPrecoBRL(PRECO_CENTAVOS.prestador_mensalidade / 100);
 
+  // Parceria sem prazo (#505): a mensalidade vale até 2100, e não há o que
+  // assinar — a tela diz "parceria" em vez de mostrar a data.
+  const parceria = emDia && ehSemPrazo(ate);
+
   const renova = assinatura?.status === "ativa";
   const comecouENaoTerminou = assinatura?.status === "pendente";
   const cartaoRecusado = assinatura?.status === "pausada";
@@ -67,7 +72,13 @@ export default async function AssinaturaPage() {
               <Badge
                 tone={emTesteGratis ? "servicos" : emDia ? "vagas" : "neutral"}
               >
-                {emTesteGratis ? "Teste grátis" : emDia ? "Ativa" : "Inativa"}
+                {emTesteGratis
+                  ? "Teste grátis"
+                  : parceria
+                    ? "Parceria"
+                    : emDia
+                      ? "Ativa"
+                      : "Inativa"}
               </Badge>
             </div>
 
@@ -115,6 +126,13 @@ export default async function AssinaturaPage() {
                     ? ` e começar os ${DIAS_TESTE_GRATIS} dias de teste.`
                     : `. A primeira cobrança de ${preco} sai na hora.`}
                 </p>
+              ) : parceria ? (
+                <p>
+                  Você é <strong className="text-ink">parceiro da Lupa</strong>:
+                  seu perfil fica na busca{" "}
+                  <strong className="text-ink">sem cobrança e sem prazo</strong>
+                  . Não há nada para assinar.
+                </p>
               ) : emDia ? (
                 <p>
                   Sua mensalidade vale até{" "}
@@ -154,12 +172,16 @@ export default async function AssinaturaPage() {
               )}
             </div>
 
-            <p className="mt-3 font-bold text-2xl text-servicos">
-              {preco}
-              <span className="ml-1 font-normal text-muted text-sm">/mês</span>
-            </p>
+            {!(parceria && !renova) && (
+              <p className="mt-3 font-bold text-2xl text-servicos">
+                {preco}
+                <span className="ml-1 font-normal text-muted text-sm">
+                  /mês
+                </span>
+              </p>
+            )}
 
-            {renova && validaAte ? (
+            {parceria && !renova ? null : renova && validaAte ? (
               <CancelarRenovacaoButton
                 validaAte={validaAte}
                 emTesteGratis={emTesteGratis}
