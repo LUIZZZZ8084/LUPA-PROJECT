@@ -211,6 +211,7 @@ function vagaDoMock(job: JobListing): Vaga {
     salarioMin: job.salary_min,
     salarioMax: job.salary_max,
     habilidades: job.skills,
+    perguntas: job.screening_questions ?? [],
     status: job.status,
     criadoEm: job.created_at,
     expiraEm: job.expires_at,
@@ -234,6 +235,7 @@ function jobListingDaVaga(vaga: Vaga): JobListing {
     salary_min: vaga.salarioMin,
     salary_max: vaga.salarioMax,
     skills: vaga.habilidades,
+    screening_questions: vaga.perguntas,
     status: vaga.status,
     created_at: vaga.criadoEm,
     expires_at: vaga.expiraEm,
@@ -750,6 +752,7 @@ function candidaturaDoMock(app: ApplicationWithCandidate): Candidatura {
     candidatoId: app.candidate_id,
     status: app.status,
     criadoEm: app.created_at,
+    respostas: app.answers ?? null,
   };
 }
 
@@ -815,7 +818,9 @@ async function applicationsEmDemonstracao(): Promise<
       candidate_id: c.candidatoId,
       status: c.status,
       created_at: c.criadoEm,
+      answers: c.respostas,
       job_title: job.title,
+      job_questions: job.screening_questions ?? [],
       candidate,
     });
   }

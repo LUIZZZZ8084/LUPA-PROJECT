@@ -65,7 +65,17 @@ describe("RepositorioCandidaturasPostgres", () => {
       candidatoId: LINHA.candidato_id,
       status: "enviada",
       criadoEm: LINHA.criado_em,
+      respostas: null,
     });
+  });
+
+  it("lê as respostas de triagem como lista de verdadeiro e falso (#491)", async () => {
+    resposta = { data: { ...LINHA, respostas: [true, false] }, error: null };
+    expect((await repo.porId(LINHA.id))?.respostas).toEqual([true, false]);
+
+    // Lixo no jsonb não vira resposta: melhor "sem resposta" que um "Sim" inventado.
+    resposta = { data: { ...LINHA, respostas: [true, "sim"] }, error: null };
+    expect((await repo.porId(LINHA.id))?.respostas).toBeNull();
   });
 
   it("id sem forma de uuid é 'não encontrado'", async () => {
@@ -84,7 +94,37 @@ describe("RepositorioCandidaturasPostgres", () => {
     expect(insercao?.args[0]).toEqual({
       vaga_id: LINHA.vaga_id,
       candidato_id: LINHA.candidato_id,
+      respostas: null,
     });
+  });
+
+  it("criar grava as respostas de triagem (#491)", async () => {
+    resposta = { data: LINHA, error: null };
+    await repo.criar({
+      vagaId: LINHA.vaga_id,
+      candidatoId: LINHA.candidato_id,
+      respostas: [true, false, true],
+    });
+
+    expect(chamadas.find((c) => c.metodo === "insert")?.args[0]).toMatchObject({
+      respostas: [true, false, true],
+    });
+  });
+
+  /**
+   * A trava do banco (`candidaturas_confere_triagem`) responde 23514 quando
+   * a vaga tem perguntas e as respostas não vieram completas. É erro de quem
+   * chamou, e não do servidor.
+   */
+  it("a trava de triagem do banco vira erro de validação", async () => {
+    resposta = {
+      data: null,
+      error: { message: "respostas de triagem incompletas", code: "23514" },
+    };
+
+    await expect(
+      repo.criar({ vagaId: LINHA.vaga_id, candidatoId: LINHA.candidato_id }),
+    ).rejects.toMatchObject({ codigo: "validacao" });
   });
 
   it("candidatura duplicada vira conflito, não erro genérico", async () => {

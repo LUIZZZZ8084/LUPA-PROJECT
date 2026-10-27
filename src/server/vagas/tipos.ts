@@ -7,6 +7,7 @@
  * funcionando sem banco.
  */
 
+import type { PerguntaDeTriagem } from "@/lib/triagem";
 import type { WorkMode } from "@/lib/types";
 
 export type StatusVaga = "aberta" | "fechada";
@@ -31,6 +32,12 @@ export interface Vaga {
   salarioMin: number | null;
   salarioMax: number | null;
   habilidades: string[];
+  /**
+   * Até três perguntas de sim ou não para quem se candidata (#491). Vazio na
+   * maioria das vagas e em toda vaga publicada antes de elas existirem.
+   * Como o resto da vaga, não se edita depois de publicada.
+   */
+  perguntas: PerguntaDeTriagem[];
   status: StatusVaga;
   criadoEm: string;
   /** 30 dias após publicar, ou após a última reativação manual. Nunca é
@@ -52,6 +59,7 @@ export interface DadosNovaVaga {
   salarioMin?: number | null;
   salarioMax?: number | null;
   habilidades?: string[];
+  perguntas?: PerguntaDeTriagem[];
 }
 
 export type EdicaoVaga = Partial<

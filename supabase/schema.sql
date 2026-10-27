@@ -487,6 +487,22 @@ create table vagas (
    */
   habilidades   text[] not null default '{}',
 
+  /*
+   * Até três perguntas de sim ou não para quem se candidata (#491), como
+   * `[{"texto": "Tem CNH D?", "eliminatoria": true}, ...]`.
+   *
+   * Dentro da própria linha da vaga, e não numa tabela à parte, por uma
+   * razão de atomicidade: publicar é uma instrução só, e a vaga não pode
+   * ficar no ar sem as perguntas que a empresa escreveu — nem as perguntas
+   * sem a vaga. Como o resto da vaga, não se edita depois de publicada.
+   *
+   * O teto de três é do banco, e não só da tela: a lista é lida por todo
+   * candidato que abre a vaga.
+   */
+  perguntas     jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(perguntas) = 'array'
+           and jsonb_array_length(perguntas) <= 3),
+
   status        status_vaga not null default 'aberta',
   visualizacoes int not null default 0,
   criado_em     timestamptz not null default now(),
@@ -520,6 +536,14 @@ create table candidaturas (
   candidato_id uuid not null references usuarios(id) on delete cascade,
   status       status_candidatura not null default 'enviada',
   criado_em    timestamptz not null default now(),
+  /*
+   * O que a pessoa respondeu às perguntas de triagem da vaga (#491), na
+   * ordem delas: `true` é Sim. Nulo quando a vaga não tinha pergunta — a
+   * maioria, e toda candidatura anterior a elas. Chega à empresa dona da
+   * vaga junto do resto da candidatura, e some com ela: excluir a conta
+   * apaga a candidatura em cascata.
+   */
+  respostas    jsonb check (respostas is null or jsonb_typeof(respostas) = 'array'),
 
   -- Uma candidatura por pessoa por vaga.
   unique (vaga_id, candidato_id)
@@ -527,6 +551,51 @@ create table candidaturas (
 
 create index candidaturas_vaga_idx on candidaturas (vaga_id);
 create index candidaturas_candidato_idx on candidaturas (candidato_id);
+
+/*
+ * Vaga com perguntas não recebe candidatura sem respostas (#491).
+ *
+ * A aplicação confere antes, para dar a mensagem; o banco confere de novo
+ * porque "sem responder todas, não envia" é regra de produto, e a action
+ * pode ser chamada direto. A resposta tem de ser uma lista de verdadeiro e
+ * falso do mesmo tamanho da lista de perguntas. Vaga **sem** pergunta
+ * descarta o que vier: lixo na entrada não vira dado.
+ *
+ * Só no `insert`: as respostas nunca mudam, e mover a candidatura de
+ * estágio não pode esbarrar numa regra de quando ela nasceu.
+ */
+create or replace function candidatura_confere_triagem()
+returns trigger language plpgsql
+set search_path = public, pg_temp
+as $$
+declare
+  v_perguntas jsonb;
+begin
+  select perguntas into v_perguntas from vagas where id = new.vaga_id;
+
+  if coalesce(jsonb_array_length(v_perguntas), 0) = 0 then
+    new.respostas := null;
+    return new;
+  end if;
+
+  if new.respostas is null
+     or jsonb_typeof(new.respostas) <> 'array'
+     or jsonb_array_length(new.respostas) <> jsonb_array_length(v_perguntas)
+     or exists (
+       select 1 from jsonb_array_elements(new.respostas) r
+       where jsonb_typeof(r) <> 'boolean'
+     ) then
+    raise exception 'respostas de triagem incompletas'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger candidaturas_confere_triagem
+  before insert on candidaturas
+  for each row execute function candidatura_confere_triagem();
 
 -- ============================================================================
 -- 7. Avaliações
@@ -1661,7 +1730,9 @@ select
   -- assim que `aplica-modalidade-vaga.sql` chega a um banco vivo (#300).
   v.modalidade                as work_mode,
   -- E depois dela, pela mesma regra (#456): coluna nova só no fim.
-  v.para_pcd                  as for_pcd
+  v.para_pcd                  as for_pcd,
+  -- E as perguntas de triagem (#491), pela mesma regra.
+  v.perguntas                 as screening_questions
 from vagas v
 join perfis_empresa e on e.usuario_id = v.empresa_id
 join usuarios u on u.id = e.usuario_id;
@@ -1703,7 +1774,11 @@ select
     'education',    pc.formacao,
     'skills',       coalesce(pc.habilidades, '{}'::text[]),
     'resume_url',   pc.curriculo_url
-  ) as candidate
+  ) as candidate,
+  -- Coluna nova só no fim (#491): as respostas à triagem e as perguntas a
+  -- que elas se referem, para a empresa ler uma ao lado da outra.
+  c.respostas     as answers,
+  v.perguntas     as job_questions
 from candidaturas c
 join vagas v on v.id = c.vaga_id
 join usuarios u on u.id = c.candidato_id

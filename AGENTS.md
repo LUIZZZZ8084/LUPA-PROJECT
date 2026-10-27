@@ -1628,6 +1628,55 @@ Os rótulos vivem em `APPLICATION_LABELS` e `APPLICATION_LABELS_CANDIDATO`,
 com teste que trava a divergência. O valor no banco não muda: renomear o
 enum custaria migração e apagaria histórico sem ganhar nada.
 
+### Perguntas de triagem: separar sem esconder (#491)
+
+A triagem de quem se candidata acontecia no WhatsApp pessoal do dono, lendo
+currículo por currículo; o InfoJobs cobra à parte por perguntas de triagem, e o
+grupo de WhatsApp nunca faz. Ao publicar, a empresa acrescenta até três
+perguntas de sim ou não ("Tem CNH D?", "Pode trabalhar à noite?"), e marca cada
+uma como eliminatória ou só informativa. Quem se candidata responde na hora, e
+sem responder todas não envia.
+
+**"Eliminatória" separa e não bloqueia, e isto é a decisão central.** A
+resposta esperada é Sim; quem responde Não **envia a candidatura do mesmo
+jeito** e aparece na lista da empresa num grupo à parte ("Não responderam o que
+a vaga exigia"), com o motivo escrito na linha (`Respondeu Não: Tem CNH D?`) e
+as respostas na ficha. Barrar quem respondeu Não esconderia gente por uma
+pergunta que talvez tenha sido entendida de outro jeito, sem a empresa nunca
+saber que a pessoa existiu — e a candidatura é o que a pessoa fez, não uma
+fase eliminatória que a Lupa decide por ela. A decisão de olhar continua da
+empresa; a pergunta informativa só informa e nunca muda o grupo de ninguém. A
+tela de quem se candidata **diz qual pergunta a empresa considera
+indispensável**, antes da resposta: dizer ajuda quem responde honestamente, e
+quem mente mentiria de qualquer forma.
+
+**Nenhuma resposta vem marcada de antemão.** "Não" como padrão faria uma pessoa
+distraída se candidatar dizendo que não tem a CNH que tem; o envio só se
+habilita com todas respondidas, e a tela diz quantas faltam.
+
+**As perguntas moram na linha da vaga (`vagas.perguntas`, jsonb), e as
+respostas na da candidatura (`candidaturas.respostas`)**, e não em tabelas à
+parte: publicar é uma instrução só, e a vaga não pode ficar no ar sem as
+perguntas que a empresa escreveu — nem a candidatura sem as respostas. O banco
+repete o que a aplicação confere (`candidaturas_confere_triagem`): vaga com
+perguntas não recebe candidatura sem respostas completas (`23514`, que o
+repositório traduz em "responda a todas as perguntas"), e vaga **sem** pergunta
+descarta o que vier. O teto de três também é do banco. A comparação `atende` é
+uma função só (`src/lib/triagem.ts`), compartilhada entre a tela de quem se
+candidata, a lista da empresa e a ficha: três cópias divergiriam no primeiro
+que mudasse. Resposta que falta, numa vaga com pergunta eliminatória, conta
+como "não atende" — "não sabemos" não é "atende".
+
+**A pergunta não aceita link** (a mesma regra do cargo, #447: é texto de
+terceiro que a Lupa mostra a quem tem conta), nem repetida, e **não se edita
+depois de publicada**, como o resto da vaga (#173). A vaga continua
+denunciável. O que isto não é: filtro de candidato, ou triagem automática —
+continua fora do escopo por decisão. A Política de Privacidade diz que as
+respostas ficam na candidatura, chegam à empresa dona da vaga junto do
+currículo e somem com a candidatura (excluir a conta a apaga em cascata); os
+Termos dizem o que "eliminatória" faz e que quem pergunta não pode discriminar
+por critério vedado em lei.
+
 ### Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a

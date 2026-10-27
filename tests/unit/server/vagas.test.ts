@@ -97,6 +97,29 @@ describe("vagas do painel da empresa", () => {
       expect(vaga.status).toBe("aberta");
     });
 
+    /*
+     * As perguntas de triagem (#491) saem do formulário já em lista, e a
+     * vaga as guarda como vieram — na ordem, com a marca de eliminatória.
+     */
+    it("a vaga guarda as perguntas de triagem que a empresa escreveu", async () => {
+      const vaga = await publicarVaga(empresa, {
+        ...DADOS,
+        perguntas: [
+          { texto: "Tem CNH D?", eliminatoria: true },
+          { texto: "Pode trabalhar à noite?", eliminatoria: false },
+        ],
+      });
+
+      expect(vaga.perguntas).toEqual([
+        { texto: "Tem CNH D?", eliminatoria: true },
+        { texto: "Pode trabalhar à noite?", eliminatoria: false },
+      ]);
+    });
+
+    it("vaga sem pergunta sai com a lista vazia", async () => {
+      expect((await publicarVaga(empresa, DADOS)).perguntas).toEqual([]);
+    });
+
     it("candidato não publica vaga", async () => {
       const erro = await capturar(() => publicarVaga(candidato, DADOS));
       expect(erro.codigo).toBe("sem_permissao");

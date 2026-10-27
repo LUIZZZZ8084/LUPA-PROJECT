@@ -178,6 +178,16 @@ export default function TermosPage() {
           não nos impede de remover, por conta própria, o que violar estes
           termos.
         </p>
+        <p>
+          <strong>Perguntas de triagem.</strong> Ao publicar, a empresa pode
+          acrescentar até três perguntas de sim ou não, e marcar cada uma como
+          eliminatória ou só informativa. Quem se candidata responde antes de
+          enviar. Eliminatória não esconde nem barra ninguém: quem responde Não
+          envia a candidatura do mesmo jeito, e aparece à parte na lista da
+          empresa. As perguntas não aceitam link, e não mudam depois de
+          publicadas. É responsabilidade de quem pergunta não discriminar por
+          critério vedado em lei.
+        </p>
       </Artigo>
 
       <Artigo n={6} titulo="O que não é permitido">

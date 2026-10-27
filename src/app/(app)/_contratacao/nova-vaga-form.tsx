@@ -451,6 +451,68 @@ export function NewJobForm({
             />
           </Field>
 
+          {/*
+            Perguntas de triagem (#491): opcionais, até três, de sim ou não.
+            "Eliminatória" separa quem responde Não numa lista à parte — não
+            esconde nem barra ninguém, e a tela diz isso antes da empresa
+            marcar.
+          */}
+          <fieldset>
+            <legend className="mb-1 font-medium text-sm">
+              Perguntas para quem se candidata{" "}
+              <span className="font-normal text-faint">(opcional)</span>
+            </legend>
+            <p className="mb-3 text-faint text-xs leading-relaxed">
+              Até 3 perguntas de sim ou não, como &ldquo;Tem CNH D?&rdquo;. Quem
+              se candidata responde antes de enviar. Marque{" "}
+              <strong>Eliminatória</strong> quando a resposta esperada é Sim:
+              quem responder Não aparece separado na sua lista, mas ninguém é
+              escondido nem barrado. Depois de publicada, a vaga não muda as
+              perguntas.
+            </p>
+            <div className="space-y-3">
+              {[1, 2, 3].map((n) => (
+                <div
+                  key={n}
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center"
+                >
+                  <Input
+                    name={`pergunta${n}`}
+                    maxLength={120}
+                    aria-label={`Pergunta ${n}`}
+                    placeholder={
+                      n === 1
+                        ? "Ex.: Tem CNH categoria D?"
+                        : "Ex.: Pode trabalhar à noite?"
+                    }
+                  />
+                  <label className="flex min-h-11 items-center gap-2 text-muted text-sm">
+                    <input
+                      type="checkbox"
+                      name={`eliminatoria${n}`}
+                      aria-label={`Pergunta ${n} é eliminatória`}
+                      className="accent-empresas"
+                    />
+                    Eliminatória
+                  </label>
+                </div>
+              ))}
+            </div>
+            {(
+              [
+                state.campos?.pergunta1,
+                state.campos?.pergunta2,
+                state.campos?.pergunta3,
+              ] as (string | undefined)[]
+            )
+              .filter(Boolean)
+              .map((erro) => (
+                <p key={erro} className="mt-1.5 text-danger text-xs">
+                  {erro}
+                </p>
+              ))}
+          </fieldset>
+
           {state.erro && (
             <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
               {state.erro}

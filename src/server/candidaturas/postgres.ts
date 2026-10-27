@@ -2,6 +2,7 @@ import "server-only";
 
 import { TETO_CANDIDATURAS } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
+import { respostasValidas } from "@/lib/triagem";
 import { erros } from "../errors";
 import type {
   Candidatura,
@@ -17,6 +18,7 @@ function paraCandidatura(linha: Record<string, unknown>): Candidatura {
     candidatoId: String(linha.candidato_id),
     status: linha.status as StatusCandidatura,
     criadoEm: String(linha.criado_em),
+    respostas: respostasValidas(linha.respostas),
   };
 }
 
@@ -96,7 +98,11 @@ export class RepositorioCandidaturasPostgres
     const supabase = await cliente();
     const { data, error } = await supabase
       .from("candidaturas")
-      .insert({ vaga_id: dados.vagaId, candidato_id: dados.candidatoId })
+      .insert({
+        vaga_id: dados.vagaId,
+        candidato_id: dados.candidatoId,
+        respostas: dados.respostas ?? null,
+      })
       .select("*")
       .single();
 
@@ -104,6 +110,14 @@ export class RepositorioCandidaturasPostgres
       // 23505 = índice único (vaga_id, candidato_id).
       if (error.code === "23505") {
         throw erros.conflito("Você já se candidatou a esta vaga.");
+      }
+      // 23514 = a trava do banco (`candidaturas_confere_triagem`): a vaga
+      // tem perguntas e as respostas não vieram completas.
+      if (error.code === "23514") {
+        throw erros.validacao(
+          [{ campo: "respostas", mensagem: "Responda a todas as perguntas." }],
+          "Responda a todas as perguntas antes de enviar.",
+        );
       }
       throw erros.indisponivel(error.message);
     }

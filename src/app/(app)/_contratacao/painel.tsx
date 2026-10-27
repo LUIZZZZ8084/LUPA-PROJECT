@@ -33,6 +33,7 @@ import {
   vagaExpirada,
   whatsappLink,
 } from "@/lib/format";
+import { motivosDeNaoAtender } from "@/lib/triagem";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import {
@@ -249,6 +250,103 @@ export async function PainelDeContratacao({
    * links voltam sozinhos, sem ninguém lembrar deste arquivo.
    */
   const buscaCandidatos = pode(sessao.papel, "candidato:buscar_disponiveis");
+
+  /*
+   * Quem respondeu o que a vaga exigia vem primeiro, e quem não, num grupo à
+   * parte (#491). A ordem dentro de cada grupo é a que a lista já tinha.
+   */
+  const triagem = new Map(
+    applications.map((a) => [
+      a.id,
+      motivosDeNaoAtender(a.job_questions ?? [], a.answers),
+    ]),
+  );
+  const atendem = applications.filter((a) => triagem.get(a.id)?.length === 0);
+  const naoAtendem = applications.filter(
+    (a) => (triagem.get(a.id)?.length ?? 0) > 0,
+  );
+
+  const linhaDaCandidatura = (app: (typeof applications)[number]) => (
+    <li
+      key={app.id}
+      /*
+          Duas linhas no celular, uma no desktop (#252).
+
+          Numa fileira só, avatar, %, WhatsApp e o seletor de
+          estágio não encolhem — quem encolhia era o nome. Em
+          360 px a empresa lia "E…", "W.", "P": não conseguia
+          saber quem tinha se candidatado. A varredura de rolagem
+          lateral passava verde, porque nada vazava; o `truncate`
+          fazia exatamente o que promete.
+        */
+      className="flex flex-col gap-2 p-4 transition-colors hover:bg-panel-2 sm:flex-row sm:items-center sm:gap-3"
+    >
+      {/*
+          A linha inteira abre a ficha: nome e vaga não
+          bastam para decidir chamar alguém, e antes disto não
+          havia para onde clicar.
+        */}
+      <Link
+        href={`${area.base}/candidaturas/${app.id}`}
+        className="group flex min-h-11 min-w-0 flex-1 items-center gap-3"
+      >
+        <Avatar
+          name={app.candidate.full_name}
+          src={app.candidate.avatar_url}
+          size="sm"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold underline-offset-2 group-hover:underline">
+            {app.candidate.full_name}
+          </p>
+          <p className="truncate text-xs text-muted">
+            {app.job_title}
+            {` · ${timeAgo(app.created_at)}`}
+          </p>
+          {/*
+              O motivo, à vista (#491): a empresa lê por que a pessoa
+              está no grupo à parte, sem abrir a ficha.
+            */}
+          {(triagem.get(app.id)?.length ?? 0) > 0 && (
+            <p className="truncate text-warn text-xs">
+              Respondeu Não: {triagem.get(app.id)?.join(" · ")}
+            </p>
+          )}
+        </div>
+      </Link>
+
+      {/*
+          Recuo de `pl-12` no celular: alinha os controles com o
+          texto, e não com o avatar, para a segunda linha ler como
+          parte da mesma pessoa.
+        */}
+      <div className="flex items-center gap-2 pl-12 sm:pl-0">
+        <SeloDeMatch match={match.get(app.id)} />
+
+        {/*
+          Atalho de contato na própria lista: o caminho entre
+          receber o currículo e chamar a pessoa não deveria ter
+          uma tela no meio.
+        */}
+        {app.candidate.phone && (
+          <a
+            href={whatsappLink(
+              app.candidate.phone,
+              `Olá! Vimos sua candidatura para a vaga de ${app.job_title} na Lupa e gostaríamos de conversar.`,
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Falar com ${app.candidate.full_name} no WhatsApp`}
+            className="flex h-11 w-11 flex-none items-center justify-center rounded-lg border border-line text-muted transition-colors hover:border-vagas hover:text-vagas"
+          >
+            <MessageCircle size={16} />
+          </a>
+        )}
+
+        <MoverCandidaturaSelect id={app.id} statusAtual={app.status} />
+      </div>
+    </li>
+  );
 
   return (
     <PageShell>
@@ -484,81 +582,18 @@ export async function PainelDeContratacao({
           />
         ) : (
           <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
-            {applications.map((app) => (
-              <li
-                key={app.id}
-                /*
-                  Duas linhas no celular, uma no desktop (#252).
-
-                  Numa fileira só, avatar, %, WhatsApp e o seletor de
-                  estágio não encolhem — quem encolhia era o nome. Em
-                  360 px a empresa lia "E…", "W.", "P": não conseguia
-                  saber quem tinha se candidatado. A varredura de rolagem
-                  lateral passava verde, porque nada vazava; o `truncate`
-                  fazia exatamente o que promete.
-                */
-                className="flex flex-col gap-2 p-4 transition-colors hover:bg-panel-2 sm:flex-row sm:items-center sm:gap-3"
-              >
-                {/*
-                  A linha inteira abre a ficha: nome e vaga não
-                  bastam para decidir chamar alguém, e antes disto não
-                  havia para onde clicar.
-                */}
-                <Link
-                  href={`${area.base}/candidaturas/${app.id}`}
-                  className="group flex min-h-11 min-w-0 flex-1 items-center gap-3"
-                >
-                  <Avatar
-                    name={app.candidate.full_name}
-                    src={app.candidate.avatar_url}
-                    size="sm"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold underline-offset-2 group-hover:underline">
-                      {app.candidate.full_name}
-                    </p>
-                    <p className="truncate text-xs text-muted">
-                      {app.job_title}
-                      {` · ${timeAgo(app.created_at)}`}
-                    </p>
-                  </div>
-                </Link>
-
-                {/*
-                  Recuo de `pl-12` no celular: alinha os controles com o
-                  texto, e não com o avatar, para a segunda linha ler como
-                  parte da mesma pessoa.
-                */}
-                <div className="flex items-center gap-2 pl-12 sm:pl-0">
-                  <SeloDeMatch match={match.get(app.id)} />
-
-                  {/*
-                  Atalho de contato na própria lista: o caminho entre
-                  receber o currículo e chamar a pessoa não deveria ter
-                  uma tela no meio.
-                */}
-                  {app.candidate.phone && (
-                    <a
-                      href={whatsappLink(
-                        app.candidate.phone,
-                        `Olá! Vimos sua candidatura para a vaga de ${app.job_title} na Lupa e gostaríamos de conversar.`,
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`Falar com ${app.candidate.full_name} no WhatsApp`}
-                      className="flex h-11 w-11 flex-none items-center justify-center rounded-lg border border-line text-muted transition-colors hover:border-vagas hover:text-vagas"
-                    >
-                      <MessageCircle size={16} />
-                    </a>
-                  )}
-
-                  <MoverCandidaturaSelect
-                    id={app.id}
-                    statusAtual={app.status}
-                  />
-                </div>
+            {atendem.map(linhaDaCandidatura)}
+            {naoAtendem.length > 0 && (
+              /*
+                Quem não respondeu o que a vaga exigia aparece à parte, e não
+                some (#491): a decisão de olhar continua sendo da empresa, e
+                o motivo está escrito em cada linha.
+              */
+              <li className="bg-panel-2 px-4 py-2 font-semibold text-muted text-xs">
+                Não responderam o que a vaga exigia ({naoAtendem.length})
               </li>
-            ))}
+            )}
+            {naoAtendem.map(linhaDaCandidatura)}
           </ul>
         )}
       </section>

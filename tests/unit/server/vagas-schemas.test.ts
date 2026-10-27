@@ -230,3 +230,109 @@ describe("schemaIdVaga", () => {
     expect(schemaIdVaga.safeParse({ id: "" }).success).toBe(false);
   });
 });
+
+/*
+ * As perguntas de triagem (#491) chegam do formulário como `pergunta1..3` e
+ * `eliminatoria1..3`, e saem como uma lista só.
+ */
+describe("perguntas de triagem", () => {
+  const perguntasDe = (extra: Record<string, unknown>) => {
+    const r = schemaNovaVaga.safeParse({ ...DADOS, ...extra });
+    return r.success ? r.data.perguntas : null;
+  };
+
+  it("vaga sem pergunta sai com lista vazia", () => {
+    expect(perguntasDe({})).toEqual([]);
+  });
+
+  it("monta a lista na ordem escrita, com a marca de eliminatória", () => {
+    expect(
+      perguntasDe({
+        pergunta1: "Tem CNH D?",
+        eliminatoria1: "on",
+        pergunta2: "Pode trabalhar à noite?",
+        pergunta3: "Mora em Sinop?",
+        eliminatoria3: "on",
+      }),
+    ).toEqual([
+      { texto: "Tem CNH D?", eliminatoria: true },
+      { texto: "Pode trabalhar à noite?", eliminatoria: false },
+      { texto: "Mora em Sinop?", eliminatoria: true },
+    ]);
+  });
+
+  /** Caixa desmarcada é ausência: não chega no formulário, e vale como "não". */
+  it("eliminatória ausente é informativa", () => {
+    expect(perguntasDe({ pergunta1: "Tem CNH D?" })).toEqual([
+      { texto: "Tem CNH D?", eliminatoria: false },
+    ]);
+  });
+
+  it("pula as em branco e junta as preenchidas", () => {
+    expect(
+      perguntasDe({
+        pergunta1: "   ",
+        pergunta2: "Tem CNH D?",
+        eliminatoria2: "on",
+        pergunta3: "",
+        eliminatoria3: "on",
+      }),
+    ).toEqual([{ texto: "Tem CNH D?", eliminatoria: true }]);
+  });
+
+  /**
+   * Pergunta é texto de terceiro que a Lupa mostra a quem tem conta; a
+   * mesma regra do cargo (#447).
+   */
+  it.each([
+    "Já viu https://vagas-rapidas.example?",
+    "Conhece www.renda-extra.example?",
+    "Quer ganhar mais em lupa-seguranca.com?",
+  ])("recusa link: %s", (texto) => {
+    const r = schemaNovaVaga.safeParse({ ...DADOS, pergunta1: texto });
+
+    expect(r.success).toBe(false);
+    expect(
+      !r.success && r.error.issues.some((i) => i.path[0] === "pergunta1"),
+    ).toBe(true);
+  });
+
+  it("aceita o que parece abreviação, e não link", () => {
+    expect(perguntasDe({ pergunta1: "Tem CNH cat. D ou E?" })).toHaveLength(1);
+    expect(
+      perguntasDe({ pergunta1: "Já trabalhou como aux. de T.I.?" }),
+    ).toHaveLength(1);
+  });
+
+  it("recusa pergunta curta demais ou longa demais", () => {
+    expect(perguntasDe({ pergunta1: "Sim?" })).toBeNull();
+    expect(perguntasDe({ pergunta1: `${"a".repeat(121)}?` })).toBeNull();
+    expect(perguntasDe({ pergunta1: `${"a".repeat(119)}?` })).toHaveLength(1);
+  });
+
+  it("recusa a mesma pergunta duas vezes, mesmo com outra caixa", () => {
+    const r = schemaNovaVaga.safeParse({
+      ...DADOS,
+      pergunta1: "Tem CNH D?",
+      pergunta2: "TEM CNH D?",
+    });
+
+    expect(r.success).toBe(false);
+    expect(
+      !r.success && r.error.issues.some((i) => i.path[0] === "pergunta2"),
+    ).toBe(true);
+  });
+
+  it("não deixa os campos soltos no resultado: só a lista", () => {
+    const r = schemaNovaVaga.safeParse({
+      ...DADOS,
+      pergunta1: "Tem CNH D?",
+      eliminatoria1: "on",
+    });
+
+    expect(r.success && Object.keys(r.data)).not.toEqual(
+      expect.arrayContaining(["pergunta1", "eliminatoria1"]),
+    );
+    expect(r.success && "perguntas" in r.data).toBe(true);
+  });
+});

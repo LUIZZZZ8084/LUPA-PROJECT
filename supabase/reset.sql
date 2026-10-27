@@ -85,6 +85,7 @@ drop function if exists atualizar_nota_prestador() cascade;
 drop function if exists estender_mensalidade_vaga(uuid, integer) cascade;
 drop function if exists consumir_credito_vaga(uuid) cascade;
 drop function if exists creditar_vaga(uuid, integer) cascade;
+drop function if exists candidatura_confere_triagem() cascade;
 drop function if exists tocar_atualizado_em() cascade;
 
 -- Os tipos enum por último: as colunas que os usavam já se foram.
