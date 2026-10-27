@@ -72,7 +72,7 @@ test.describe("ficha do candidato", () => {
     await page.goto("/empresa");
     await page.locator('a[href^="/empresa/candidaturas/"]').first().click();
 
-    const whats = page.getByRole("link", { name: /falar no whatsapp/i });
+    const whats = page.getByRole("link", { name: /chamar no whatsapp/i });
     await expect(whats).toBeVisible();
 
     /*
@@ -84,6 +84,8 @@ test.describe("ficha do candidato", () => {
     const href = await whats.getAttribute("href");
     expect(href).toContain("wa.me/55");
     expect(decodeURIComponent(href ?? "")).toContain("candidatura");
+    // E de quem chama (#493): sem o nome da empresa, quem recebe desconfia.
+    expect(decodeURIComponent(href ?? "")).toContain("Aqui é da ");
 
     await expect(
       page.getByRole("link", { name: /enviar e-mail/i }),
