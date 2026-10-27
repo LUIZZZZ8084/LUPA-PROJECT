@@ -142,6 +142,7 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
    */
   "prestador.assinar_mensalidade": porJanela(5),
   "prestador.cancelar_renovacao": porJanela(5),
+  "empresa.cancelar_plano": porJanela(5),
   "empresa.comprar_creditos": porJanela(5),
   "candidato.comprar_gerador_curriculo": porJanela(5),
 

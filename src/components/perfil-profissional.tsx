@@ -12,6 +12,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { formatStartingPrice } from "@/lib/format";
+import { seloDoDireito } from "@/lib/planos-empresa";
 import type { ProviderListing } from "@/lib/types";
 import { motivoForaDaVitrine } from "@/lib/vitrine";
 import type {
@@ -346,7 +347,12 @@ export function PerfilEmpresa({
    * lido por teste de componente: buscar a carteira daqui arrastaria o
    * repositório para dentro do teste. A página já carrega o valor.
    */
-  direito?: { mensalAtivo: boolean; creditos: number } | null;
+  direito?: {
+    mensalAtivo: boolean;
+    creditos: number;
+    limiteNoAr?: number | null;
+    primeiraGratis?: boolean;
+  } | null;
   /**
    * O botão de conferência, injetado pela página.
    *
@@ -405,11 +411,7 @@ export function PerfilEmpresa({
       <div className="mt-3 flex items-center gap-2">
         <Award size={14} className="text-empresas" />
         <Badge tone={direito?.mensalAtivo ? "empresas" : "neutral"}>
-          {direito?.mensalAtivo
-            ? "Plano mensal ativo"
-            : direito?.creditos === 1
-              ? "1 vaga para publicar"
-              : `${direito?.creditos ?? 0} vagas para publicar`}
+          {seloDoDireito(direito ?? { mensalAtivo: false, creditos: 0 }).texto}
         </Badge>
       </div>
 

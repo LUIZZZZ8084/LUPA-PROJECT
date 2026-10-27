@@ -51,10 +51,10 @@ test.describe("plano depois do cadastro da empresa", () => {
 
     const gratis = page.getByRole("link", { name: /continuar grátis/i });
     const primeiraCompra = page.getByRole("button", {
-      name: /comprar 1 vaga/i,
+      name: /assinar o plano 5/i,
     });
     const ultimaCompra = page.getByRole("button", {
-      name: /assinar o plano mensal/i,
+      name: /comprar 1 vaga/i,
     });
 
     const caixaGratis = await gratis.boundingBox();

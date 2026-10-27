@@ -69,6 +69,40 @@ describe("vagas em modo demonstração", () => {
     expect(vaga.empresaId).not.toBe(contaNova.usuarioId);
   });
 
+  /**
+   * O limite do plano (#489) conta o que a conta publicou. Em demonstração
+   * as vagas de exemplo e as das outras contas pertencem à mesma empresa
+   * fictícia; contá-las deixaria o Plano 5 de uma conta nova cheio antes de
+   * a pessoa publicar a primeira.
+   */
+  describe("limite do plano", () => {
+    it("não conta as vagas de exemplo nem as de outra conta", async () => {
+      const repo = new RepositorioVagasMemoria();
+      const restaurarRepo = usarRepositorioVagas(repo);
+      try {
+        const a: Autenticado = {
+          usuarioId: crypto.randomUUID(),
+          papel: "empresa",
+        };
+        const b: Autenticado = {
+          usuarioId: crypto.randomUUID(),
+          papel: "empresa",
+        };
+        await publicarVaga(a, DADOS);
+        await publicarVaga(a, { ...DADOS, titulo: "Segunda da A" });
+        await publicarVaga(b, { ...DADOS, titulo: "Primeira da B" });
+
+        expect(await repo.contarNoAr(DEMO_COMPANY_ID, a.usuarioId)).toBe(2);
+        expect(await repo.contarNoAr(DEMO_COMPANY_ID, b.usuarioId)).toBe(1);
+        expect(
+          await repo.contarNoAr(DEMO_COMPANY_ID, crypto.randomUUID()),
+        ).toBe(0);
+      } finally {
+        restaurarRepo();
+      }
+    });
+  });
+
   it("duas contas de empresa diferentes caem na mesma empresa", async () => {
     const a: Autenticado = { usuarioId: crypto.randomUUID(), papel: "empresa" };
     const b: Autenticado = { usuarioId: crypto.randomUUID(), papel: "empresa" };
