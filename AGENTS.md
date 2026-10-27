@@ -2501,6 +2501,36 @@ e-mail é mesmo do parceiro — o admin digita o endereço que o parceiro passou
 E a parceria com prazo não avisa ninguém quando vence: o benefício expira
 sozinho, pela própria data, como uma mensalidade que não renovou.
 
+### A visão geral do painel, em cards (#507)
+
+Pedido do Luiz em 27/10/2026, com um modelo de "bento" com gráficos em SVG
+como inspiração — "livre para editar e remover o que achar desnecessário".
+O topo do painel virou quatro cards (`visao-geral.tsx`), todos com o dado que
+o polling já traz, sem consulta nova nem SQL: **receita que se repete** com o
+medidor de quanto ela cobre dos custos; **contas**, com o ritmo da semana
+contra a anterior e os 30 dias em ondas (quem procura acima da linha, quem
+contrata abaixo); **onde estão as contas**, um mapa de área por estado
+colorido pela região do IBGE, com troca de papel; e **onde o funil vaza**, um
+radar da fração de cada papel que chega a cada passo, com os dois passos que
+mais perdem gente escritos embaixo.
+
+Saíram os cartões de totais e as barras de cadastros, que os cards
+substituem; o resto ficou — o caixa, "O Lupa já se paga?" com a edição de
+custos, o funil em números, as listas de lugares e a pressão. Do modelo
+saíram também o selo do autor, as fontes buscadas no Google (a CSP não deixa,
+e a Lupa tem as dela), a animação contínua das ondas — um laço de quadros num
+painel que fica aberto o dia todo — e as cores fixas: as superfícies e as
+cores são os tokens do tema, nos dois modos.
+
+**As contas são funções puras** (`visao-geral-dados.ts`), testadas sem
+desenhar nada, e nenhuma desenha zero como medida: sem custo cadastrado o
+medidor diz "—", não "100%"; sem cadastro na semana anterior não há variação;
+papel sem conta diz isso em vez de um mapa vazio. **A curva das ondas não
+passa do ponto**: os pontos de controle ficam presos entre os dois pontos do
+trecho, porque a linha do meio separa quem procura de quem contrata, e um
+pico de candidatos desenhava um vale do lado das empresas.
+
+
 ### Polling, não websocket, no painel do admin
 
 Conexão aberta em serverless exige um serviço à parte, com custo e mais uma
