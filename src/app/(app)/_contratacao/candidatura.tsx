@@ -13,7 +13,9 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
+import { mensagemParaCandidato } from "@/lib/chamada";
 import { APPLICATION_LABELS, APPLICATION_TONE } from "@/lib/constants";
+import { empresaDoPainel, getCompany } from "@/lib/data";
 import { formatPhone, timeAgo, whatsappLink } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import {
@@ -49,9 +51,18 @@ export async function FichaDaCandidatura({
    */
   after(() => marcarComoVisualizada(candidatura.id));
 
-  const mensagem =
-    `Olá, ${primeiroNome(c.full_name)}! Vimos sua candidatura para a vaga ` +
-    `de ${candidatura.job_title} na Lupa e gostaríamos de conversar.`;
+  /*
+   * A mensagem leva o nome de quem chama (#493): sem ele, quem recebe lê um
+   * número desconhecido falando de uma vaga, e desconfia. A empresa é a da
+   * sessão, e a ficha só abre para ela.
+   */
+  const empresa = (await getCompany(empresaDoPainel(sessao?.usuarioId ?? null)))
+    ?.company_name;
+  const mensagem = mensagemParaCandidato({
+    candidato: c.full_name,
+    vaga: candidatura.job_title,
+    empresa: empresa ?? "nossa empresa",
+  });
 
   return (
     <PageShell width="narrow">
@@ -92,7 +103,7 @@ export async function FichaDaCandidatura({
               variant="vagas"
             >
               <MessageCircle size={17} />
-              Falar no WhatsApp
+              Chamar no WhatsApp
             </ButtonLink>
           )}
           {c.email && (
@@ -107,6 +118,16 @@ export async function FichaDaCandidatura({
         {c.phone && (
           <p className="mt-1 text-xs text-muted">
             WhatsApp: {formatPhone(c.phone)}
+          </p>
+        )}
+        {/*
+          A mensagem é só o ponto de partida (#493): ela abre escrita no
+          campo do WhatsApp, e a empresa edita antes de enviar.
+        */}
+        {c.phone && (
+          <p className="mt-1 text-faint text-xs leading-relaxed">
+            A mensagem abre pronta, com seu nome e o cargo da vaga. Edite antes
+            de enviar.
           </p>
         )}
       </Panel>
@@ -210,10 +231,6 @@ export async function FichaDaCandidatura({
       </Panel>
     </PageShell>
   );
-}
-
-function primeiroNome(nome: string): string {
-  return nome.trim().split(/\s+/)[0] ?? nome;
 }
 
 function Linha({

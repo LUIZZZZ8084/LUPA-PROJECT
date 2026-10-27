@@ -41,6 +41,41 @@ export class RepositorioVisualizacoesPostgres
     if (error) throw erros.indisponivel(`visualização: ${error.message}`);
   }
 
+  async totaisPorVaga(empresaId: string): Promise<Map<string, number>> {
+    const supabase = await cliente();
+
+    const vagas = await supabase
+      .from("vagas")
+      .select("id")
+      .eq("empresa_id", empresaId)
+      .limit(TETO_DO_DONO);
+
+    if (vagas.error) {
+      throw erros.indisponivel(`vagas da empresa: ${vagas.error.message}`);
+    }
+
+    const ids = (vagas.data ?? []).map((v) => String(v.id));
+    // Empresa sem vaga não tem o que somar — e `in` com lista vazia é erro.
+    if (ids.length === 0) return new Map();
+
+    const { data, error } = await supabase
+      .from("visualizacoes_vaga")
+      .select("vaga_id, total")
+      .in("vaga_id", ids)
+      .limit(TETO_SERIE_DE_METRICAS);
+
+    if (error) throw erros.indisponivel(`visualizações: ${error.message}`);
+
+    // Somado aqui, pelo mesmo motivo da série: o PostgREST não agrupa sem uma
+    // view por recorte, e o volume de uma empresa cabe numa requisição.
+    const totais = new Map<string, number>();
+    for (const linha of data ?? []) {
+      const id = String(linha.vaga_id);
+      totais.set(id, (totais.get(id) ?? 0) + Number(linha.total));
+    }
+    return totais;
+  }
+
   async serieDaEmpresa(
     empresaId: string,
     dias: number,

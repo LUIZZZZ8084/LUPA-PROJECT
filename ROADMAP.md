@@ -14,6 +14,15 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 26/10/2026:
 
+- Resultado de cada vaga no painel (visualizações, candidaturas e quantas
+  combinam com o que a vaga pede), com o resumo final e "Publicar outra
+  parecida" para a vaga encerrada ou vencida; o chamado no WhatsApp leva o
+  nome da empresa além do nome da pessoa e do cargo; e a página "Quem já se
+  candidatou" reúne, sem repetir, todo mundo que se candidatou a alguma vaga
+  da empresa, com filtro por habilidade e área —
+  [#492](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/492),
+  [#493](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/493),
+  [#494](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/494)
 - Termos de Uso, Política de Privacidade e página de Suporte no ar, com a
   PALU (PALU DESENVOLVIMENTO DE SOFTWARE SOB ENCOMENDA LTDA, CNPJ
   69.787.370/0001-17, sede em Curitiba/PR) identificada como controladora

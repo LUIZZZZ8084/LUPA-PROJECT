@@ -49,9 +49,16 @@ export function NewJobForm({
   cidadeDaEmpresa,
   area,
   direito,
+  modelo = null,
 }: {
   cidadeDaEmpresa: string;
   area: AreaDeContratacao;
+  /**
+   * O texto de uma vaga antiga da própria empresa, para publicar outra
+   * parecida (#492). Só preenche os campos: nada vai ao ar sem a revisão, e a
+   * vaga nova gasta uma vaga do saldo como qualquer outra.
+   */
+  modelo?: DadosDaVaga | null;
   /**
    * O que a pessoa pode publicar hoje — para a tela avisar **antes**.
    *
@@ -67,7 +74,7 @@ export function NewJobForm({
     publicarVagaComEstado,
     inicial,
   );
-  const [cidade, setCidade] = useCidade(cidadeDaEmpresa);
+  const [cidade, setCidade] = useCidade(modelo?.cidade || cidadeDaEmpresa);
   const [revisao, setRevisao] = useState<{
     dados: DadosDaVaga;
     formData: FormData;
@@ -113,6 +120,15 @@ export function NewJobForm({
         começo é mais barato para ela e não custa nada para quem tem
         saldo.
       */}
+      {!revisao && modelo && (
+        <Panel className="mb-4 border-empresas/30">
+          <p className="text-sm leading-relaxed">
+            Preenchido com o texto de <strong>{modelo.titulo}</strong>. Confira
+            tudo e ajuste o que mudou: esta é uma vaga nova, e a revisão vem
+            antes de ir ao ar.
+          </p>
+        </Panel>
+      )}
       {!revisao && (
         <Panel className={cn("mb-4", semSaldo && "border-warn/40 bg-warn/10")}>
           <div className="flex items-start gap-3">
@@ -249,13 +265,18 @@ export function NewJobForm({
             <Input
               name="titulo"
               placeholder="Ex.: Auxiliar Administrativo"
+              defaultValue={modelo?.titulo}
               required
             />
           </Field>
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Categoria" required error={state.campos?.categoria}>
-              <Select name="categoria" required defaultValue="">
+              <Select
+                name="categoria"
+                required
+                defaultValue={modelo?.categoria ?? ""}
+              >
                 <option value="" disabled>
                   Escolha uma área
                 </option>
@@ -272,7 +293,11 @@ export function NewJobForm({
               required
               error={state.campos?.tipoContrato}
             >
-              <Select name="tipoContrato" required defaultValue="">
+              <Select
+                name="tipoContrato"
+                required
+                defaultValue={modelo?.tipoContrato ?? ""}
+              >
                 <option value="" disabled>
                   Escolha o tipo
                 </option>
@@ -304,6 +329,7 @@ export function NewJobForm({
                     type="radio"
                     name="modalidade"
                     value={modo}
+                    defaultChecked={modelo?.modalidade === modo}
                     required
                     className="accent-empresas"
                   />
@@ -348,6 +374,7 @@ export function NewJobForm({
                     type="radio"
                     name="paraPcd"
                     value={valor}
+                    defaultChecked={modelo?.paraPcd === valor}
                     required
                     className="accent-empresas"
                   />
@@ -379,7 +406,12 @@ export function NewJobForm({
               error={state.campos?.bairro}
               hint="Opcional. Aparece só no anúncio da vaga."
             >
-              <Input name="bairro" maxLength={60} placeholder="Ex.: Centro" />
+              <Input
+                name="bairro"
+                maxLength={60}
+                placeholder="Ex.: Centro"
+                defaultValue={modelo?.bairro}
+              />
             </Field>
           </div>
 
@@ -392,6 +424,7 @@ export function NewJobForm({
             <Input
               name="endereco"
               placeholder="Ex.: Av. das Itaúbas, 1200, perto do terminal rodoviário"
+              defaultValue={modelo?.endereco}
               required
             />
           </Field>
@@ -404,6 +437,7 @@ export function NewJobForm({
             <Input
               name="habilidades"
               placeholder="Ex.: colheitadeira, CNH D, manutenção básica"
+              defaultValue={modelo?.habilidades}
             />
           </Field>
 
@@ -420,6 +454,7 @@ export function NewJobForm({
                 step={100}
                 inputMode="numeric"
                 placeholder="Ex.: 1800"
+                defaultValue={modelo?.salarioMin}
               />
             </Field>
 
@@ -431,6 +466,7 @@ export function NewJobForm({
                 step={100}
                 inputMode="numeric"
                 placeholder="Ex.: 2200"
+                defaultValue={modelo?.salarioMax}
               />
             </Field>
           </div>
@@ -444,6 +480,7 @@ export function NewJobForm({
             <Textarea
               name="descricao"
               rows={9}
+              defaultValue={modelo?.descricao}
               required
               placeholder={
                 "Atividades do dia a dia...\n\nRequisitos: ...\n\nOferecemos: vale-transporte, vale-refeição..."

@@ -1,13 +1,21 @@
 import { notFound } from "next/navigation";
 import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
+import { umParametro } from "@/lib/busca";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
 import { direitoDePublicar } from "@/server/carteiras/servico";
+import { modeloDeVaga } from "@/server/vagas/modelo";
 import type { AreaDeContratacao } from "./area";
 import { NewJobForm } from "./nova-vaga-form";
 
-export async function PublicarVaga({ area }: { area: AreaDeContratacao }) {
+export async function PublicarVaga({
+  area,
+  searchParams,
+}: {
+  area: AreaDeContratacao;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   /*
    * A cidade da empresa é só o valor inicial, não uma trava: quem tem sede
    * em Sinop e contrata em Sorriso precisa poder trocar. O que não pode é
@@ -27,6 +35,10 @@ export async function PublicarVaga({ area }: { area: AreaDeContratacao }) {
    */
   if (!pode(sessao.papel, "vaga:publicar")) notFound();
 
+  const modelo = await modeloDeVaga(
+    sessao.usuarioId,
+    umParametro(await searchParams, "modelo"),
+  );
   const [usuario, direito] = await Promise.all([
     usuarioDaSessao(sessao.usuarioId),
     /*
@@ -50,6 +62,7 @@ export async function PublicarVaga({ area }: { area: AreaDeContratacao }) {
         cidadeDaEmpresa={usuario?.cidade ?? ""}
         area={area}
         direito={direito}
+        modelo={modelo}
       />
     </PageShell>
   );

@@ -58,6 +58,37 @@ export class RepositorioVisualizacoesMemoria
     }
   }
 
+  /**
+   * Só as vagas que já existiam antes desta sessão ganham histórico. Uma
+   * vaga publicada agora, na demonstração, deve começar do zero — senão
+   * quem acabou de publicar vê 200 visualizações de ontem.
+   */
+  private semearAsAntigas(
+    vagas: { id: string; criadoEm: string }[],
+    janela: string[],
+  ): void {
+    for (const vaga of vagas) {
+      const nascidaAgora =
+        vaga.criadoEm.slice(0, 10) === janela[janela.length - 1];
+      if (!nascidaAgora) this.semear(vaga.id, janela);
+    }
+  }
+
+  async totaisPorVaga(empresaId: string): Promise<Map<string, number>> {
+    const vagas = await repositorioVagas().porEmpresa(empresaId);
+    this.semearAsAntigas(vagas, diasAte(new Date(), 30));
+
+    const totais = new Map<string, number>();
+    for (const vaga of vagas) {
+      const porDia = this.contagens.get(vaga.id);
+      if (!porDia) continue;
+      let soma = 0;
+      for (const total of porDia.values()) soma += total;
+      totais.set(vaga.id, soma);
+    }
+    return totais;
+  }
+
   async serieDaEmpresa(
     empresaId: string,
     dias: number,
@@ -65,14 +96,7 @@ export class RepositorioVisualizacoesMemoria
     const janela = diasAte(new Date(), dias);
     const vagas = await repositorioVagas().porEmpresa(empresaId);
 
-    // Só as vagas que já existiam antes desta sessão ganham histórico. Uma
-    // vaga publicada agora, na demonstração, deve começar do zero — senão
-    // quem acabou de publicar vê 200 visualizações de ontem.
-    for (const vaga of vagas) {
-      const nascidaAgora =
-        vaga.criadoEm.slice(0, 10) === janela[janela.length - 1];
-      if (!nascidaAgora) this.semear(vaga.id, janela);
-    }
+    this.semearAsAntigas(vagas, janela);
 
     const idsDaEmpresa = new Set(vagas.map((v) => v.id));
 
