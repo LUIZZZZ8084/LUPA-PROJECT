@@ -41,8 +41,10 @@ import {
   resultadosDasVagas,
 } from "@/lib/resultado-da-vaga";
 import { motivosDeNaoAtender } from "@/lib/triagem";
+import type { Company } from "@/lib/types";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
+import { usuarioDaSessao } from "@/server/auth/servico";
 import {
   type MatchDaCandidatura,
   matchPorCandidatura,
@@ -97,6 +99,23 @@ function SeloDeMatch({ match }: { match: MatchDaCandidatura | undefined }) {
   );
 }
 
+/** A empresa do admin enquanto ela não tem perfil gravado (#499). */
+async function empresaDoAdmin(usuarioId: string): Promise<Company | null> {
+  const usuario = await usuarioDaSessao(usuarioId);
+  if (!usuario) return null;
+
+  return {
+    profile_id: usuario.id,
+    company_name: usuario.nomeCompleto,
+    cnpj: null,
+    logo_url: null,
+    plan: "trial",
+    site: null,
+    instagram: null,
+    facebook: null,
+  };
+}
+
 export async function PainelDeContratacao({
   area,
 }: {
@@ -115,9 +134,9 @@ export async function PainelDeContratacao({
    * portão, e portão que falta é o que a próxima página criada aqui
    * embaixo herda.
    *
-   * 404 e não 403, como no resto da casa. O admin também cai aqui de
-   * propósito: ele enxerga tudo pelo `/admin/painel`, e uma empresa
-   * própria é justamente o que ele não tem.
+   * 404 e não 403, como no resto da casa. O admin passa por este portão
+   * desde a #499: ele tem a empresa dele, e a visão geral continua sendo o
+   * `/admin/painel`.
    */
 
   /*
@@ -174,20 +193,27 @@ export async function PainelDeContratacao({
   }
 
   const companyId = empresaDoPainel(sessao.usuarioId);
-  const [company, jobs, applications, stats, serie, porVaga, recomendados] =
-    await Promise.all([
-      getCompany(companyId),
-      getCompanyJobs(companyId),
-      getCompanyApplications(companyId),
-      getCompanyStats(companyId),
-      // Quem não é empresa cai no estado vazio logo abaixo; pedir a série
-      // antes disso trocaria a explicação por uma tela de erro.
-      temPainelDeEmpresa(sessao) ? serieDoPainel(sessao) : [],
-      temPainelDeEmpresa(sessao)
-        ? visualizacoesPorVaga(sessao)
-        : new Map<string, number>(),
-      recomendadosParaEmpresa(sessao),
-    ]);
+  const [
+    empresaDoBanco,
+    jobs,
+    applications,
+    stats,
+    serie,
+    porVaga,
+    recomendados,
+  ] = await Promise.all([
+    getCompany(companyId),
+    getCompanyJobs(companyId),
+    getCompanyApplications(companyId),
+    getCompanyStats(companyId),
+    // Quem não é empresa cai no estado vazio logo abaixo; pedir a série
+    // antes disso trocaria a explicação por uma tela de erro.
+    temPainelDeEmpresa(sessao) ? serieDoPainel(sessao) : [],
+    temPainelDeEmpresa(sessao)
+      ? visualizacoesPorVaga(sessao)
+      : new Map<string, number>(),
+    recomendadosParaEmpresa(sessao),
+  ]);
   const totais = totaisDaSerie(serie);
   const match = matchPorCandidatura(applications, jobs);
   // O resultado de cada vaga (#492): visualizações, candidaturas e quantas
@@ -195,6 +221,20 @@ export async function PainelDeContratacao({
   const resultados = resultadosDasVagas(jobs, applications, match, porVaga);
   const direito = await direitoDePublicar(sessao.usuarioId);
   const resumoDoPlano = resumoDoDireito(direito);
+
+  /*
+   * O admin abre o painel inteiro antes da primeira vaga (#499).
+   *
+   * A conta dele é criada por script, sem perfil de empresa, e o perfil
+   * nasce na primeira vaga que ele publica. O estado vazio logo abaixo
+   * esconde os planos, "Quem já se candidatou" e o resto dos atalhos — e o
+   * pedido era justamente olhar a área inteira. Nada é gravado aqui: é a
+   * mesma empresa que a primeira vaga vai criar, montada com o nome da
+   * conta.
+   */
+  const company =
+    empresaDoBanco ??
+    (sessao.papel === "admin" ? await empresaDoAdmin(sessao.usuarioId) : null);
 
   /*
    * Sem perfil de contratante, e a tela diz coisas diferentes por papel.
@@ -216,7 +256,7 @@ export async function PainelDeContratacao({
    * conta.
    */
   if (!company) {
-    const contratante = sessao.papel === "prestador_servico";
+    const contratante = sessao.papel !== "empresa";
 
     return (
       <PageShell>

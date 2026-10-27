@@ -158,7 +158,8 @@ export interface PerfilDeCandidato {
  * procurar quem nunca se candidatou.
  *
  * Só o papel `empresa` passa por esta conferência. O outro papel com a
- * capacidade é o admin, que não contrata e enxerga tudo.
+ * capacidade é o admin, que enxerga tudo e passa direto, sem o teto — mesmo
+ * tendo a empresa dele desde a #499.
  */
 export type AcessoABusca =
   | "liberado"

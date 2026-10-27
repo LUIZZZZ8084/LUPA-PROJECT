@@ -1141,12 +1141,42 @@ dentro para dar suporte — painel, métricas, fila de verificação, lista de
 candidatos disponíveis. Decisão do Luiz em 31/08/2026, que afrouxou de
 propósito o corte anterior, mais fechado.
 
-O que continua fora é **escrita com dono**: publicar vaga, se candidatar,
-mover a candidatura de uma empresa. A razão não é desconfiar de quem
-administra — é que essas ações têm autor, e uma vaga publicada por um
-acesso comprometido não deixa rastro de que não foi a empresa. Quando for
-preciso agir como outro papel, que seja por personificação registrada em
-log, onde a ação continua tendo dono.
+O que continua fora é **escrita com dono**: se candidatar, mover a
+candidatura de uma empresa, publicar ou encerrar a vaga dela. A razão não é
+desconfiar de quem administra — é que essas ações têm autor, e uma vaga
+publicada por um acesso comprometido não deixa rastro de que não foi a
+empresa. Quando for preciso agir como outro papel, que seja por
+personificação registrada em log, onde a ação continua tendo dono.
+
+**O admin tem a empresa dele, e só a dele (#499).** Pedido do Luiz em
+27/10/2026: a conta de administração abre `/empresa` — painel, planos e
+vagas, quem já se candidatou, publicar vaga — para olhar a área de
+contratação inteira com a conta que ele usa. Antes, o admin tocava em
+"Empresa" e lia "Sua conta ainda não contrata", e as telas de dentro
+respondiam 404. São as cinco capacidades de contratar na matriz, e a área
+dele é a da empresa (`areaDoPapel`); a visão geral da Lupa continua sendo o
+`/admin/painel`, e o menu da conta dele ganhou os dois atalhos.
+
+**O que mantém de pé a regra de cima é `exigirDono` sem o atalho do admin.**
+Ele passava por ali em qualquer registro, e era inofensivo enquanto nenhuma
+capacidade de escrita com dono era dele. Com a empresa própria, o atalho
+viraria a porta para encerrar, reativar — gastando o saldo do admin — e
+mover candidatura de qualquer empresa, só trocando o id. Hoje o admin
+alcança o registro que é dele e lê "não encontrado" no resto, como qualquer
+empresa. A leitura que ele tem de tudo vem das capacidades `admin:*`, não
+desta função.
+
+**O painel abre completo mesmo sem perfil de empresa.** A conta do admin é
+criada por script, sem o perfil, que nasce na primeira vaga que ele publica
+(`garantirPerfilDeContratante`, a mesma passada do prestador). O estado
+vazio dessa tela esconde os planos e os atalhos, e o pedido era justamente
+olhar tudo; então o painel monta a empresa com o nome da conta, sem gravar
+nada. É exceção do admin: conta de empresa sem perfil continua lendo o erro,
+porque para ela é estado quebrado de verdade.
+
+**Admin que publica vaga publica para o público.** Não há "vaga de teste"
+escondida: ela entra na busca como qualquer outra e gasta o saldo do admin.
+Quem quiser olhar sem publicar tem o painel, os planos e o formulário.
 
 **Não há senha de admin no repositório, e nunca houve.**
 `scripts/criar-admin.mjs` lê `ADMIN_SENHA` do ambiente ou gera uma senha
@@ -3414,8 +3444,8 @@ prestador: quem liga a caixa consente ser encontrado por **empresas**, e
 ela é pessoa física. Quem não está conferido lê o que falta, em vez de um
 404 — a capacidade continua no papel, e o link no painel também. O perfil
 de quem se candidatou à empresa **não** conta no teto: candidatura é outro
-consentimento, e continua chegando como sempre. O admin passa direto, por
-não contratar.
+consentimento, e continua chegando como sempre. O admin passa direto, sem
+o teto, porque enxerga tudo — mesmo tendo a empresa dele (#499).
 
 O que isto não resolve: conferir o CNPJ prova que a empresa existe, não
 que quem a cadastrou é dono dela. O teto é o que limita quem usa o CNPJ de

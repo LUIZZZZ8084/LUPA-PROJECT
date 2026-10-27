@@ -36,6 +36,8 @@ function atalhosDoPapel(papel: string) {
         label: "Painel do admin",
         Icon: LayoutDashboard,
       },
+      // O admin tem a empresa dele (#499), para olhar a área de contratação.
+      { href: "/empresa", label: "Painel da empresa", Icon: Building2 },
     ];
   }
   return [];

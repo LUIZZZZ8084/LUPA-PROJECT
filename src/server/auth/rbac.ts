@@ -233,12 +233,20 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
    * por ela e precisa alcançar o que existe lá dentro para dar suporte —
    * inclusive a lista de candidatos disponíveis.
    *
-   * O que continua fora é **escrita no lugar de outro papel**: publicar
-   * vaga, se candidatar, mover a candidatura de uma empresa. Não é
-   * desconfiança de quem administra; é que essas ações têm dono, e um
-   * acesso comprometido que pode agir como empresa não deixa rastro de
-   * que não era a empresa. Se um dia for preciso, que seja por
+   * O que continua fora é **escrita no lugar de outro papel**: se
+   * candidatar, mover a candidatura de uma empresa, publicar ou encerrar a
+   * vaga dela. Não é desconfiança de quem administra; é que essas ações
+   * têm dono, e um acesso comprometido que pode agir como empresa não deixa
+   * rastro de que não era a empresa. Se um dia for preciso, que seja por
    * personificação registrada em log — aí a ação continua tendo autor.
+   *
+   * **O admin tem a empresa dele (#499).** Pedido do Luiz em 27/10/2026: a
+   * conta de administração ganha a página de empresa, para olhar a área de
+   * contratação inteira — planos, vagas, currículos, talentos — com a conta
+   * que ele usa. São as cinco capacidades de contratar, e valem **só para a
+   * empresa do próprio admin**: `exigirDono` não tem mais o atalho dele, e
+   * é isso que mantém a regra de cima de pé. Sem essa troca, as capacidades
+   * novas deixariam o admin encerrar a vaga de qualquer empresa pelo id.
    */
   admin: [
     "admin:painel",
@@ -248,6 +256,11 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "admin:custos",
     "perfil:editar_proprio",
     "candidato:buscar_disponiveis",
+    "vaga:publicar",
+    "vaga:encerrar_propria",
+    "vaga:reativar_propria",
+    "vaga:ver_candidaturas_proprias",
+    "candidatura:mover_estagio",
   ],
 };
 
@@ -308,6 +321,13 @@ export function exigirCapacidade<T extends Autenticado>(
  * Capacidade responde "pode editar vaga?"; isto responde "pode editar *esta*
  * vaga?". Sem a segunda pergunta, qualquer empresa autenticada alcança a
  * vaga de qualquer outra trocando o id na URL.
+ *
+ * **O admin não passa por aqui sem ser o dono (#499).** Havia um atalho para
+ * ele, e era inofensivo enquanto nenhuma capacidade de escrita com dono era
+ * dele. Quando o admin ganhou a empresa própria, o atalho viraria a porta
+ * para encerrar, reativar — gastando o saldo do admin — e mover candidatura
+ * de qualquer empresa, só trocando o id. A leitura que o admin tem de tudo
+ * não passa por esta função: vem das capacidades `admin:*`.
  */
 export function exigirDono(
   sessao: Autenticado | null,
@@ -315,7 +335,6 @@ export function exigirDono(
   oQue: string,
 ): void {
   if (!sessao) throw erros.naoAutenticado("sem sessão");
-  if (sessao.papel === "admin") return;
 
   if (sessao.usuarioId !== donoId) {
     // "Não encontrado", e não "sem permissão": responder 403 confirma que o

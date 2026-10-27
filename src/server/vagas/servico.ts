@@ -59,15 +59,17 @@ async function vagaDaEmpresa(sessao: Autenticado, id: string): Promise<Vaga> {
  */
 async function garantirPerfilDeContratante(sessao: Autenticado): Promise<void> {
   /*
-   * Só o prestador chega aqui sem perfil de contratante.
+   * Só o prestador e o admin chegam aqui sem perfil de contratante.
    *
    * A conta de empresa ganha o dela em `cadastrar()`, na mesma passada que
-   * cria o usuário. Consultar o banco para os dois papéis seria uma
+   * cria o usuário. Consultar o banco para os três papéis seria uma
    * consulta a mais em toda publicação de vaga, para responder uma pergunta
    * cuja resposta já se conhece — e faria este serviço depender do
-   * repositório de usuários num caminho onde ele não precisa.
+   * repositório de usuários num caminho onde ele não precisa. O admin entra
+   * pelo mesmo motivo do prestador (#499): a conta dele é criada por
+   * script, sem passar pelo cadastro de empresa.
    */
-  if (sessao.papel !== "prestador_servico") return;
+  if (sessao.papel !== "prestador_servico" && sessao.papel !== "admin") return;
 
   const repo = repositorioUsuarios();
   if (await repo.perfilEmpresa(sessao.usuarioId)) return;

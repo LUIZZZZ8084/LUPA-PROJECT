@@ -54,12 +54,15 @@ export const BASES_DE_CONTRATACAO = ["/empresa", "/contratar"] as const;
  * A área de quem entrou, ou `null` para quem não contrata.
  *
  * O candidato cai no `null` e recebe a explicação da #122 — que a área é
- * de quem contrata —, nunca um 404. O admin também: ele enxerga tudo pelo
- * `/admin/painel`, e uma área de contratação própria é justamente o que
- * ele não tem.
+ * de quem contrata —, nunca um 404.
+ *
+ * O admin usa a da empresa (#499). Ele tem a empresa dele, para olhar a
+ * área de contratação inteira, e o que ele vê ali é a empresa dele — não a
+ * de ninguém. A visão geral do que acontece na Lupa continua sendo o
+ * `/admin/painel`.
  */
 export function areaDoPapel(papel: Papel): AreaDeContratacao | null {
-  if (papel === "empresa") return AREA_EMPRESA;
+  if (papel === "empresa" || papel === "admin") return AREA_EMPRESA;
   if (papel === "prestador_servico") return AREA_PRESTADOR;
   return null;
 }

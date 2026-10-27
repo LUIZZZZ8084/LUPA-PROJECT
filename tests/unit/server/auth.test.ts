@@ -438,18 +438,34 @@ describe("RBAC", () => {
    *
    * Ele alcança o que existe na ferramenta para poder dar suporte — o
    * painel, as métricas, a fila de verificação, a lista de candidatos
-   * disponíveis. O que fica de fora é escrita com dono: publicar uma vaga
-   * ou se candidatar em nome de alguém não deixa rastro de que não foi
-   * aquela pessoa, e é isso que um acesso comprometido exploraria.
+   * disponíveis. O que fica de fora é escrita com dono: se candidatar em
+   * nome de alguém não deixa rastro de que não foi aquela pessoa, e é isso
+   * que um acesso comprometido exploraria.
    */
-  it("admin enxerga, mas não age no lugar de empresa nem de candidato", () => {
+  it("admin enxerga, mas não se candidata nem avalia", () => {
     expect(pode("admin", "admin:painel")).toBe(true);
     expect(pode("admin", "admin:decidir_verificacao")).toBe(true);
     expect(pode("admin", "candidato:buscar_disponiveis")).toBe(true);
 
-    expect(pode("admin", "vaga:publicar")).toBe(false);
     expect(pode("admin", "candidatura:criar")).toBe(false);
-    expect(pode("admin", "candidatura:mover_estagio")).toBe(false);
+    expect(pode("admin", "avaliacao:escrever")).toBe(false);
+  });
+
+  /**
+   * O admin tem a empresa dele (#499): as cinco capacidades de contratar.
+   * Valem só para a empresa dele, e quem garante isso é `exigirDono`, no
+   * teste logo abaixo — a matriz diz quem pode fazer, não em quê.
+   */
+  it("admin contrata pela empresa dele", () => {
+    for (const cap of [
+      "vaga:publicar",
+      "vaga:encerrar_propria",
+      "vaga:reativar_propria",
+      "vaga:ver_candidaturas_proprias",
+      "candidatura:mover_estagio",
+    ] as const) {
+      expect(pode("admin", cap), cap).toBe(true);
+    }
   });
 
   it("nenhum papel comum alcança as capacidades de admin", () => {
@@ -527,10 +543,23 @@ describe("RBAC", () => {
     }
   });
 
-  it("admin alcança registro de qualquer dono", () => {
+  /**
+   * O atalho do admin saiu na #499. Ele só era inofensivo enquanto nenhuma
+   * capacidade de escrita com dono era dele; com a empresa própria, deixá-lo
+   * passar aqui daria a um acesso de admin comprometido o painel de qualquer
+   * empresa, pelo id.
+   */
+  it("admin alcança o registro que é dele, e o alheio responde 'não encontrado'", () => {
     expect(() =>
-      exigirDono(sessao("admin", "adm"), "u2", "Vaga"),
+      exigirDono(sessao("admin", "adm"), "adm", "Vaga"),
     ).not.toThrow();
+
+    try {
+      exigirDono(sessao("admin", "adm"), "u2", "Vaga");
+      expect.unreachable("o admin alcançou o registro de outro dono");
+    } catch (e) {
+      expect((e as { codigo: string }).codigo).toBe("nao_encontrado");
+    }
   });
 
   it("exigirDono sem sessão é 401", () => {

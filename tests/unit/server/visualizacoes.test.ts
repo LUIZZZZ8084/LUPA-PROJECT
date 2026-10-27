@@ -280,16 +280,24 @@ describe("visualizações de vaga", () => {
       expect((await visualizacoesPorVaga(outraEmpresa)).size).toBe(0);
     });
 
-    it("sem sessão é 401; candidato e admin não leem", async () => {
+    it("sem sessão é 401; candidato não lê", async () => {
       expect((await capturar(() => visualizacoesPorVaga(null))).codigo).toBe(
         "nao_autenticado",
       );
       expect(
         (await capturar(() => visualizacoesPorVaga(candidato))).codigo,
       ).toBe("sem_permissao");
-      expect((await capturar(() => visualizacoesPorVaga(admin))).codigo).toBe(
-        "sem_permissao",
-      );
+    });
+
+    /**
+     * O admin tem a empresa dele (#499) e lê o movimento dela — que, sem vaga
+     * publicada, é vazio. O movimento de outra empresa continua fechado.
+     */
+    it("admin lê o movimento da empresa dele, e não o da outra", async () => {
+      const vaga = await publicarVaga(empresa, DADOS_VAGA);
+      await contarVisualizacao(vaga.id);
+
+      expect((await visualizacoesPorVaga(admin)).size).toBe(0);
     });
   });
 
@@ -304,9 +312,13 @@ describe("visualizações de vaga", () => {
       expect(erro.codigo).toBe("sem_permissao");
     });
 
-    it("admin também não — administra, não recruta", async () => {
-      const erro = await capturar(() => serieDoPainel(admin));
-      expect(erro.codigo).toBe("sem_permissao");
+    it("admin lê a série da empresa dele, vazia até ele publicar", async () => {
+      const vaga = await publicarVaga(empresa, DADOS_VAGA);
+      await contarVisualizacao(vaga.id);
+
+      const serie = await serieDoPainel(admin);
+
+      expect(totaisDaSerie(serie).visualizacoes).toBe(0);
     });
   });
 });

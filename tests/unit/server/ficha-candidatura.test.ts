@@ -95,8 +95,22 @@ describe("quem abre a ficha", () => {
     expect(await fichaDaCandidatura(candidato, "cand-1")).toBeNull();
   });
 
-  it("admin também não — administra, não recruta", async () => {
+  /**
+   * O admin tem a empresa dele (#499), e a ficha continua sendo da empresa
+   * dona da vaga: a candidatura de outra empresa não abre para ele, mesmo
+   * com o id na mão. É o mesmo teste da outra empresa, com o papel que mais
+   * tem a perder se esta porta abrisse.
+   */
+  it("admin não abre a ficha de candidatura de outra empresa", async () => {
     expect(await fichaDaCandidatura(admin, "cand-1")).toBeNull();
+  });
+
+  it("admin abre a ficha de candidatura à vaga dele", async () => {
+    candidaturas[admin.usuarioId] = [CANDIDATURA];
+
+    const ficha = await fichaDaCandidatura(admin, "cand-1");
+
+    expect(ficha?.candidatura.candidate.full_name).toBe("Everton Rodrigues");
   });
 
   it("sem sessão, nada", async () => {
