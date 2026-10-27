@@ -1,5 +1,6 @@
 import { BellRing, Check, Infinity as Infinito, Ticket } from "lucide-react";
 import { notFound } from "next/navigation";
+import { Carrossel } from "@/components/carrossel";
 import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import {
   PLANOS_DE_VAGA,
   resumoDoDireito,
 } from "@/lib/planos-empresa";
+import { cn } from "@/lib/utils";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
@@ -126,28 +128,41 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
         </Panel>
       )}
 
-      <div className="space-y-3">
-        {/*
-          A avulsa vem primeiro (#501) e continua separada dos planos: não
-          renova, não vira plano, e vale para quem tem uma vaga só. Quem tem
-          uma vaga acha a opção dela sem rolar por três planos mensais.
-          Misturá-la na lista faria parecer "o plano de 1", e quem contrata
-          todo mês pagaria mais por vaga sem perceber.
-        */}
-        <Panel>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
+      {/*
+        As quatro opções são cards num carrossel (#503), e não uma lista: no
+        celular a pessoa comparava preço rolando por quatro painéis altos e
+        perdia de vista o anterior ao chegar no próximo.
+
+        A avulsa vem primeiro (#501) e continua distinta dos planos: não
+        renova, não vira plano, e vale para quem tem uma vaga só. Ela diz
+        "compra única" no lugar de "por mês", porque no mesmo carrossel
+        misturá-la faria parecer "o plano de 1", e quem contrata todo mês
+        pagaria mais por vaga sem perceber.
+      */}
+      <Carrossel rotulo="Opções de vaga e plano">
+        <Panel className="flex h-full flex-col">
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-bold text-base">{OPCAO_AVULSA.nome}</h2>
-              <p className="mt-0.5 text-muted text-sm">
-                {OPCAO_AVULSA.paraQuem}
-              </p>
+              <Badge tone="outline">Compra única</Badge>
             </div>
-            <div className="flex-none text-right">
-              <p className="font-bold text-empresas text-xl">
-                {preco(OPCAO_AVULSA.tipo)}
-              </p>
-              <p className="text-faint text-xs">compra única</p>
-            </div>
+            <p className="mt-0.5 text-muted text-sm">{OPCAO_AVULSA.paraQuem}</p>
+
+            <p className="mt-4 font-bold text-empresas text-2xl">
+              {preco(OPCAO_AVULSA.tipo)}
+            </p>
+            <p className="text-faint text-xs">compra única</p>
+
+            <ul className="mt-3 space-y-1.5 text-muted text-sm">
+              <li className="flex items-start gap-2">
+                <Check size={15} className="mt-0.5 flex-none text-empresas" />
+                Uma vaga, 30 dias no ar
+              </li>
+              <li className="flex items-start gap-2">
+                <Check size={15} className="mt-0.5 flex-none text-empresas" />
+                Paga uma vez, sem renovar
+              </li>
+            </ul>
           </div>
 
           <ComprarButton
@@ -164,48 +179,54 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
           return (
             <Panel
               key={plano.tipo}
-              className={plano.destaque ? "border-empresas/40" : undefined}
+              className={cn(
+                "flex h-full flex-col",
+                plano.destaque && "border-empresas/40",
+              )}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-bold text-base">{plano.nome}</h2>
-                    {plano.destaque && (
-                      <Badge tone="empresas">Mais completo</Badge>
-                    )}
-                    {ehOAtual && <Badge tone="vagas">Seu plano</Badge>}
-                  </div>
-                  <p className="mt-0.5 text-muted text-sm">{plano.paraQuem}</p>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="font-bold text-base">{plano.nome}</h2>
+                  {plano.destaque && (
+                    <Badge tone="empresas">Mais completo</Badge>
+                  )}
+                  {ehOAtual && <Badge tone="vagas">Seu plano</Badge>}
                 </div>
-                <div className="flex-none text-right">
-                  <p className="font-bold text-empresas text-xl">
-                    {preco(plano.tipo)}
-                  </p>
-                  <p className="text-faint text-xs">
-                    {porVaga ? `por mês · ${porVaga} por vaga` : "por mês"}
-                  </p>
-                </div>
-              </div>
+                <p className="mt-0.5 text-muted text-sm">{plano.paraQuem}</p>
 
-              <ul className="mt-3 space-y-1.5 text-muted text-sm">
-                <li className="flex items-start gap-2">
-                  <Check size={15} className="mt-0.5 flex-none text-empresas" />
-                  {quantasVagas(plano.tipo)}
-                </li>
-                {porVaga && (
+                <p className="mt-4 font-bold text-empresas text-2xl">
+                  {preco(plano.tipo)}
+                </p>
+                <p className="text-faint text-xs">
+                  {porVaga ? `por mês · ${porVaga} por vaga` : "por mês"}
+                </p>
+
+                <ul className="mt-3 space-y-1.5 text-muted text-sm">
                   <li className="flex items-start gap-2">
                     <Check
                       size={15}
                       className="mt-0.5 flex-none text-empresas"
                     />
-                    Encerrou uma vaga? O lugar dela volta na hora
+                    {quantasVagas(plano.tipo)}
                   </li>
-                )}
-                <li className="flex items-start gap-2">
-                  <Check size={15} className="mt-0.5 flex-none text-empresas" />
-                  Renova sozinho todo mês, e você cancela quando quiser
-                </li>
-              </ul>
+                  {porVaga && (
+                    <li className="flex items-start gap-2">
+                      <Check
+                        size={15}
+                        className="mt-0.5 flex-none text-empresas"
+                      />
+                      Encerrou uma vaga? O lugar dela volta na hora
+                    </li>
+                  )}
+                  <li className="flex items-start gap-2">
+                    <Check
+                      size={15}
+                      className="mt-0.5 flex-none text-empresas"
+                    />
+                    Renova sozinho todo mês, e você cancela quando quiser
+                  </li>
+                </ul>
+              </div>
 
               {/*
                 Com um plano ativo, assinar outro só recusaria depois do
@@ -227,7 +248,7 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
             </Panel>
           );
         })}
-      </div>
+      </Carrossel>
 
       <Panel className="mt-5">
         <h2 className="font-bold text-sm">Como funciona</h2>
