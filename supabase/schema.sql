@@ -70,11 +70,15 @@ create type status_publicacao as enum ('ativa', 'arquivada');
 create type tipo_pagamento as enum (
   'prestador_mensalidade',
   -- Publicar vaga, para empresa e para quem contrata como pessoa fisica
-  -- (#172). Os tres primeiros sao pagamento unico e viram credito; o
-  -- ultimo e assinatura mensal e nao consome credito nenhum.
+  -- (#172, #489). A avulsa e pagamento unico e vira credito; os tres planos
+  -- sao assinatura mensal, nao consomem credito e se distinguem pelo limite
+  -- de vagas no ar ao mesmo tempo (5, 10 e ilimitado). Os pacotes de 5 e 10
+  -- que existiram antes (`empresa_pacote_5`, `empresa_pacote_10`) deixaram
+  -- de ser vendidos; o valor continua no enum de quem veio de antes, porque
+  -- o Postgres nao tira valor de enum, e nenhuma compra nova o usa.
   'empresa_vaga_avulsa',
-  'empresa_pacote_5',
-  'empresa_pacote_10',
+  'empresa_plano_5',
+  'empresa_plano_10',
   'empresa_mensal',
   -- Gerador de currículo em PDF (#47): compra única, libera para sempre.
   'curriculo_pdf'
@@ -1091,8 +1095,23 @@ create table carteiras_vaga (
    * de publicacoes ja resolve no banco.
    */
   creditos_vaga          int not null default 0 check (creditos_vaga >= 0),
-  /** Enquanto valer, publica quantas quiser e nao gasta credito. */
+  /** Enquanto valer, publica ate o limite do plano e nao gasta credito. */
   mensalidade_valida_ate timestamptz,
+  /*
+   * Quantas vagas o plano deixa no ar ao mesmo tempo (#489). Nulo e o
+   * ilimitado — e tambem o valor de quem nunca teve plano, o que nao
+   * importa: sem `mensalidade_valida_ate` em dia, o limite nao e lido.
+   * Guardado aqui e nao deduzido do tipo da assinatura porque o estorno e
+   * a expiracao agem sobre a carteira, e a carteira nao conhece assinatura.
+   */
+  plano_vagas_no_ar      int check (plano_vagas_no_ar is null
+                                    or plano_vagas_no_ar > 0),
+  /*
+   * A primeira vaga gratis e uma por conta (#489). Preenchido pela mesma
+   * instrucao que a concede (`reivindicar_primeira_vaga_gratis`), para duas
+   * publicacoes simultaneas nao usarem as duas a mesma vaga gratis.
+   */
+  primeira_vaga_gratis_usada_em timestamptz,
   criado_em              timestamptz not null default now(),
   atualizado_em          timestamptz not null default now()
 );
@@ -1137,20 +1156,32 @@ as $$
   returning *;
 $$;
 
--- Estende o plano mensal a partir do maior entre agora e o que ja valia.
--- `p_dias` nulo revoga: e o caminho do estorno e do chargeback.
+-- Estende o plano mensal a partir do maior entre agora e o que ja valia, e
+-- grava o limite de vagas no ar do plano que acabou de ser pago (#489).
+-- `p_dias` nulo revoga: e o caminho do estorno e do chargeback, e leva o
+-- limite junto. `p_limite` nulo e o ilimitado.
+--
+-- Quem troca de plano passa a ter o limite do novo na hora, e a validade
+-- soma: os dias pagos do plano antigo nao se perdem. Foi uma escolha
+-- consciente — trocar de plano exige cancelar a renovacao do atual, entao
+-- nao ha cobranca em duplicidade, e o custo de somar e so alguns dias de
+-- um limite diferente.
 create or replace function estender_mensalidade_vaga(
   p_usuario uuid,
-  p_dias int
+  p_dias int,
+  p_limite int default null
 )
 returns setof carteiras_vaga language sql
 set search_path = public, pg_temp
 as $$
-  insert into carteiras_vaga (usuario_id, mensalidade_valida_ate)
+  insert into carteiras_vaga (
+    usuario_id, mensalidade_valida_ate, plano_vagas_no_ar
+  )
   values (
     p_usuario,
     case when p_dias is null then null
-         else now() + make_interval(days => p_dias) end
+         else now() + make_interval(days => p_dias) end,
+    case when p_dias is null then null else p_limite end
   )
   on conflict (usuario_id) do update
     set mensalidade_valida_ate = case
@@ -1159,8 +1190,43 @@ as $$
         now(),
         coalesce(carteiras_vaga.mensalidade_valida_ate, now())
       ) + make_interval(days => p_dias)
-    end
+    end,
+    plano_vagas_no_ar = case when p_dias is null then null else p_limite end
   returning *;
+$$;
+
+-- Usa a primeira vaga gratis, e so se ainda nao foi usada (#489). Devolve
+-- verdadeiro quando esta chamada foi quem a usou. A decisao e a gravacao
+-- sao a mesma instrucao: dois cliques simultaneos nao ganham duas vagas.
+create or replace function reivindicar_primeira_vaga_gratis(p_usuario uuid)
+returns boolean language sql
+set search_path = public, pg_temp
+as $$
+  with usada as (
+    insert into carteiras_vaga (usuario_id, primeira_vaga_gratis_usada_em)
+    values (p_usuario, now())
+    on conflict (usuario_id) do update
+      set primeira_vaga_gratis_usada_em = now()
+      where carteiras_vaga.primeira_vaga_gratis_usada_em is null
+    returning 1
+  )
+  select exists (select 1 from usada);
+$$;
+
+-- Quantas pessoas da cidade pediram aviso de vaga e tem um aparelho que o
+-- recebe (#489). So o numero sai daqui, nunca quem sao: numa cidade pequena
+-- isso diria quem esta procurando sair do emprego atual. Quem decide mostrar
+-- ou nao o numero e a aplicacao, abaixo de um minimo.
+create or replace function pessoas_com_aviso_na_cidade(p_cidade text)
+returns int language sql stable
+set search_path = public, pg_temp
+as $$
+  select count(*)::int
+  from preferencias_notificacao p
+  where p.cidade = p_cidade
+    and exists (
+      select 1 from inscricoes_push i where i.usuario_id = p.usuario_id
+    );
 $$;
 
 
@@ -1918,8 +1984,9 @@ select
   (select count(distinct p.usuario_id) from pagamentos p
      join contas c on c.id = p.usuario_id
     where c.papel = 'empresa' and p.status = 'aprovado'
-      and p.tipo in ('empresa_vaga_avulsa', 'empresa_pacote_5',
-                     'empresa_pacote_10', 'empresa_mensal'))
+      and p.tipo::text in ('empresa_vaga_avulsa', 'empresa_pacote_5',
+                           'empresa_pacote_10', 'empresa_plano_5',
+                           'empresa_plano_10', 'empresa_mensal'))
     as empresas_que_compraram,
   (select count(*) from assinaturas where status = 'ativa')
     as assinaturas_ativas,
@@ -1962,7 +2029,8 @@ select
     as contestado_centavos,
   coalesce(sum(valor_centavos) filter (
     where status = 'aprovado'
-      and tipo in ('prestador_mensalidade', 'empresa_mensal')
+      and tipo::text in ('prestador_mensalidade', 'empresa_plano_5',
+                         'empresa_plano_10', 'empresa_mensal')
   ), 0) as recorrente_centavos,
   count(*) filter (where status = 'aprovado')    as cobrancas,
   count(*) filter (where status = 'contestado')  as contestacoes

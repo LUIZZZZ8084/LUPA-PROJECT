@@ -36,8 +36,11 @@ import {
   CREDITOS_POR_COMPRA,
   DESCRICAO_PAGAMENTO,
   diasDeTeste,
+  ehPlanoDeVaga,
   ehRecorrente,
   PRECO_CENTAVOS,
+  TIPOS_DE_PLANO_DE_VAGA,
+  VAGAS_NO_AR_POR_PLANO,
 } from "./planos";
 import type {
   Assinatura,
@@ -104,22 +107,30 @@ async function aplicarEfeito(pagamento: Pagamento): Promise<void> {
       return;
 
     /*
-     * As três compras únicas de vaga viram crédito, e a quantidade sai de
+     * A compra única de vaga vira crédito, e a quantidade sai de
      * `CREDITOS_POR_COMPRA` — nunca de um número escrito aqui. Preço e
      * quantidade moram no mesmo arquivo de propósito: é lá que se
-     * confere se o "5 vagas" do preço continua sendo cinco.
+     * confere se a "1 vaga" do preço continua sendo uma.
      */
     case "empresa_vaga_avulsa":
-    case "empresa_pacote_5":
-    case "empresa_pacote_10":
       await creditarVagas(
         pagamento.usuarioId,
         CREDITOS_POR_COMPRA[pagamento.tipo] ?? 0,
       );
       return;
 
+    /*
+     * Os três planos estendem a validade e gravam o limite de vagas no ar
+     * do plano que acabou de ser pago — que vem de `VAGAS_NO_AR_POR_PLANO`,
+     * pelo mesmo motivo acima.
+     */
+    case "empresa_plano_5":
+    case "empresa_plano_10":
     case "empresa_mensal":
-      await estenderPlanoMensal(pagamento.usuarioId);
+      await estenderPlanoMensal(
+        pagamento.usuarioId,
+        VAGAS_NO_AR_POR_PLANO[pagamento.tipo] ?? null,
+      );
       return;
 
     case "curriculo_pdf":
@@ -153,18 +164,18 @@ async function desfazerEfeitoDoTipo(
       return;
 
     /*
-     * Estorno de pacote tira os créditos que sobraram, e para em zero.
-     * A vaga que já foi publicada continua publicada: desfazer aquilo
+     * Estorno de compra avulsa tira os créditos que sobraram, e para em
+     * zero. A vaga que já foi publicada continua publicada: desfazer aquilo
      * seria apagar o anúncio de uma empresa que talvez já esteja
      * recebendo currículo, por uma contestação que ela pode nem ter
      * feito. O que se recupera é o que ainda não foi usado.
      */
     case "empresa_vaga_avulsa":
-    case "empresa_pacote_5":
-    case "empresa_pacote_10":
       await debitarVagas(usuarioId, CREDITOS_POR_COMPRA[tipo] ?? 0);
       return;
 
+    case "empresa_plano_5":
+    case "empresa_plano_10":
     case "empresa_mensal":
       await revogarPlanoMensal(usuarioId);
       return;
@@ -251,6 +262,11 @@ export async function assinar(
   }
 
   const repo = repositorioPagamentos();
+
+  if (ehPlanoDeVaga(tipo)) {
+    await recusarSegundoPlanoDeVaga(sessao.usuarioId, tipo, opcoes.buscar);
+  }
+
   const viva = await repo.assinaturaViva(sessao.usuarioId, tipo);
 
   if (viva?.status === "ativa") {
@@ -371,6 +387,56 @@ export async function assinar(
     pagamento: null,
     checkoutUrl: resultado.assinatura.initPoint,
   };
+}
+
+/**
+ * Quem já tem um plano de vagas não assina outro por cima (#489).
+ *
+ * Os três planos são o mesmo produto com limites diferentes, e a pessoa
+ * só tem um por vez: duas assinaturas vivas seriam duas cobranças por mês
+ * para um benefício só, que é o erro que só aparece na fatura de quem pagou.
+ *
+ * **Trocar de plano é cancelar a renovação do atual e assinar o novo** — e a
+ * recusa diz isso. Cancelar não tira os dias já pagos, então a troca não
+ * custa nada a quem a faz; o que ela não faz é cancelar sozinha, porque
+ * cancelar uma assinatura que está paga por causa de um clique em outra
+ * seria agir contra quem só estava olhando preços.
+ *
+ * Um plano **pendente** de outro tipo é um checkout que a pessoa abriu e
+ * não terminou — nada foi pago —, e um **suspenso** é um cartão que o Mercado
+ * Pago não conseguiu cobrar. Os dois se encerram sem perguntar, como a
+ * assinatura suspensa em `assinar`: deixá-los vivos travaria quem desistiu
+ * de um plano, ou teve o cartão recusado, e quer outro.
+ */
+async function recusarSegundoPlanoDeVaga(
+  usuarioId: string,
+  tipo: TipoPagamento,
+  buscar?: typeof fetch,
+): Promise<void> {
+  const repo = repositorioPagamentos();
+
+  for (const outro of TIPOS_DE_PLANO_DE_VAGA) {
+    if (outro === tipo) continue;
+
+    const viva = await repo.assinaturaViva(usuarioId, outro);
+    if (!viva) continue;
+
+    if (viva.status === "pendente" || viva.status === "pausada") {
+      const encerrada = await encerrarNoMercadoPago(viva, buscar);
+      if (!encerrada.ok) throw erros.indisponivel(encerrada.motivo);
+      await repo.definirStatusAssinatura(viva.id, "cancelada");
+      continue;
+    }
+
+    throw erros.validacao([
+      {
+        campo: "assinatura",
+        mensagem:
+          "Você já tem um plano de vagas. Para trocar, cancele a renovação " +
+          "dele primeiro — os dias que você já pagou continuam valendo.",
+      },
+    ]);
+  }
 }
 
 // ── Comprar uma vez ───────────────────────────────────────────────────────
@@ -562,6 +628,52 @@ export async function cancelarRenovacao(
   });
 
   return { ok: true };
+}
+
+/**
+ * O plano de vagas que a pessoa tem agora, com a assinatura por trás — para
+ * a tela dizer qual é e oferecer o cancelamento (#489).
+ *
+ * Só conta o que está de pé: ativa, que renova sozinha. Pendente é checkout
+ * que não terminou, e cancelada já não cobra.
+ */
+export async function planoDeVagasAtual(
+  sessao: Autenticado | null,
+): Promise<{ tipo: TipoPagamento; assinatura: Assinatura } | null> {
+  if (!sessao) return null;
+
+  for (const tipo of TIPOS_DE_PLANO_DE_VAGA) {
+    const assinatura = await repositorioPagamentos().assinaturaViva(
+      sessao.usuarioId,
+      tipo,
+    );
+    if (assinatura?.status === "ativa") return { tipo, assinatura };
+  }
+  return null;
+}
+
+/**
+ * Cancela a renovação do plano de vagas que a pessoa tem, seja qual for
+ * (#489).
+ *
+ * A tela de plano não sabe de qual dos três tipos é a assinatura viva — é
+ * a carteira que guarda o limite, e a assinatura que guarda o tipo —, então
+ * a procura mora aqui, e não numa action que repetiria o laço.
+ */
+export async function cancelarPlanoDeVagas(
+  sessao: Autenticado | null,
+  buscar?: typeof fetch,
+): Promise<{ ok: true } | { ok: false; motivo: string }> {
+  if (!sessao) throw erros.naoAutenticado("sem sessão");
+
+  const repo = repositorioPagamentos();
+  for (const tipo of TIPOS_DE_PLANO_DE_VAGA) {
+    if (await repo.assinaturaViva(sessao.usuarioId, tipo)) {
+      return cancelarRenovacao(sessao, tipo, buscar);
+    }
+  }
+
+  return { ok: false, motivo: "Não há renovação automática para cancelar." };
 }
 
 // ── Devolver o dinheiro: nao existe mais porta aqui ───────────────

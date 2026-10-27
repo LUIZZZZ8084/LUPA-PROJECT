@@ -175,10 +175,24 @@ export interface EntradaDoFunil {
   agora: Date;
 }
 
+/**
+ * Os `empresa_pacote_*` ficam: deixaram de ser vendidos na #489, mas há
+ * compra aprovada com eles, e quem comprou um pacote comprou.
+ */
 const COMPRAS_DE_EMPRESA = new Set([
   "empresa_vaga_avulsa",
   "empresa_pacote_5",
   "empresa_pacote_10",
+  "empresa_plano_5",
+  "empresa_plano_10",
+  "empresa_mensal",
+]);
+
+/** O que se repete sozinho todo mês: a mesma lista de `metricas_caixa`. */
+export const TIPOS_RECORRENTES_NO_CAIXA = new Set([
+  "prestador_mensalidade",
+  "empresa_plano_5",
+  "empresa_plano_10",
   "empresa_mensal",
 ]);
 

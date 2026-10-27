@@ -10,29 +10,30 @@ export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
   prestador_mensalidade: 1990,
 
   /*
-   * Publicar vaga (#172), e a tabela de agora é a de 14/10/2026 (#469),
-   * decisão do Luiz: 19,90 / 79,90 / 99,90 e mensal de 149,90.
+   * Publicar vaga: a avulsa e três planos (#489), decisão do Luiz em
+   * 26/10/2026 — 19,90 / 49,90 / 79,90 / 99,90.
    *
-   * O preço por vaga sai 19,90 / 15,98 / 9,99: a avulsa custa o **dobro**
-   * do unitário do pacote de 10, e o de 5 fica no meio. A tabela anterior
-   * era 29,90 / 119,90 / 149,90 e mensal de 199,90 (a primeira, de 09/09,
-   * tinha pacote de 15 e avulsa a três vezes o unitário dele — quem tinha
-   * uma vaga só olhava aquilo como punição).
+   * A tabela de 14/10 (#469) era 19,90 / pacote de 5 por 79,90 / pacote de 10
+   * por 99,90 / mensal de 149,90. Os pacotes não renovavam: quem comprava 10
+   * tinha 10 e, acabando, tinha de decidir comprar de novo. Plano que se
+   * repete dá ao dono um motivo para voltar e à Lupa uma receita que se
+   * prevê. A concorrência anuncia vaga de graça e cobra por resultado; o
+   * mais parecido, o Pense Empregos, cobra R$ 99 por 10 vagas e R$ 199 pelo
+   * ilimitado — a Lupa fica abaixo nos dois.
    *
-   * **O teto é o plano mensal**, e é ele que segura a escada: 12 vagas
-   * saem por 139,70 (o pacote de 10 e duas avulsas), e 13 já custam 159,60,
-   * mais que os 149,90 do mensal. É exatamente aí que ele deve ganhar. Um pacote que custasse perto
-   * dos 149,90 não venderia, porque a essa altura vale mais assinar — e há
-   * teste que reprova uma tabela em que o unitário não cai com o pacote ou
-   * o mensal sai mais barato que o pacote de 10.
+   * O limite dos planos é de vagas **no ar ao mesmo tempo**, e não de vagas
+   * por mês: cada vaga já vale 30 dias, e "5 no ar" se entende sem conta.
    *
-   * O pacote de 10 custa só 20,00 a mais que o de 5: quem escolhe o de 5
-   * escolhe pelo valor que sai do bolso, não pela conta por vaga.
+   * **A escada tem de se sustentar**, e há teste que a cobra: o plano de 5
+   * custa mais que a avulsa (quem publica uma vaga por mês não assina), o
+   * de 10 mais que o de 5 e o ilimitado mais que o de 10 — e o preço por vaga
+   * sai de cima para baixo. A avulsa é a âncora: com três avulsas no mês
+   * (59,70), o plano de 5 já compensa.
    */
   empresa_vaga_avulsa: 1990,
-  empresa_pacote_5: 7990,
-  empresa_pacote_10: 9990,
-  empresa_mensal: 14990,
+  empresa_plano_5: 4990,
+  empresa_plano_10: 7990,
+  empresa_mensal: 9990,
 
   /** Currículo em PDF (#47), compra única e permanente. */
   curriculo_pdf: 1490,
@@ -41,24 +42,56 @@ export const PRECO_CENTAVOS: Record<TipoPagamento, number> = {
 export const DESCRICAO_PAGAMENTO: Record<TipoPagamento, string> = {
   prestador_mensalidade: "Mensalidade de prestador — Lupa",
   empresa_vaga_avulsa: "1 vaga — Lupa",
-  empresa_pacote_5: "5 vagas — Lupa",
-  empresa_pacote_10: "10 vagas — Lupa",
-  empresa_mensal: "Vagas ilimitadas, mensal — Lupa",
+  empresa_plano_5: "Plano 5 vagas no ar, mensal — Lupa",
+  empresa_plano_10: "Plano 10 vagas no ar, mensal — Lupa",
+  empresa_mensal: "Plano ilimitado, mensal — Lupa",
   curriculo_pdf: "Gerador de currículo em PDF — Lupa",
 };
 
 /**
  * Quantos créditos de vaga cada compra entrega.
  *
- * Só os pagamentos únicos aparecem aqui: `empresa_mensal` não dá crédito
- * nenhum de propósito — enquanto vale, publicar não gasta crédito, e
- * misturar os dois faria a pessoa acumular saldo que não precisa usar.
+ * Só o pagamento único aparece aqui: os planos não dão crédito nenhum de
+ * propósito — enquanto valem, publicar não gasta crédito, e misturar os
+ * dois faria a pessoa acumular saldo que não precisa usar.
  */
 export const CREDITOS_POR_COMPRA: Partial<Record<TipoPagamento, number>> = {
   empresa_vaga_avulsa: 1,
-  empresa_pacote_5: 5,
-  empresa_pacote_10: 10,
 };
+
+/**
+ * Os planos de vaga e quantas vagas cada um deixa no ar ao mesmo tempo
+ * (#489). `null` é sem limite: o ilimitado.
+ *
+ * Preço e limite moram no mesmo arquivo de propósito — é aqui que se
+ * confere se o "5 vagas" do plano continua sendo cinco.
+ */
+export const VAGAS_NO_AR_POR_PLANO: Partial<
+  Record<TipoPagamento, number | null>
+> = {
+  empresa_plano_5: 5,
+  empresa_plano_10: 10,
+  empresa_mensal: null,
+};
+
+export const TIPOS_DE_PLANO_DE_VAGA = Object.keys(
+  VAGAS_NO_AR_POR_PLANO,
+) as TipoPagamento[];
+
+export function ehPlanoDeVaga(tipo: TipoPagamento): boolean {
+  return TIPOS_DE_PLANO_DE_VAGA.includes(tipo);
+}
+
+/**
+ * Qual plano tem este limite — a carteira guarda o limite, e não o tipo, e
+ * a tela precisa dizer "Plano 5" e não "5".
+ */
+export function planoPorLimite(limite: number | null): TipoPagamento | null {
+  return (
+    TIPOS_DE_PLANO_DE_VAGA.find((t) => VAGAS_NO_AR_POR_PLANO[t] === limite) ??
+    null
+  );
+}
 
 /**
  * Os tipos que são assinatura recorrente, e não pagamento único.
@@ -69,6 +102,8 @@ export const CREDITOS_POR_COMPRA: Partial<Record<TipoPagamento, number>> = {
  */
 export const TIPOS_RECORRENTES: readonly TipoPagamento[] = [
   "prestador_mensalidade",
+  "empresa_plano_5",
+  "empresa_plano_10",
   "empresa_mensal",
 ];
 

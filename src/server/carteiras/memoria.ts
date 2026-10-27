@@ -33,9 +33,27 @@ export class RepositorioCarteirasMemoria implements RepositorioCarteiras {
     });
   }
 
+  async reivindicarPrimeiraVagaGratis(usuarioId: string): Promise<boolean> {
+    const atual = this.garantir(usuarioId);
+    if (atual.primeiraVagaGratisUsadaEm) return false;
+
+    this.gravar({
+      ...atual,
+      primeiraVagaGratisUsadaEm: new Date().toISOString(),
+    });
+    return true;
+  }
+
+  async liberarPrimeiraVagaGratis(usuarioId: string): Promise<void> {
+    const atual = this.itens.get(usuarioId);
+    if (!atual) return;
+    this.gravar({ ...atual, primeiraVagaGratisUsadaEm: null });
+  }
+
   async estenderMensalidade(
     usuarioId: string,
     dias: number,
+    vagasNoAr: number | null,
   ): Promise<Carteira> {
     const atual = this.garantir(usuarioId);
     const baseMs = atual.mensalidadeValidaAte
@@ -47,12 +65,17 @@ export class RepositorioCarteirasMemoria implements RepositorioCarteiras {
       mensalidadeValidaAte: new Date(
         baseMs + dias * 24 * 60 * 60 * 1000,
       ).toISOString(),
+      planoVagasNoAr: vagasNoAr,
     });
   }
 
   async revogarMensalidade(usuarioId: string): Promise<Carteira> {
     const atual = this.garantir(usuarioId);
-    return this.gravar({ ...atual, mensalidadeValidaAte: null });
+    return this.gravar({
+      ...atual,
+      mensalidadeValidaAte: null,
+      planoVagasNoAr: null,
+    });
   }
 
   /** A carteira nasce zerada na primeira vez que alguém mexe nela. */
@@ -65,6 +88,8 @@ export class RepositorioCarteirasMemoria implements RepositorioCarteiras {
       usuarioId,
       creditosVaga: 0,
       mensalidadeValidaAte: null,
+      planoVagasNoAr: null,
+      primeiraVagaGratisUsadaEm: null,
       criadoEm: agora,
       atualizadoEm: agora,
     };

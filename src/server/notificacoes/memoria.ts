@@ -57,6 +57,15 @@ export class RepositorioNotificacoesMemoria implements RepositorioNotificacoes {
     this.inscricoes.delete(endpoint);
   }
 
+  async contarComAvisoNaCidade(cidade: string): Promise<number> {
+    const comAparelho = new Set(
+      [...this.inscricoes.values()].map((i) => i.usuarioId),
+    );
+    return [...this.preferencias.values()].filter(
+      (p) => p.cidade === cidade && comAparelho.has(p.usuarioId),
+    ).length;
+  }
+
   async inscricoesDe(usuarioId: string): Promise<InscricaoPush[]> {
     return [...this.inscricoes.values()].filter(
       (i) => i.usuarioId === usuarioId,

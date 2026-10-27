@@ -79,7 +79,7 @@ export const ROTAS: readonly RotaVarrida[] = [
 export const ROTAS_EMPRESA: readonly RotaVarrida[] = [
   { path: "/empresa", nome: "Painel da empresa" },
   { path: "/empresa/vagas/nova", nome: "Publicar vaga" },
-  { path: "/empresa/creditos", nome: "Comprar vagas" },
+  { path: "/empresa/creditos", nome: "Planos e vagas" },
   { path: "/candidatos", nome: "Candidatos disponíveis" },
 ] as const;
 

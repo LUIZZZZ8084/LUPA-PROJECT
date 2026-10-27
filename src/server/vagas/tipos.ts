@@ -52,6 +52,15 @@ export interface DadosNovaVaga {
   salarioMin?: number | null;
   salarioMax?: number | null;
   habilidades?: string[];
+  /**
+   * Quem publicou — só o repositório em memória usa (#489).
+   *
+   * Em demonstração toda conta publica sob a mesma empresa fictícia, e sem
+   * saber quem publicou o limite do plano contaria as vagas de exemplo e as
+   * das outras contas: o Plano 5 de uma conta nova já nasceria cheio. No
+   * banco a empresa é a conta, e o campo não faz nada.
+   */
+  publicadaPor?: string;
 }
 
 export type EdicaoVaga = Partial<
@@ -77,6 +86,15 @@ export interface RepositorioVagas {
   porEmpresa(empresaId: string): Promise<Vaga[]>;
   /** Todas as vagas, de qualquer empresa — usado pela busca pública. */
   listar(): Promise<Vaga[]>;
+  /**
+   * Quantas vagas da empresa estão no ar agora: abertas e dentro dos 30
+   * dias (#489). É o número que o limite dos planos compara — vaga
+   * encerrada ou vencida não ocupa lugar.
+   *
+   * `publicadaPor` separa o que cada conta publicou quando várias dividem
+   * a mesma empresa — a demonstração. No banco é ignorado.
+   */
+  contarNoAr(empresaId: string, publicadaPor?: string): Promise<number>;
   criar(dados: DadosNovaVaga): Promise<Vaga>;
   atualizar(id: string, campos: EdicaoVaga): Promise<Vaga>;
   encerrar(id: string): Promise<Vaga>;

@@ -158,6 +158,21 @@ export class RepositorioNotificacoesPostgres
     if (error) throw erros.indisponivel(error.message);
   }
 
+  /**
+   * `pessoas_com_aviso_na_cidade` é uma função do banco, e não duas
+   * consultas juntadas aqui: a junção entre a preferência e o aparelho
+   * acontece onde as duas tabelas moram, e só o número atravessa.
+   */
+  async contarComAvisoNaCidade(cidade: string): Promise<number> {
+    const supabase = await cliente();
+    const { data, error } = await supabase.rpc("pessoas_com_aviso_na_cidade", {
+      p_cidade: cidade,
+    });
+
+    if (error) throw erros.indisponivel(error.message);
+    return Number(data ?? 0);
+  }
+
   async inscricoesDe(usuarioId: string): Promise<InscricaoPush[]> {
     const supabase = await cliente();
     const { data, error } = await supabase

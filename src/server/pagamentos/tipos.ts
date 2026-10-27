@@ -10,11 +10,25 @@
 
 export type TipoPagamento =
   | "prestador_mensalidade"
-  /** Publicar vaga (#172): três compras únicas que viram crédito… */
+  /**
+   * Publicar vaga (#172, #489): uma compra única que vira crédito…
+   *
+   * Os pacotes de 5 e 10 vagas saíram de venda em 26/10/2026, e com eles
+   * os dois valores do tipo: nunca houve compra de pacote em produção, e
+   * tipo sem tela que o venda é a promessa vazia que este arquivo já
+   * registra. O enum do banco ainda os tem — valor de enum não se apaga —,
+   * e nenhuma linha usa.
+   */
   | "empresa_vaga_avulsa"
-  | "empresa_pacote_5"
-  | "empresa_pacote_10"
-  /** …e uma assinatura mensal, que dispensa crédito enquanto vale. */
+  /**
+   * …e três assinaturas mensais, que dispensam crédito enquanto valem e
+   * limitam quantas vagas ficam no ar ao mesmo tempo. `empresa_mensal`
+   * é o **ilimitado**: o nome ficou, porque renomear um valor de enum em
+   * produção custaria uma migração que não muda uma palavra do que a
+   * pessoa lê.
+   */
+  | "empresa_plano_5"
+  | "empresa_plano_10"
   | "empresa_mensal"
   /**
    * Gerador de currículo pago (#47): compra única, que libera a geração e

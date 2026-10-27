@@ -48,9 +48,19 @@ const DEU_ERRADO: Record<Rota, readonly string[]> = {
  * não tem painel de empresa nem assinatura para abrir, tem um PDF para
  * baixar.
  */
+const DESTINO_PLANO_DE_VAGAS = {
+  href: "/perfil",
+  rotulo: "Ir para o perfil",
+  mensagem:
+    "Seu plano está ativo e renova sozinho todo mês. Para cancelar a renovação ou trocar de plano, abra Planos e vagas, no seu perfil.",
+};
+
 const DESTINO_APROVADO: Partial<
   Record<TipoPagamento, { href: string; rotulo: string; mensagem: string }>
 > = {
+  empresa_plano_5: DESTINO_PLANO_DE_VAGAS,
+  empresa_plano_10: DESTINO_PLANO_DE_VAGAS,
+  empresa_mensal: DESTINO_PLANO_DE_VAGAS,
   curriculo_pdf: {
     href: "/perfil/curriculo",
     rotulo: "Baixar currículo",
@@ -121,7 +131,7 @@ export function RetornoDaCompra({
             ? destino.mensagem
             : rota === "assinaturas"
               ? "Sua assinatura está ativa e renova sozinha todo mês. Você pode cancelar quando quiser, no seu perfil."
-              : "Suas vagas já estão na conta e não expiram. Você pode publicar quando quiser."}
+              : "Sua vaga já está na conta e não expira. Você pode publicar quando quiser."}
         </p>
         <ButtonLink
           href={

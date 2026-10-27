@@ -62,6 +62,20 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
     return data ? paraVaga(data) : null;
   }
 
+  async contarNoAr(empresaId: string): Promise<number> {
+    // `publicadaPor` não importa aqui: no banco a empresa é a própria conta.
+    const supabase = await cliente();
+    const { count, error } = await supabase
+      .from("vagas")
+      .select("id", { count: "exact", head: true })
+      .eq("empresa_id", empresaId)
+      .eq("status", "aberta")
+      .gt("expira_em", new Date().toISOString());
+
+    if (error) throw erros.indisponivel(error.message);
+    return count ?? 0;
+  }
+
   async porEmpresa(empresaId: string): Promise<Vaga[]> {
     const supabase = await cliente();
     const { data, error } = await supabase

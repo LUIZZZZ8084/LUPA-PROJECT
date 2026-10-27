@@ -33,6 +33,7 @@ import {
   vagaExpirada,
   whatsappLink,
 } from "@/lib/format";
+import { resumoDoDireito, seloDoDireito } from "@/lib/planos-empresa";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import {
@@ -178,6 +179,7 @@ export async function PainelDeContratacao({
   const totais = totaisDaSerie(serie);
   const match = matchPorCandidatura(applications, jobs);
   const direito = await direitoDePublicar(sessao.usuarioId);
+  const resumoDoPlano = resumoDoDireito(direito);
 
   /*
    * Sem perfil de contratante, e a tela diz coisas diferentes por papel.
@@ -310,7 +312,7 @@ export async function PainelDeContratacao({
             <div className="mt-2.5">
               <Badge tone={direito.mensalAtivo ? "empresas" : "outline"}>
                 {direito.mensalAtivo
-                  ? "Plano mensal ativo"
+                  ? seloDoDireito(direito).texto
                   : "Pagamento por vaga"}
               </Badge>
             </div>
@@ -351,20 +353,10 @@ export async function PainelDeContratacao({
         >
           <div className="flex items-center gap-2">
             <Ticket size={18} className="flex-none text-empresas" />
-            <h2 className="font-bold text-sm">
-              {direito.mensalAtivo
-                ? "Plano mensal ativo"
-                : direito.creditos === 1
-                  ? "1 vaga para publicar"
-                  : `${direito.creditos} vagas para publicar`}
-            </h2>
+            <h2 className="font-bold text-sm">{resumoDoPlano.titulo}</h2>
           </div>
           <p className="mt-1 text-muted text-sm leading-relaxed">
-            {direito.mensalAtivo
-              ? "Publique quantas vagas quiser, sem tirar do saldo."
-              : direito.creditos === 0
-                ? "Compre uma vaga para publicar a próxima."
-                : "Cada uma fica 30 dias no ar. Toque para comprar mais."}
+            {resumoDoPlano.detalhe}
           </p>
         </Link>
 

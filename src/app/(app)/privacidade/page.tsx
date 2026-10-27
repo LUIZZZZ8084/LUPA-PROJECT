@@ -171,7 +171,11 @@ export default function PrivacidadePage() {
             <li>
               <strong>Consentimento</strong> (inciso I) — ser encontrado por
               empresas, e receber aviso de vaga nova. Os dois nascem desligados
-              e você desliga quando quiser.
+              e você desliga quando quiser. Quem pede aviso entra, sem nome,
+              numa contagem que a empresa vê ao escolher um plano — &quot;N
+              pessoas da sua cidade pediram aviso&quot; —, e ela só aparece com
+              dez pessoas ou mais na cidade, para o número não apontar para
+              ninguém.
             </li>
             <li>
               <strong>Legítimo interesse</strong> (inciso IX) — conter fraude e
