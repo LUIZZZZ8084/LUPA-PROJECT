@@ -59,6 +59,40 @@ test.describe("resultado de cada vaga no painel", () => {
   });
 });
 
+test.describe("publicar outra vaga parecida", () => {
+  /**
+   * O caminho que a vaga encerrada ou vencida oferece. Encerrar uma vaga de
+   * verdade mudaria o estado da demonstração, que os outros specs
+   * compartilham — então o que se confere é o destino: o formulário abre
+   * preenchido com o texto da vaga, e só com ele.
+   */
+  test("abre preenchido com o texto da vaga, e avisa que a revisão vem antes", async ({
+    page,
+  }) => {
+    await page.goto("/empresa/vagas/nova?modelo=job-operador-maquinas");
+
+    await expect(page.getByText(/Preenchido com o texto de/)).toBeVisible();
+    await expect(page.getByLabel("Cargo")).toHaveValue(/Operador/);
+    await expect(page.getByLabel("Descrição da vaga")).not.toHaveValue("");
+  });
+
+  test("sem modelo, o formulário abre vazio", async ({ page }) => {
+    await page.goto("/empresa/vagas/nova");
+
+    await expect(page.getByLabel("Cargo")).toHaveValue("");
+    await expect(page.getByText(/Preenchido com o texto de/)).toHaveCount(0);
+  });
+
+  test("id que não é da empresa abre vazio, sem dizer o motivo", async ({
+    page,
+  }) => {
+    await page.goto("/empresa/vagas/nova?modelo=nao-existe");
+
+    await expect(page.getByLabel("Cargo")).toHaveValue("");
+    await expect(page.getByText(/Preenchido com o texto de/)).toHaveCount(0);
+  });
+});
+
 test.describe("chamar no WhatsApp com a mensagem pronta", () => {
   test("o atalho da lista e o da ficha levam o nome, o cargo e a empresa", async ({
     page,
