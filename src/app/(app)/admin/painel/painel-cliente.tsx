@@ -1,24 +1,16 @@
 "use client";
 
-import {
-  AlertCircle,
-  Briefcase,
-  Building2,
-  RefreshCw,
-  TrendingUp,
-  UserRound,
-  Users,
-  Wrench,
-} from "lucide-react";
+import { AlertCircle, RefreshCw, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Panel } from "@/components/ui/card";
 import { formatMoneyBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PainelAdmin } from "@/server/metrics/tipos";
 import { CoberturaDosCustos } from "./cobertura-dos-custos";
-import { ContasPorLugarBlocos, Legenda } from "./contas-por-lugar";
+import { ContasPorLugarBlocos } from "./contas-por-lugar";
 import { FunilDoPainel } from "./funil";
 import { PressaoNosTetos } from "./pressao-nos-tetos";
+import { VisaoGeral } from "./visao-geral";
 
 /**
  * Painel administrativo com atualização por polling.
@@ -100,9 +92,6 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
     };
   }, [buscar]);
 
-  const cadastrosNaJanela = painel.cadastros.reduce((s, d) => s + d.total, 0);
-  const picoDiario = Math.max(1, ...painel.cadastros.map((d) => d.total));
-
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -132,41 +121,10 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
       )}
 
       {/*
-        Candidatos ganharam cartão (#471): o número já vinha da view, e
-        o papel mais numeroso do app era o único sem lugar no topo.
+        A visão geral (#507): receita, contas, lugares e funil em quatro
+        cards, no lugar dos cartões de totais e das barras de cadastros.
       */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <Cartao
-          icone={<Users size={18} />}
-          rotulo="Contas"
-          valor={painel.totais.usuarios}
-          cor="text-ink"
-        />
-        <Cartao
-          icone={<UserRound size={18} />}
-          rotulo="Candidatos"
-          valor={painel.totais.candidatos}
-          cor="text-vagas"
-        />
-        <Cartao
-          icone={<Wrench size={18} />}
-          rotulo="Prestadores"
-          valor={painel.totais.prestadores}
-          cor="text-servicos"
-        />
-        <Cartao
-          icone={<Building2 size={18} />}
-          rotulo="Empresas"
-          valor={painel.totais.empresas}
-          cor="text-empresas"
-        />
-        <Cartao
-          icone={<Briefcase size={18} />}
-          rotulo="Vagas abertas"
-          valor={painel.totais.vagasAbertas}
-          cor="text-vagas"
-        />
-      </div>
+      <VisaoGeral painel={painel} />
 
       {/*
         Caixa.
@@ -244,65 +202,6 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
 
       <FunilDoPainel funil={painel.funil} />
 
-      {/* Cadastros por dia */}
-      <Panel>
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold">
-            Cadastros nos últimos 30 dias
-          </h2>
-          <span className="text-xs text-muted">
-            {cadastrosNaJanela} no período
-          </span>
-        </div>
-        <div className="mt-2">
-          <Legenda />
-        </div>
-
-        {/*
-          Cada dia empilha os três papéis (#471). A série já vinha separada
-          por papel do banco, e a barra única a somava — um dia de dez
-          cadastros de empresa e um de dez candidatos eram a mesma barra.
-          Dia sem cadastro continua com o tracinho de 2%, para a série
-          mostrar a constância.
-        */}
-        <div className="mt-4 flex h-28 items-end gap-[3px]">
-          {painel.cadastros.map((dia) => (
-            <div
-              key={dia.dia}
-              className="group relative flex flex-1 flex-col-reverse overflow-visible rounded-t-sm bg-panel-3"
-              style={{
-                height: `${Math.max(2, (dia.total / picoDiario) * 100)}%`,
-              }}
-            >
-              {(
-                [
-                  ["candidato_clt", "bg-vagas"],
-                  ["prestador_servico", "bg-servicos"],
-                  ["empresa", "bg-empresas"],
-                ] as const
-              ).map(([papel, cor]) =>
-                dia.porPapel[papel] > 0 ? (
-                  <div
-                    key={papel}
-                    className={cor}
-                    style={{
-                      height: `${(dia.porPapel[papel] / dia.total) * 100}%`,
-                    }}
-                  />
-                ) : null,
-              )}
-              <span className="pointer-events-none absolute -top-7 left-1/2 hidden -translate-x-1/2 rounded bg-panel-3 px-1.5 py-0.5 text-[10px] whitespace-nowrap text-ink group-hover:block">
-                {new Date(`${dia.dia}T12:00:00Z`).toLocaleDateString("pt-BR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                })}
-                : {dia.total}
-              </span>
-            </div>
-          ))}
-        </div>
-      </Panel>
-
       <ContasPorLugarBlocos lugares={painel.lugares} />
 
       {/*
@@ -315,28 +214,6 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
         ser insumo de uma decisão mensal.
       */}
       <PressaoNosTetos linhas={painel.pressao} />
-    </div>
-  );
-}
-
-function Cartao({
-  icone,
-  rotulo,
-  valor,
-  cor,
-}: {
-  icone: React.ReactNode;
-  rotulo: string;
-  valor: number;
-  cor: string;
-}) {
-  return (
-    <div className="rounded-[var(--radius-card)] border border-line bg-panel p-4">
-      <span className={cn("inline-flex", cor)}>{icone}</span>
-      <p className={cn("mt-2 text-2xl font-bold tabular-nums", cor)}>
-        {valor.toLocaleString("pt-BR")}
-      </p>
-      <p className="mt-0.5 text-[11px] text-muted">{rotulo}</p>
     </div>
   );
 }
