@@ -1,6 +1,8 @@
+import { Handshake } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
+import { ButtonLink } from "@/components/ui/button";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { buscasSemResultado, DIAS_DA_JANELA } from "@/server/buscas/servico";
@@ -45,6 +47,14 @@ export default async function PainelAdminPage() {
         title="Painel"
         accent="text-warn"
         description="Contas por estado, cidade e papel, o funil de cada papel, o caixa e quanto falta para o Lupa pagar os próprios custos."
+        action={
+          pode(sessao.papel, "admin:parceiros") ? (
+            <ButtonLink href="/admin/parceiros" variant="outline">
+              <Handshake size={17} aria-hidden />
+              Parceiros
+            </ButtonLink>
+          ) : undefined
+        }
       />
       <PainelCliente inicial={inicial} />
       <BuscasSemResultado termos={termos} dias={DIAS_DA_JANELA} />

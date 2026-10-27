@@ -1,6 +1,7 @@
 import "server-only";
 
 import { passouDoPrazo } from "@/lib/format";
+import { aindaEDaParceria, diasParaChegarA } from "@/lib/parceria";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
 import { idDaEmpresaDoUsuario } from "../vagas/dono";
@@ -232,4 +233,43 @@ export async function revogarPlanoMensal(usuarioId: string): Promise<void> {
   log.info("plano mensal de vaga revogado", {
     acao: "carteira.mensal_revogado",
   });
+}
+
+/**
+ * Deixa o plano ilimitado valendo pelo menos até `ate` — a parceria (#505).
+ *
+ * Usa a mesma função atômica do pagamento, com os dias que faltam para
+ * chegar lá: conceder de novo pede zero dias e não estende duas vezes.
+ * Devolve a validade que ficou na carteira.
+ */
+export async function garantirPlanoIlimitadoAte(
+  usuarioId: string,
+  ate: string,
+): Promise<string | null> {
+  const repo = repositorioCarteiras();
+  const atual = await repo.porUsuario(usuarioId);
+  const dias = diasParaChegarA(ate, atual?.mensalidadeValidaAte ?? null);
+  if (dias <= 0) return atual?.mensalidadeValidaAte ?? null;
+
+  const carteira = await repo.estenderMensalidade(usuarioId, dias, null);
+  log.info("plano ilimitado de parceria concedido", {
+    acao: "carteira.parceria",
+    dias,
+  });
+  return carteira.mensalidadeValidaAte;
+}
+
+/**
+ * Tira o plano que a parceria deu, e só ele (#505): se a carteira vale além
+ * do que a parceria gravou, a diferença foi paga, e fica.
+ */
+export async function encerrarPlanoDeParceria(
+  usuarioId: string,
+  concedidoAte: string,
+): Promise<void> {
+  const atual = await repositorioCarteiras().porUsuario(usuarioId);
+  if (!aindaEDaParceria(atual?.mensalidadeValidaAte ?? null, concedidoAte)) {
+    return;
+  }
+  await revogarPlanoMensal(usuarioId);
 }

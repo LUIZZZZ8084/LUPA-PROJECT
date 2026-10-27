@@ -114,6 +114,12 @@ export default function PrivacidadePage() {
           da transação no Mercado Pago.{" "}
           <strong>Não recebemos nem guardamos dado de cartão.</strong>
         </p>
+        <p>
+          <strong>De parceria:</strong> se você ou a sua empresa tem acordo com
+          a Lupa para usá-la sem pagar, guardamos o e-mail que identifica a
+          parceria, o nome dela, o prazo e a conta que recebeu o benefício. O
+          benefício só vale depois que você confirma que o e-mail é seu.
+        </p>
       </Artigo>
 
       <Artigo n={3} titulo="O que é público, e o que nunca é">

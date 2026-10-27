@@ -474,6 +474,8 @@ describe("RBAC", () => {
       "admin:metricas",
       "admin:decidir_verificacao",
       "admin:moderar",
+      "admin:custos",
+      "admin:parceiros",
     ];
 
     for (const papel of PAPEIS.filter((p) => p !== "admin")) {

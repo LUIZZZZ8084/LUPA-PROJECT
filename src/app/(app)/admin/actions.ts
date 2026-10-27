@@ -24,6 +24,14 @@ import {
 import { decidirDenuncia } from "@/server/denuncias/servico";
 import { erros } from "@/server/errors";
 import { log } from "@/server/logger";
+import {
+  schemaIdDeParceria,
+  schemaNovaParceria,
+} from "@/server/parceiros/schemas";
+import {
+  autorizarParceiro,
+  encerrarParceria,
+} from "@/server/parceiros/servico";
 
 export type ReviewDecision = "aprovado" | "reprovado";
 
@@ -185,6 +193,33 @@ export const removerCustoAction = criarAcao({
   executar: async ({ id }) => {
     await removerCusto(await sessaoAtual(), id);
     revalidatePath("/admin/painel");
+    return { id };
+  },
+});
+
+/*
+ * Parcerias (#505). Autorizar pode dar o benefício na hora — a conta já
+ * existia e já tinha confirmado o e-mail —, e encerrar pode tirá-lo: as duas
+ * mexem na vitrine e na busca de vagas, que guardam a lista em cache.
+ */
+export const autorizarParceiroAction = criarAcao({
+  nome: "parceiro.autorizar",
+  entrada: schemaNovaParceria,
+  executar: async (dados) => {
+    const parceria = await autorizarParceiro(await sessaoAtual(), dados);
+    derrubarCacheDePrestadores();
+    revalidatePath("/admin/parceiros");
+    return { id: parceria.id };
+  },
+});
+
+export const encerrarParceriaAction = criarAcao({
+  nome: "parceiro.encerrar",
+  entrada: schemaIdDeParceria,
+  executar: async ({ id }) => {
+    await encerrarParceria(await sessaoAtual(), id);
+    derrubarCacheDePrestadores();
+    revalidatePath("/admin/parceiros");
     return { id };
   },
 });

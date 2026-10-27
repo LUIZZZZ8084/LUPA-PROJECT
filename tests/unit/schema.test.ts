@@ -121,6 +121,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "inscricoes_push",
       "mensagens_suporte",
       "pagamentos",
+      "parceiros",
       "pedidos_verificacao",
       "perfis_candidato",
       "perfis_empresa",
@@ -819,6 +820,8 @@ describe("grants de anon e authenticated", () => {
     "denuncias",
     // Quanto a empresa gasta por mês (#473): dado dela, não do app.
     "custos_mensais",
+    // Quem tem parceria com a Lupa, e até quando (#505).
+    "parceiros",
     /*
      * Saber quem está de olho em vaga de motorista é a mesma classe de
      * informação que o currículo — numa cidade do tamanho de Sinop, diz
@@ -1217,7 +1220,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        order by table_name`,
     );
     // 23 desde a #235, que acrescentou `mensagens_suporte`.
-    expect(tabelas.rows).toHaveLength(23);
+    expect(tabelas.rows).toHaveLength(24);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -3489,6 +3492,91 @@ describe("aplica-custos-mensais.sql", () => {
 
       const privilegio = await banco.query<{ algum: boolean }>(
         `select bool_or(has_table_privilege(papel, 'custos_mensais', p)) as algum
+           from unnest(array['anon', 'authenticated']) as papel,
+                unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE',
+                             'TRUNCATE']) as p`,
+      );
+      expect(privilegio.rows[0].algum).toBe(false);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
+});
+
+/**
+ * Parcerias (#505). O que o banco garante sozinho: e-mail em minúsculas, uma
+ * aberta por e-mail — duas dariam dois prazos para a mesma conta —, e a
+ * parceria encerrada liberando o e-mail para uma nova.
+ */
+describe("parceiros", () => {
+  let banco: PGlite;
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  it("recusa e-mail com maiúscula, sem arroba ou nome curto", async () => {
+    for (const valores of [
+      "'Parceiro@Lupa.com', 'Agro Norte'",
+      "'parceiro.lupa.com', 'Agro Norte'",
+      "'parceiro@lupa.com', 'A'",
+    ]) {
+      await expect(
+        banco.query(`insert into parceiros (email, nome) values (${valores})`),
+      ).rejects.toThrow();
+    }
+  });
+
+  it("uma aberta por e-mail; encerrada, o e-mail volta a valer", async () => {
+    await banco.query(
+      "insert into parceiros (email, nome) values ('agro@lupa.com', 'Agro Norte')",
+    );
+    await expect(
+      banco.query(
+        "insert into parceiros (email, nome) values ('agro@lupa.com', 'De novo')",
+      ),
+    ).rejects.toThrow();
+
+    await banco.query(
+      "update parceiros set encerrado_em = now() where email = 'agro@lupa.com'",
+    );
+    await banco.query(
+      "insert into parceiros (email, nome) values ('agro@lupa.com', 'De novo')",
+    );
+    const r = await banco.query<{ n: number }>(
+      "select count(*)::int as n from parceiros where email = 'agro@lupa.com'",
+    );
+    expect(r.rows[0].n).toBe(2);
+  });
+});
+
+/**
+ * O script que leva os parceiros ao banco de produção (#505): cria a tabela
+ * num banco que não a tem, roda de novo sem erro, e tira das chaves públicas
+ * tudo o que o Supabase concede a toda tabela nova.
+ */
+describe("aplica-parceiros.sql", () => {
+  it("cria, roda de novo sem erro e fecha para as chaves públicas", async () => {
+    const banco = await PGlite.create();
+    try {
+      await banco.exec(SCHEMA);
+      await banco.exec("drop table parceiros");
+
+      const script = readFileSync(
+        join(process.cwd(), "supabase/aplica-parceiros.sql"),
+        "utf8",
+      );
+      await banco.exec(script);
+      await banco.exec("grant all on parceiros to anon, authenticated");
+      await banco.exec(script);
+
+      const privilegio = await banco.query<{ algum: boolean }>(
+        `select bool_or(has_table_privilege(papel, 'parceiros', p)) as algum
            from unnest(array['anon', 'authenticated']) as papel,
                 unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE',
                              'TRUNCATE']) as p`,
