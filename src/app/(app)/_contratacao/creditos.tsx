@@ -127,6 +127,36 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
       )}
 
       <div className="space-y-3">
+        {/*
+          A avulsa vem primeiro (#501) e continua separada dos planos: não
+          renova, não vira plano, e vale para quem tem uma vaga só. Quem tem
+          uma vaga acha a opção dela sem rolar por três planos mensais.
+          Misturá-la na lista faria parecer "o plano de 1", e quem contrata
+          todo mês pagaria mais por vaga sem perceber.
+        */}
+        <Panel>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-bold text-base">{OPCAO_AVULSA.nome}</h2>
+              <p className="mt-0.5 text-muted text-sm">
+                {OPCAO_AVULSA.paraQuem}
+              </p>
+            </div>
+            <div className="flex-none text-right">
+              <p className="font-bold text-empresas text-xl">
+                {preco(OPCAO_AVULSA.tipo)}
+              </p>
+              <p className="text-faint text-xs">compra única</p>
+            </div>
+          </div>
+
+          <ComprarButton
+            tipo={OPCAO_AVULSA.tipo}
+            rotulo="Comprar 1 vaga"
+            destaque={false}
+          />
+        </Panel>
+
         {PLANOS_DE_VAGA.map((plano) => {
           const porVaga = precoPorVaga(plano.tipo);
           const ehOAtual = planoAtual?.tipo === plano.tipo;
@@ -197,35 +227,6 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
             </Panel>
           );
         })}
-
-        {/*
-          A avulsa fica separada dos planos de propósito: não renova, não
-          vira plano, e vale para quem tem uma vaga só. Misturá-la na lista
-          faria parecer "o plano de 1", e quem contrata todo mês pagaria
-          mais por vaga sem perceber.
-        */}
-        <Panel>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="font-bold text-base">{OPCAO_AVULSA.nome}</h2>
-              <p className="mt-0.5 text-muted text-sm">
-                {OPCAO_AVULSA.paraQuem}
-              </p>
-            </div>
-            <div className="flex-none text-right">
-              <p className="font-bold text-empresas text-xl">
-                {preco(OPCAO_AVULSA.tipo)}
-              </p>
-              <p className="text-faint text-xs">compra única</p>
-            </div>
-          </div>
-
-          <ComprarButton
-            tipo={OPCAO_AVULSA.tipo}
-            rotulo="Comprar 1 vaga"
-            destaque={false}
-          />
-        </Panel>
       </div>
 
       <Panel className="mt-5">

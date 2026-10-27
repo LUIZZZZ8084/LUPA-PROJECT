@@ -2750,6 +2750,13 @@ teto. Quando o plano está cheio e não há saldo, a mensagem diz que o plano
 **funciona** e falta lugar. Dizer "assine um plano" a quem já assinou é a
 mensagem que faz a pessoa concluir que o app não sabe que ela existe.
 
+**Na tela, a vaga avulsa vem primeiro (#501).** Pedido do Luiz em
+27/10/2026: quem tem uma vaga só achava a opção dela depois de rolar por
+três planos mensais. Ela continua num bloco separado dos planos — não
+renova, não vira plano —, e a tela de depois do cadastro usa a mesma
+ordem, porque as duas leem a mesma lista e divergir é como uma passa a
+dizer o que a outra não diz.
+
 **Um plano por vez, e trocar é cancelar a renovação do atual.** Dois planos
 vivos seriam duas cobranças por mês para um benefício só, que só aparece na
 fatura de quem pagou. A regra mora na aplicação (`recusarSegundoPlanoDeVaga`)
