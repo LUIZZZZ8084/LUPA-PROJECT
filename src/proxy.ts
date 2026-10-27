@@ -35,9 +35,10 @@ import {
  * painel da empresa tem um `loading.tsx` de propósito, para não abrir em
  * branco no 3G; sem esta lista, fechá-lo custaria o esqueleto.
  *
- * O mais específico vence: `/empresa/vagas/nova` exige publicar, que o
- * admin não tem — ele enxerga, e de propósito não publica no lugar de
- * ninguém.
+ * O mais específico vence: `/empresa/vagas/nova` exige publicar, que
+ * candidato não tem. O admin tem (#499), só para a empresa dele: ele não
+ * publica no lugar de ninguém, e quem garante isso é o dono da vaga, não
+ * esta lista.
  *
  * `semSessao` separa dois casos que parecem um só. Para quem tem sessão e
  * não pode, a resposta é sempre 404 — 403 confirmaria que a área existe.

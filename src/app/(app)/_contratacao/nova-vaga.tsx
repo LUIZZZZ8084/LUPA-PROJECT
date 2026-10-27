@@ -30,8 +30,9 @@ export async function PublicarVaga({
    * envio, quando a action recusa — formulário preenchido e recusado no
    * fim é a pior forma de dizer "isto não é para você".
    *
-   * `vaga:publicar` e não a capacidade do painel: o admin enxerga, e de
-   * propósito não publica no lugar de ninguém.
+   * `vaga:publicar` e não a capacidade do painel: são perguntas
+   * diferentes, e a segunda não diz se a pessoa publica. O admin passa
+   * desde a #499, e publica só pela empresa dele.
    */
   if (!pode(sessao.papel, "vaga:publicar")) notFound();
 

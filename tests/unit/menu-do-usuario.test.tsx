@@ -92,6 +92,14 @@ describe("atalhos por papel", () => {
     ).toHaveAttribute("href", "/admin/painel");
   });
 
+  // O admin tem a empresa dele (#499), a mesma área da empresa.
+  it("admin também vê o painel da empresa", () => {
+    abrir({ ...CANDIDATO, papel: "admin" });
+    expect(
+      screen.getByRole("menuitem", { name: /painel da empresa/i }),
+    ).toHaveAttribute("href", "/empresa");
+  });
+
   it("candidato não vê painel nenhum", () => {
     abrir();
     expect(screen.queryByRole("menuitem", { name: /painel/i })).toBeNull();

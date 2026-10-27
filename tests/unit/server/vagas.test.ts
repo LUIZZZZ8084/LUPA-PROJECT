@@ -41,7 +41,6 @@ const candidato: Autenticado = {
   usuarioId: "candidato-1",
   papel: "candidato_clt",
 };
-const admin: Autenticado = { usuarioId: "admin-1", papel: "admin" };
 
 const DADOS = {
   titulo: "Operador de Máquinas",
@@ -58,6 +57,24 @@ describe("vagas do painel da empresa", () => {
   let restaurar: () => void;
   let restaurarCarteira: () => void;
   let restaurarUsuariosDoTeste: () => void;
+  let usuariosDoTeste: RepositorioMemoria;
+
+  /**
+   * O admin precisa existir no repositório: a primeira vaga dele cria o perfil
+   * de contratante a partir do nome da conta (#499), como a do prestador.
+   */
+  async function adminComConta(): Promise<Autenticado> {
+    const usuario = await usuariosDoTeste.criar({
+      email: "admin@teste.lupa",
+      senhaHash: "hash",
+      papel: "admin",
+      nomeCompleto: "Administrador da Lupa",
+      telefone: "66999110009",
+      cidade: "Sinop - MT",
+    });
+    await creditarVagas(usuario.id, 50);
+    return { usuarioId: usuario.id, papel: "admin" };
+  }
 
   /*
    * Publicar passou a custar crédito (#172), então quase todo teste deste
@@ -79,15 +96,12 @@ describe("vagas do painel da empresa", () => {
      * Postgres. Estas empresas não existem em lugar nenhum — o que importa
      * aqui é que a consulta responda "não", e não que bata num banco.
      */
-    restaurarUsuariosDoTeste = usarRepositorio(new RepositorioMemoria());
+    usuariosDoTeste = new RepositorioMemoria();
+    restaurarUsuariosDoTeste = usarRepositorio(usuariosDoTeste);
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
 
-    for (const id of [
-      empresa.usuarioId,
-      outraEmpresa.usuarioId,
-      admin.usuarioId,
-    ]) {
+    for (const id of [empresa.usuarioId, outraEmpresa.usuarioId]) {
       await creditarVagas(id, 50);
     }
   });
@@ -313,16 +327,28 @@ describe("vagas do painel da empresa", () => {
     });
 
     /**
-     * Admin administra, mas não age no lugar de ninguém — a matriz nem
-     * concede `vaga:encerrar_propria` ao papel. Dar de graça
-     * transformaria um acesso de admin comprometido em controle sobre o
-     * painel de qualquer empresa.
+     * O admin tem a empresa dele (#499), e só a dele. Antes, a matriz nem
+     * dava `vaga:encerrar_propria` ao papel; hoje dá, e o que impede um
+     * acesso de admin comprometido de controlar o painel de qualquer
+     * empresa é o dono da vaga — `exigirDono` não tem mais o atalho.
      */
-    it("admin não tem a capacidade de encerrar vaga", async () => {
+    it("admin não encerra a vaga de outra empresa", async () => {
+      const admin = await adminComConta();
       const dela = await publicarVaga(empresa, DADOS);
 
       const erro = await capturar(() => encerrarVaga(admin, dela.id));
-      expect(erro.codigo).toBe("sem_permissao");
+      expect(erro.codigo).toBe("nao_encontrado");
+
+      // Continua no ar: quem a encerra, depois, é a dona.
+      expect((await encerrarVaga(empresa, dela.id)).status).toBe("fechada");
+    });
+
+    it("admin publica e encerra a vaga que é dele", async () => {
+      const admin = await adminComConta();
+      const dele = await publicarVaga(admin, DADOS);
+      expect(dele.empresaId).toBe(admin.usuarioId);
+
+      expect((await encerrarVaga(admin, dele.id)).status).toBe("fechada");
     });
 
     it("id inexistente é 'não encontrado'", async () => {
@@ -445,6 +471,36 @@ describe("vagas do painel da empresa", () => {
       vi.setSystemTime(new Date("2026-02-05T00:00:00Z"));
       const erro = await capturar(() => reativarVaga(outraEmpresa, dela.id));
       expect(erro.codigo).toBe("nao_encontrado");
+    });
+
+    /**
+     * Reativar gasta o saldo de quem chama. Se o admin alcançasse a vaga
+     * vencida de outra empresa (#499), gastaria o próprio crédito para
+     * estender o anúncio dela.
+     */
+    it("o admin não reativa a vaga vencida de outra empresa nem gasta saldo", async () => {
+      const admin = await adminComConta();
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const dela = await publicarVaga(empresa, DADOS);
+
+      vi.setSystemTime(new Date("2026-02-05T00:00:00Z"));
+      const erro = await capturar(() => reativarVaga(admin, dela.id));
+
+      expect(erro.codigo).toBe("nao_encontrado");
+      expect((await direitoDePublicar(admin.usuarioId)).creditos).toBe(50);
+    });
+
+    it("o admin reativa a vaga vencida que é dele", async () => {
+      const admin = await adminComConta();
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const dele = await publicarVaga(admin, DADOS);
+
+      vi.setSystemTime(new Date("2026-02-05T00:00:00Z"));
+      const reativada = await reativarVaga(admin, dele.id);
+
+      expect(reativada.status).toBe("aberta");
     });
   });
 
