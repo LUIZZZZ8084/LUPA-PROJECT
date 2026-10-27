@@ -74,6 +74,14 @@ test.describe("planos de vaga", () => {
     await expect(page.getByText("R$ 19,90").first()).toBeVisible();
     await expect(page.getByText(/até 5 vagas no ar/i)).toBeVisible();
 
+    // A vaga avulsa vem primeiro (#501): quem tem uma vaga só não rola por
+    // três planos mensais para achar a opção dela.
+    const titulos = await page
+      .getByRole("heading", { level: 2 })
+      .allTextContents();
+    expect(titulos.indexOf("1 vaga")).toBeGreaterThanOrEqual(0);
+    expect(titulos.indexOf("1 vaga")).toBeLessThan(titulos.indexOf("Plano 5"));
+
     // Assina o Plano 5.
     await page.getByRole("button", { name: /assinar plano 5/i }).click();
     await page.waitForURL(/\/pagamento\/retorno/, { timeout: 20_000 });

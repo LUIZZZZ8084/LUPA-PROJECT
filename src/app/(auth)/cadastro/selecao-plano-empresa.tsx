@@ -94,6 +94,19 @@ export function SelecaoDePlanoEmpresa() {
         </p>
 
         <ul className="mt-2 space-y-2">
+          <LinhaDeCompra
+            nome={OPCAO_AVULSA.nome}
+            preco={formatPrecoBRL(PRECO_CENTAVOS[OPCAO_AVULSA.tipo] / 100)}
+            nota="compra única"
+          >
+            <ComprarButton
+              tipo={OPCAO_AVULSA.tipo}
+              rotulo="Comprar"
+              ariaLabel="Comprar 1 vaga"
+              destaque={false}
+              compacto
+            />
+          </LinhaDeCompra>
           {PLANOS_DE_VAGA.map((plano) => {
             const limite = VAGAS_NO_AR_POR_PLANO[plano.tipo];
             return (
@@ -113,19 +126,6 @@ export function SelecaoDePlanoEmpresa() {
               </LinhaDeCompra>
             );
           })}
-          <LinhaDeCompra
-            nome={OPCAO_AVULSA.nome}
-            preco={formatPrecoBRL(PRECO_CENTAVOS[OPCAO_AVULSA.tipo] / 100)}
-            nota="compra única"
-          >
-            <ComprarButton
-              tipo={OPCAO_AVULSA.tipo}
-              rotulo="Comprar"
-              ariaLabel="Comprar 1 vaga"
-              destaque={false}
-              compacto
-            />
-          </LinhaDeCompra>
         </ul>
       </section>
     </div>
