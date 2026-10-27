@@ -9,6 +9,7 @@
  */
 
 import type { Origem } from "./proximidade";
+import type { PerguntaDeTriagem } from "./triagem";
 
 export type Role = "candidato_clt" | "prestador_servico" | "empresa";
 
@@ -123,6 +124,11 @@ export interface Job {
   /** O que a vaga pede. Vazio quando a empresa não declarou — aí o
    * casamento com o candidato lê o título e a descrição. */
   skills: string[];
+  /**
+   * Até três perguntas de sim ou não para quem se candidata (#491).
+   * Opcional porque banco sem a migração aplicada não devolve o campo.
+   */
+  screening_questions?: PerguntaDeTriagem[];
   status: JobStatus;
   created_at: string;
   /** 30 dias após publicar, ou após a última reativação manual. */
@@ -135,6 +141,11 @@ export interface Application {
   candidate_id: string;
   status: ApplicationStatus;
   created_at: string;
+  /**
+   * O que a pessoa respondeu às perguntas de triagem da vaga, na ordem delas
+   * (#491): `true` é Sim. `null` quando a vaga não tinha pergunta.
+   */
+  answers?: boolean[] | null;
 }
 
 export interface Review {
@@ -202,6 +213,8 @@ export interface ApplicationWithCandidate extends Application {
     resume_url: string | null;
   };
   job_title: string;
+  /** As perguntas da vaga, para a empresa ler a resposta ao lado delas (#491). */
+  job_questions?: PerguntaDeTriagem[];
 }
 
 /** A mesma candidatura, vista por quem se candidatou — sem currículo alheio. */

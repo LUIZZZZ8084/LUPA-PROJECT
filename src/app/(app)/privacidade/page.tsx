@@ -74,7 +74,13 @@ export default function PrivacidadePage() {
         <p>
           <strong>De quem procura trabalho:</strong> área desejada, resumo,
           experiências, formação, habilidades, disponibilidade, arquivo de
-          currículo se enviar, e as candidaturas que fez.
+          currículo se enviar, e as candidaturas que fez.{" "}
+          <strong>
+            Se a vaga tinha perguntas de triagem, as suas respostas ficam na
+            candidatura e chegam à empresa dona da vaga, junto do currículo.
+          </strong>{" "}
+          Elas somem com a candidatura, e a candidatura some se você excluir a
+          conta.
         </p>
         <p>
           <strong>De quem presta serviço:</strong> categoria, descrição, preço
@@ -123,6 +129,16 @@ export default function PrivacidadePage() {
             que escreve (o da empresa, se a conta é de empresa). CNPJ e razão
             social, que são registro público. O telefone do prestador, porque é
             por ele que o contato acontece.
+          </p>
+          <p className="mt-3">
+            <strong>A vaga publicada abre sem conta.</strong> O link de uma vaga
+            pode ser aberto por qualquer pessoa, e aparece com o cargo, a
+            empresa e a cidade na prévia do WhatsApp, do Instagram e do
+            Facebook. Sem conta, quem abre lê o cargo, a empresa, o local, o
+            salário, o endereço e a descrição — e nada de contato: nem telefone,
+            nem e-mail, nem WhatsApp, nem as redes da empresa. Candidatar-se
+            continua pedindo conta. A lista de vagas, os perfis e os contatos
+            seguem fechados.
           </p>
           <p className="mt-3 font-semibold text-ink">Nunca fica visível</p>
           <p className="mt-1">
@@ -178,7 +194,11 @@ export default function PrivacidadePage() {
             <li>
               <strong>Consentimento</strong> (inciso I) — ser encontrado por
               empresas, e receber aviso de vaga nova. Os dois nascem desligados
-              e você desliga quando quiser.
+              e você desliga quando quiser. Quem pede aviso entra, sem nome,
+              numa contagem que a empresa vê ao escolher um plano — &quot;N
+              pessoas da sua cidade pediram aviso&quot; —, e ela só aparece com
+              dez pessoas ou mais na cidade, para o número não apontar para
+              ninguém.
             </li>
             <li>
               <strong>Legítimo interesse</strong> (inciso IX) — conter fraude e

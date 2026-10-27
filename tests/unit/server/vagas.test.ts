@@ -57,6 +57,7 @@ const DADOS = {
 describe("vagas do painel da empresa", () => {
   let restaurar: () => void;
   let restaurarCarteira: () => void;
+  let restaurarUsuariosDoTeste: () => void;
 
   /*
    * Publicar passou a custar crédito (#172), então quase todo teste deste
@@ -72,6 +73,13 @@ describe("vagas do painel da empresa", () => {
     restaurarCarteira = usarRepositorioCarteiras(
       new RepositorioCarteirasMemoria(),
     );
+    /*
+     * A carteira consulta a conta para saber se ainda há primeira vaga
+     * grátis (#489), e com o banco "ligado" o repositório padrão seria o
+     * Postgres. Estas empresas não existem em lugar nenhum — o que importa
+     * aqui é que a consulta responda "não", e não que bata num banco.
+     */
+    restaurarUsuariosDoTeste = usarRepositorio(new RepositorioMemoria());
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -87,6 +95,7 @@ describe("vagas do painel da empresa", () => {
   afterEach(() => {
     restaurar();
     restaurarCarteira();
+    restaurarUsuariosDoTeste();
     vi.restoreAllMocks();
   });
 
@@ -95,6 +104,29 @@ describe("vagas do painel da empresa", () => {
       const vaga = await publicarVaga(empresa, DADOS);
       expect(vaga.empresaId).toBe(empresa.usuarioId);
       expect(vaga.status).toBe("aberta");
+    });
+
+    /*
+     * As perguntas de triagem (#491) saem do formulário já em lista, e a
+     * vaga as guarda como vieram — na ordem, com a marca de eliminatória.
+     */
+    it("a vaga guarda as perguntas de triagem que a empresa escreveu", async () => {
+      const vaga = await publicarVaga(empresa, {
+        ...DADOS,
+        perguntas: [
+          { texto: "Tem CNH D?", eliminatoria: true },
+          { texto: "Pode trabalhar à noite?", eliminatoria: false },
+        ],
+      });
+
+      expect(vaga.perguntas).toEqual([
+        { texto: "Tem CNH D?", eliminatoria: true },
+        { texto: "Pode trabalhar à noite?", eliminatoria: false },
+      ]);
+    });
+
+    it("vaga sem pergunta sai com a lista vazia", async () => {
+      expect((await publicarVaga(empresa, DADOS)).perguntas).toEqual([]);
     });
 
     it("candidato não publica vaga", async () => {
@@ -128,7 +160,7 @@ describe("vagas do painel da empresa", () => {
        * que ninguém escolheu.
        */
       expect(erro.mensagem).toMatch(/compre uma vaga/i);
-      expect(erro.mensagem).toMatch(/plano mensal/i);
+      expect(erro.mensagem).toMatch(/assine um plano/i);
     });
 
     it("publicar gasta exatamente um crédito", async () => {
@@ -144,7 +176,52 @@ describe("vagas do painel da empresa", () => {
     /** Com o plano mensal ativo, publicar não custa crédito nenhum. */
     it("plano mensal publica sem gastar crédito", async () => {
       await debitarVagas(empresa.usuarioId, 50);
-      await estenderPlanoMensal(empresa.usuarioId);
+      await estenderPlanoMensal(empresa.usuarioId, null);
+
+      await publicarVaga(empresa, DADOS);
+
+      expect((await direitoDePublicar(empresa.usuarioId)).creditos).toBe(0);
+    });
+
+    /**
+     * O teto do plano (#489): a sexta vaga do Plano 5 é recusada, e a
+     * mensagem diz que o plano **funciona** e o que falta é lugar. Dizer
+     * "assine um plano" a quem já assinou faria a pessoa concluir que o app
+     * não sabe que ela existe.
+     */
+    it("plano de 5 cheio recusa a sexta, e diz que está cheio", async () => {
+      await debitarVagas(empresa.usuarioId, 50);
+      await estenderPlanoMensal(empresa.usuarioId, 5);
+      for (let i = 0; i < 5; i += 1) await publicarVaga(empresa, DADOS);
+
+      const erro = await capturar(() => publicarVaga(empresa, DADOS));
+
+      expect(erro.codigo).toBe("validacao");
+      expect(erro.mensagem).toMatch(/5 vagas no ar/i);
+      expect(erro.mensagem).not.toMatch(/assine um plano/i);
+    });
+
+    it("encerrar uma vaga do plano cheio abre lugar para a próxima", async () => {
+      await debitarVagas(empresa.usuarioId, 50);
+      await estenderPlanoMensal(empresa.usuarioId, 5);
+      const vagas = [];
+      for (let i = 0; i < 5; i += 1) {
+        vagas.push(await publicarVaga(empresa, DADOS));
+      }
+      await capturar(() => publicarVaga(empresa, DADOS));
+
+      await encerrarVaga(empresa, vagas[0].id);
+
+      await expect(publicarVaga(empresa, DADOS)).resolves.toMatchObject({
+        status: "aberta",
+      });
+    });
+
+    it("plano de 5 cheio ainda publica pela vaga avulsa do saldo", async () => {
+      await debitarVagas(empresa.usuarioId, 50);
+      await estenderPlanoMensal(empresa.usuarioId, 5);
+      for (let i = 0; i < 5; i += 1) await publicarVaga(empresa, DADOS);
+      await creditarVagas(empresa.usuarioId, 1);
 
       await publicarVaga(empresa, DADOS);
 
@@ -339,8 +416,8 @@ describe("vagas do painel da empresa", () => {
       const erro = await capturar(() => reativarVaga(empresa, vaga.id));
 
       expect(erro.codigo).toBe("validacao");
-      expect(erro.mensagem).toMatch(/gasta uma vaga do saldo/i);
-      expect(erro.mensagem).toMatch(/plano mensal/i);
+      expect(erro.mensagem).toMatch(/reativar conta como publicar/i);
+      expect(erro.mensagem).toMatch(/assine um plano/i);
     });
 
     it("recusa reativar vaga que ainda não expirou", async () => {

@@ -100,9 +100,74 @@ describe("RepositorioVagasPostgres", () => {
       salarioMin: null,
       salarioMax: null,
       habilidades: ["Colheitadeira"],
+      perguntas: [],
       status: "aberta",
       criadoEm: LINHA.criado_em,
       expiraEm: LINHA.expira_em,
+    });
+  });
+
+  /*
+   * As perguntas de triagem (#491) vêm do jsonb, e o que sai de lá passa por
+   * `perguntasValidas`: lixo na coluna não vira pergunta na tela de quem
+   * se candidata.
+   */
+  it("lê as perguntas de triagem do jsonb", async () => {
+    resposta = {
+      data: {
+        ...LINHA,
+        perguntas: [
+          { texto: "Tem CNH D?", eliminatoria: true },
+          { texto: "Pode trabalhar à noite?", eliminatoria: false },
+        ],
+      },
+      error: null,
+    };
+
+    expect((await repo.porId(LINHA.id))?.perguntas).toEqual([
+      { texto: "Tem CNH D?", eliminatoria: true },
+      { texto: "Pode trabalhar à noite?", eliminatoria: false },
+    ]);
+  });
+
+  it("descarta o que não é pergunta e passa de três", async () => {
+    resposta = {
+      data: {
+        ...LINHA,
+        perguntas: [
+          { texto: "Um?" },
+          "lixo",
+          null,
+          { texto: "Dois?" },
+          { texto: "Três?" },
+          { texto: "Quatro?" },
+        ],
+      },
+      error: null,
+    };
+
+    expect((await repo.porId(LINHA.id))?.perguntas.map((p) => p.texto)).toEqual(
+      ["Um?", "Dois?", "Três?"],
+    );
+  });
+
+  it("criar grava as perguntas na própria linha da vaga", async () => {
+    resposta = { data: LINHA, error: null };
+    await repo.criar({
+      empresaId: LINHA.empresa_id,
+      titulo: LINHA.titulo,
+      descricao: LINHA.descricao,
+      categoria: LINHA.categoria,
+      cidade: LINHA.cidade,
+      tipoContrato: LINHA.tipo_contrato,
+      modalidade: LINHA.modalidade,
+      paraPcd: false,
+      endereco: "Rua A, 1",
+      perguntas: [{ texto: "Tem CNH D?", eliminatoria: true }],
+    });
+
+    expect(chamadas.find((c) => c.metodo === "insert")?.args[0]).toMatchObject({
+      perguntas: [{ texto: "Tem CNH D?", eliminatoria: true }],
     });
   });
 

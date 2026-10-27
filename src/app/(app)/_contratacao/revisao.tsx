@@ -38,6 +38,8 @@ export interface DadosDaVaga {
   salarioMin: string;
   salarioMax: string;
   descricao: string;
+  /** As perguntas de triagem preenchidas, na ordem escrita (#491). */
+  perguntas: { texto: string; eliminatoria: boolean }[];
 }
 
 export function lerDoFormulario(formData: FormData): DadosDaVaga {
@@ -55,6 +57,12 @@ export function lerDoFormulario(formData: FormData): DadosDaVaga {
     salarioMin: ler("salarioMin"),
     salarioMax: ler("salarioMax"),
     descricao: ler("descricao"),
+    perguntas: [1, 2, 3]
+      .map((n) => ({
+        texto: ler(`pergunta${n}`),
+        eliminatoria: formData.get(`eliminatoria${n}`) === "on",
+      }))
+      .filter((p) => p.texto !== ""),
   };
 }
 
@@ -180,6 +188,34 @@ export function RevisaoDaVaga({ dados }: { dados: DadosDaVaga }) {
             {dados.descricao}
           </p>
         </div>
+
+        {/*
+          As perguntas aparecem como a pessoa vai vê-las (#491), com o aviso
+          do que "eliminatória" faz — e do que não faz: ninguém é escondido
+          nem barrado.
+        */}
+        {dados.perguntas.length > 0 && (
+          <div className="mt-4 border-line border-t pt-4">
+            <h4 className="font-bold text-sm">
+              Perguntas para quem se candidata
+            </h4>
+            <ul className="mt-2 space-y-1.5 text-sm">
+              {dados.perguntas.map((p) => (
+                <li key={p.texto} className="flex flex-wrap items-center gap-2">
+                  <span>{p.texto}</span>
+                  <Badge tone={p.eliminatoria ? "warn" : "neutral"}>
+                    {p.eliminatoria ? "Eliminatória" : "Informativa"}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-faint text-xs leading-relaxed">
+              Quem responde Não a uma eliminatória envia a candidatura do mesmo
+              jeito, e aparece separado de quem atende. As perguntas não mudam
+              depois de publicadas.
+            </p>
+          </div>
+        )}
       </Panel>
     </section>
   );

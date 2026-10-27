@@ -180,21 +180,21 @@ test.describe("revisão antes de publicar", () => {
     ).toHaveCount(0);
   });
   /**
-   * O saldo aparece antes dos campos, com o número (#193).
+   * O direito de publicar aparece antes dos campos (#193).
    *
    * O aviso antigo vivia no rodapé e dizia só *que* publicar usa uma vaga.
-   * Aqui a conta da suíte tem saldo de sobra, então o que se confere é o
-   * formato — que a tela informa a quantidade, e não uma frase genérica.
-   * Os estados de "sem saldo" e de plano mensal ficam no teste de
-   * componente (`saldo-ao-publicar.test.tsx`), porque chegar a zero aqui
-   * exigiria gastar as quarenta vagas que o setup compra.
+   * Aqui a conta da suíte tem o plano ilimitado, então o que se confere é
+   * o lugar — que a tela informa o que a pessoa pode publicar antes do
+   * primeiro campo. Os estados de "sem saldo", plano cheio e primeira vaga
+   * grátis ficam no teste de componente (`saldo-ao-publicar.test.tsx`), e o
+   * plano com teto em `planos-de-vaga.spec.ts`.
    */
-  test("o formulário diz quantas vagas há no saldo, antes dos campos", async ({
+  test("o formulário diz o que dá para publicar, antes dos campos", async ({
     page,
   }) => {
     await page.goto("/empresa/vagas/nova");
 
-    const aviso = page.getByText(/vagas? para publicar/i).first();
+    const aviso = page.getByText(/plano ilimitado ativo/i).first();
     await expect(aviso).toBeVisible();
 
     // Antes do primeiro campo, não depois do último.

@@ -94,8 +94,9 @@ select
   (select count(distinct p.usuario_id) from pagamentos p
      join contas c on c.id = p.usuario_id
     where c.papel = 'empresa' and p.status = 'aprovado'
-      and p.tipo in ('empresa_vaga_avulsa', 'empresa_pacote_5',
-                     'empresa_pacote_10', 'empresa_mensal'))
+      and p.tipo::text in ('empresa_vaga_avulsa', 'empresa_pacote_5',
+                           'empresa_pacote_10', 'empresa_plano_5',
+                           'empresa_plano_10', 'empresa_mensal'))
     as empresas_que_compraram,
   (select count(*) from assinaturas where status = 'ativa')
     as assinaturas_ativas,

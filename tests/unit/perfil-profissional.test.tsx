@@ -336,7 +336,7 @@ describe("empresa", () => {
    * tela lendo essa coluna morta (#182); as outras duas caíram na #172 e
    * na #179.
    */
-  it("com plano mensal ativo, o selo diz isso", () => {
+  it("com plano ilimitado ativo, o selo diz isso", () => {
     render(
       <PerfilEmpresa
         empresa={EMPRESA}
@@ -344,7 +344,29 @@ describe("empresa", () => {
         direito={{ mensalAtivo: true, creditos: 0 }}
       />,
     );
-    expect(screen.getByText("Plano mensal ativo")).toBeTruthy();
+    expect(screen.getByText("Plano ilimitado ativo")).toBeTruthy();
+  });
+
+  it("com plano de limite, o selo diz qual", () => {
+    render(
+      <PerfilEmpresa
+        empresa={EMPRESA}
+        docVerificado
+        direito={{ mensalAtivo: true, creditos: 0, limiteNoAr: 5 }}
+      />,
+    );
+    expect(screen.getByText("Plano de 5 ativo")).toBeTruthy();
+  });
+
+  it("sem saldo, mas com a primeira vaga grátis, o selo anuncia a primeira", () => {
+    render(
+      <PerfilEmpresa
+        empresa={EMPRESA}
+        docVerificado
+        direito={{ mensalAtivo: false, creditos: 0, primeiraGratis: true }}
+      />,
+    );
+    expect(screen.getByText("Primeira vaga grátis")).toBeTruthy();
   });
 
   /**

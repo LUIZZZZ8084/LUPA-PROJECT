@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useActionState, useRef, useState, useTransition } from "react";
 import { CampoCidade, useCidade } from "@/components/campo-cidade";
+import { CompartilharVaga } from "@/components/compartilhar-vaga";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -20,6 +21,7 @@ import {
   WORK_MODE_LABELS,
   WORK_MODES,
 } from "@/lib/constants";
+import { type DireitoParaTela, resumoDoDireito } from "@/lib/planos-empresa";
 import { cn } from "@/lib/utils";
 import type { AreaDeContratacao } from "./area";
 import { type EstadoVaga, publicarVagaComEstado } from "./nova-vaga-actions";
@@ -58,7 +60,7 @@ export function NewJobForm({
    * parecida (#492). Só preenche os campos: nada vai ao ar sem a revisão, e a
    * vaga nova gasta uma vaga do saldo como qualquer outra.
    */
-  modelo?: DadosDaVaga | null;
+  modelo?: Omit<DadosDaVaga, "perguntas"> | null;
   /**
    * O que a pessoa pode publicar hoje — para a tela avisar **antes**.
    *
@@ -67,9 +69,10 @@ export function NewJobForm({
    * alguns segundos, e isso é aceitável para um aviso; seria inaceitável
    * para um portão.
    */
-  direito: { mensalAtivo: boolean; creditos: number };
+  direito: DireitoParaTela;
 }) {
-  const semSaldo = !direito.mensalAtivo && direito.creditos === 0;
+  const semSaldo = !direito.pode;
+  const resumo = resumoDoDireito(direito);
   const [state, action, pending] = useActionState(
     publicarVagaComEstado,
     inicial,
@@ -97,6 +100,21 @@ export function NewJobForm({
           Sua vaga já aparece na busca de quem está procurando emprego em{" "}
           {cidade}.
         </p>
+        {/*
+          A divulgação aparece na hora (#490): é quando a empresa mais quer
+          espalhar a vaga, e o link já abre sem login, com prévia.
+        */}
+        {state.vagaId && revisao && (
+          <div className="mx-auto mt-5 max-w-sm border-line border-t pt-5 text-left">
+            <CompartilharVaga
+              recolhido
+              vagaId={state.vagaId}
+              cargo={revisao.dados.titulo}
+              cidade={cidade}
+              titulo="Divulgue agora"
+            />
+          </div>
+        )}
         <div className="mt-6 flex justify-center gap-3">
           <ButtonLink href={area.base} variant="empresas" size="sm">
             Ir para o painel
@@ -132,30 +150,18 @@ export function NewJobForm({
       {!revisao && (
         <Panel className={cn("mb-4", semSaldo && "border-warn/40 bg-warn/10")}>
           <div className="flex items-start gap-3">
-            {direito.mensalAtivo ? (
-              <Infinito size={18} className="mt-0.5 flex-none text-empresas" />
-            ) : semSaldo ? (
+            {semSaldo ? (
               <AlertTriangle size={18} className="mt-0.5 flex-none text-warn" />
+            ) : direito.mensalAtivo ? (
+              <Infinito size={18} className="mt-0.5 flex-none text-empresas" />
             ) : (
               <Ticket size={18} className="mt-0.5 flex-none text-empresas" />
             )}
 
             <div className="min-w-0 flex-1">
-              <p className="font-bold text-sm">
-                {direito.mensalAtivo
-                  ? "Plano mensal ativo"
-                  : direito.creditos === 0
-                    ? "Você não tem vagas para publicar"
-                    : direito.creditos === 1
-                      ? "Você tem 1 vaga para publicar"
-                      : `Você tem ${direito.creditos} vagas para publicar`}
-              </p>
+              <p className="font-bold text-sm">{resumo.titulo}</p>
               <p className="mt-0.5 text-muted text-sm leading-relaxed">
-                {direito.mensalAtivo
-                  ? "Publique quantas quiser enquanto o plano estiver ativo, sem tirar do saldo."
-                  : direito.creditos === 0
-                    ? "Compre antes de escrever a vaga — assim você não preenche tudo para ser barrado no fim."
-                    : "Publicar usa uma delas. Cada vaga fica 30 dias no ar."}
+                {resumo.detalhe}
               </p>
 
               {semSaldo && (
@@ -166,7 +172,7 @@ export function NewJobForm({
                   className="mt-3"
                 >
                   <Ticket size={15} />
-                  Comprar vagas
+                  Ver planos e vagas
                 </ButtonLink>
               )}
             </div>
@@ -209,7 +215,7 @@ export function NewJobForm({
                   className="mt-3"
                 >
                   <Ticket size={15} />
-                  Comprar vagas
+                  Ver planos e vagas
                 </ButtonLink>
               )}
             </div>
@@ -487,6 +493,68 @@ export function NewJobForm({
               }
             />
           </Field>
+
+          {/*
+            Perguntas de triagem (#491): opcionais, até três, de sim ou não.
+            "Eliminatória" separa quem responde Não numa lista à parte — não
+            esconde nem barra ninguém, e a tela diz isso antes da empresa
+            marcar.
+          */}
+          <fieldset>
+            <legend className="mb-1 font-medium text-sm">
+              Perguntas para quem se candidata{" "}
+              <span className="font-normal text-faint">(opcional)</span>
+            </legend>
+            <p className="mb-3 text-faint text-xs leading-relaxed">
+              Até 3 perguntas de sim ou não, como &ldquo;Tem CNH D?&rdquo;. Quem
+              se candidata responde antes de enviar. Marque{" "}
+              <strong>Eliminatória</strong> quando a resposta esperada é Sim:
+              quem responder Não aparece separado na sua lista, mas ninguém é
+              escondido nem barrado. Depois de publicada, a vaga não muda as
+              perguntas.
+            </p>
+            <div className="space-y-3">
+              {[1, 2, 3].map((n) => (
+                <div
+                  key={n}
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center"
+                >
+                  <Input
+                    name={`pergunta${n}`}
+                    maxLength={120}
+                    aria-label={`Pergunta ${n}`}
+                    placeholder={
+                      n === 1
+                        ? "Ex.: Tem CNH categoria D?"
+                        : "Ex.: Pode trabalhar à noite?"
+                    }
+                  />
+                  <label className="flex min-h-11 items-center gap-2 text-muted text-sm">
+                    <input
+                      type="checkbox"
+                      name={`eliminatoria${n}`}
+                      aria-label={`Pergunta ${n} é eliminatória`}
+                      className="accent-empresas"
+                    />
+                    Eliminatória
+                  </label>
+                </div>
+              ))}
+            </div>
+            {(
+              [
+                state.campos?.pergunta1,
+                state.campos?.pergunta2,
+                state.campos?.pergunta3,
+              ] as (string | undefined)[]
+            )
+              .filter(Boolean)
+              .map((erro) => (
+                <p key={erro} className="mt-1.5 text-danger text-xs">
+                  {erro}
+                </p>
+              ))}
+          </fieldset>
 
           {state.erro && (
             <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

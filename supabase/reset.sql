@@ -82,9 +82,12 @@ drop function if exists registrar_visualizacao(uuid) cascade;
 drop function if exists conferir_limite_publicacoes() cascade;
 drop function if exists anonimizar_avaliacoes_do_autor() cascade;
 drop function if exists atualizar_nota_prestador() cascade;
-drop function if exists estender_mensalidade_vaga(uuid, integer) cascade;
+drop function if exists estender_mensalidade_vaga(uuid, integer, integer) cascade;
+drop function if exists reivindicar_primeira_vaga_gratis(uuid) cascade;
+drop function if exists pessoas_com_aviso_na_cidade(text) cascade;
 drop function if exists consumir_credito_vaga(uuid) cascade;
 drop function if exists creditar_vaga(uuid, integer) cascade;
+drop function if exists candidatura_confere_triagem() cascade;
 drop function if exists tocar_atualizado_em() cascade;
 
 -- Os tipos enum por último: as colunas que os usavam já se foram.

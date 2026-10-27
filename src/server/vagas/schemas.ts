@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAXIMO_DE_PERGUNTAS, type PerguntaDeTriagem } from "@/lib/triagem";
 import { zBairro, zCidade, zTexto } from "../validation";
 
 /**
@@ -40,6 +41,65 @@ const zSalario = z.coerce.number().nonnegative().optional();
  */
 const PARECE_LINK =
   /https?:\/\/|www\.|[\p{L}\p{N}-]+\.(?:com|net|org|br|info|io|app|site|online|xyz|me|co|biz|top|link|shop|store|club|vip|ly|gl)(?![\p{L}\p{N}])/iu;
+
+/*
+ * As perguntas de triagem chegam do formulário como `pergunta1..3` e
+ * `eliminatoria1..3` (#491), e viram uma lista só no fim do schema.
+ *
+ * Mesma regra do título: **não aceitam link**. A pergunta é texto de
+ * terceiro que a Lupa mostra a quem tem conta, e cargo ou pergunta nunca
+ * precisam de link — o lugar dele é a descrição. Em branco vale: pergunta
+ * é opcional, e as preenchidas formam a lista na ordem em que vieram.
+ */
+const zPerguntaOpcional = z
+  .string()
+  .trim()
+  .max(120, "A pergunta tem no máximo 120 letras.")
+  .refine(
+    (texto) => texto === "" || texto.length >= 5,
+    "A pergunta está curta demais.",
+  )
+  .refine(
+    (texto) => !PARECE_LINK.test(texto),
+    "A pergunta não pode ter link. Se precisar, ponha na descrição.",
+  )
+  .optional();
+
+/** Caixa de marcar: chega como "on" ou não chega — ausência é "não". */
+const zMarcada = z.preprocess(
+  (v) => v === "on" || v === "sim" || v === true,
+  z.boolean(),
+);
+
+const camposDePergunta = {
+  pergunta1: zPerguntaOpcional,
+  pergunta2: zPerguntaOpcional,
+  pergunta3: zPerguntaOpcional,
+  eliminatoria1: zMarcada,
+  eliminatoria2: zMarcada,
+  eliminatoria3: zMarcada,
+};
+
+type EntradaDePerguntas = {
+  pergunta1?: string;
+  pergunta2?: string;
+  pergunta3?: string;
+  eliminatoria1: boolean;
+  eliminatoria2: boolean;
+  eliminatoria3: boolean;
+};
+
+/** As três perguntas do formulário, sem as em branco, na ordem escrita. */
+function reunirPerguntas(e: EntradaDePerguntas): PerguntaDeTriagem[] {
+  const lista = [
+    { texto: e.pergunta1, eliminatoria: e.eliminatoria1 },
+    { texto: e.pergunta2, eliminatoria: e.eliminatoria2 },
+    { texto: e.pergunta3, eliminatoria: e.eliminatoria3 },
+  ];
+  return lista
+    .filter((p): p is PerguntaDeTriagem => Boolean(p.texto))
+    .slice(0, MAXIMO_DE_PERGUNTAS);
+}
 
 /** Campos comuns a publicar e editar vaga. */
 export const camposVaga = {
@@ -92,10 +152,46 @@ export const camposVaga = {
 const refinoSalario = (v: { salarioMin?: number; salarioMax?: number }) =>
   !v.salarioMin || !v.salarioMax || v.salarioMax >= v.salarioMin;
 
-export const schemaNovaVaga = z.object(camposVaga).refine(refinoSalario, {
-  message: "O teto precisa ser maior que o piso.",
-  path: ["salarioMax"],
-});
+export const schemaNovaVaga = z
+  .object({ ...camposVaga, ...camposDePergunta })
+  .refine(refinoSalario, {
+    message: "O teto precisa ser maior que o piso.",
+    path: ["salarioMax"],
+  })
+  /*
+   * Duas perguntas iguais seriam a mesma resposta pedida duas vezes — e, na
+   * tela de quem se candidata, duas linhas que só um texto distingue.
+   */
+  .refine(
+    (v) => {
+      const textos = [v.pergunta1, v.pergunta2, v.pergunta3]
+        .filter((t): t is string => Boolean(t))
+        .map((t) => t.toLowerCase());
+      return new Set(textos).size === textos.length;
+    },
+    { message: "As perguntas não podem se repetir.", path: ["pergunta2"] },
+  )
+  .transform(
+    ({
+      pergunta1,
+      pergunta2,
+      pergunta3,
+      eliminatoria1,
+      eliminatoria2,
+      eliminatoria3,
+      ...vaga
+    }) => ({
+      ...vaga,
+      perguntas: reunirPerguntas({
+        pergunta1,
+        pergunta2,
+        pergunta3,
+        eliminatoria1,
+        eliminatoria2,
+        eliminatoria3,
+      }),
+    }),
+  );
 
 export const schemaEdicaoVaga = z
   .object({ id: z.string().trim().min(1, "Vaga inválida."), ...camposVaga })

@@ -48,13 +48,17 @@ export const publicarVaga = criarAcao({
      */
     for (const base of BASES_DE_CONTRATACAO) revalidatePath(base);
     revalidarBuscaDeVagas();
-    return {};
+    // O id volta para a tela oferecer a divulgação na hora (#490): é o
+    // momento em que a empresa mais quer espalhar a vaga.
+    return { vagaId: vaga.id };
   },
 });
 
 /** Adaptador para useActionState, como nas telas de conta. */
 export interface EstadoVaga {
   ok?: boolean;
+  /** A vaga recém-publicada, para a tela oferecer o compartilhamento. */
+  vagaId?: string;
   erro?: string;
   campos?: Record<string, string>;
 }
@@ -65,7 +69,7 @@ export async function publicarVagaComEstado(
 ): Promise<EstadoVaga> {
   const resposta = await publicarVaga(formData);
 
-  if (resposta.ok) return { ok: true };
+  if (resposta.ok) return { ok: true, vagaId: resposta.dados.vagaId };
 
   return {
     erro: resposta.mensagem,

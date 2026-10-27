@@ -199,6 +199,7 @@ describe("visualizações de vaga", () => {
       salarioMin: null,
       salarioMax: null,
       habilidades: [],
+      perguntas: [],
       status: "aberta" as const,
       criadoEm: "2026-01-01T00:00:00.000Z",
       expiraEm: "2026-01-31T00:00:00.000Z",

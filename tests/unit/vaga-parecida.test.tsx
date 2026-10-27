@@ -19,7 +19,7 @@ vi.mock("@/app/(app)/_contratacao/nova-vaga-actions", () => ({
 const { NewJobForm } = await import("@/app/(app)/_contratacao/nova-vaga-form");
 const { AREA_EMPRESA } = await import("@/app/(app)/_contratacao/area");
 
-const MODELO: DadosDaVaga = {
+const MODELO: Omit<DadosDaVaga, "perguntas"> = {
   titulo: "Motorista de Carreta",
   categoria: "Logística e Transporte",
   tipoContrato: "CLT",
@@ -44,7 +44,7 @@ const DIREITO = {
   primeiraGratis: false,
 };
 
-function montar(modelo?: DadosDaVaga | null) {
+function montar(modelo?: Omit<DadosDaVaga, "perguntas"> | null) {
   return render(
     <NewJobForm
       cidadeDaEmpresa="Sinop - MT"

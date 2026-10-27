@@ -173,12 +173,30 @@ const ABERTAS = [
   "/suporte",
 ];
 
+/**
+ * A vaga individual abre sem sessão, só para leitura (#490).
+ *
+ * Quando a empresa cola o link no WhatsApp ou posta no Instagram, quem clica
+ * cai numa página de entrar — e o robô que monta a prévia do link também, sem
+ * sessão nenhuma, então a prévia saía em branco. As vagas da cidade já
+ * circulam por esses canais, e a Lupa precisa ser o destino do que se posta
+ * ali.
+ *
+ * **Só `/vagas/<id>` e a miniatura dela**, `/vagas/<id>/opengraph-image`. A
+ * lista `/vagas`, os perfis, o contato e a candidatura continuam fechados: a
+ * página sem sessão não mostra telefone, e-mail nem WhatsApp, e "Candidatar-se"
+ * leva a entrar. A âncora e o `[^/]+` são o que impede `/vagas/<id>/qualquer`
+ * de abrir junto — a lista de abertas é explícita, rota por rota.
+ */
+const VAGA_PUBLICA = /^\/vagas\/[^/]+(?:\/opengraph-image(?:-[a-z0-9]+)?)?$/;
+
 /** Para onde mandar quem não tem sessão. */
 const ENTRADA = "/entrar";
 
 function ehRotaAberta(pathname: string): boolean {
-  return ABERTAS.some(
-    (rota) => pathname === rota || pathname.startsWith(`${rota}/`),
+  return (
+    VAGA_PUBLICA.test(pathname) ||
+    ABERTAS.some((rota) => pathname === rota || pathname.startsWith(`${rota}/`))
   );
 }
 

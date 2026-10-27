@@ -7,6 +7,7 @@
  * funcionando sem banco.
  */
 
+import type { PerguntaDeTriagem } from "@/lib/triagem";
 import type { WorkMode } from "@/lib/types";
 
 export type StatusVaga = "aberta" | "fechada";
@@ -31,6 +32,12 @@ export interface Vaga {
   salarioMin: number | null;
   salarioMax: number | null;
   habilidades: string[];
+  /**
+   * Até três perguntas de sim ou não para quem se candidata (#491). Vazio na
+   * maioria das vagas e em toda vaga publicada antes de elas existirem.
+   * Como o resto da vaga, não se edita depois de publicada.
+   */
+  perguntas: PerguntaDeTriagem[];
   status: StatusVaga;
   criadoEm: string;
   /** 30 dias após publicar, ou após a última reativação manual. Nunca é
@@ -52,6 +59,16 @@ export interface DadosNovaVaga {
   salarioMin?: number | null;
   salarioMax?: number | null;
   habilidades?: string[];
+  perguntas?: PerguntaDeTriagem[];
+  /**
+   * Quem publicou — só o repositório em memória usa (#489).
+   *
+   * Em demonstração toda conta publica sob a mesma empresa fictícia, e sem
+   * saber quem publicou o limite do plano contaria as vagas de exemplo e as
+   * das outras contas: o Plano 5 de uma conta nova já nasceria cheio. No
+   * banco a empresa é a conta, e o campo não faz nada.
+   */
+  publicadaPor?: string;
 }
 
 export type EdicaoVaga = Partial<
@@ -77,6 +94,15 @@ export interface RepositorioVagas {
   porEmpresa(empresaId: string): Promise<Vaga[]>;
   /** Todas as vagas, de qualquer empresa — usado pela busca pública. */
   listar(): Promise<Vaga[]>;
+  /**
+   * Quantas vagas da empresa estão no ar agora: abertas e dentro dos 30
+   * dias (#489). É o número que o limite dos planos compara — vaga
+   * encerrada ou vencida não ocupa lugar.
+   *
+   * `publicadaPor` separa o que cada conta publicou quando várias dividem
+   * a mesma empresa — a demonstração. No banco é ignorado.
+   */
+  contarNoAr(empresaId: string, publicadaPor?: string): Promise<number>;
   criar(dados: DadosNovaVaga): Promise<Vaga>;
   atualizar(id: string, campos: EdicaoVaga): Promise<Vaga>;
   encerrar(id: string): Promise<Vaga>;

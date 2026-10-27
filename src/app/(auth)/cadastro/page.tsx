@@ -20,7 +20,10 @@ const TITULO_POR_PAPEL: Record<Role, string> = {
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ tipo?: string | string[] }>;
+  searchParams: Promise<{
+    tipo?: string | string[];
+    destino?: string | string[];
+  }>;
 }): Promise<Metadata> {
   const { tipo } = await searchParams;
   const selecionado = Array.isArray(tipo) ? tipo[0] : tipo;
@@ -87,10 +90,22 @@ function isRole(value: string | undefined): value is Role {
 export default async function CadastroPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tipo?: string | string[] }>;
+  searchParams: Promise<{
+    tipo?: string | string[];
+    destino?: string | string[];
+  }>;
 }) {
-  const { tipo } = await searchParams;
+  const { tipo, destino: destinoBruto } = await searchParams;
   const selected = Array.isArray(tipo) ? tipo[0] : tipo;
+  /*
+   * Quem chega pelo "Criar conta" de uma vaga (#490) volta para ela depois.
+   * O valor só desce como texto; quem o valida é `destinoSeguro`, no
+   * formulário, antes de virar link.
+   */
+  const destino = Array.isArray(destinoBruto) ? destinoBruto[0] : destinoBruto;
+  const sufixoDoDestino = destino
+    ? `&destino=${encodeURIComponent(destino)}`
+    : "";
 
   if (isRole(selected)) {
     /*
@@ -101,7 +116,7 @@ export default async function CadastroPage({
      */
     return (
       <PageShell width="narrow">
-        <SignUpForm role={selected} />
+        <SignUpForm role={selected} destino={destino} />
       </PageShell>
     );
   }
@@ -119,7 +134,7 @@ export default async function CadastroPage({
           return (
             <Link
               key={role}
-              href={`/cadastro?tipo=${role}`}
+              href={`/cadastro?tipo=${role}${sufixoDoDestino}`}
               className={`group flex items-start gap-4 rounded-[var(--radius-card)] border border-line bg-panel p-5 transition-colors hover:bg-panel-2 ${styles.hover}`}
             >
               <span

@@ -3102,7 +3102,7 @@ describe("painel do admin por lugar e funil", () => {
     );
     await banco.query(
       `insert into pagamentos (usuario_id, tipo, valor_centavos, status, criado_em)
-       values ($1, 'empresa_pacote_10', 9990, 'aprovado', now()),
+       values ($1, 'empresa_plano_10', 7990, 'aprovado', now()),
               ($1, 'empresa_vaga_avulsa', 1990, 'aprovado', now() - interval '40 days'),
               ($1, 'empresa_vaga_avulsa', 1990, 'pendente', now())`,
       [emp1],
@@ -3298,9 +3298,9 @@ describe("painel do admin por lugar e funil", () => {
       receita: {
         assinaturasAtivas: 1,
         recorrenteAtivoCentavos: 1990,
-        // O pacote de hoje entra; a avulsa de 40 dias atrás e a pendente,
+        // O plano de hoje entra; a avulsa de 40 dias atrás e a pendente,
         // não.
-        entrouUltimos30DiasCentavos: 9990,
+        entrouUltimos30DiasCentavos: 7990,
       },
     });
   });
@@ -3613,4 +3613,768 @@ describe("aplica-indice-denuncia-prestador.sql", () => {
       await banco.close();
     }
   }, 60_000);
+});
+
+/**
+ * Os planos de vaga e a primeira vaga grátis (#489).
+ *
+ * As três regras moram em funções do banco, e não na aplicação, porque são
+ * as que perdem a corrida: duas ativações simultâneas e duas publicações
+ * com a mesma vaga grátis só se resolvem onde a decisão e a gravação são a
+ * mesma instrução.
+ */
+describe("carteira: planos por vagas no ar e primeira vaga grátis", () => {
+  let banco: PGlite;
+  let n = 0;
+
+  async function pessoa() {
+    n += 1;
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ($1, 'h', 'empresa', 'Empresa', '66999110001', 'Sinop - MT')
+       returning id`,
+      [`plano${n}@teste.lupa`],
+    );
+    return r.rows[0].id;
+  }
+
+  const carteira = async (id: string) =>
+    (
+      await banco.query<{
+        creditos_vaga: number;
+        plano_vagas_no_ar: number | null;
+        mensalidade_valida_ate: Date | null;
+        primeira_vaga_gratis_usada_em: Date | null;
+      }>("select * from carteiras_vaga where usuario_id = $1", [id])
+    ).rows[0];
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  describe("estender_mensalidade_vaga", () => {
+    it("grava o limite do plano que acabou de ser pago", async () => {
+      const id = await pessoa();
+      await banco.query("select * from estender_mensalidade_vaga($1, 30, 5)", [
+        id,
+      ]);
+
+      const c = await carteira(id);
+      expect(c.plano_vagas_no_ar).toBe(5);
+      expect(c.mensalidade_valida_ate).not.toBeNull();
+    });
+
+    it("o ilimitado é limite nulo, e a chamada de dois argumentos continua valendo", async () => {
+      const id = await pessoa();
+      await banco.query("select * from estender_mensalidade_vaga($1, 30)", [
+        id,
+      ]);
+
+      expect((await carteira(id)).plano_vagas_no_ar).toBeNull();
+    });
+
+    it("trocar de plano vale o limite novo e soma os dias que já eram pagos", async () => {
+      const id = await pessoa();
+      await banco.query("select * from estender_mensalidade_vaga($1, 30, 5)", [
+        id,
+      ]);
+      const antes = await carteira(id);
+
+      await banco.query("select * from estender_mensalidade_vaga($1, 30, 10)", [
+        id,
+      ]);
+      const depois = await carteira(id);
+
+      expect(depois.plano_vagas_no_ar).toBe(10);
+      const dias =
+        (+new Date(depois.mensalidade_valida_ate as Date) -
+          +new Date(antes.mensalidade_valida_ate as Date)) /
+        86_400_000;
+      expect(Math.round(dias)).toBe(30);
+    });
+
+    /** Estorno e chargeback chamam com `p_dias` nulo: o limite vai junto. */
+    it("revogar zera a validade e o limite", async () => {
+      const id = await pessoa();
+      await banco.query("select * from estender_mensalidade_vaga($1, 30, 5)", [
+        id,
+      ]);
+
+      await banco.query(
+        "select * from estender_mensalidade_vaga($1, null, 5)",
+        [id],
+      );
+
+      const c = await carteira(id);
+      expect(c.mensalidade_valida_ate).toBeNull();
+      expect(c.plano_vagas_no_ar).toBeNull();
+    });
+
+    it("o banco recusa limite zero ou negativo", async () => {
+      const id = await pessoa();
+      await expect(
+        banco.query("select * from estender_mensalidade_vaga($1, 30, 0)", [id]),
+      ).rejects.toThrow();
+    });
+
+    it("não mexe nos créditos avulsos", async () => {
+      const id = await pessoa();
+      await banco.query("select * from creditar_vaga($1, 3)", [id]);
+
+      await banco.query("select * from estender_mensalidade_vaga($1, 30, 5)", [
+        id,
+      ]);
+
+      expect((await carteira(id)).creditos_vaga).toBe(3);
+    });
+  });
+
+  describe("reivindicar_primeira_vaga_gratis", () => {
+    const reivindicar = async (id: string) =>
+      (
+        await banco.query<{ ok: boolean }>(
+          "select reivindicar_primeira_vaga_gratis($1) as ok",
+          [id],
+        )
+      ).rows[0].ok;
+
+    it("a primeira reivindicação leva, a segunda não", async () => {
+      const id = await pessoa();
+
+      expect(await reivindicar(id)).toBe(true);
+      expect(await reivindicar(id)).toBe(false);
+      expect((await carteira(id)).primeira_vaga_gratis_usada_em).not.toBeNull();
+    });
+
+    it("funciona com a carteira já criada por uma compra", async () => {
+      const id = await pessoa();
+      await banco.query("select * from creditar_vaga($1, 2)", [id]);
+
+      expect(await reivindicar(id)).toBe(true);
+      expect(await reivindicar(id)).toBe(false);
+      expect((await carteira(id)).creditos_vaga).toBe(2);
+    });
+
+    it("reivindicações simultâneas dão a vaga a uma só", async () => {
+      const id = await pessoa();
+
+      const resultados = await Promise.all([
+        reivindicar(id),
+        reivindicar(id),
+        reivindicar(id),
+      ]);
+
+      expect(resultados.filter(Boolean)).toHaveLength(1);
+    });
+
+    it("devolver a vaga (publicação que falhou) deixa reivindicar de novo", async () => {
+      const id = await pessoa();
+      await reivindicar(id);
+
+      await banco.query(
+        "update carteiras_vaga set primeira_vaga_gratis_usada_em = null where usuario_id = $1",
+        [id],
+      );
+
+      expect(await reivindicar(id)).toBe(true);
+    });
+
+    it("cada conta tem a sua", async () => {
+      expect(await reivindicar(await pessoa())).toBe(true);
+      expect(await reivindicar(await pessoa())).toBe(true);
+    });
+  });
+
+  /**
+   * O público que a empresa vê ao comprar (#489): só o número, e só de quem
+   * tem um aparelho que recebe o aviso. Preferência sem aparelho não avisa
+   * ninguém, e contá-la prometeria um público que não existe.
+   */
+  describe("pessoas_com_aviso_na_cidade", () => {
+    const contar = async (cidade: string) =>
+      (
+        await banco.query<{ total: number }>(
+          "select pessoas_com_aviso_na_cidade($1) as total",
+          [cidade],
+        )
+      ).rows[0].total;
+
+    async function candidata(cidade: string, comAparelho: boolean) {
+      n += 1;
+      const r = await banco.query<{ id: string }>(
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ($1, 'h', 'candidato_clt', 'Candidata', '66999110001', $2)
+         returning id`,
+        [`aviso${n}@teste.lupa`, cidade],
+      );
+      const id = r.rows[0].id;
+      await banco.query(
+        "insert into preferencias_notificacao (usuario_id, cidade) values ($1, $2)",
+        [id, cidade],
+      );
+      if (comAparelho) {
+        await banco.query(
+          "insert into inscricoes_push (usuario_id, endpoint, p256dh, auth) values ($1, $2, 'k', 'a')",
+          [id, `https://fcm.googleapis.com/${id}`],
+        );
+      }
+    }
+
+    it("conta quem pediu aviso na cidade e tem aparelho", async () => {
+      await candidata("Lucas do Rio Verde - MT", true);
+      await candidata("Lucas do Rio Verde - MT", true);
+
+      expect(await contar("Lucas do Rio Verde - MT")).toBe(2);
+    });
+
+    it("não conta quem pediu mas não tem aparelho, nem outra cidade", async () => {
+      await candidata("Sorriso - MT", false);
+      await candidata("Sorriso - MT", true);
+      await candidata("Cuiabá - MT", true);
+
+      expect(await contar("Sorriso - MT")).toBe(1);
+    });
+
+    it("cidade sem ninguém é zero, não erro", async () => {
+      expect(await contar("Cidade Nenhuma - MT")).toBe(0);
+    });
+
+    it("devolve um número, nunca quem são", async () => {
+      const colunas = await banco.query<{ tipo: string }>(
+        `select pg_get_function_result(p.oid) as tipo
+           from pg_proc p
+          where p.proname = 'pessoas_com_aviso_na_cidade'`,
+      );
+      expect(colunas.rows).toEqual([{ tipo: "integer" }]);
+    });
+  });
+
+  /**
+   * As views do painel comparam `tipo::text`, e não o enum: no banco de
+   * produção os valores novos nascem na mesma migração que as views, e um
+   * valor de enum recém-criado não pode ser usado na transação que o criou.
+   */
+  describe("as métricas reconhecem os planos", () => {
+    it("compra de plano conta como empresa que comprou, e como recorrente no caixa", async () => {
+      const id = await pessoa();
+      await banco.query(
+        `insert into pagamentos (usuario_id, tipo, valor_centavos, status)
+         values ($1, 'empresa_plano_5', 4990, 'aprovado')`,
+        [id],
+      );
+
+      const funil = await banco.query<{ n: number }>(
+        "select empresas_que_compraram as n from metricas_funil",
+      );
+      expect(Number(funil.rows[0].n)).toBeGreaterThanOrEqual(1);
+
+      const caixa = await banco.query<{ r: number }>(
+        "select recorrente_centavos as r from metricas_caixa",
+      );
+      expect(Number(caixa.rows[0].r)).toBeGreaterThanOrEqual(4990);
+    });
+  });
+});
+
+/**
+ * O script de produção (#489) leva o banco de antes ao do `schema.sql`:
+ * colunas novas, funções novas, a função velha de dois argumentos fora (com
+ * ela e a nova de três por padrão, a chamada de dois ficaria ambígua), e as
+ * views iguais.
+ */
+describe("aplica-planos-de-vaga.sql", () => {
+  const SCRIPT = readFileSync(
+    join(process.cwd(), "supabase/aplica-planos-de-vaga.sql"),
+    "utf8",
+  );
+  const VIEWS = ["metricas_funil", "metricas_caixa"];
+
+  async function bancoDeAntes() {
+    const banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+    // O estado de produção antes da #489.
+    await banco.exec(`
+      alter table carteiras_vaga
+        drop column plano_vagas_no_ar,
+        drop column primeira_vaga_gratis_usada_em;
+      drop function estender_mensalidade_vaga(uuid, int, int);
+      drop function reivindicar_primeira_vaga_gratis(uuid);
+      drop function pessoas_com_aviso_na_cidade(text);
+      create function estender_mensalidade_vaga(p_usuario uuid, p_dias int)
+      returns setof carteiras_vaga language sql
+      as $$ select * from carteiras_vaga where false $$;
+    `);
+    return banco;
+  }
+
+  const definicoes = async (banco: PGlite) =>
+    Promise.all(
+      VIEWS.map(async (v) => {
+        const r = await banco.query<{ def: string }>(
+          "select pg_get_viewdef($1::regclass, true) as def",
+          [v],
+        );
+        return r.rows[0].def;
+      }),
+    );
+
+  it("cria o que falta, tira a função velha e deixa as views iguais às do schema", async () => {
+    const doSchema = await PGlite.create();
+    const banco = await bancoDeAntes();
+    try {
+      await doSchema.exec(SCHEMA);
+      const esperadas = await definicoes(doSchema);
+
+      await banco.exec(SCRIPT);
+      // Seguro de rodar mais de uma vez.
+      await banco.exec(SCRIPT);
+
+      const colunas = await banco.query<{ column_name: string }>(
+        `select column_name from information_schema.columns
+          where table_name = 'carteiras_vaga'
+            and column_name in ('plano_vagas_no_ar', 'primeira_vaga_gratis_usada_em')`,
+      );
+      expect(colunas.rows).toHaveLength(2);
+
+      const funcoes = await banco.query<{ assinatura: string }>(
+        `select p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as assinatura
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public'
+            and p.proname in ('estender_mensalidade_vaga',
+                              'reivindicar_primeira_vaga_gratis',
+                              'pessoas_com_aviso_na_cidade')
+          order by 1`,
+      );
+      expect(funcoes.rows.map((f) => f.assinatura)).toEqual([
+        "estender_mensalidade_vaga(p_usuario uuid, p_dias integer, p_limite integer)",
+        "pessoas_com_aviso_na_cidade(p_cidade text)",
+        "reivindicar_primeira_vaga_gratis(p_usuario uuid)",
+      ]);
+
+      expect(await definicoes(banco)).toEqual(esperadas);
+    } finally {
+      await banco.close();
+      await doSchema.close();
+    }
+  }, 90_000);
+
+  it("deixa a execução das funções só para a chave de serviço", async () => {
+    const banco = await bancoDeAntes();
+    try {
+      await banco.exec(
+        "grant execute on all functions in schema public to public, anon, authenticated;",
+      );
+
+      await banco.exec(SCRIPT);
+
+      const abertas = await banco.query<{ funcao: string }>(
+        `select p.proname as funcao
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public'
+            and (has_function_privilege('anon', p.oid, 'EXECUTE')
+                 or has_function_privilege('authenticated', p.oid, 'EXECUTE'))`,
+      );
+      expect(abertas.rows).toEqual([]);
+    } finally {
+      await banco.close();
+    }
+  }, 90_000);
+
+  it("a carteira antiga continua inteira, e quem tinha o mensal fica ilimitado", async () => {
+    const banco = await bancoDeAntes();
+    try {
+      const u = await banco.query<{ id: string }>(
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('antigo@teste.lupa', 'h', 'empresa', 'Empresa', '66999110001', 'Sinop - MT')
+         returning id`,
+      );
+      const id = u.rows[0].id;
+      await banco.query(
+        "insert into carteiras_vaga (usuario_id, creditos_vaga, mensalidade_valida_ate) values ($1, 4, now() + interval '10 days')",
+        [id],
+      );
+
+      await banco.exec(SCRIPT);
+
+      const c = await banco.query<{
+        creditos_vaga: number;
+        plano_vagas_no_ar: number | null;
+      }>("select * from carteiras_vaga where usuario_id = $1", [id]);
+      // Quem tinha o mensal ilimitado continua ilimitado: limite nulo.
+      expect(c.rows[0]).toMatchObject({
+        creditos_vaga: 4,
+        plano_vagas_no_ar: null,
+      });
+    } finally {
+      await banco.close();
+    }
+  }, 90_000);
+});
+
+/**
+ * Perguntas de triagem na vaga (#491).
+ *
+ * "Sem responder todas, não envia" é regra de produto, e o banco a repete: a
+ * aplicação confere antes para dar a mensagem, mas a action pode ser chamada
+ * direto. As perguntas moram na própria linha da vaga para publicar ser uma
+ * instrução só.
+ */
+describe("triagem: perguntas da vaga e respostas da candidatura", () => {
+  let banco: PGlite;
+  let n = 0;
+
+  async function conta(papel: string) {
+    n += 1;
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ($1, 'h', $2::papel_usuario, 'Pessoa', '66999110001', 'Sinop - MT')
+       returning id`,
+      [`triagem${n}@teste.lupa`, papel],
+    );
+    return r.rows[0].id;
+  }
+
+  async function vaga(perguntas: unknown) {
+    const empresaId = await conta("empresa");
+    await banco.query(
+      `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+       values ($1, 'Empresa', $2)`,
+      [empresaId, `1122233300${String(n).padStart(4, "0")}`],
+    );
+    const r = await banco.query<{ id: string }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade, perguntas)
+       values ($1, 'Motorista', 'Descrição da vaga', 'Sinop - MT', $2::jsonb)
+       returning id`,
+      [empresaId, JSON.stringify(perguntas)],
+    );
+    return r.rows[0].id;
+  }
+
+  const candidatar = async (vagaId: string, respostas: unknown | undefined) =>
+    banco.query(
+      `insert into candidaturas (vaga_id, candidato_id, respostas)
+       values ($1, $2, $3::jsonb) returning respostas`,
+      [
+        vagaId,
+        await conta("candidato_clt"),
+        respostas === undefined ? null : JSON.stringify(respostas),
+      ],
+    );
+
+  const DUAS = [
+    { texto: "Tem CNH E?", eliminatoria: true },
+    { texto: "Pode viajar?", eliminatoria: false },
+  ];
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  describe("vagas.perguntas", () => {
+    it("nasce vazia: vaga sem pergunta é a regra", async () => {
+      const empresaId = await conta("empresa");
+      await banco.query(
+        `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+         values ($1, 'Empresa', '11222333000199')`,
+        [empresaId],
+      );
+      const r = await banco.query<{ perguntas: unknown }>(
+        `insert into vagas (empresa_id, titulo, descricao, cidade)
+         values ($1, 'Cargo', 'Descrição', 'Sinop - MT') returning perguntas`,
+        [empresaId],
+      );
+
+      expect(r.rows[0].perguntas).toEqual([]);
+    });
+
+    it("guarda até três", async () => {
+      const id = await vaga([...DUAS, { texto: "Mora em Sinop?" }]);
+      const r = await banco.query<{ perguntas: unknown[] }>(
+        "select perguntas from vagas where id = $1",
+        [id],
+      );
+      expect(r.rows[0].perguntas).toHaveLength(3);
+    });
+
+    it("recusa a quarta: o teto é do banco, não só da tela", async () => {
+      await expect(
+        vaga([...DUAS, { texto: "Três?" }, { texto: "Quatro?" }]),
+      ).rejects.toThrow();
+    });
+
+    it("recusa o que não é lista", async () => {
+      await expect(vaga({ texto: "Tem CNH?" })).rejects.toThrow();
+      await expect(vaga("Tem CNH?")).rejects.toThrow();
+    });
+  });
+
+  describe("candidaturas.respostas", () => {
+    it("vaga com perguntas aceita respostas completas, na ordem", async () => {
+      const r = await candidatar(await vaga(DUAS), [true, false]);
+      expect(r.rows[0]).toEqual({ respostas: [true, false] });
+    });
+
+    it("vaga com perguntas recusa candidatura sem respostas", async () => {
+      await expect(candidatar(await vaga(DUAS), undefined)).rejects.toThrow(
+        /respostas de triagem incompletas/,
+      );
+    });
+
+    it("recusa respostas a menos ou a mais", async () => {
+      const id = await vaga(DUAS);
+      await expect(candidatar(id, [true])).rejects.toThrow(/incompletas/);
+      await expect(candidatar(id, [true, false, true])).rejects.toThrow(
+        /incompletas/,
+      );
+    });
+
+    it("recusa resposta que não é verdadeiro ou falso", async () => {
+      const id = await vaga(DUAS);
+      await expect(candidatar(id, [true, "sim"])).rejects.toThrow(
+        /incompletas/,
+      );
+      await expect(candidatar(id, [1, 0])).rejects.toThrow(/incompletas/);
+    });
+
+    /** O código que a aplicação traduz em "responda a todas as perguntas". */
+    it("a recusa é 23514 (check_violation)", async () => {
+      const id = await vaga(DUAS);
+      await expect(candidatar(id, [true])).rejects.toMatchObject({
+        code: "23514",
+      });
+    });
+
+    it("vaga sem pergunta descarta o que vier, em vez de guardar lixo", async () => {
+      const r = await candidatar(await vaga([]), [true, true]);
+      expect(r.rows[0]).toEqual({ respostas: null });
+    });
+
+    it("vaga sem pergunta continua aceitando candidatura sem nada", async () => {
+      const r = await candidatar(await vaga([]), undefined);
+      expect(r.rows[0]).toEqual({ respostas: null });
+    });
+
+    /** Mover de estágio não pode esbarrar na regra de quando ela nasceu. */
+    it("mudar o estágio não confere a triagem de novo", async () => {
+      const id = await vaga(DUAS);
+      const c = await banco.query<{ id: string }>(
+        `insert into candidaturas (vaga_id, candidato_id, respostas)
+         values ($1, $2, '[true,false]'::jsonb) returning id`,
+        [id, await conta("candidato_clt")],
+      );
+
+      await banco.query(
+        "update candidaturas set status = 'entrevista' where id = $1",
+        [c.rows[0].id],
+      );
+
+      const r = await banco.query<{ status: string }>(
+        "select status from candidaturas where id = $1",
+        [c.rows[0].id],
+      );
+      expect(r.rows[0].status).toBe("entrevista");
+    });
+
+    it("excluir a conta apaga as respostas junto com a candidatura", async () => {
+      const id = await vaga(DUAS);
+      const candidatoId = await conta("candidato_clt");
+      await banco.query(
+        `insert into candidaturas (vaga_id, candidato_id, respostas)
+         values ($1, $2, '[true,true]'::jsonb)`,
+        [id, candidatoId],
+      );
+
+      await banco.query("select excluir_conta($1)", [candidatoId]);
+
+      const r = await banco.query(
+        "select 1 from candidaturas where candidato_id = $1",
+        [candidatoId],
+      );
+      expect(r.rows).toHaveLength(0);
+    });
+  });
+
+  describe("as views", () => {
+    it("job_listings devolve as perguntas, e nenhum dado a mais", async () => {
+      const id = await vaga(DUAS);
+      const r = await banco.query<{ screening_questions: unknown }>(
+        "select screening_questions from job_listings where id = $1",
+        [id],
+      );
+      expect(r.rows[0].screening_questions).toEqual(DUAS);
+    });
+
+    it("company_applications devolve as respostas e as perguntas da vaga", async () => {
+      const id = await vaga(DUAS);
+      await candidatar(id, [false, true]);
+
+      const r = await banco.query<{ answers: unknown; job_questions: unknown }>(
+        "select answers, job_questions from company_applications where job_id = $1",
+        [id],
+      );
+
+      expect(r.rows[0]).toEqual({
+        answers: [false, true],
+        job_questions: DUAS,
+      });
+    });
+  });
+});
+
+/**
+ * O script de produção (#491) leva o banco de antes ao do `schema.sql`:
+ * colunas, trava, e as duas views iguais — e o dado que já existe fica como
+ * estava, com perguntas vazias e respostas nulas.
+ */
+describe("aplica-triagem.sql", () => {
+  const SCRIPT = readFileSync(
+    join(process.cwd(), "supabase/aplica-triagem.sql"),
+    "utf8",
+  );
+  const VIEWS = ["job_listings", "company_applications"];
+
+  async function bancoDeAntes() {
+    const banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+    // O estado de produção antes da #491: as views sem as colunas novas, e
+    // sem a trava nem as colunas.
+    await banco.exec(`
+      drop view job_listings;
+      drop view company_applications;
+      drop trigger candidaturas_confere_triagem on candidaturas;
+      drop function candidatura_confere_triagem();
+      alter table candidaturas drop column respostas;
+      alter table vagas drop column perguntas;
+      create view job_listings as select id, empresa_id as company_id from vagas;
+      create view company_applications as select id, vaga_id as job_id from candidaturas;
+    `);
+    return banco;
+  }
+
+  const definicoes = async (banco: PGlite) =>
+    Promise.all(
+      VIEWS.map(async (v) => {
+        const r = await banco.query<{ def: string }>(
+          "select pg_get_viewdef($1::regclass, true) as def",
+          [v],
+        );
+        return r.rows[0].def;
+      }),
+    );
+
+  it("cria o que falta, e as views ficam iguais às do schema", async () => {
+    const doSchema = await PGlite.create();
+    const banco = await bancoDeAntes();
+    try {
+      await doSchema.exec(SCHEMA);
+      const esperadas = await definicoes(doSchema);
+
+      // Já existia gente no banco: o script não pode estragá-la.
+      const u = await banco.query<{ id: string }>(
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('antigo@teste.lupa', 'h', 'empresa', 'Empresa', '66999110001', 'Sinop - MT')
+         returning id`,
+      );
+      await banco.query(
+        `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+         values ($1, 'Empresa', '11222333000181')`,
+        [u.rows[0].id],
+      );
+      await banco.query(
+        `insert into vagas (empresa_id, titulo, descricao, cidade)
+         values ($1, 'Vaga antiga', 'Descrição', 'Sinop - MT')`,
+        [u.rows[0].id],
+      );
+
+      await banco.exec(SCRIPT);
+      // Seguro de rodar mais de uma vez.
+      await banco.exec(SCRIPT);
+
+      const colunas = await banco.query<{ table_name: string }>(
+        `select table_name from information_schema.columns
+          where (table_name = 'vagas' and column_name = 'perguntas')
+             or (table_name = 'candidaturas' and column_name = 'respostas')
+          order by 1`,
+      );
+      expect(colunas.rows.map((c) => c.table_name)).toEqual([
+        "candidaturas",
+        "vagas",
+      ]);
+
+      const antiga = await banco.query<{ perguntas: unknown }>(
+        "select perguntas from vagas where titulo = 'Vaga antiga'",
+      );
+      expect(antiga.rows[0].perguntas).toEqual([]);
+
+      expect(await definicoes(banco)).toEqual(esperadas);
+    } finally {
+      await banco.close();
+      await doSchema.close();
+    }
+  }, 90_000);
+
+  it("a trava volta, e funciona", async () => {
+    const banco = await bancoDeAntes();
+    try {
+      await banco.exec(SCRIPT);
+      const u = await banco.query<{ id: string }>(
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('a@teste.lupa', 'h', 'empresa', 'Empresa', '66999110001', 'Sinop - MT'),
+                ('b@teste.lupa', 'h', 'candidato_clt', 'Pessoa', '66999110002', 'Sinop - MT')
+         returning id`,
+      );
+      await banco.query(
+        `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+         values ($1, 'Empresa', '11222333000181')`,
+        [u.rows[0].id],
+      );
+      const v = await banco.query<{ id: string }>(
+        `insert into vagas (empresa_id, titulo, descricao, cidade, perguntas)
+         values ($1, 'Cargo', 'Descrição', 'Sinop - MT', '[{"texto":"Tem CNH?","eliminatoria":true}]'::jsonb)
+         returning id`,
+        [u.rows[0].id],
+      );
+
+      await expect(
+        banco.query(
+          "insert into candidaturas (vaga_id, candidato_id) values ($1, $2)",
+          [v.rows[0].id, u.rows[1].id],
+        ),
+      ).rejects.toThrow(/incompletas/);
+    } finally {
+      await banco.close();
+    }
+  }, 90_000);
+
+  it("deixa a execução das funções só para a chave de serviço", async () => {
+    const banco = await bancoDeAntes();
+    try {
+      await banco.exec(
+        "grant execute on all functions in schema public to public, anon, authenticated;",
+      );
+
+      await banco.exec(SCRIPT);
+
+      const abertas = await banco.query<{ funcao: string }>(
+        `select p.proname as funcao
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public'
+            and (has_function_privilege('anon', p.oid, 'EXECUTE')
+                 or has_function_privilege('authenticated', p.oid, 'EXECUTE'))`,
+      );
+      expect(abertas.rows).toEqual([]);
+    } finally {
+      await banco.close();
+    }
+  }, 90_000);
 });

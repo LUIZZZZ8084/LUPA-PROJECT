@@ -23,6 +23,19 @@ Em 26/10/2026:
   [#492](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/492),
   [#493](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/493),
   [#494](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/494)
+- Perguntas de triagem na vaga: até três de sim ou não, escritas ao publicar e
+  marcadas como eliminatórias ou informativas. Quem se candidata responde
+  antes de enviar; na lista da empresa, quem respondeu o que a vaga exigia vem
+  primeiro e os outros ficam num grupo à parte, com o motivo à vista — ninguém
+  é escondido nem barrado —
+  [#491](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/491)
+- Planos de vaga no lugar dos pacotes: vaga avulsa R$ 19,90 e três planos
+  mensais — Plano 5 (R$ 49,90), Plano 10 (R$ 79,90) e Ilimitado (R$ 99,90) —
+  que limitam quantas vagas ficam no ar ao mesmo tempo. A primeira vaga é
+  grátis para empresa com CNPJ conferido, a tela de planos mostra para
+  quantas pessoas da cidade a vaga vai quando há dez ou mais, e trocar de
+  plano é cancelar a renovação do atual e assinar o novo —
+  [#489](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/489)
 - Termos de Uso, Política de Privacidade e página de Suporte no ar, com a
   PALU (PALU DESENVOLVIMENTO DE SOFTWARE SOB ENCOMENDA LTDA, CNPJ
   69.787.370/0001-17, sede em Curitiba/PR) identificada como controladora
@@ -30,6 +43,13 @@ Em 26/10/2026:
   exclusão de conta pelo perfil, denúncias, busca de candidatos só para
   empresa conferida e a tabela de preços nova —
   [#235](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/235)
+- A vaga abre sem login, só para leitura, e o link tem prévia própria (cargo,
+  empresa, cidade e salário) no WhatsApp, no Instagram e no Facebook. Sem
+  conta não se vê contato nenhum, e "Candidatar-se" leva a entrar ou criar
+  conta e volta para a mesma vaga. A empresa dona divulga pela própria vaga e
+  logo depois de publicar: WhatsApp, copiar link e uma arte vertical para
+  story -
+  [#490](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/490)
 
 Em 22/10/2026:
 

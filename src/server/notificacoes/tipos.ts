@@ -73,4 +73,15 @@ export interface RepositorioNotificacoes {
   removerInscricao(endpoint: string): Promise<void>;
 
   inscricoesDe(usuarioId: string): Promise<InscricaoPush[]>;
+
+  /**
+   * Quantas pessoas pediram aviso de vaga nesta cidade **e têm um aparelho
+   * que o recebe** (#489). Preferência sem aparelho não avisa ninguém, e
+   * contá-la prometeria um público que não existe.
+   *
+   * É só o número. Quem são é informação que sai daqui por nenhum caminho:
+   * numa cidade do tamanho de Sinop, saber quem pediu aviso de vaga é
+   * saber quem quer sair do emprego atual.
+   */
+  contarComAvisoNaCidade(cidade: string): Promise<number>;
 }

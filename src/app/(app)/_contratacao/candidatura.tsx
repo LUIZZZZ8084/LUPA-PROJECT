@@ -17,6 +17,7 @@ import { mensagemParaCandidato } from "@/lib/chamada";
 import { APPLICATION_LABELS, APPLICATION_TONE } from "@/lib/constants";
 import { empresaDoPainel, getCompany } from "@/lib/data";
 import { formatPhone, timeAgo, whatsappLink } from "@/lib/format";
+import { motivosDeNaoAtender } from "@/lib/triagem";
 import { sessaoAtual } from "@/server/auth/cookies";
 import {
   fichaDaCandidatura,
@@ -50,6 +51,9 @@ export async function FichaDaCandidatura({
    * marca à mão — melhor do que a página não abrir.
    */
   after(() => marcarComoVisualizada(candidatura.id));
+
+  const perguntas = candidatura.job_questions ?? [];
+  const naoAtende = motivosDeNaoAtender(perguntas, candidatura.answers);
 
   /*
    * A mensagem leva o nome de quem chama (#493): sem ele, quem recebe lê um
@@ -131,6 +135,53 @@ export async function FichaDaCandidatura({
           </p>
         )}
       </Panel>
+
+      {/*
+        As respostas à triagem (#491), ao lado das perguntas. Vêm antes do
+        currículo: foi para isso que a empresa perguntou, e é o que decide se
+        vale abrir o resto.
+      */}
+      {perguntas.length > 0 && (
+        <Panel className="mt-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-bold">Respostas às perguntas</h2>
+            <Badge tone={naoAtende.length === 0 ? "vagas" : "warn"}>
+              {naoAtende.length === 0
+                ? "Respondeu o que a vaga exigia"
+                : "Não respondeu o que a vaga exigia"}
+            </Badge>
+          </div>
+          <ul className="mt-3 space-y-2.5 text-sm">
+            {perguntas.map((p, i) => {
+              const resposta = candidatura.answers?.[i];
+              return (
+                <li
+                  key={p.texto}
+                  className="flex flex-wrap items-baseline gap-x-2"
+                >
+                  <span className="min-w-0 flex-1">{p.texto}</span>
+                  <strong
+                    className={
+                      p.eliminatoria && resposta !== true
+                        ? "text-warn"
+                        : "text-ink"
+                    }
+                  >
+                    {resposta === true
+                      ? "Sim"
+                      : resposta === false
+                        ? "Não"
+                        : "Sem resposta"}
+                  </strong>
+                  {p.eliminatoria && (
+                    <span className="text-faint text-xs">eliminatória</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
+      )}
 
       <Panel className="mt-5">
         <h2 className="text-base font-bold">Sobre a pessoa</h2>
