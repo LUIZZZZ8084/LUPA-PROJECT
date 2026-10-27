@@ -87,6 +87,7 @@ drop function if exists reivindicar_primeira_vaga_gratis(uuid) cascade;
 drop function if exists pessoas_com_aviso_na_cidade(text) cascade;
 drop function if exists consumir_credito_vaga(uuid) cascade;
 drop function if exists creditar_vaga(uuid, integer) cascade;
+drop function if exists candidatura_confere_triagem() cascade;
 drop function if exists tocar_atualizado_em() cascade;
 
 -- Os tipos enum por último: as colunas que os usavam já se foram.

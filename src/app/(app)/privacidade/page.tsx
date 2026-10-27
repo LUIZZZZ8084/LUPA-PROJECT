@@ -74,7 +74,13 @@ export default function PrivacidadePage() {
         <p>
           <strong>De quem procura trabalho:</strong> área desejada, resumo,
           experiências, formação, habilidades, disponibilidade, arquivo de
-          currículo se enviar, e as candidaturas que fez.
+          currículo se enviar, e as candidaturas que fez.{" "}
+          <strong>
+            Se a vaga tinha perguntas de triagem, as suas respostas ficam na
+            candidatura e chegam à empresa dona da vaga, junto do currículo.
+          </strong>{" "}
+          Elas somem com a candidatura, e a candidatura some se você excluir a
+          conta.
         </p>
         <p>
           <strong>De quem presta serviço:</strong> categoria, descrição, preço

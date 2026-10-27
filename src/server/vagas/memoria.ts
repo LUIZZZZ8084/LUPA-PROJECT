@@ -84,6 +84,7 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
       salarioMin: dados.salarioMin ?? null,
       salarioMax: dados.salarioMax ?? null,
       habilidades: dados.habilidades ?? [],
+      perguntas: dados.perguntas ?? [],
       status: "aberta",
       criadoEm: new Date().toISOString(),
       expiraEm: daquiA(30),

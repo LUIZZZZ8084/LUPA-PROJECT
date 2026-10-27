@@ -14,6 +14,12 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 26/10/2026:
 
+- Perguntas de triagem na vaga: até três de sim ou não, escritas ao publicar e
+  marcadas como eliminatórias ou informativas. Quem se candidata responde
+  antes de enviar; na lista da empresa, quem respondeu o que a vaga exigia vem
+  primeiro e os outros ficam num grupo à parte, com o motivo à vista — ninguém
+  é escondido nem barrado —
+  [#491](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/491)
 - Planos de vaga no lugar dos pacotes: vaga avulsa R$ 19,90 e três planos
   mensais — Plano 5 (R$ 49,90), Plano 10 (R$ 79,90) e Ilimitado (R$ 99,90) —
   que limitam quantas vagas ficam no ar ao mesmo tempo. A primeira vaga é

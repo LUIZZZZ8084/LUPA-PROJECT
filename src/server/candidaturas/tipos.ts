@@ -18,11 +18,18 @@ export interface Candidatura {
   candidatoId: string;
   status: StatusCandidatura;
   criadoEm: string;
+  /**
+   * O que a pessoa respondeu às perguntas de triagem da vaga (#491), na
+   * ordem delas: `true` é Sim. `null` quando a vaga não tinha pergunta — a
+   * maioria, e toda candidatura anterior a elas.
+   */
+  respostas: boolean[] | null;
 }
 
 export interface DadosNovaCandidatura {
   vagaId: string;
   candidatoId: string;
+  respostas?: boolean[];
 }
 
 export interface RepositorioCandidaturas {

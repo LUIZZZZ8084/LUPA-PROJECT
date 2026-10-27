@@ -3,6 +3,7 @@ import "server-only";
 import { daquiA } from "@/lib/format";
 import { TETO_DO_DONO } from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
+import { perguntasValidas } from "@/lib/triagem";
 import type { WorkMode } from "@/lib/types";
 import { erros } from "../errors";
 import type {
@@ -29,6 +30,7 @@ function paraVaga(linha: Record<string, unknown>): Vaga {
     salarioMin: (linha.salario_min as number | null) ?? null,
     salarioMax: (linha.salario_max as number | null) ?? null,
     habilidades: (linha.habilidades as string[] | null) ?? [],
+    perguntas: perguntasValidas(linha.perguntas),
     status: linha.status as StatusVaga,
     criadoEm: String(linha.criado_em),
     expiraEm: String(linha.expira_em),
@@ -122,6 +124,7 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
         salario_min: dados.salarioMin ?? null,
         salario_max: dados.salarioMax ?? null,
         habilidades: dados.habilidades ?? [],
+        perguntas: dados.perguntas ?? [],
       })
       .select("*")
       .single();

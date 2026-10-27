@@ -274,6 +274,30 @@ describe("os documentos, na publicação", () => {
     expect(privacidade).toMatch(/De denúncia:/);
   });
 
+  /*
+   * As respostas de triagem (#491) são dado pessoal que chega à empresa: a
+   * Política diz onde ficam e até onde vão, e os Termos dizem o que
+   * "eliminatória" faz — e o que não faz.
+   */
+  it("a Privacidade diz que as respostas de triagem chegam à empresa da vaga", () => {
+    const { container } = render(<PrivacidadePage />);
+    const texto = (container.textContent ?? "").replace(/\s+/g, " ");
+
+    expect(texto).toMatch(
+      /respostas ficam na candidatura e chegam à empresa dona da vaga/,
+    );
+    expect(texto).toMatch(/some se você excluir a conta/);
+  });
+
+  it("os Termos dizem que eliminatória não esconde nem barra ninguém", () => {
+    const { container } = render(<TermosPage />);
+    const texto = (container.textContent ?? "").replace(/\s+/g, " ");
+
+    expect(texto).toMatch(/até três perguntas de sim ou não/);
+    expect(texto).toMatch(/Eliminatória não esconde nem barra ninguém/);
+    expect(texto).toMatch(/não aceitam link, e não mudam depois de publicadas/);
+  });
+
   it("ser encontrado chega só a empresa com CNPJ conferido", () => {
     const { container } = render(<PrivacidadePage />);
     expect(container.textContent).toMatch(

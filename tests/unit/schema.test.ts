@@ -4015,3 +4015,366 @@ describe("aplica-planos-de-vaga.sql", () => {
     }
   }, 90_000);
 });
+
+/**
+ * Perguntas de triagem na vaga (#491).
+ *
+ * "Sem responder todas, não envia" é regra de produto, e o banco a repete: a
+ * aplicação confere antes para dar a mensagem, mas a action pode ser chamada
+ * direto. As perguntas moram na própria linha da vaga para publicar ser uma
+ * instrução só.
+ */
+describe("triagem: perguntas da vaga e respostas da candidatura", () => {
+  let banco: PGlite;
+  let n = 0;
+
+  async function conta(papel: string) {
+    n += 1;
+    const r = await banco.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ($1, 'h', $2::papel_usuario, 'Pessoa', '66999110001', 'Sinop - MT')
+       returning id`,
+      [`triagem${n}@teste.lupa`, papel],
+    );
+    return r.rows[0].id;
+  }
+
+  async function vaga(perguntas: unknown) {
+    const empresaId = await conta("empresa");
+    await banco.query(
+      `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+       values ($1, 'Empresa', $2)`,
+      [empresaId, `1122233300${String(n).padStart(4, "0")}`],
+    );
+    const r = await banco.query<{ id: string }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade, perguntas)
+       values ($1, 'Motorista', 'Descrição da vaga', 'Sinop - MT', $2::jsonb)
+       returning id`,
+      [empresaId, JSON.stringify(perguntas)],
+    );
+    return r.rows[0].id;
+  }
+
+  const candidatar = async (vagaId: string, respostas: unknown | undefined) =>
+    banco.query(
+      `insert into candidaturas (vaga_id, candidato_id, respostas)
+       values ($1, $2, $3::jsonb) returning respostas`,
+      [
+        vagaId,
+        await conta("candidato_clt"),
+        respostas === undefined ? null : JSON.stringify(respostas),
+      ],
+    );
+
+  const DUAS = [
+    { texto: "Tem CNH E?", eliminatoria: true },
+    { texto: "Pode viajar?", eliminatoria: false },
+  ];
+
+  beforeAll(async () => {
+    banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+  }, 60_000);
+
+  afterAll(async () => {
+    await banco?.close();
+  });
+
+  describe("vagas.perguntas", () => {
+    it("nasce vazia: vaga sem pergunta é a regra", async () => {
+      const empresaId = await conta("empresa");
+      await banco.query(
+        `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+         values ($1, 'Empresa', '11222333000199')`,
+        [empresaId],
+      );
+      const r = await banco.query<{ perguntas: unknown }>(
+        `insert into vagas (empresa_id, titulo, descricao, cidade)
+         values ($1, 'Cargo', 'Descrição', 'Sinop - MT') returning perguntas`,
+        [empresaId],
+      );
+
+      expect(r.rows[0].perguntas).toEqual([]);
+    });
+
+    it("guarda até três", async () => {
+      const id = await vaga([...DUAS, { texto: "Mora em Sinop?" }]);
+      const r = await banco.query<{ perguntas: unknown[] }>(
+        "select perguntas from vagas where id = $1",
+        [id],
+      );
+      expect(r.rows[0].perguntas).toHaveLength(3);
+    });
+
+    it("recusa a quarta: o teto é do banco, não só da tela", async () => {
+      await expect(
+        vaga([...DUAS, { texto: "Três?" }, { texto: "Quatro?" }]),
+      ).rejects.toThrow();
+    });
+
+    it("recusa o que não é lista", async () => {
+      await expect(vaga({ texto: "Tem CNH?" })).rejects.toThrow();
+      await expect(vaga("Tem CNH?")).rejects.toThrow();
+    });
+  });
+
+  describe("candidaturas.respostas", () => {
+    it("vaga com perguntas aceita respostas completas, na ordem", async () => {
+      const r = await candidatar(await vaga(DUAS), [true, false]);
+      expect(r.rows[0]).toEqual({ respostas: [true, false] });
+    });
+
+    it("vaga com perguntas recusa candidatura sem respostas", async () => {
+      await expect(candidatar(await vaga(DUAS), undefined)).rejects.toThrow(
+        /respostas de triagem incompletas/,
+      );
+    });
+
+    it("recusa respostas a menos ou a mais", async () => {
+      const id = await vaga(DUAS);
+      await expect(candidatar(id, [true])).rejects.toThrow(/incompletas/);
+      await expect(candidatar(id, [true, false, true])).rejects.toThrow(
+        /incompletas/,
+      );
+    });
+
+    it("recusa resposta que não é verdadeiro ou falso", async () => {
+      const id = await vaga(DUAS);
+      await expect(candidatar(id, [true, "sim"])).rejects.toThrow(
+        /incompletas/,
+      );
+      await expect(candidatar(id, [1, 0])).rejects.toThrow(/incompletas/);
+    });
+
+    /** O código que a aplicação traduz em "responda a todas as perguntas". */
+    it("a recusa é 23514 (check_violation)", async () => {
+      const id = await vaga(DUAS);
+      await expect(candidatar(id, [true])).rejects.toMatchObject({
+        code: "23514",
+      });
+    });
+
+    it("vaga sem pergunta descarta o que vier, em vez de guardar lixo", async () => {
+      const r = await candidatar(await vaga([]), [true, true]);
+      expect(r.rows[0]).toEqual({ respostas: null });
+    });
+
+    it("vaga sem pergunta continua aceitando candidatura sem nada", async () => {
+      const r = await candidatar(await vaga([]), undefined);
+      expect(r.rows[0]).toEqual({ respostas: null });
+    });
+
+    /** Mover de estágio não pode esbarrar na regra de quando ela nasceu. */
+    it("mudar o estágio não confere a triagem de novo", async () => {
+      const id = await vaga(DUAS);
+      const c = await banco.query<{ id: string }>(
+        `insert into candidaturas (vaga_id, candidato_id, respostas)
+         values ($1, $2, '[true,false]'::jsonb) returning id`,
+        [id, await conta("candidato_clt")],
+      );
+
+      await banco.query(
+        "update candidaturas set status = 'entrevista' where id = $1",
+        [c.rows[0].id],
+      );
+
+      const r = await banco.query<{ status: string }>(
+        "select status from candidaturas where id = $1",
+        [c.rows[0].id],
+      );
+      expect(r.rows[0].status).toBe("entrevista");
+    });
+
+    it("excluir a conta apaga as respostas junto com a candidatura", async () => {
+      const id = await vaga(DUAS);
+      const candidatoId = await conta("candidato_clt");
+      await banco.query(
+        `insert into candidaturas (vaga_id, candidato_id, respostas)
+         values ($1, $2, '[true,true]'::jsonb)`,
+        [id, candidatoId],
+      );
+
+      await banco.query("select excluir_conta($1)", [candidatoId]);
+
+      const r = await banco.query(
+        "select 1 from candidaturas where candidato_id = $1",
+        [candidatoId],
+      );
+      expect(r.rows).toHaveLength(0);
+    });
+  });
+
+  describe("as views", () => {
+    it("job_listings devolve as perguntas, e nenhum dado a mais", async () => {
+      const id = await vaga(DUAS);
+      const r = await banco.query<{ screening_questions: unknown }>(
+        "select screening_questions from job_listings where id = $1",
+        [id],
+      );
+      expect(r.rows[0].screening_questions).toEqual(DUAS);
+    });
+
+    it("company_applications devolve as respostas e as perguntas da vaga", async () => {
+      const id = await vaga(DUAS);
+      await candidatar(id, [false, true]);
+
+      const r = await banco.query<{ answers: unknown; job_questions: unknown }>(
+        "select answers, job_questions from company_applications where job_id = $1",
+        [id],
+      );
+
+      expect(r.rows[0]).toEqual({
+        answers: [false, true],
+        job_questions: DUAS,
+      });
+    });
+  });
+});
+
+/**
+ * O script de produção (#491) leva o banco de antes ao do `schema.sql`:
+ * colunas, trava, e as duas views iguais — e o dado que já existe fica como
+ * estava, com perguntas vazias e respostas nulas.
+ */
+describe("aplica-triagem.sql", () => {
+  const SCRIPT = readFileSync(
+    join(process.cwd(), "supabase/aplica-triagem.sql"),
+    "utf8",
+  );
+  const VIEWS = ["job_listings", "company_applications"];
+
+  async function bancoDeAntes() {
+    const banco = await PGlite.create();
+    await banco.exec(SCHEMA);
+    // O estado de produção antes da #491: as views sem as colunas novas, e
+    // sem a trava nem as colunas.
+    await banco.exec(`
+      drop view job_listings;
+      drop view company_applications;
+      drop trigger candidaturas_confere_triagem on candidaturas;
+      drop function candidatura_confere_triagem();
+      alter table candidaturas drop column respostas;
+      alter table vagas drop column perguntas;
+      create view job_listings as select id, empresa_id as company_id from vagas;
+      create view company_applications as select id, vaga_id as job_id from candidaturas;
+    `);
+    return banco;
+  }
+
+  const definicoes = async (banco: PGlite) =>
+    Promise.all(
+      VIEWS.map(async (v) => {
+        const r = await banco.query<{ def: string }>(
+          "select pg_get_viewdef($1::regclass, true) as def",
+          [v],
+        );
+        return r.rows[0].def;
+      }),
+    );
+
+  it("cria o que falta, e as views ficam iguais às do schema", async () => {
+    const doSchema = await PGlite.create();
+    const banco = await bancoDeAntes();
+    try {
+      await doSchema.exec(SCHEMA);
+      const esperadas = await definicoes(doSchema);
+
+      // Já existia gente no banco: o script não pode estragá-la.
+      const u = await banco.query<{ id: string }>(
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('antigo@teste.lupa', 'h', 'empresa', 'Empresa', '66999110001', 'Sinop - MT')
+         returning id`,
+      );
+      await banco.query(
+        `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+         values ($1, 'Empresa', '11222333000181')`,
+        [u.rows[0].id],
+      );
+      await banco.query(
+        `insert into vagas (empresa_id, titulo, descricao, cidade)
+         values ($1, 'Vaga antiga', 'Descrição', 'Sinop - MT')`,
+        [u.rows[0].id],
+      );
+
+      await banco.exec(SCRIPT);
+      // Seguro de rodar mais de uma vez.
+      await banco.exec(SCRIPT);
+
+      const colunas = await banco.query<{ table_name: string }>(
+        `select table_name from information_schema.columns
+          where (table_name = 'vagas' and column_name = 'perguntas')
+             or (table_name = 'candidaturas' and column_name = 'respostas')
+          order by 1`,
+      );
+      expect(colunas.rows.map((c) => c.table_name)).toEqual([
+        "candidaturas",
+        "vagas",
+      ]);
+
+      const antiga = await banco.query<{ perguntas: unknown }>(
+        "select perguntas from vagas where titulo = 'Vaga antiga'",
+      );
+      expect(antiga.rows[0].perguntas).toEqual([]);
+
+      expect(await definicoes(banco)).toEqual(esperadas);
+    } finally {
+      await banco.close();
+      await doSchema.close();
+    }
+  }, 90_000);
+
+  it("a trava volta, e funciona", async () => {
+    const banco = await bancoDeAntes();
+    try {
+      await banco.exec(SCRIPT);
+      const u = await banco.query<{ id: string }>(
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('a@teste.lupa', 'h', 'empresa', 'Empresa', '66999110001', 'Sinop - MT'),
+                ('b@teste.lupa', 'h', 'candidato_clt', 'Pessoa', '66999110002', 'Sinop - MT')
+         returning id`,
+      );
+      await banco.query(
+        `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+         values ($1, 'Empresa', '11222333000181')`,
+        [u.rows[0].id],
+      );
+      const v = await banco.query<{ id: string }>(
+        `insert into vagas (empresa_id, titulo, descricao, cidade, perguntas)
+         values ($1, 'Cargo', 'Descrição', 'Sinop - MT', '[{"texto":"Tem CNH?","eliminatoria":true}]'::jsonb)
+         returning id`,
+        [u.rows[0].id],
+      );
+
+      await expect(
+        banco.query(
+          "insert into candidaturas (vaga_id, candidato_id) values ($1, $2)",
+          [v.rows[0].id, u.rows[1].id],
+        ),
+      ).rejects.toThrow(/incompletas/);
+    } finally {
+      await banco.close();
+    }
+  }, 90_000);
+
+  it("deixa a execução das funções só para a chave de serviço", async () => {
+    const banco = await bancoDeAntes();
+    try {
+      await banco.exec(
+        "grant execute on all functions in schema public to public, anon, authenticated;",
+      );
+
+      await banco.exec(SCRIPT);
+
+      const abertas = await banco.query<{ funcao: string }>(
+        `select p.proname as funcao
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public'
+            and (has_function_privilege('anon', p.oid, 'EXECUTE')
+                 or has_function_privilege('authenticated', p.oid, 'EXECUTE'))`,
+      );
+      expect(abertas.rows).toEqual([]);
+    } finally {
+      await banco.close();
+    }
+  }, 90_000);
+});

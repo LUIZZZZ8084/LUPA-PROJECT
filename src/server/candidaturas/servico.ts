@@ -19,6 +19,7 @@ import type { Candidatura, StatusCandidatura } from "./tipos";
 export async function candidatarSe(
   sessao: Autenticado | null,
   vagaId: string,
+  respostas?: readonly boolean[],
 ): Promise<Candidatura> {
   const autenticado = exigirCapacidade(sessao, "candidatura:criar");
 
@@ -34,9 +35,32 @@ export async function candidatarSe(
     throw erros.conflito("Esta vaga não está mais recebendo candidaturas.");
   }
 
+  /*
+   * A pessoa responde a todas as perguntas da vaga antes de enviar (#491).
+   *
+   * Quem confere é o servidor, e não só a tela: a action pode ser chamada
+   * direto, e "sem responder todas, não envia" precisa valer para quem não
+   * passou pela tela. O banco tem a mesma trava (`candidaturas_confere_
+   * triagem`) — esta existe para dar a mensagem antes de tentar.
+   */
+  const perguntas = vaga.perguntas;
+  if (perguntas.length > 0) {
+    const completas =
+      respostas?.length === perguntas.length &&
+      respostas.every((r) => typeof r === "boolean");
+    if (!completas) {
+      throw erros.validacao(
+        [{ campo: "respostas", mensagem: "Responda a todas as perguntas." }],
+        "Responda a todas as perguntas antes de enviar.",
+      );
+    }
+  }
+
   const candidatura = await repositorioCandidaturas().criar({
     vagaId,
     candidatoId: autenticado.usuarioId,
+    // Vaga sem pergunta não guarda resposta: o que sobrou na entrada é lixo.
+    respostas: perguntas.length > 0 ? [...(respostas ?? [])] : undefined,
   });
 
   log.info("candidatura criada", {
