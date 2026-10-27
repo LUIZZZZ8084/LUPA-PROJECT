@@ -130,6 +130,16 @@ export default function PrivacidadePage() {
             social, que são registro público. O telefone do prestador, porque é
             por ele que o contato acontece.
           </p>
+          <p className="mt-3">
+            <strong>A vaga publicada abre sem conta.</strong> O link de uma vaga
+            pode ser aberto por qualquer pessoa, e aparece com o cargo, a
+            empresa e a cidade na prévia do WhatsApp, do Instagram e do
+            Facebook. Sem conta, quem abre lê o cargo, a empresa, o local, o
+            salário, o endereço e a descrição — e nada de contato: nem telefone,
+            nem e-mail, nem WhatsApp, nem as redes da empresa. Candidatar-se
+            continua pedindo conta. A lista de vagas, os perfis e os contatos
+            seguem fechados.
+          </p>
           <p className="mt-3 font-semibold text-ink">Nunca fica visível</p>
           <p className="mt-1">
             <strong>Seu CPF.</strong> Fica numa área que só o servidor alcança —

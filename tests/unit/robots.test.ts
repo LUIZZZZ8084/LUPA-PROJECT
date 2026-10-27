@@ -24,7 +24,18 @@ describe("robots.txt", () => {
 
   it("continua fechando as áreas de quem tem conta", () => {
     expect(bloqueadas).toEqual(
-      expect.arrayContaining(["/vagas", "/perfil", "/api/"]),
+      expect.arrayContaining(["/vagas$", "/perfil", "/api/"]),
     );
+  });
+
+  /**
+   * A vaga compartilhada precisa ser rastreável (#490). O rastreador da
+   * prévia do Facebook e do Instagram obedece ao `robots.txt`: com `/vagas`
+   * bloqueado por prefixo, o link da vaga saía sem miniatura.
+   */
+  it("não bloqueia a página de uma vaga", () => {
+    expect(bloqueadas).not.toContain("/vagas");
+    expect(bloqueadas).not.toContain("/vagas/");
+    expect(bloqueadas.some((c) => "/vagas/abc".startsWith(c))).toBe(false);
   });
 });

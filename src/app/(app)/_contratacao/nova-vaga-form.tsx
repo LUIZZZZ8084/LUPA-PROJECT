@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useActionState, useRef, useState, useTransition } from "react";
 import { CampoCidade, useCidade } from "@/components/campo-cidade";
+import { CompartilharVaga } from "@/components/compartilhar-vaga";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -92,6 +93,21 @@ export function NewJobForm({
           Sua vaga já aparece na busca de quem está procurando emprego em{" "}
           {cidade}.
         </p>
+        {/*
+          A divulgação aparece na hora (#490): é quando a empresa mais quer
+          espalhar a vaga, e o link já abre sem login, com prévia.
+        */}
+        {state.vagaId && revisao && (
+          <div className="mx-auto mt-5 max-w-sm border-line border-t pt-5 text-left">
+            <CompartilharVaga
+              recolhido
+              vagaId={state.vagaId}
+              cargo={revisao.dados.titulo}
+              cidade={cidade}
+              titulo="Divulgue agora"
+            />
+          </div>
+        )}
         <div className="mt-6 flex justify-center gap-3">
           <ButtonLink href={area.base} variant="empresas" size="sm">
             Ir para o painel

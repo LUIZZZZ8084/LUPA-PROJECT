@@ -174,6 +174,16 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
 export const ORCAMENTO_DO_CURRICULO_PDF = porJanela(10);
 
 /**
+ * Quantas artes de story uma empresa gera por janela (#490).
+ *
+ * Mesma razão do currículo: é o `GET` de `/api/vagas/[id]/arte`, que o teto
+ * de `criarAcao` não alcança, e a imagem de 1080 × 1920 é renderizada do
+ * zero a cada chamada. Vinte cabem em quem baixa a arte de cada vaga que
+ * publicou e confere o resultado; quem passa disso está chamando em laço.
+ */
+export const ORCAMENTO_DA_ARTE_DA_VAGA = porJanela(20);
+
+/**
  * Quantos perfis de candidato uma empresa abre por dia (#433).
  *
  * O perfil traz o WhatsApp de quem pediu para ser encontrado, e colher

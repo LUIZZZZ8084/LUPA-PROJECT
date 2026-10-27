@@ -7,19 +7,23 @@ import {
   Users,
 } from "lucide-react";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { ApplyButton } from "@/components/apply-button";
 import { BarraDeAcaoFixa } from "@/components/barra-de-acao-fixa";
+import { CompartilharVaga } from "@/components/compartilhar-vaga";
 import { Denunciar } from "@/components/denunciar";
 import { JobCard } from "@/components/job-card";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { VerifiedMark } from "@/components/verified-badge";
 import { ROTULO_PCD, WORK_MODE_LABELS } from "@/lib/constants";
-import { getJobById, getRelatedJobs } from "@/lib/data";
+import { empresaDoPainel, getJobById, getRelatedJobs } from "@/lib/data";
 import {
   formatSalaryRange,
   linkExterno,
@@ -27,6 +31,7 @@ import {
   timeAgo,
   vagaExpirada,
 } from "@/lib/format";
+import { ehRastreador } from "@/lib/rastreador";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { contarVisualizacao } from "@/server/visualizacoes";
@@ -39,9 +44,33 @@ export async function generateMetadata({
   const { id } = await params;
   const job = await getJobById(id);
   if (!job) return { title: "Vaga não encontrada" };
+
+  /*
+   * A prévia do link (#490): cargo, empresa, cidade e salário no título e
+   * na descrição, e a miniatura vem de `opengraph-image.tsx`, ao lado.
+   * Nada de contato — a página abre sem login, e o que ela mostra a quem
+   * não tem conta é só isto.
+   */
+  const titulo = `${job.title} — ${job.company.company_name}`;
+  const salario = formatSalaryRange(job.salary_min, job.salary_max);
+  const descricao =
+    `${job.company.company_name} · ${job.city}` +
+    `${salario === "A combinar" ? "" : ` · ${salario}`}. ` +
+    job.description.slice(0, 120);
+  const aberta = job.status === "aberta" && !vagaExpirada(job.expires_at);
+
   return {
-    title: `${job.title} — ${job.company.company_name}`,
-    description: job.description.slice(0, 155),
+    title: titulo,
+    description: descricao,
+    openGraph: {
+      title: titulo,
+      description: descricao,
+      type: "website",
+      siteName: "Lupa",
+      locale: "pt_BR",
+    },
+    // Vaga que já fechou não deve aparecer numa busca como se estivesse aberta.
+    robots: aberta ? undefined : { index: false, follow: false },
   };
 }
 
@@ -70,15 +99,30 @@ export default async function JobDetailPage({
    *
    * A própria empresa não conta. Ela abre a vaga para conferir o texto, e
    * uma métrica que sobe quando o dono recarrega mede o dono, não o
-   * público.
+   * público. **E o robô de prévia também não** (#490): a vaga abre sem
+   * login, e colar o link no WhatsApp manda um servidor buscar a página —
+   * contar isso faria o número subir quando a empresa divulga.
    */
   const sessao = await sessaoAtual();
   const podeCandidatar = Boolean(
     sessao && pode(sessao.papel, "candidatura:criar"),
   );
-  if (sessao?.usuarioId !== job.company_id) {
+  const robo = ehRastreador((await headers()).get("user-agent"));
+  if (sessao?.usuarioId !== job.company_id && !robo) {
     after(() => contarVisualizacao(job.id));
   }
+
+  /*
+   * Quem publicou a vaga: a empresa, ou o prestador que contrata. Em
+   * demonstração toda conta de contratante é a empresa fictícia, e
+   * `empresaDoPainel` faz essa tradução — o mesmo que o painel usa.
+   */
+  const ehDono = Boolean(
+    sessao &&
+      pode(sessao.papel, "vaga:publicar") &&
+      empresaDoPainel(sessao.usuarioId) === job.company_id,
+  );
+  const destino = `/vagas/${job.id}`;
 
   const related = await getRelatedJobs(job);
   const expirada = job.status === "aberta" && vagaExpirada(job.expires_at);
@@ -88,7 +132,23 @@ export default async function JobDetailPage({
 
   return (
     <PageShell width="narrow">
-      <BackLink href="/vagas" label="Voltar para vagas" />
+      {/*
+        Sem sessão, "voltar para vagas" levaria ao login: a lista continua
+        fechada, só esta página abre (#490). O link volta para a home.
+      */}
+      <BackLink
+        href={sessao ? "/vagas" : "/"}
+        label={sessao ? "Voltar para vagas" : "Conhecer a Lupa"}
+      />
+
+      {ehDono && job.status === "aberta" && !expirada && (
+        <CompartilharVaga
+          vagaId={job.id}
+          cargo={job.title}
+          cidade={job.city}
+          empresa={job.company.company_name}
+        />
+      )}
 
       <Panel>
         <div className="flex items-start gap-4">
@@ -120,7 +180,12 @@ export default async function JobDetailPage({
               </p>
             )}
 
-            {(redes.site || redes.instagram || redes.facebook) && (
+            {/*
+              Site e redes da empresa são contato, e contato é de quem tem
+              conta (#490): a vaga aberta ao público mostra cargo, empresa
+              e local, e o resto pede entrar.
+            */}
+            {sessao && (redes.site || redes.instagram || redes.facebook) && (
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                 {redes.site && (
                   <a
@@ -226,8 +291,31 @@ export default async function JobDetailPage({
         {!abertaParaCandidatar && (
           <div className="mt-6 border-t border-line pt-5">
             {job.status !== "aberta" || expirada ? (
+              <div className="text-center">
+                <p className="text-muted text-sm">
+                  Esta vaga não está mais recebendo candidaturas.
+                </p>
+                {/*
+                  Quem chegou por um link velho precisa de um caminho: as
+                  vagas da cidade. Sem sessão a lista pede entrar, e volta
+                  para a mesma busca depois.
+                */}
+                <ButtonLink
+                  href={`/vagas?cidade=${encodeURIComponent(job.city)}`}
+                  variant="vagas"
+                  size="sm"
+                  className="mt-3"
+                >
+                  Ver vagas em {job.city}
+                </ButtonLink>
+              </div>
+            ) : !sessao ? (
+              /*
+               * Aberta, e a pessoa ainda não tem conta (#490): o convite
+               * está na barra de baixo, e aqui não sobra nada a dizer.
+               */
               <p className="text-center text-muted text-sm">
-                Esta vaga não está mais recebendo candidaturas.
+                Entre ou crie uma conta para se candidatar.
               </p>
             ) : (
               /*
@@ -255,6 +343,35 @@ export default async function JobDetailPage({
             jobId={job.id}
             perguntas={job.screening_questions ?? []}
           />
+        </BarraDeAcaoFixa>
+      )}
+
+      {/*
+        Sem conta: entrar ou criar uma, e voltar para esta mesma vaga. O
+        `destino` é validado por `destinoSeguro` do outro lado, então um
+        caminho nosso não vira trampolim.
+      */}
+      {!sessao && job.status === "aberta" && !expirada && (
+        <BarraDeAcaoFixa>
+          <div className="space-y-2">
+            <ButtonLink
+              href={`/entrar?destino=${encodeURIComponent(destino)}`}
+              variant="vagas"
+              size="lg"
+              block
+            >
+              Entrar para se candidatar
+            </ButtonLink>
+            <p className="text-center text-muted text-xs">
+              Ainda não tem conta?{" "}
+              <Link
+                href={`/cadastro?tipo=candidato_clt&destino=${encodeURIComponent(destino)}`}
+                className="-my-3 inline-flex items-center py-3 font-medium text-vagas underline-offset-2 hover:underline"
+              >
+                Criar conta grátis
+              </Link>
+            </p>
+          </div>
         </BarraDeAcaoFixa>
       )}
 

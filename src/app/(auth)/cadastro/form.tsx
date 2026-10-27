@@ -17,6 +17,7 @@ import {
   SENHA_MINIMA,
   SERVICE_CATEGORIES,
 } from "@/lib/constants";
+import { destinoSeguro } from "@/lib/destino";
 import type { Role } from "@/lib/types";
 import { ConsentimentoDoCadastro } from "./consentimento";
 import { SelecaoDePlanoEmpresa } from "./selecao-plano-empresa";
@@ -30,7 +31,14 @@ const ACCENT: Record<Role, "vagas" | "servicos" | "empresas"> = {
   empresa: "empresas",
 };
 
-export function SignUpForm({ role }: { role: Role }) {
+export function SignUpForm({
+  role,
+  destino,
+}: {
+  role: Role;
+  /** Para onde voltar depois de criar a conta, se a pessoa veio de uma vaga. */
+  destino?: string;
+}) {
   const [state, action, pending] = useActionState(cadastrarComEstado, inicial);
   const [cidade, setCidade] = useCidade();
   /*
@@ -83,6 +91,15 @@ export function SignUpForm({ role }: { role: Role }) {
       );
     }
 
+    /*
+     * O destino vem da URL, e a URL vem de fora: `destinoSeguro` resolve
+     * contra a própria origem e descarta o que escapa dela (#345). Só aqui
+     * — depois de a conta existir —, então `window` já está disponível.
+     */
+    const voltarPara = destino
+      ? destinoSeguro(destino, window.location.origin)
+      : null;
+
     return (
       <Panel className="text-center">
         <CheckCircle2 size={40} className="mx-auto text-vagas" />
@@ -112,7 +129,20 @@ export function SignUpForm({ role }: { role: Role }) {
           currículos que ela recebe.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <ButtonLink href="/perfil/editar" variant={ACCENT[role]} size="sm">
+          {/*
+            Quem veio de uma vaga volta para ela (#490): foi o que a pessoa
+            estava fazendo, e criar a conta era só o desvio.
+          */}
+          {voltarPara && (
+            <ButtonLink href={voltarPara} variant={ACCENT[role]} size="sm">
+              Voltar para a vaga
+            </ButtonLink>
+          )}
+          <ButtonLink
+            href="/perfil/editar"
+            variant={voltarPara ? "outline" : ACCENT[role]}
+            size="sm"
+          >
             Completar perfil
           </ButtonLink>
           <ButtonLink href="/vagas" variant="outline" size="sm">
@@ -125,7 +155,14 @@ export function SignUpForm({ role }: { role: Role }) {
 
   return (
     <form action={action} {...envio}>
-      <BackLink href="/cadastro" label="Escolher outro tipo de conta" />
+      <BackLink
+        href={
+          destino
+            ? `/cadastro?destino=${encodeURIComponent(destino)}`
+            : "/cadastro"
+        }
+        label="Escolher outro tipo de conta"
+      />
       <PageTitle
         title={`Cadastro de ${ROLE_LABELS[role].toLowerCase()}`}
         description="Leva menos de dois minutos. Você completa o resto do perfil depois."

@@ -34,6 +34,13 @@ Em 26/10/2026:
   exclusão de conta pelo perfil, denúncias, busca de candidatos só para
   empresa conferida e a tabela de preços nova —
   [#235](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/235)
+- A vaga abre sem login, só para leitura, e o link tem prévia própria (cargo,
+  empresa, cidade e salário) no WhatsApp, no Instagram e no Facebook. Sem
+  conta não se vê contato nenhum, e "Candidatar-se" leva a entrar ou criar
+  conta e volta para a mesma vaga. A empresa dona divulga pela própria vaga e
+  logo depois de publicar: WhatsApp, copiar link e uma arte vertical para
+  story -
+  [#490](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/490)
 
 Em 22/10/2026:
 

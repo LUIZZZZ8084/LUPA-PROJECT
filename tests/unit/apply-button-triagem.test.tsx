@@ -137,8 +137,12 @@ describe("ApplyButton com perguntas", () => {
         "Esta vaga não está mais recebendo candidaturas.",
       ),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Enviar candidatura" }),
-    ).toBeEnabled();
+    // A transição termina um instante depois da mensagem aparecer: esperar,
+    // e não afirmar de imediato, é o que evita falha com a máquina carregada.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Enviar candidatura" }),
+      ).toBeEnabled(),
+    );
   });
 });
