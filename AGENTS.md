@@ -212,7 +212,7 @@ Como arquivo entra e sai, excluir a conta, os documentos legais e as denúncias.
 
 ### [Contratar: a área de empresa, as vagas e as candidaturas](docs/decisoes/contratacao.md)
 
-As duas portas de contratação, os campos da vaga, a triagem, o resultado da vaga e o prazo de 30 dias.
+As duas portas de contratação, os campos da vaga, a triagem, o funil de candidaturas, o resultado da vaga e o prazo de 30 dias.
 
 - A aba Empresa deixou de ser só de PJ
 - Duas portas para contratar, uma implementação só (#189)
@@ -223,6 +223,7 @@ As duas portas de contratação, os campos da vaga, a triagem, o resultado da va
 - Estágio da candidatura: o nome depende de quem lê
 - O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
 - Perguntas de triagem: separar sem esconder (#491)
+- A área de contratação como mini CRM: abas, funil e o resumo do dia (#511)
 - Na % de casamento, zero é uma afirmação
 - Vaga expira em 30 dias, e reativar custa o mesmo que publicar
 

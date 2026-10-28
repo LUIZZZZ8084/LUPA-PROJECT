@@ -34,8 +34,10 @@ test.describe("ficha do candidato", () => {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.goto("/empresa");
 
+    // A lista do painel, pelo nome da região: a frase "currículos
+    // recebidos" também aparece na descrição da página (#511).
     const nomes = page
-      .locator("section", { hasText: "Currículos recebidos" })
+      .getByRole("region", { name: "Currículos recebidos" })
       .locator('a[href*="/candidaturas/"] p.font-semibold');
     await expect(nomes.first()).toBeVisible();
 
@@ -138,9 +140,10 @@ test.describe("ficha do candidato", () => {
    * ainda não olhou.
    */
   test('o estágio inicial se chama "Nova", não "Enviada"', async ({ page }) => {
-    await page.goto("/empresa");
+    // O estágio se move no funil desde a #511.
+    await page.goto("/empresa/funil");
 
-    const seletores = page.getByLabel("Estágio da candidatura");
+    const seletores = page.getByLabel(/Estágio da candidatura/);
     await expect(seletores.first()).toBeVisible();
 
     const opcoes = await seletores.first().locator("option").allTextContents();

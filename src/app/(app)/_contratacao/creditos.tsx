@@ -1,7 +1,7 @@
 import { BellRing, Check, Infinity as Infinito, Ticket } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Carrossel } from "@/components/carrossel";
-import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
+import { PageShell, PageTitle } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL } from "@/lib/format";
@@ -23,6 +23,7 @@ import {
 } from "@/server/pagamentos/planos";
 import { planoDeVagasAtual } from "@/server/pagamentos/servico";
 import type { TipoPagamento } from "@/server/pagamentos/tipos";
+import { AbasDaContratacao } from "./abas";
 import type { AreaDeContratacao } from "./area";
 import { CancelarPlanoButton } from "./cancelar-plano-button";
 import { ComprarButton } from "./comprar-button";
@@ -75,12 +76,12 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
 
   return (
     <PageShell width="narrow">
-      <BackLink href={area.base} label="Voltar ao painel" />
       <PageTitle
         title="Planos e vagas"
         accent="text-empresas"
         description="Cada vaga publicada fica 30 dias no ar. Assine um plano para contratar todo mês, ou compre uma vaga avulsa."
       />
+      <AbasDaContratacao area={area} />
 
       {/*
         O que a pessoa tem vem primeiro, antes dos preços: quem já tem

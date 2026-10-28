@@ -22,6 +22,7 @@ const estado = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/empresa",
   redirect: (destino: string) => {
     estado.redirecionou = destino;
     throw new Error(`NEXT_REDIRECT:${destino}`);

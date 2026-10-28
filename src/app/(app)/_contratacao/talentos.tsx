@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FilterBar } from "@/components/filter-bar";
 import {
-  BackLink,
   EmptyState,
   PageShell,
   PageTitle,
@@ -18,6 +17,7 @@ import { TETO_CANDIDATURAS } from "@/lib/limites-de-lista";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { talentosDaEmpresa } from "@/server/candidaturas/talentos";
 import { temPainelDeEmpresa } from "@/server/visualizacoes/servico";
+import { AbasDaContratacao } from "./abas";
 import type { AreaDeContratacao } from "./area";
 
 /**
@@ -53,12 +53,12 @@ export async function QuemJaSeCandidatou({
 
   return (
     <PageShell>
-      <BackLink href={area.base} label={`Voltar para ${area.nome}`} />
       <PageTitle
         title="Quem já se candidatou"
         accent="text-empresas"
         description="Todo mundo que já se candidatou a alguma vaga sua, sem repetir. Quem se candidatou a mais de uma aparece uma vez, com a vaga mais recente."
       />
+      <AbasDaContratacao area={area} />
 
       <FilterBar
         accent="vagas"
