@@ -179,17 +179,18 @@ test.describe("perguntas de triagem", () => {
     });
     await a.contexto.close();
 
-    // 5. A lista da empresa: quem atende primeiro, o outro grupo à parte.
-    await painel.goto("/empresa");
-    const atende = painel
-      .getByRole("link", { name: /Pessoa de Teste/ })
-      .filter({
-        hasText: semPergunta,
-      });
-    const naoAtende = painel
+    // 5. O funil da empresa (#511): na coluna, quem atende primeiro, o outro
+    // grupo à parte.
+    await painel.goto("/empresa/funil");
+    // As duas candidaturas acabaram de chegar: estão na coluna das novas.
+    const novas = painel.getByRole("region", { name: /^Nova:/ });
+    const atende = novas.getByRole("link", { name: /Pessoa de Teste/ }).filter({
+      hasText: semPergunta,
+    });
+    const naoAtende = novas
       .getByRole("link", { name: /Pessoa de Teste/ })
       .filter({ hasText: comPergunta });
-    const separador = painel.getByText(
+    const separador = novas.getByText(
       /Não responderam o que a vaga exigia \(\d+\)/,
     );
 
@@ -198,7 +199,7 @@ test.describe("perguntas de triagem", () => {
     await expect(separador).toBeVisible();
     // O motivo está escrito na linha, sem abrir a ficha.
     await expect(
-      painel.getByText(`Respondeu Não: ${PERGUNTA_ELIMINATORIA}`).first(),
+      novas.getByText(`Respondeu Não: ${PERGUNTA_ELIMINATORIA}`).first(),
     ).toBeVisible();
 
     const yAtende = (await atende.boundingBox())?.y ?? 0;

@@ -176,7 +176,13 @@ test.describe("alvos de toque, empresa", () => {
   test.skip(({ hasTouch }) => !hasTouch, "só aparelho de toque");
   test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
 
-  for (const rota of ["/empresa", "/empresa/creditos", "/empresa/vagas/nova"]) {
+  for (const rota of [
+    "/empresa",
+    "/empresa/creditos",
+    "/empresa/vagas/nova",
+    "/empresa/vagas",
+    "/empresa/funil",
+  ]) {
     test(`${rota}: nada abaixo de 44 px`, async ({ page }) => {
       await conferir(page, rota);
     });

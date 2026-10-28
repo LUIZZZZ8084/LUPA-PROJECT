@@ -1,8 +1,8 @@
 import {
   Building2,
-  FileText,
+  CalendarClock,
+  Clock,
   Inbox,
-  MessageCircle,
   Plus,
   Ticket,
   UserSearch,
@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import {
   EmptyState,
   PageShell,
@@ -20,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel, Stat } from "@/components/ui/card";
 import { VerifiedMark } from "@/components/verified-badge";
-import { mensagemParaCandidato } from "@/lib/chamada";
+import { APPLICATION_LABELS, APPLICATION_TONE } from "@/lib/constants";
 import {
   empresaDoPainel,
   getCompany,
@@ -28,76 +29,31 @@ import {
   getCompanyJobs,
   getCompanyStats,
 } from "@/lib/data";
+import { timeAgo } from "@/lib/format";
 import {
-  pluralize,
-  prazoDaVaga,
-  timeAgo,
-  vagaExpirada,
-  whatsappLink,
-} from "@/lib/format";
+  alcancePorEtapa,
+  contarPorEstagio,
+  vagasVencendo,
+} from "@/lib/funil-de-candidaturas";
 import { resumoDoDireito, seloDoDireito } from "@/lib/planos-empresa";
-import {
-  LIMIAR_MUITO_COMPATIVEL,
-  resultadosDasVagas,
-} from "@/lib/resultado-da-vaga";
-import { motivosDeNaoAtender } from "@/lib/triagem";
 import type { Company } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
-import {
-  type MatchDaCandidatura,
-  matchPorCandidatura,
-} from "@/server/candidaturas/match";
+import { matchPorCandidatura } from "@/server/candidaturas/match";
 import { recomendadosParaEmpresa } from "@/server/candidaturas/recomendados";
 import { direitoDePublicar } from "@/server/carteiras/servico";
 import {
   serieDoPainel,
   temPainelDeEmpresa,
   totaisDaSerie,
-  visualizacoesPorVaga,
 } from "@/server/visualizacoes/servico";
+import { AbasDaContratacao } from "./abas";
 import { type AreaDeContratacao, areaDoPapel } from "./area";
-import { EncerrarVagaButton } from "./encerrar-vaga-button";
-import { MoverCandidaturaSelect } from "./mover-candidatura-select";
-import { ReativarVagaButton } from "./reativar-vaga-button";
 import { Recomendados } from "./recomendados";
-import { ResultadoDaVagaLinha } from "./resultado-da-vaga";
+import { SeloDeMatch } from "./selo-de-match";
 import { SerieGrafico } from "./serie-grafico";
-
-/**
- * O quanto o candidato casa com a vaga a que se candidatou.
- *
- * Sem match no mapa, não desenha nada: a vaga não declarou habilidade e o
- * título não deu pista. Mostrar "0%" ali seria afirmar que o candidato não
- * tem nada do que se pede, quando a verdade é que ninguém disse o que se
- * pede.
- *
- * O número vive no `aria-label` por extenso porque o selo mostra só
- * "72%", e "72%" sozinho não diz de quê — nem para quem usa leitor de
- * tela, nem para quem está no celular, onde `title` não existe. Quem
- * quiser o detalhe abre a ficha.
- */
-function SeloDeMatch({ match }: { match: MatchDaCandidatura | undefined }) {
-  if (!match) return null;
-
-  const tone =
-    match.porcentagem >= LIMIAR_MUITO_COMPATIVEL
-      ? "vagas"
-      : match.porcentagem >= 40
-        ? "warn"
-        : "neutral";
-
-  return (
-    <Badge
-      tone={tone}
-      className="flex-none"
-      aria-label={`Combina com ${match.pontos} de ${match.deQuantas} habilidades que a vaga pede`}
-    >
-      {match.porcentagem}%
-    </Badge>
-  );
-}
 
 /** A empresa do admin enquanto ela não tem perfil gravado (#499). */
 async function empresaDoAdmin(usuarioId: string): Promise<Company | null> {
@@ -193,32 +149,19 @@ export async function PainelDeContratacao({
   }
 
   const companyId = empresaDoPainel(sessao.usuarioId);
-  const [
-    empresaDoBanco,
-    jobs,
-    applications,
-    stats,
-    serie,
-    porVaga,
-    recomendados,
-  ] = await Promise.all([
-    getCompany(companyId),
-    getCompanyJobs(companyId),
-    getCompanyApplications(companyId),
-    getCompanyStats(companyId),
-    // Quem não é empresa cai no estado vazio logo abaixo; pedir a série
-    // antes disso trocaria a explicação por uma tela de erro.
-    temPainelDeEmpresa(sessao) ? serieDoPainel(sessao) : [],
-    temPainelDeEmpresa(sessao)
-      ? visualizacoesPorVaga(sessao)
-      : new Map<string, number>(),
-    recomendadosParaEmpresa(sessao),
-  ]);
+  const [empresaDoBanco, jobs, applications, stats, serie, recomendados] =
+    await Promise.all([
+      getCompany(companyId),
+      getCompanyJobs(companyId),
+      getCompanyApplications(companyId),
+      getCompanyStats(companyId),
+      // Quem não é empresa cai no estado vazio logo abaixo; pedir a série
+      // antes disso trocaria a explicação por uma tela de erro.
+      temPainelDeEmpresa(sessao) ? serieDoPainel(sessao) : [],
+      recomendadosParaEmpresa(sessao),
+    ]);
   const totais = totaisDaSerie(serie);
   const match = matchPorCandidatura(applications, jobs);
-  // O resultado de cada vaga (#492): visualizações, candidaturas e quantas
-  // combinam com o que a vaga pede, juntos, no fim da linha dela.
-  const resultados = resultadosDasVagas(jobs, applications, match, porVaga);
   const direito = await direitoDePublicar(sessao.usuarioId);
   const resumoDoPlano = resumoDoDireito(direito);
 
@@ -308,111 +251,23 @@ export async function PainelDeContratacao({
   const buscaCandidatos = pode(sessao.papel, "candidato:buscar_disponiveis");
 
   /*
-   * Quem respondeu o que a vaga exigia vem primeiro, e quem não, num grupo à
-   * parte (#491). A ordem dentro de cada grupo é a que a lista já tinha.
+   * O resumo do dia (#511): o que precisa de atenção, o funil em números e
+   * as candidaturas mais recentes. As listas inteiras moram nas abas — as
+   * vagas em "Vagas" e as candidaturas em "Funil" —, e o painel responde a
+   * pergunta de quem abre o app de manhã: o que eu faço hoje?
    */
-  const triagem = new Map(
-    applications.map((a) => [
-      a.id,
-      motivosDeNaoAtender(a.job_questions ?? [], a.answers),
-    ]),
-  );
-  const atendem = applications.filter((a) => triagem.get(a.id)?.length === 0);
-  const naoAtendem = applications.filter(
-    (a) => (triagem.get(a.id)?.length ?? 0) > 0,
-  );
-
-  const linhaDaCandidatura = (app: (typeof applications)[number]) => (
-    <li
-      key={app.id}
-      /*
-          Duas linhas no celular, uma no desktop (#252).
-
-          Numa fileira só, avatar, %, WhatsApp e o seletor de
-          estágio não encolhem — quem encolhia era o nome. Em
-          360 px a empresa lia "E…", "W.", "P": não conseguia
-          saber quem tinha se candidatado. A varredura de rolagem
-          lateral passava verde, porque nada vazava; o `truncate`
-          fazia exatamente o que promete.
-        */
-      className="flex flex-col gap-2 p-4 transition-colors hover:bg-panel-2 sm:flex-row sm:items-center sm:gap-3"
-    >
-      {/*
-          A linha inteira abre a ficha: nome e vaga não
-          bastam para decidir chamar alguém, e antes disto não
-          havia para onde clicar.
-        */}
-      <Link
-        href={`${area.base}/candidaturas/${app.id}`}
-        className="group flex min-h-11 min-w-0 flex-1 items-center gap-3"
-      >
-        <Avatar
-          name={app.candidate.full_name}
-          src={app.candidate.avatar_url}
-          size="sm"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold underline-offset-2 group-hover:underline">
-            {app.candidate.full_name}
-          </p>
-          <p className="truncate text-xs text-muted">
-            {app.job_title}
-            {` · ${timeAgo(app.created_at)}`}
-          </p>
-          {/*
-              O motivo, à vista (#491): a empresa lê por que a pessoa
-              está no grupo à parte, sem abrir a ficha.
-            */}
-          {(triagem.get(app.id)?.length ?? 0) > 0 && (
-            <p className="truncate text-warn text-xs">
-              Respondeu Não: {triagem.get(app.id)?.join(" · ")}
-            </p>
-          )}
-        </div>
-      </Link>
-
-      {/*
-          Recuo de `pl-12` no celular: alinha os controles com o
-          texto, e não com o avatar, para a segunda linha ler como
-          parte da mesma pessoa.
-        */}
-      <div className="flex items-center gap-2 pl-12 sm:pl-0">
-        <SeloDeMatch match={match.get(app.id)} />
-
-        {/*
-          Atalho de contato na própria lista: o caminho entre
-          receber o currículo e chamar a pessoa não deveria ter
-          uma tela no meio.
-        */}
-        {app.candidate.phone && (
-          <a
-            href={whatsappLink(
-              app.candidate.phone,
-              mensagemParaCandidato({
-                candidato: app.candidate.full_name,
-                vaga: app.job_title,
-                empresa: company.company_name,
-              }),
-            )}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Chamar ${app.candidate.full_name} no WhatsApp`}
-            className="flex h-11 w-11 flex-none items-center justify-center rounded-lg border border-line text-muted transition-colors hover:border-vagas hover:text-vagas"
-          >
-            <MessageCircle size={16} />
-          </a>
-        )}
-
-        <MoverCandidaturaSelect id={app.id} statusAtual={app.status} />
-      </div>
-    </li>
-  );
+  const contagem = contarPorEstagio(applications);
+  const alcance = alcancePorEtapa(contagem);
+  const vencendo = vagasVencendo(jobs);
+  const recentes = applications.slice(0, 5);
+  const fracao = (n: number) =>
+    alcance.recebidas === 0 ? null : n / alcance.recebidas;
 
   return (
     <PageShell>
       {/*
         O título é o da área, não "Minha Empresa" fixo.
-        
+
         O prestador chegava aqui pela porta dele e lia o nome da porta da
         empresa — que é exatamente o que a #189 veio desfazer. Foi o e2e
         que pegou: o painel renderizava certo e o cabeçalho mentia.
@@ -420,7 +275,7 @@ export async function PainelDeContratacao({
       <PageTitle
         title={area.nome}
         accent="text-empresas"
-        description="Acompanhe suas vagas e os currículos recebidos."
+        description="O que precisa da sua atenção hoje, suas vagas e os currículos recebidos."
         action={
           <div className="flex flex-wrap gap-2">
             {buscaCandidatos && (
@@ -436,6 +291,50 @@ export async function PainelDeContratacao({
           </div>
         }
       />
+      <AbasDaContratacao area={area} />
+
+      {/*
+        Para hoje: três números que viram um clique. Cada cartão leva ao
+        lugar onde a coisa se resolve — o funil já aberto no estágio, ou a
+        aba de vagas.
+      */}
+      <section aria-labelledby="para-hoje" className="mb-6">
+        <h2 id="para-hoje" className="mb-3 font-bold text-base">
+          Para hoje
+        </h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <CartaoDoDia
+            href={`${area.base}/funil?estagio=enviada`}
+            icone={<Inbox size={18} aria-hidden />}
+            valor={contagem.enviada}
+            rotulo={
+              contagem.enviada === 1 ? "Nova para olhar" : "Novas para olhar"
+            }
+            dica="Abrir a ficha marca como vista."
+            destaque={contagem.enviada > 0}
+          />
+          <CartaoDoDia
+            href={`${area.base}/funil?estagio=entrevista`}
+            icone={<CalendarClock size={18} aria-hidden />}
+            valor={contagem.entrevista}
+            rotulo="Em entrevista"
+            dica="Quem você chamou para conversar."
+          />
+          <CartaoDoDia
+            href={`${area.base}/vagas`}
+            icone={<Clock size={18} aria-hidden />}
+            valor={vencendo.length}
+            rotulo={
+              vencendo.length === 1
+                ? "Vaga vence em até 3 dias"
+                : "Vagas vencem em até 3 dias"
+            }
+            dica="Reative para continuar recebendo."
+            destaque={vencendo.length > 0}
+            alerta
+          />
+        </div>
+      </section>
 
       <Panel>
         <div className="flex items-start gap-4">
@@ -490,6 +389,67 @@ export async function PainelDeContratacao({
 
         <SerieGrafico serie={serie} />
       </Panel>
+
+      {/*
+        O funil em números: de todas as candidaturas, quantas já foram
+        olhadas, quantas chegaram à entrevista e quantas foram selecionadas.
+        A porcentagem é sobre as recebidas, a mesma conta do funil do painel
+        do admin (#471): "10% viraram entrevista" se lê sem conta.
+      */}
+      {alcance.recebidas > 0 && (
+        <section aria-labelledby="funil-em-numeros" className="mt-6">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="funil-em-numeros" className="font-bold text-base">
+              Do currículo à contratação
+            </h2>
+            <Link
+              href={`${area.base}/funil`}
+              className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
+            >
+              Abrir o funil
+            </Link>
+          </div>
+          <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {(
+              [
+                ["Recebidas", alcance.recebidas],
+                ["Olhadas", alcance.olhadas],
+                ["Entrevistas", alcance.entrevistas],
+                ["Selecionados", alcance.selecionados],
+              ] as const
+            ).map(([rotulo, valor], i) => {
+              const f = fracao(valor);
+              return (
+                <li
+                  key={rotulo}
+                  className="rounded-[var(--radius-card)] border border-line bg-panel p-4"
+                >
+                  <p className="text-muted text-xs">{rotulo}</p>
+                  <p className="mt-1 font-bold text-2xl tabular-nums">
+                    {valor.toLocaleString("pt-BR")}
+                  </p>
+                  {i > 0 && f !== null && (
+                    <>
+                      <div
+                        aria-hidden
+                        className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel-3"
+                      >
+                        <div
+                          className="h-full rounded-full bg-empresas"
+                          style={{ width: `${Math.round(f * 100)}%` }}
+                        />
+                      </div>
+                      <p className="mt-1 text-faint text-xs">
+                        {Math.round(f * 100)}% das recebidas
+                      </p>
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
 
       {/*
         Dois atalhos que estavam escondidos.
@@ -549,120 +509,24 @@ export async function PainelDeContratacao({
         )}
       </div>
 
-      {/* Vagas publicadas */}
-      <section className="mt-6">
-        <h2 className="text-base font-bold">Vagas publicadas</h2>
-        {/*
-          O que a visualização é, dito uma vez, antes dos números (#492): ela
-          serve para comparar uma vaga com outra, e não para contar pessoas —
-          quem recarrega a página conta de novo, porque a Lupa não guarda
-          quem viu.
-        */}
-        <p className="mt-1 mb-3 text-faint text-xs leading-relaxed">
-          Visualização serve para comparar uma vaga com outra, não para contar
-          pessoas: quem abre de novo conta de novo. Muito compatível é quem
-          combina com {LIMIAR_MUITO_COMPATIVEL}% ou mais do que a vaga pede.
-        </p>
-        {jobs.length === 0 ? (
-          <EmptyState
-            icon={<FileText size={22} />}
-            title="Você ainda não publicou nenhuma vaga"
-            description="Publicar leva menos de dois minutos, e usa uma vaga do seu saldo."
-            action={
-              <ButtonLink
-                href={`${area.base}/vagas/nova`}
-                variant="empresas"
-                size="sm"
-              >
-                <Plus size={16} />
-                Publicar vaga
-              </ButtonLink>
-            }
-          />
-        ) : (
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
-            {jobs.map((job) => {
-              const expirada =
-                job.status === "aberta" && vagaExpirada(job.expires_at);
-              const resultado = resultados.get(job.id);
-              return (
-                <li
-                  key={job.id}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4 transition-colors hover:bg-panel-2"
-                >
-                  <Link
-                    href={`/vagas/${job.id}`}
-                    className="flex min-w-0 flex-1 items-center gap-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      {/* Duas linhas, e não uma cortada: ao lado há o selo de
-                          estado e o botão (#479). */}
-                      <p className="line-clamp-2 text-sm font-semibold">
-                        {job.title}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted">
-                        {pluralize(
-                          job.applicant_count,
-                          "candidato",
-                          "candidatos",
-                        )}{" "}
-                        · {timeAgo(job.created_at)}
-                        {job.status === "aberta" &&
-                          ` · ${prazoDaVaga(job.expires_at)}`}
-                      </p>
-                    </div>
-                    <Badge
-                      tone={
-                        expirada
-                          ? "warn"
-                          : job.status === "aberta"
-                            ? "vagas"
-                            : "neutral"
-                      }
-                    >
-                      {expirada
-                        ? "Expirada"
-                        : job.status === "aberta"
-                          ? "Ativa"
-                          : "Encerrada"}
-                    </Badge>
-                  </Link>
-                  {/*
-                    O "Encerrar" devolve o botão e, ao ser tocado, um quadro de
-                    confirmação que ocupa a linha inteira: por isso a linha é
-                    `flex-wrap` e o botão é filho direto dela (#481).
-                  */}
-                  {job.status === "aberta" &&
-                    (expirada ? (
-                      <div className="flex shrink-0 items-center gap-2">
-                        <ReativarVagaButton id={job.id} />
-                      </div>
-                    ) : (
-                      <EncerrarVagaButton id={job.id} titulo={job.title} />
-                    ))}
-                  {resultado && (
-                    <div className="basis-full">
-                      <ResultadoDaVagaLinha
-                        resultado={resultado}
-                        finalizada={job.status !== "aberta" || expirada}
-                        vagaId={job.id}
-                        base={area.base}
-                      />
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
       <Recomendados vagas={recomendados} base={area.base} />
 
-      {/* Currículos recebidos */}
-      <section className="mt-8">
-        <h2 className="mb-3 text-base font-bold">Currículos recebidos</h2>
-        {applications.length === 0 ? (
+      {/* Candidaturas recentes: as cinco últimas; o resto está no funil. */}
+      <section aria-labelledby="recentes" className="mt-8">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="recentes" className="font-bold text-base">
+            Currículos recebidos
+          </h2>
+          {applications.length > recentes.length && (
+            <Link
+              href={`${area.base}/funil`}
+              className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
+            >
+              Ver todos os {applications.length} no funil
+            </Link>
+          )}
+        </div>
+        {recentes.length === 0 ? (
           <EmptyState
             icon={<Inbox size={22} />}
             title="Nenhuma candidatura ainda"
@@ -670,21 +534,101 @@ export async function PainelDeContratacao({
           />
         ) : (
           <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
-            {atendem.map(linhaDaCandidatura)}
-            {naoAtendem.length > 0 && (
-              /*
-                Quem não respondeu o que a vaga exigia aparece à parte, e não
-                some (#491): a decisão de olhar continua sendo da empresa, e
-                o motivo está escrito em cada linha.
-              */
-              <li className="bg-panel-2 px-4 py-2 font-semibold text-muted text-xs">
-                Não responderam o que a vaga exigia ({naoAtendem.length})
+            {recentes.map((app) => (
+              <li key={app.id}>
+                {/*
+                  A linha inteira abre a ficha: nome e vaga não bastam para
+                  decidir chamar alguém. Mover de estágio é no funil.
+                */}
+                {/*
+                  Duas linhas no celular, uma no desktop (#252): os selos ao
+                  lado apertavam o nome a "E…" em 360 px.
+                */}
+                <Link
+                  href={`${area.base}/candidaturas/${app.id}`}
+                  className="group flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 p-4 transition-colors hover:bg-panel-2"
+                >
+                  <Avatar
+                    name={app.candidate.full_name}
+                    src={app.candidate.avatar_url}
+                    size="sm"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-sm underline-offset-2 group-hover:underline">
+                      {app.candidate.full_name}
+                    </p>
+                    <p className="truncate text-muted text-xs">
+                      {app.job_title} · {timeAgo(app.created_at)}
+                    </p>
+                  </div>
+                  <span className="flex basis-full items-center gap-2 pl-11 sm:basis-auto sm:pl-0">
+                    <SeloDeMatch match={match.get(app.id)} />
+                    <Badge tone={APPLICATION_TONE[app.status]}>
+                      {APPLICATION_LABELS[app.status]}
+                    </Badge>
+                  </span>
+                </Link>
               </li>
-            )}
-            {naoAtendem.map(linhaDaCandidatura)}
+            ))}
           </ul>
         )}
       </section>
     </PageShell>
+  );
+}
+
+/**
+ * Um número do dia que vira um clique. `destaque` pinta a borda quando há o
+ * que fazer; zero fica neutro, porque zero novas é boa notícia, não alarme.
+ */
+function CartaoDoDia({
+  href,
+  icone,
+  valor,
+  rotulo,
+  dica,
+  destaque = false,
+  alerta = false,
+}: {
+  href: string;
+  icone: ReactNode;
+  valor: number;
+  rotulo: string;
+  dica: string;
+  destaque?: boolean;
+  alerta?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex items-center gap-3 rounded-[var(--radius-card)] border bg-panel p-4 transition-colors hover:bg-panel-2",
+        destaque
+          ? alerta
+            ? "border-warn/60"
+            : "border-empresas/50"
+          : "border-line",
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-10 w-10 flex-none items-center justify-center rounded-xl",
+          destaque
+            ? alerta
+              ? "bg-warn/15 text-warn"
+              : "bg-empresas/15 text-empresas"
+            : "bg-panel-2 text-muted",
+        )}
+      >
+        {icone}
+      </span>
+      <span className="min-w-0">
+        <span className="block font-bold text-2xl tabular-nums leading-none">
+          {valor}
+        </span>
+        <span className="mt-1 block font-semibold text-sm">{rotulo}</span>
+        <span className="block text-faint text-xs">{dica}</span>
+      </span>
+    </Link>
   );
 }

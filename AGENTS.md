@@ -1771,6 +1771,44 @@ currículo e somem com a candidatura (excluir a conta a apaga em cascata); os
 Termos dizem o que "eliminatória" faz e que quem pergunta não pode discriminar
 por critério vedado em lei.
 
+### A área de contratação como mini CRM: abas, funil e o resumo do dia (#511)
+
+Pedido do Luiz em 27/10/2026: o painel da empresa era "simples e sem graça"
+para quem recruta todo mês — e as agências de emprego são o público que a
+Lupa quer atrair. Ele virou cinco abas, nas duas portas (`/empresa` e
+`/contratar`): **Painel, Vagas, Funil, Talentos e Planos**. É a fase 1, só
+tela, com o que o banco já guarda; anotações, entrevista com hora, etiquetas
+(fase 2) e vaga em nome de cliente ou vários usuários por empresa (fase 3)
+ficam para Issues próprias.
+
+**O Funil é a aba que faz do painel um CRM.** As candidaturas em colunas
+pelos cinco estágios que já existiam, cada card com nome, vaga, % de
+casamento, o motivo da triagem, há quanto tempo, WhatsApp e o seletor de
+estágio. No computador o card se arrasta entre colunas; **o arrastar é um
+atalho por cima do seletor**, e é o seletor que vale para teclado, leitor de
+tela e celular, onde arrastar com o dedo numa página que rola é briga com a
+rolagem. No celular aparece uma coluna por vez, escolhida por botões de
+estágio que quebram de linha (#460) — cinco colunas lado a lado em 360 px
+seriam cinco tiras ilegíveis. A mudança aparece na hora e volta se o servidor
+recusar: o estado local é só o que foi movido ali, por cima do que veio do
+servidor, sem efeito sincronizando nada. Quem não respondeu o que a vaga
+exigia fica à parte dentro de cada coluna (#491). O card leva só o que a tela
+mostra; o currículo continua chegando pela ficha.
+
+**O Painel virou o resumo do dia**: "para hoje" (novas para olhar, em
+entrevista, vagas que vencem em 3 dias, cada uma um clique para onde se
+resolve), o cartão da empresa com a série de 30 dias, o funil em números
+("do currículo à contratação": recebidas, olhadas, entrevistas e
+selecionados, cada um como fração das recebidas, a conta do painel do admin)
+e as cinco candidaturas mais recentes. **O alcance conta até onde cada um
+chegou, não o estágio de agora**: quem foi selecionado passou pela
+entrevista, mesmo que a empresa tenha pulado o estágio. As listas inteiras
+saíram do painel — as vagas para a aba Vagas, as candidaturas para o Funil.
+
+**As abas cabem no celular sem rolar para o lado**: cinco colunas iguais,
+ícone em cima e nome embaixo, o desenho da barra inferior. A fileira que
+rola já escondeu um filtro inteiro (#460).
+
 ### Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a

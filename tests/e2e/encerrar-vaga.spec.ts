@@ -20,7 +20,8 @@ const encerrar = (page: Page) =>
   page.getByRole("button", { name: "Encerrar", exact: true }).first();
 
 async function abrirPainel(page: Page) {
-  await page.goto("/empresa");
+  // A lista de vagas é uma aba própria desde a #511.
+  await page.goto("/empresa/vagas");
   await page.waitForLoadState("networkidle");
   await expect(encerrar(page)).toBeVisible();
 }

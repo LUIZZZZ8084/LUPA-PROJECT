@@ -29,7 +29,8 @@ test.describe("resultado de cada vaga no painel", () => {
   test("cada vaga mostra visualizações e candidaturas, com o que a visualização é", async ({
     page,
   }) => {
-    await page.goto("/empresa");
+    // A lista de vagas é uma aba própria desde a #511.
+    await page.goto("/empresa/vagas");
 
     const lista = page
       .locator("section", { hasText: "Vagas publicadas" })
@@ -97,9 +98,9 @@ test.describe("chamar no WhatsApp com a mensagem pronta", () => {
   test("o atalho da lista e o da ficha levam o nome, o cargo e a empresa", async ({
     page,
   }) => {
-    await page.goto("/empresa");
+    // O atalho do card do funil (#511): o link do WhatsApp de uma candidatura.
+    await page.goto("/empresa/funil");
 
-    // O atalho da lista: o link do WhatsApp de uma candidatura.
     const atalho = page
       .getByRole("link", { name: /^Chamar .* no WhatsApp$/ })
       .first();
