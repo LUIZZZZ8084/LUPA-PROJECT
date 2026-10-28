@@ -419,6 +419,25 @@ saíram do painel — as vagas para a aba Vagas, as candidaturas para o Funil.
 ícone em cima e nome embaixo, o desenho da barra inferior. A fileira que
 rola já escondeu um filtro inteiro (#460).
 
+**Os cards de atalho viraram um tutorial de primeira visita (#513).** O
+painel tinha três cards abaixo do resumo — o plano, "Quem já se candidatou"
+e "Buscar candidatos" —, e desde as abas eles só repetiam o caminho. O Luiz
+leu um deles e não entendeu o que era. Pedido dele em 28/10/2026: tirar os
+três e explicar uma vez, como um tutorial rápido. São quatro passos, um por
+vez (publicar com o plano de quem olha, o funil, os talentos e a busca, que
+só entra para quem a matriz deixa buscar, #251), e "Pular", o X ou o último
+passo fecham. **"Visto" mora no aparelho** (`localStorage`), não na conta:
+guardar na conta pediria coluna nova e SQL em produção para uma explicação
+de quatro passos, e o preço — aparecer de novo num aparelho novo — não custa
+nada a ninguém. Sem storage, fechar vale para a visita. O servidor não
+desenha o tutorial, porque não sabe se já foi visto: aparecer depois da
+hidratação é melhor que piscar e sumir.
+
+O card da busca existia porque o botão pequeno do topo passava despercebido
+(#83). O botão "Candidatos" continua no topo, e quem chega pela primeira vez
+lê no tutorial o que ele faz; quem fechou o tutorial sem ler fica com o
+botão. Nenhum caminho perdeu a porta: as abas levam a Talentos e Planos.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a
