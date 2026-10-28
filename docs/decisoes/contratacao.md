@@ -385,13 +385,14 @@ por critério vedado em lei.
 
 Pedido do Luiz em 27/10/2026: o painel da empresa era "simples e sem graça"
 para quem recruta todo mês — e as agências de emprego são o público que a
-Lupa quer atrair. Ele virou cinco abas, nas duas portas (`/empresa` e
-`/contratar`): **Painel, Vagas, Funil, Talentos e Planos**. É a fase 1, só
+Lupa quer atrair. Ele virou abas, nas duas portas (`/empresa` e
+`/contratar`): **Painel, Vagas, Candidatos e Talentos**. É a fase 1, só
 tela, com o que o banco já guarda; anotações, entrevista com hora, etiquetas
 (fase 2) e vaga em nome de cliente ou vários usuários por empresa (fase 3)
 ficam para Issues próprias.
 
-**O Funil é a aba que faz do painel um CRM.** As candidaturas em colunas
+**Candidatos é a aba que faz do painel um CRM** — o funil, no endereço
+`/funil`. As candidaturas em colunas
 pelos cinco estágios que já existiam, cada card com nome, vaga, % de
 casamento, o motivo da triagem, há quanto tempo, WhatsApp e o seletor de
 estágio. No computador o card se arrasta entre colunas; **o arrastar é um
@@ -413,9 +414,9 @@ selecionados, cada um como fração das recebidas, a conta do painel do admin)
 e as cinco candidaturas mais recentes. **O alcance conta até onde cada um
 chegou, não o estágio de agora**: quem foi selecionado passou pela
 entrevista, mesmo que a empresa tenha pulado o estágio. As listas inteiras
-saíram do painel — as vagas para a aba Vagas, as candidaturas para o Funil.
+saíram do painel — as vagas para a aba Vagas, as candidaturas para Candidatos.
 
-**As abas cabem no celular sem rolar para o lado**: cinco colunas iguais,
+**As abas cabem no celular sem rolar para o lado**: colunas iguais,
 ícone em cima e nome embaixo, o desenho da barra inferior. A fileira que
 rola já escondeu um filtro inteiro (#460).
 
@@ -436,7 +437,21 @@ hidratação é melhor que piscar e sumir.
 O card da busca existia porque o botão pequeno do topo passava despercebido
 (#83). O botão "Candidatos" continua no topo, e quem chega pela primeira vez
 lê no tutorial o que ele faz; quem fechou o tutorial sem ler fica com o
-botão. Nenhum caminho perdeu a porta: as abas levam a Talentos e Planos.
+botão. Nenhum caminho perdeu a porta: as abas levam a Talentos, e Planos
+abre pelo cartão da empresa.
+
+**A aba Funil virou Candidatos, e Planos saiu das abas (#515).** Pedido do
+Luiz em 28/10/2026. A #511 nasceu com cinco abas, com "Funil" e "Planos"
+entre elas. A aba passou a se chamar pelo que mostra, as pessoas que se
+candidataram; o endereço `/funil` ficou, porque trocar link não muda nada
+para quem clica. Com isso, o botão do topo que abre a
+busca (`/candidatos`) passou a dizer "Buscar candidatos": duas coisas
+chamadas "Candidatos" na mesma tela seriam a mesma palavra para lugares
+diferentes. **Planos é página à parte**, sem as abas e com o caminho de
+volta ao painel, como era antes da #511: é o que se abre de vez em quando,
+não o dia a dia de contratar. A porta dela no painel é "Ver planos", ao lado
+do selo do plano no cartão da empresa; o perfil tem o atalho "Planos e
+vagas", e o formulário de vaga leva até ela quando falta saldo.
 
 ## Na % de casamento, zero é uma afirmação
 

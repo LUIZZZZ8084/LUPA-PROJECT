@@ -100,7 +100,7 @@ export async function FunilDaContratacao({
   return (
     <PageShell width="wide">
       <PageTitle
-        title="Funil"
+        title="Candidatos"
         accent="text-empresas"
         description="Cada candidatura no estágio em que está. Mova quem avançou, e abra a ficha para ver o currículo."
       />

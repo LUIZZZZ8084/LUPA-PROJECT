@@ -25,7 +25,7 @@ test("aparece na primeira visita e, fechado, não volta", async ({ page }) => {
 
   await page.getByRole("button", { name: "Próximo" }).click();
   await expect(
-    page.getByRole("heading", { name: "Acompanhe no Funil" }),
+    page.getByRole("heading", { name: "Acompanhe os candidatos" }),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Pular" }).click();

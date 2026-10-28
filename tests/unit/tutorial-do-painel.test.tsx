@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const PASSOS = [
   { titulo: "Publique uma vaga", texto: "Pelo botão de publicar." },
-  { titulo: "Acompanhe no Funil", texto: "Cada currículo vira um card." },
+  { titulo: "Acompanhe os candidatos", texto: "Cada currículo vira um card." },
   { titulo: "Chame de novo", texto: "A aba Talentos reúne todo mundo." },
 ];
 
@@ -55,7 +55,7 @@ describe("tutorial do painel", () => {
 
     fireEvent.click(botao("Próximo"));
     expect(
-      screen.getByRole("heading", { name: "Acompanhe no Funil" }),
+      screen.getByRole("heading", { name: "Acompanhe os candidatos" }),
     ).toBeTruthy();
     expect(screen.getByText(/2 de 3/)).toBeTruthy();
 

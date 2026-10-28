@@ -264,12 +264,12 @@ export async function PainelDeContratacao({
   const passosDoTutorial: PassoDoTutorial[] = [
     {
       titulo: "Publique uma vaga",
-      texto: `Pelo botão "Publicar nova vaga", aqui em cima. ${resumoDoPlano.titulo}. ${resumoDoPlano.detalhe} O saldo e os planos ficam na aba Planos.`,
+      texto: `Pelo botão "Publicar nova vaga", aqui em cima. ${resumoDoPlano.titulo}. ${resumoDoPlano.detalhe} O saldo e os planos ficam em "Ver planos", no cartão da empresa.`,
     },
     {
-      titulo: "Acompanhe no Funil",
+      titulo: "Acompanhe os candidatos",
       texto:
-        "Cada currículo recebido vira um card. Mude o estágio pelo seletor do card (no computador, dá para arrastar) e veja quem falta olhar, quem vai para entrevista e quem foi selecionado.",
+        "Na aba Candidatos, cada currículo recebido vira um card. Mude o estágio pelo seletor do card (no computador, dá para arrastar) e veja quem falta olhar, quem vai para entrevista e quem foi selecionado.",
     },
     {
       titulo: "Chame de novo quem já se candidatou",
@@ -281,7 +281,7 @@ export async function PainelDeContratacao({
           {
             titulo: "Procure quem quer ser encontrado",
             texto:
-              'No botão "Candidatos", aqui em cima, você busca por habilidade e área entre quem pediu para ser encontrado por empresas, sem esperar alguém se candidatar.',
+              'No botão "Buscar candidatos", aqui em cima, você busca por habilidade e área entre quem pediu para ser encontrado por empresas, sem esperar alguém se candidatar.',
           },
         ]
       : []),
@@ -312,7 +312,7 @@ export async function PainelDeContratacao({
             {buscaCandidatos && (
               <ButtonLink href="/candidatos" variant="outline">
                 <UserSearch size={17} />
-                Candidatos
+                Buscar candidatos
               </ButtonLink>
             )}
             <ButtonLink href={`${area.base}/vagas/nova`} variant="empresas">
@@ -396,12 +396,22 @@ export async function PainelDeContratacao({
               Quem responde de verdade é a carteira, que a página já
               carregou logo acima para o card de saldo.
             */}
-            <div className="mt-2.5">
+            {/*
+              Planos é página à parte, fora das abas (#515): a porta dela
+              no painel fica ao lado do selo que diz o plano.
+            */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3">
               <Badge tone={direito.mensalAtivo ? "empresas" : "outline"}>
                 {direito.mensalAtivo
                   ? seloDoDireito(direito).texto
                   : "Pagamento por vaga"}
               </Badge>
+              <Link
+                href={`${area.base}/creditos`}
+                className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
+              >
+                Ver planos
+              </Link>
             </div>
           </div>
         </div>
@@ -438,7 +448,7 @@ export async function PainelDeContratacao({
               href={`${area.base}/funil`}
               className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
             >
-              Abrir o funil
+              Ver candidatos
             </Link>
           </div>
           <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -496,7 +506,7 @@ export async function PainelDeContratacao({
               href={`${area.base}/funil`}
               className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
             >
-              Ver todos os {applications.length} no funil
+              Ver todos os {applications.length} candidatos
             </Link>
           )}
         </div>

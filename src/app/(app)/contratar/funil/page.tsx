@@ -9,7 +9,7 @@ import { AREA_PRESTADOR } from "../../_contratacao/area";
 import { FunilDaContratacao } from "../../_contratacao/funil";
 
 export const metadata: Metadata = {
-  title: "Funil",
+  title: "Candidatos",
 };
 
 export default function Page({
