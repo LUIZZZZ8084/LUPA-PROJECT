@@ -177,7 +177,7 @@ export async function VagasDaContratacao({
                       href={`${area.base}/funil?vaga=${job.id}`}
                       className="inline-flex min-h-11 basis-full items-center text-empresas text-xs underline-offset-2 hover:underline"
                     >
-                      Ver os candidatos desta vaga no funil
+                      Ver os candidatos desta vaga
                     </Link>
                   )}
                 </li>

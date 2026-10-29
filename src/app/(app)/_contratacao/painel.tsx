@@ -4,9 +4,7 @@ import {
   Clock,
   Inbox,
   Plus,
-  Ticket,
   UserSearch,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -54,6 +52,7 @@ import { type AreaDeContratacao, areaDoPapel } from "./area";
 import { Recomendados } from "./recomendados";
 import { SeloDeMatch } from "./selo-de-match";
 import { SerieGrafico } from "./serie-grafico";
+import { type PassoDoTutorial, TutorialDoPainel } from "./tutorial";
 
 /** A empresa do admin enquanto ela não tem perfil gravado (#499). */
 async function empresaDoAdmin(usuarioId: string): Promise<Company | null> {
@@ -170,8 +169,8 @@ export async function PainelDeContratacao({
    *
    * A conta dele é criada por script, sem perfil de empresa, e o perfil
    * nasce na primeira vaga que ele publica. O estado vazio logo abaixo
-   * esconde os planos, "Quem já se candidatou" e o resto dos atalhos — e o
-   * pedido era justamente olhar a área inteira. Nada é gravado aqui: é a
+   * esconde as abas, o resumo e o tutorial — e o pedido era justamente
+   * olhar a área inteira. Nada é gravado aqui: é a
    * mesma empresa que a primeira vaga vai criar, montada com o nome da
    * conta.
    */
@@ -256,6 +255,38 @@ export async function PainelDeContratacao({
    * vagas em "Vagas" e as candidaturas em "Funil" —, e o painel responde a
    * pergunta de quem abre o app de manhã: o que eu faço hoje?
    */
+  /*
+   * O tutorial de primeira visita (#513) diz uma vez o que os cards de
+   * atalho diziam sempre. O primeiro passo usa o plano de quem olha: a
+   * primeira vaga grátis, o saldo ou o plano cheio. A busca só entra para
+   * quem a matriz deixa buscar, pela mesma razão do botão (#251).
+   */
+  const passosDoTutorial: PassoDoTutorial[] = [
+    {
+      titulo: "Publique uma vaga",
+      texto: `Pelo botão "Publicar nova vaga", aqui em cima. ${resumoDoPlano.titulo}. ${resumoDoPlano.detalhe} O saldo e os planos ficam em "Ver planos", no cartão da empresa.`,
+    },
+    {
+      titulo: "Acompanhe os candidatos",
+      texto:
+        "Na aba Candidatos, cada currículo recebido vira um card. Mude o estágio pelo seletor do card (no computador, dá para arrastar) e veja quem falta olhar, quem vai para entrevista e quem foi selecionado.",
+    },
+    {
+      titulo: "Chame de novo quem já se candidatou",
+      texto:
+        "A aba Talentos reúne todo mundo que já se candidatou a alguma vaga sua, cada pessoa uma vez. Ao abrir uma vaga parecida, comece por lá.",
+    },
+    ...(buscaCandidatos
+      ? [
+          {
+            titulo: "Procure quem quer ser encontrado",
+            texto:
+              'No botão "Buscar candidatos", aqui em cima, você busca por habilidade e área entre quem pediu para ser encontrado por empresas, sem esperar alguém se candidatar.',
+          },
+        ]
+      : []),
+  ];
+
   const contagem = contarPorEstagio(applications);
   const alcance = alcancePorEtapa(contagem);
   const vencendo = vagasVencendo(jobs);
@@ -281,7 +312,7 @@ export async function PainelDeContratacao({
             {buscaCandidatos && (
               <ButtonLink href="/candidatos" variant="outline">
                 <UserSearch size={17} />
-                Candidatos
+                Buscar candidatos
               </ButtonLink>
             )}
             <ButtonLink href={`${area.base}/vagas/nova`} variant="empresas">
@@ -292,6 +323,7 @@ export async function PainelDeContratacao({
         }
       />
       <AbasDaContratacao area={area} />
+      <TutorialDoPainel passos={passosDoTutorial} />
 
       {/*
         Para hoje: três números que viram um clique. Cada cartão leva ao
@@ -364,12 +396,22 @@ export async function PainelDeContratacao({
               Quem responde de verdade é a carteira, que a página já
               carregou logo acima para o card de saldo.
             */}
-            <div className="mt-2.5">
+            {/*
+              Planos é página à parte, fora das abas (#515): a porta dela
+              no painel fica ao lado do selo que diz o plano.
+            */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3">
               <Badge tone={direito.mensalAtivo ? "empresas" : "outline"}>
                 {direito.mensalAtivo
                   ? seloDoDireito(direito).texto
                   : "Pagamento por vaga"}
               </Badge>
+              <Link
+                href={`${area.base}/creditos`}
+                className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
+              >
+                Ver planos
+              </Link>
             </div>
           </div>
         </div>
@@ -406,7 +448,7 @@ export async function PainelDeContratacao({
               href={`${area.base}/funil`}
               className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
             >
-              Abrir o funil
+              Ver candidatos
             </Link>
           </div>
           <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -451,64 +493,6 @@ export async function PainelDeContratacao({
         </section>
       )}
 
-      {/*
-        Dois atalhos que estavam escondidos.
-
-        "Candidatos" existia só como um botão pequeno no cabeçalho, ao
-        lado de "Publicar nova vaga" — e a busca inteira da #83 passava
-        despercebida por quem não sabia que ela existia. Aqui os dois
-        ganham espaço, e cada um diz o que a pessoa encontra do outro
-        lado: atalho sem explicação é atalho que ninguém clica.
-      */}
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Link
-          href={`${area.base}/creditos`}
-          className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
-        >
-          <div className="flex items-center gap-2">
-            <Ticket size={18} className="flex-none text-empresas" />
-            <h2 className="font-bold text-sm">{resumoDoPlano.titulo}</h2>
-          </div>
-          <p className="mt-1 text-muted text-sm leading-relaxed">
-            {resumoDoPlano.detalhe}
-          </p>
-        </Link>
-
-        {/*
-          Quem já se candidatou (#494): a lista que a empresa já formou, sem
-          repetir. Ao abrir outra vaga parecida ela não começa do zero.
-        */}
-        <Link
-          href={`${area.base}/talentos`}
-          className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
-        >
-          <div className="flex items-center gap-2">
-            <Users size={18} className="flex-none text-empresas" />
-            <h2 className="font-bold text-sm">Quem já se candidatou</h2>
-          </div>
-          <p className="mt-1 text-muted text-sm leading-relaxed">
-            Todo mundo que se candidatou a alguma vaga sua, sem repetir — para
-            começar a próxima com gente que já combina.
-          </p>
-        </Link>
-
-        {buscaCandidatos && (
-          <Link
-            href="/candidatos"
-            className="rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
-          >
-            <div className="flex items-center gap-2">
-              <UserSearch size={18} className="flex-none text-empresas" />
-              <h2 className="font-bold text-sm">Buscar candidatos</h2>
-            </div>
-            <p className="mt-1 text-muted text-sm leading-relaxed">
-              Procure por habilidade e área entre quem pediu para ser encontrado
-              — sem esperar alguém se candidatar.
-            </p>
-          </Link>
-        )}
-      </div>
-
       <Recomendados vagas={recomendados} base={area.base} />
 
       {/* Candidaturas recentes: as cinco últimas; o resto está no funil. */}
@@ -522,7 +506,7 @@ export async function PainelDeContratacao({
               href={`${area.base}/funil`}
               className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
             >
-              Ver todos os {applications.length} no funil
+              Ver todos os {applications.length} candidatos
             </Link>
           )}
         </div>

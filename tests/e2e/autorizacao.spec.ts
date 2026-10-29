@@ -138,7 +138,9 @@ test.describe("sessão de empresa", () => {
   }) => {
     await page.goto("/empresa");
 
-    await expect(page.locator('a[href="/candidatos"]')).toHaveCount(2);
+    // O botão "Buscar candidatos" do topo. O card que repetia o link virou um
+    // passo do tutorial de primeira visita (#513).
+    await expect(page.locator('a[href="/candidatos"]')).toHaveCount(1);
 
     const resposta = await page.goto("/candidatos");
     expect(resposta?.status()).toBe(200);

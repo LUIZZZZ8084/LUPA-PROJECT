@@ -48,10 +48,13 @@ test.describe("resultado de cada vaga no painel", () => {
     await semViolacoes(page);
   });
 
-  test("o painel oferece Quem já se candidatou", async ({ page }) => {
+  test("a aba Talentos abre Quem já se candidatou", async ({ page }) => {
     await page.goto("/empresa");
 
-    await page.getByRole("link", { name: /Quem já se candidatou/ }).click();
+    await page
+      .getByRole("navigation", { name: /Seções de/ })
+      .getByRole("link", { name: "Talentos" })
+      .click();
 
     await expect(page).toHaveURL(/\/empresa\/talentos$/);
     await expect(
