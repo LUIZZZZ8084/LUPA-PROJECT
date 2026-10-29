@@ -8,9 +8,18 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 26/10/2026.**
+**Última atualização: 28/10/2026.**
 
 ## Concluído
+
+Em 28/10/2026:
+
+- Testes de compra no painel do admin: o gerador de currículo, a vaga avulsa
+  e os três planos de vaga são comprados sem pagar, na conta do próprio
+  admin, e a tela mostra o que a pessoa receberia — o PDF ou a carteira de
+  vagas. A liberação é a mesma da compra de verdade; só o Mercado Pago fica
+  de fora, e nenhuma cobrança é gravada, então o caixa não muda —
+  [#516](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/516)
 
 Em 26/10/2026:
 

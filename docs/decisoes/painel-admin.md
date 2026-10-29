@@ -121,6 +121,42 @@ e-mail é mesmo do parceiro — o admin digita o endereço que o parceiro passou
 E a parceria com prazo não avisa ninguém quando vence: o benefício expira
 sozinho, pela própria data, como uma mensalidade que não renovou.
 
+## Testes de compra: o produto liberado sem o Mercado Pago (#516)
+
+Pedido do Paulinho em 28/10/2026: conferir se a compra do currículo e a de
+vagas funcionam sem configurar as credenciais de teste do Mercado Pago. A tela
+é `/admin/testes` (capacidade `admin:testar_compras`), com um botão por
+produto — o gerador de currículo, a vaga avulsa e os três planos.
+
+**O que se testa é o que vem depois do "aprovado".** Cada botão chama
+`aplicarCompraSemCobranca`, que roda o mesmo `aplicarEfeito` do webhook e da
+varredura: é ele que libera o gerador, credita a vaga e grava o plano com o
+limite certo. O que fica de fora é só a ida e a volta do Mercado Pago —
+preferência, checkout e a confirmação —, que aqui é sempre "aprovado". O
+currículo sai pelo mesmo `curriculoEmPdf` do candidato, separado de
+`gerarCurriculoDoCandidato` só para tirar a checagem de papel, que o admin
+não tem.
+
+**Não grava cobrança.** O caixa soma as cobranças aprovadas (#179), e cada
+teste viraria receita que não entrou. Marcar a linha como teste pediria
+migração e um filtro em toda soma do painel, para guardar o que o log já
+guarda (`pagamentos.testar_compra`).
+
+**Só na conta de quem testa.** Dar produto pago a outra conta é o que a
+parceria faz, com e-mail confirmado e prazo; esta porta não é atalho para
+aquela. O preço, aceito: o admin não tem perfil de candidato, e
+`liberarGeradorCurriculo` recusa quem não tem — com razão, numa compra de
+verdade. O teste cria um perfil vazio antes de liberar, com "quero ser
+encontrado" desligado, e a view `candidatos_disponiveis` só lê
+`candidato_clt`, então ele não aparece em busca nenhuma. O PDF sai com o
+nome, o e-mail, o telefone e a cidade do admin — o que um candidato recém
+cadastrado também teria.
+
+Os planos testados estendem a carteira do admin por 30 dias, como uma
+parcela paga, sem criar assinatura: não há o que o Mercado Pago renove, e o
+plano vence sozinho. A mensalidade do prestador ficou de fora porque o pedido
+foi só currículo e vagas.
+
 ## A visão geral do painel, em cards (#507)
 
 Pedido do Luiz em 27/10/2026, com um modelo de "bento" com gráficos em SVG

@@ -252,6 +252,7 @@ As métricas, a visão geral em cards, os custos e as parcerias.
 
 - O painel do admin responde de onde vem a conta e se o Lupa se paga (#471)
 - Parceiros: a Lupa de graça, autorizada pelo e-mail (#505)
+- Testes de compra: o produto liberado sem o Mercado Pago (#516)
 - A visão geral do painel, em cards (#507)
 - Polling, não websocket, no painel do admin
 
