@@ -1,4 +1,4 @@
-import { Handshake } from "lucide-react";
+import { FlaskConical, Handshake } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
@@ -48,12 +48,20 @@ export default async function PainelAdminPage() {
         accent="text-warn"
         description="Contas por estado, cidade e papel, o funil de cada papel, o caixa e quanto falta para o Lupa pagar os próprios custos."
         action={
-          pode(sessao.papel, "admin:parceiros") ? (
-            <ButtonLink href="/admin/parceiros" variant="outline">
-              <Handshake size={17} aria-hidden />
-              Parceiros
-            </ButtonLink>
-          ) : undefined
+          <div className="flex flex-wrap gap-2">
+            {pode(sessao.papel, "admin:parceiros") && (
+              <ButtonLink href="/admin/parceiros" variant="outline">
+                <Handshake size={17} aria-hidden />
+                Parceiros
+              </ButtonLink>
+            )}
+            {pode(sessao.papel, "admin:testar_compras") && (
+              <ButtonLink href="/admin/testes" variant="outline">
+                <FlaskConical size={17} aria-hidden />
+                Testes de compra
+              </ButtonLink>
+            )}
+          </div>
         }
       />
       <PainelCliente inicial={inicial} />
