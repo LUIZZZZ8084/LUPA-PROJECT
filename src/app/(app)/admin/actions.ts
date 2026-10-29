@@ -32,6 +32,11 @@ import {
   autorizarParceiro,
   encerrarParceria,
 } from "@/server/parceiros/servico";
+import {
+  COMPRAS_DE_VAGA_TESTAVEIS,
+  testarCompraDeVaga,
+  testarCompraDoCurriculo,
+} from "@/server/testes-de-compra/servico";
 
 export type ReviewDecision = "aprovado" | "reprovado";
 
@@ -221,5 +226,34 @@ export const encerrarParceriaAction = criarAcao({
     derrubarCacheDePrestadores();
     revalidatePath("/admin/parceiros");
     return { id };
+  },
+});
+
+/*
+ * A área de testes de compra (#516). Uma action só para os cinco botões,
+ * porque o gesto é o mesmo — "compre isto como se tivesse pago" — e o
+ * resultado é o que a pessoa receberia: o PDF, ou a carteira de vagas.
+ *
+ * O PDF volta em base64 porque a resposta de uma action precisa ser
+ * serializável; a tela o transforma em arquivo para baixar.
+ */
+export const testarCompraAction = criarAcao({
+  nome: "admin.testar_compra",
+  entrada: z.object({
+    tipo: z.enum(["curriculo_pdf", ...COMPRAS_DE_VAGA_TESTAVEIS]),
+  }),
+  executar: async ({ tipo }) => {
+    const sessao = await sessaoAtual();
+
+    if (tipo === "curriculo_pdf") {
+      const pdf = await testarCompraDoCurriculo(sessao);
+      return { tipo, pdfBase64: pdf.toString("base64"), carteira: null };
+    }
+
+    const carteira = await testarCompraDeVaga(sessao, tipo);
+    // A área de contratação do admin é `/empresa` (#499), e o saldo aparece
+    // no painel e na tela de planos.
+    revalidatePath("/empresa", "layout");
+    return { tipo, pdfBase64: null, carteira };
   },
 });

@@ -121,6 +121,45 @@ export function resumoDoDireito(d: DireitoParaTela): {
   };
 }
 
+/** Quantas vagas a empresa ainda publica, e de onde vem cada uma (#518). */
+export interface VagasParaPublicar {
+  /** A soma das três fontes; `null` é o plano ilimitado, que não se conta. */
+  total: number | null;
+  /** Quantas ainda cabem no plano, ou `null` sem plano com limite. */
+  doPlano: number | null;
+  avulsas: number;
+  gratis: number;
+}
+
+/**
+ * O número do contador do painel: tudo o que ainda dá para publicar.
+ *
+ * Soma as mesmas três fontes que `gastarParaPublicar` gasta, na mesma
+ * ordem — o lugar no plano, a primeira grátis e o saldo avulso. Mostrar só
+ * uma delas faria o número mentir para quem tem duas: plano cheio com saldo
+ * guardado ainda publica, e o contador dizer "0" ali a mandaria comprar o
+ * que já tem.
+ */
+export function vagasParaPublicar(d: DireitoParaTela): VagasParaPublicar {
+  const gratis = d.primeiraGratis ? 1 : 0;
+
+  if (d.mensalAtivo && d.limiteNoAr === null) {
+    return { total: null, doPlano: null, avulsas: d.creditos, gratis };
+  }
+
+  const doPlano =
+    d.mensalAtivo && d.limiteNoAr !== null
+      ? Math.max(0, d.limiteNoAr - d.noAr)
+      : null;
+
+  return {
+    total: (doPlano ?? 0) + d.creditos + gratis,
+    doPlano,
+    avulsas: d.creditos,
+    gratis,
+  };
+}
+
 /**
  * O selo curto — "Plano de 5 ativo", "3 vagas para publicar" — do painel e
  * do perfil da empresa.

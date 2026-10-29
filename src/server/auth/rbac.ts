@@ -133,7 +133,13 @@ export type Capacidade =
    * acordo. Dá benefício pago a uma conta, então é capacidade própria, e
    * não carona de `admin:painel`.
    */
-  | "admin:parceiros";
+  | "admin:parceiros"
+  /*
+   * Comprar sem pagar, na própria conta, para conferir se a liberação do
+   * produto funciona (#516). Também é benefício pago, então também é
+   * capacidade própria — pela mesma razão de `admin:parceiros`.
+   */
+  | "admin:testar_compras";
 
 const NENHUMA: readonly Capacidade[] = [];
 
@@ -261,6 +267,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "admin:moderar",
     "admin:custos",
     "admin:parceiros",
+    "admin:testar_compras",
     "perfil:editar_proprio",
     "candidato:buscar_disponiveis",
     "vaga:publicar",

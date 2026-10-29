@@ -26,6 +26,7 @@ import type { TipoPagamento } from "@/server/pagamentos/tipos";
 import type { AreaDeContratacao } from "./area";
 import { CancelarPlanoButton } from "./cancelar-plano-button";
 import { ComprarButton } from "./comprar-button";
+import { ContadorDeVagas } from "./contador-de-vagas";
 
 function preco(tipo: TipoPagamento): string {
   return formatPrecoBRL(PRECO_CENTAVOS[tipo] / 100);
@@ -88,8 +89,14 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
       {/*
         O que a pessoa tem vem primeiro, antes dos preços: quem já tem
         plano ou saldo veio aqui por engano e precisa saber disso antes de
-        comprar de novo.
+        comprar de novo. O contador (#518) é o número; o quadro logo abaixo,
+        a explicação e a renovação.
       */}
+      <ContadorDeVagas
+        direito={direito}
+        base={area.base}
+        linkParaPlanos={false}
+      />
       <Panel className="mb-5">
         <div className="flex items-center gap-3">
           {direito.mensalAtivo ? (

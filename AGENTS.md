@@ -224,6 +224,7 @@ As duas portas de contratação, os campos da vaga, a triagem, o funil de candid
 - O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
 - Perguntas de triagem: separar sem esconder (#491)
 - A área de contratação como mini CRM: abas, funil e o resumo do dia (#511)
+- O contador de vagas para publicar (#518)
 - Na % de casamento, zero é uma afirmação
 - Vaga expira em 30 dias, e reativar custa o mesmo que publicar
 
@@ -252,6 +253,7 @@ As métricas, a visão geral em cards, os custos e as parcerias.
 
 - O painel do admin responde de onde vem a conta e se o Lupa se paga (#471)
 - Parceiros: a Lupa de graça, autorizada pelo e-mail (#505)
+- Testes de compra: o produto liberado sem o Mercado Pago (#516)
 - A visão geral do painel, em cards (#507)
 - Polling, não websocket, no painel do admin
 
