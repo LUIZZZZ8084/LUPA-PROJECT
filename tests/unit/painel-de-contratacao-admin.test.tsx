@@ -97,8 +97,8 @@ describe("painel de contratação para o admin", () => {
   });
 
   /**
-   * Sem perfil gravado, o painel abria o estado vazio, que não tem os
-   * planos nem "Quem já se candidatou". O pedido era olhar a área inteira.
+   * Sem perfil gravado, o painel abria o estado vazio, que não tem as
+   * abas nem os atalhos. O pedido era olhar a área inteira.
    */
   it("abre o painel completo antes da primeira vaga, com o nome da conta", async () => {
     await abrir();
@@ -115,6 +115,41 @@ describe("painel de contratação para o admin", () => {
         "/candidatos",
       ]),
     );
+  });
+
+  /**
+   * Os cards de atalho viraram o tutorial de primeira visita (#513): o que
+   * eles diziam aparece uma vez, e a busca só para quem pode buscar.
+   */
+  it("explica o painel num tutorial, e não em cards de atalho", async () => {
+    localStorage.clear();
+    await abrir();
+
+    expect(
+      screen.getByRole("heading", { name: "Publique uma vaga" }),
+    ).toBeTruthy();
+    expect(screen.getByText(/de 4$/)).toBeTruthy();
+    expect(screen.queryByText(/Todo mundo que se candidatou/)).toBeNull();
+  });
+
+  it("o tutorial do prestador não fala da busca, que não é dele", async () => {
+    localStorage.clear();
+    estado.sessao = { usuarioId: "pre-1", papel: "prestador_servico" };
+    estado.empresa = {
+      profile_id: "pre-1",
+      company_name: "João Eletricista",
+      cnpj: null,
+      logo_url: null,
+      plan: "trial",
+      site: null,
+      instagram: null,
+      facebook: null,
+    };
+
+    await abrir(AREA_PRESTADOR);
+
+    expect(screen.getByText(/de 3$/)).toBeTruthy();
+    expect(hrefs()).not.toContain("/candidatos");
   });
 
   it("usa o perfil de empresa quando ele já existe", async () => {

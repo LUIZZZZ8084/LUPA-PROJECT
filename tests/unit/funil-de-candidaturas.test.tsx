@@ -300,7 +300,7 @@ describe("quadro do funil", () => {
 });
 
 describe("abas da contratação", () => {
-  it("as cinco abas de cada porta, e a da página atual marcada", () => {
+  it("as quatro abas de cada porta, e a da página atual marcada", () => {
     estado.caminho = "/contratar/funil";
     render(<AbasDaContratacao area={AREA_PRESTADOR} />);
 
@@ -310,15 +310,22 @@ describe("abas da contratação", () => {
       "/contratar/vagas",
       "/contratar/funil",
       "/contratar/talentos",
-      "/contratar/creditos",
     ]);
-    expect(screen.getByRole("link", { name: "Funil" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Candidatos" })).toHaveAttribute(
       "aria-current",
       "page",
     );
     expect(screen.getByRole("link", { name: "Painel" })).not.toHaveAttribute(
       "aria-current",
     );
+  });
+
+  /** Planos é página à parte, com o caminho de volta ao painel (#515). */
+  it("planos não é aba", () => {
+    estado.caminho = "/empresa";
+    render(<AbasDaContratacao area={AREA_EMPRESA} />);
+
+    expect(screen.queryByRole("link", { name: /Planos/ })).toBeNull();
   });
 
   it("publicar vaga nova ainda conta como a aba de vagas", () => {
