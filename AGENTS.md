@@ -224,6 +224,7 @@ As duas portas de contratação, os campos da vaga, a triagem, o funil de candid
 - O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
 - Perguntas de triagem: separar sem esconder (#491)
 - A área de contratação como mini CRM: abas, funil e o resumo do dia (#511)
+- O contador de vagas para publicar (#518)
 - Na % de casamento, zero é uma afirmação
 - Vaga expira em 30 dias, e reativar custa o mesmo que publicar
 

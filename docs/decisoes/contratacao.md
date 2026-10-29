@@ -453,6 +453,32 @@ não o dia a dia de contratar. A porta dela no painel é "Ver planos", ao lado
 do selo do plano no cartão da empresa; o perfil tem o atalho "Planos e
 vagas", e o formulário de vaga leva até ela quando falta saldo.
 
+## O contador de vagas para publicar (#518)
+
+Pedido do Paulinho em 28/10/2026: a empresa precisa ver quantas vagas ainda
+pode publicar. O painel dizia o plano num selo curto ("Plano de 5 ativo") e a
+tela de planos, numa frase; a soma não aparecia em lugar nenhum, e a empresa
+descobria que tinha acabado só ao tentar publicar.
+
+O contador (`contador-de-vagas.tsx`) fica no painel, logo abaixo das abas, e
+no topo da tela de planos: o número grande, de onde vem cada vaga ("3 do
+plano · 1 avulsa · 1 grátis") e, no plano com limite, a barra de quantas
+estão no ar de quantas cabem.
+
+**A conta soma as três fontes, na ordem de `gastarParaPublicar`** — o lugar
+no plano, a primeira grátis e o saldo avulso —, e mora em
+`vagasParaPublicar`, ao lado de `resumoDoDireito`, para o número e a frase
+não divergirem quando a regra mudar. Mostrar só uma das fontes faria o
+número mentir para quem tem duas: o plano cheio com saldo guardado ainda
+publica, e um "0" ali mandaria a empresa comprar o que já tem.
+
+**O ilimitado não vira número.** Plano ilimitado e parceria dizem
+"Ilimitado"; um 999 seria um limite inventado, e o ∞ sozinho não se lê em
+voz alta. **Zero é o único estado que pede ação**: a borda vira aviso, a
+frase diz o que fazer — plano cheio e saldo acabado são frases diferentes,
+porque a saída é diferente — e o link leva aos planos. Nos outros, o
+contador só informa: o botão de publicar já está no topo do painel.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a

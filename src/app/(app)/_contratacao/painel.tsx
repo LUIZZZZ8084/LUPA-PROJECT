@@ -49,6 +49,7 @@ import {
 } from "@/server/visualizacoes/servico";
 import { AbasDaContratacao } from "./abas";
 import { type AreaDeContratacao, areaDoPapel } from "./area";
+import { ContadorDeVagas } from "./contador-de-vagas";
 import { Recomendados } from "./recomendados";
 import { SeloDeMatch } from "./selo-de-match";
 import { SerieGrafico } from "./serie-grafico";
@@ -324,6 +325,12 @@ export async function PainelDeContratacao({
       />
       <AbasDaContratacao area={area} />
       <TutorialDoPainel passos={passosDoTutorial} />
+
+      {/*
+        Quantas vagas ainda dá para publicar (#518), antes do resto: é o que
+        decide se o "Publicar nova vaga" lá em cima vai dar certo.
+      */}
+      <ContadorDeVagas direito={direito} base={area.base} />
 
       {/*
         Para hoje: três números que viram um clique. Cada cartão leva ao
