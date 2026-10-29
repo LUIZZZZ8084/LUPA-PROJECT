@@ -1,7 +1,7 @@
 import "server-only";
 
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { Autenticado } from "../auth/rbac";
+import { type Autenticado, exigirCapacidade } from "../auth/rbac";
 import {
   liberarGeradorCurriculo,
   revogarGeradorCurriculo,
@@ -100,7 +100,9 @@ async function aplicarEfeitoOuReabrir(pagamento: Pagamento): Promise<void> {
   }
 }
 
-async function aplicarEfeito(pagamento: Pagamento): Promise<void> {
+async function aplicarEfeito(
+  pagamento: Pick<Pagamento, "tipo" | "usuarioId">,
+): Promise<void> {
   switch (pagamento.tipo) {
     case "prestador_mensalidade":
       await estenderMensalidade(pagamento.usuarioId);
@@ -536,6 +538,41 @@ export async function comprar(
     pagamento: comPreferencia,
     checkoutUrl: resultado.preferencia.initPoint,
   };
+}
+
+// ── Testar a compra sem o Mercado Pago (#516) ─────────────────────────────
+
+/**
+ * Libera o produto como se o pagamento tivesse acabado de ser aprovado —
+ * a área de testes do admin.
+ *
+ * O que se quer conferir é o que a Lupa faz **depois** do "aprovado": é
+ * `aplicarEfeito`, o mesmo que o webhook e a varredura chamam, e é ele que
+ * roda aqui. O que fica de fora é só a ida e a volta do Mercado Pago —
+ * preferência, checkout e a confirmação que viria pelo webhook —, que aqui
+ * é sempre "aprovado".
+ *
+ * **Não grava cobrança.** O caixa do painel soma as cobranças aprovadas
+ * (#179), e cada teste apareceria como receita que nunca entrou; marcar a
+ * linha como teste pediria migração e um filtro em toda soma, para guardar
+ * uma informação que o log já guarda.
+ *
+ * **Só na conta de quem testa.** Dar produto pago a outra conta é o que a
+ * parceria faz (#505), com e-mail confirmado e com prazo; esta porta não é
+ * um atalho para aquela.
+ */
+export async function aplicarCompraSemCobranca(
+  sessao: Autenticado | null,
+  tipo: TipoPagamento,
+): Promise<void> {
+  const admin = exigirCapacidade(sessao, "admin:testar_compras");
+
+  await aplicarEfeito({ tipo, usuarioId: admin.usuarioId });
+
+  log.info("compra testada sem cobrança", {
+    acao: "pagamentos.testar_compra",
+    tipo,
+  });
 }
 
 // ── Cancelar a renovação ──────────────────────────────────────────────────

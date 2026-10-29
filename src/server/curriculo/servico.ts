@@ -18,10 +18,19 @@ import { gerarCurriculoPdf } from "./gerar";
 export async function gerarCurriculoDoCandidato(
   sessao: Autenticado | null,
 ): Promise<Buffer> {
-  exigirCapacidade(sessao, "candidato:gerar_curriculo");
-  // `exigirCapacidade` já lançou se `sessao` fosse nulo.
-  const usuarioId = (sessao as Autenticado).usuarioId;
+  const candidato = exigirCapacidade(sessao, "candidato:gerar_curriculo");
+  return curriculoEmPdf(candidato.usuarioId);
+}
 
+/**
+ * O PDF de uma conta que já tem o gerador liberado.
+ *
+ * Separado de `gerarCurriculoDoCandidato` para a área de testes do admin
+ * (#516) passar pelo mesmo caminho do candidato — a checagem de que já
+ * comprou e a montagem do PDF —, sem a do papel, que o admin não tem. Quem
+ * chama já decidiu de quem é o currículo: aqui não há sessão nenhuma.
+ */
+export async function curriculoEmPdf(usuarioId: string): Promise<Buffer> {
   const repo = repositorioUsuarios();
   const [usuario, perfil] = await Promise.all([
     repo.porId(usuarioId),
