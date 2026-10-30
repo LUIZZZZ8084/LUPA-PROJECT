@@ -2,6 +2,7 @@ import { CanalDeContato } from "@/components/canal-de-contato";
 import { InstalarApp } from "@/components/instalar-app";
 import { AppHeader } from "@/components/layout/app-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { RodapeDoComputador } from "@/components/layout/rodape-do-computador";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
@@ -55,10 +56,11 @@ export default async function AppLayout({
        * para todo mundo duplicaria o rodapé de `(auth)` sem necessidade.
        */}
       {!usuario && (
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        <div className="mx-auto w-full max-w-site px-4 py-6 sm:px-6 lg:hidden">
           <CanalDeContato />
         </div>
       )}
+      <RodapeDoComputador visitante={!usuario} />
       <BottomNav autenticado={Boolean(usuario)} papel={usuario?.papel} />
     </>
   );
