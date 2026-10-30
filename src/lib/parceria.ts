@@ -12,11 +12,15 @@
 export const VALIDADE_SEM_PRAZO = "2100-01-01T00:00:00.000Z";
 
 /**
- * Daqui em diante a validade é de parceria sem prazo. Um ano antes da
- * marca: a conta da validade arredonda para o dia, e nenhum pagamento
- * chega perto disso.
+ * Daqui em diante a validade é de parceria sem prazo: a própria marca.
+ *
+ * A conta que a grava (`diasParaChegarA`) arredonda os dias para cima, então
+ * a validade de parceria nunca fica antes dela. Já houve um ano de folga, e
+ * ele engolia a vitrine vitalícia de 2099-12-31 (#245), que não é parceria
+ * (#519). E a data sozinha não basta: as telas também perguntam ao registro
+ * (`ehParceiroSemPrazo`).
  */
-const LIMIAR_SEM_PRAZO = Date.parse("2099-01-01T00:00:00.000Z");
+const LIMIAR_SEM_PRAZO = Date.parse(VALIDADE_SEM_PRAZO);
 
 export function ehSemPrazo(validade: string | null | undefined): boolean {
   if (!validade) return false;

@@ -34,6 +34,7 @@ import { schemaNovaParceria } from "@/server/parceiros/schemas";
 import {
   autorizarParceiro,
   concederBeneficioDeParceiro,
+  ehParceiroSemPrazo,
   encerrarParceria,
   listarParceiros,
 } from "@/server/parceiros/servico";
@@ -205,6 +206,42 @@ describe("parcerias", () => {
     expect(
       Math.abs(Date.parse(validade ?? "") - Date.parse(ate)),
     ).toBeLessThanOrEqual(UM_DIA);
+  });
+
+  /**
+   * O caso de produção (#519): a vitrine vitalícia de 2099 (#245) fazia a
+   * tela dizer "Parceria Lupa" a quem nunca foi parceiro. Data longe não é
+   * parceria; o registro é.
+   */
+  it("validade em 2099 sem parceria não é parceria", async () => {
+    const id = await conta("prestador_servico", "paulinho@lupa.com");
+    await usuarios.definirMensalidadeValidaAte(id, "2099-12-31T00:00:00Z");
+
+    expect(
+      ehSemPrazo((await usuarios.perfilPrestador(id))?.mensalidadeValidaAte),
+    ).toBe(false);
+    expect(await ehParceiroSemPrazo(id)).toBe(false);
+  });
+
+  it("é parceira sem prazo a conta que recebeu, até a parceria ser encerrada", async () => {
+    const id = await conta("empresa", "rh@agronorte.com");
+    expect(await ehParceiroSemPrazo(id)).toBe(false);
+
+    const parceria = await autorizar("rh@agronorte.com");
+    expect(await ehParceiroSemPrazo(id)).toBe(true);
+
+    await encerrarParceria(admin, parceria.id);
+    expect(await ehParceiroSemPrazo(id)).toBe(false);
+  });
+
+  it("parceria com prazo não é a sem prazo", async () => {
+    const id = await conta("empresa", "rh@agronorte.com");
+    await autorizar(
+      "rh@agronorte.com",
+      new Date(Date.now() + 90 * UM_DIA).toISOString(),
+    );
+
+    expect(await ehParceiroSemPrazo(id)).toBe(false);
   });
 
   it("um e-mail tem uma parceria aberta por vez", async () => {

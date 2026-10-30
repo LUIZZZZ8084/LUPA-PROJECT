@@ -53,6 +53,8 @@ export interface RepositorioParceiros {
   listar(): Promise<Parceria[]>;
   /** A parceria aberta deste e-mail, ou `null`. Uma por e-mail. */
   abertaPorEmail(email: string): Promise<Parceria | null>;
+  /** A parceria aberta já concedida a esta conta, ou `null`. */
+  abertaPorUsuario(usuarioId: string): Promise<Parceria | null>;
   porId(id: string): Promise<Parceria | null>;
   criar(dados: DadosDaParceria, criadoPor: string | null): Promise<Parceria>;
   /** Guarda a conta que recebeu e a validade gravada nela. */
