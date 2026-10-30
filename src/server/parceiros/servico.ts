@@ -173,6 +173,20 @@ export async function concederBeneficioDeParceiro(
 }
 
 /**
+ * Esta conta é parceira sem prazo? É o que as telas de validade perguntam
+ * antes de dizer "Parceria Lupa" no lugar da data (#519).
+ *
+ * **A resposta vem do registro, não da data.** A #505 reconhecia a parceria
+ * só pela validade lá no futuro, e em produção havia contas com a vitrine
+ * vitalícia de 2099 (#245) que nunca foram parceiras: todas liam "Parceria
+ * Lupa". Data é efeito da parceria; quem diz que ela existe é `parceiros`.
+ */
+export async function ehParceiroSemPrazo(usuarioId: string): Promise<boolean> {
+  const parceria = await repositorioParceiros().abertaPorUsuario(usuarioId);
+  return parceria !== null && parceria.validoAte === null;
+}
+
+/**
  * A concessão, chamada de dentro de outro fluxo — confirmar o e-mail, virar
  * prestador. Falhar aqui não pode desfazer o que a pessoa acabou de fazer:
  * vai ao Sentry, e a próxima concessão (o admin autorizando de novo, ou a

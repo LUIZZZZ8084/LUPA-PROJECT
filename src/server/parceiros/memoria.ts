@@ -22,6 +22,13 @@ export class RepositorioParceirosMemoria implements RepositorioParceiros {
     return achada ? { ...achada } : null;
   }
 
+  async abertaPorUsuario(usuarioId: string): Promise<Parceria | null> {
+    const achada = this.itens.find(
+      (p) => p.usuarioId === usuarioId && p.encerradoEm === null,
+    );
+    return achada ? { ...achada } : null;
+  }
+
   async porId(id: string): Promise<Parceria | null> {
     const achada = this.itens.find((p) => p.id === id);
     return achada ? { ...achada } : null;

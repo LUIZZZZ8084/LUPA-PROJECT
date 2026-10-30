@@ -91,6 +91,18 @@ seria um parceiro cobrado. **Sem prazo é a validade em 2100**
 validade — planos da empresa e assinatura do prestador — a reconhecem por
 `ehSemPrazo`, dizem "parceria" no lugar da data e não oferecem pagar.
 
+**Mas quem diz que a parceria existe é o registro, não a data (#519).** O
+`ehSemPrazo` nasceu aceitando um ano de folga, a partir de 2099, e a vitrine
+vitalícia de 22/09/2026 (#245) tinha gravado `2099-12-31` em nove
+prestadores — sete perfis de exemplo e duas contas reais, a do Paulinho e a
+do Luiz. As duas telas passaram a chamar todos de "Parceria Lupa", sem
+ninguém ter autorizado nada. Hoje a marca é exatamente 2100, e as telas
+também perguntam a `ehParceiroSemPrazo`, que procura uma parceria aberta
+concedida àquela conta. As contas de 2099 ficaram como estão no banco e leem
+a própria validade como validade comum. *Valor sentinela escolhido depois
+dos dados precisa ser conferido contra os dados: a sentinela de outra
+decisão pode já estar lá.*
+
 **Tudo o que é pago fica grátis, e a matriz decide o quê:** quem publica vaga
 ganha o plano ilimitado; o prestador, a mensalidade que o põe na vitrine;
 quem gera currículo, o gerador.

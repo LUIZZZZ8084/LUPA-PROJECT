@@ -55,6 +55,18 @@ export class RepositorioParceirosPostgres implements RepositorioParceiros {
     return data ? deLinha(data) : null;
   }
 
+  async abertaPorUsuario(usuarioId: string): Promise<Parceria | null> {
+    const { data, error } = await cliente()
+      .from("parceiros")
+      .select(COLUNAS)
+      .eq("usuario_id", usuarioId)
+      .is("encerrado_em", null)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw erros.indisponivel(`parceria: ${error.message}`);
+    return data ? deLinha(data) : null;
+  }
+
   async porId(id: string): Promise<Parceria | null> {
     const { data, error } = await cliente()
       .from("parceiros")

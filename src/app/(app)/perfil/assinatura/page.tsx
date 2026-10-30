@@ -13,6 +13,7 @@ import {
   diasDeTesteDisponiveis,
   estadoDaAssinatura,
 } from "@/server/pagamentos/servico";
+import { ehParceiroSemPrazo } from "@/server/parceiros/servico";
 import { repositorioUsuarios } from "@/server/repositories";
 import { AssinarButton } from "./assinar-button";
 import { CancelarRenovacaoButton } from "./cancelar-button";
@@ -48,8 +49,10 @@ export default async function AssinaturaPage() {
   const preco = formatPrecoBRL(PRECO_CENTAVOS.prestador_mensalidade / 100);
 
   // Parceria sem prazo (#505): a mensalidade vale até 2100, e não há o que
-  // assinar — a tela diz "parceria" em vez de mostrar a data.
-  const parceria = emDia && ehSemPrazo(ate);
+  // assinar — a tela diz "parceria" em vez de mostrar a data. Quem diz que a
+  // parceria existe é o registro, não a data (#519).
+  const parceria =
+    emDia && ehSemPrazo(ate) && (await ehParceiroSemPrazo(sessao.usuarioId));
 
   const renova = assinatura?.status === "ativa";
   const comecouENaoTerminou = assinatura?.status === "pendente";

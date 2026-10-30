@@ -23,6 +23,7 @@ import {
 } from "@/server/pagamentos/planos";
 import { planoDeVagasAtual } from "@/server/pagamentos/servico";
 import type { TipoPagamento } from "@/server/pagamentos/tipos";
+import { ehParceiroSemPrazo } from "@/server/parceiros/servico";
 import type { AreaDeContratacao } from "./area";
 import { CancelarPlanoButton } from "./cancelar-plano-button";
 import { ComprarButton } from "./comprar-button";
@@ -60,9 +61,12 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
   /*
    * Parceria sem prazo (#505): o plano ilimitado vale até 2100, e a tela diz
    * "parceria" em vez da data — e não oferece pagar a quem já tem tudo.
+   * Quem diz que a parceria existe é o registro, não a data (#519).
    */
   const parceria =
-    direito.mensalAtivo && ehSemPrazo(direito.mensalidadeValidaAte);
+    direito.mensalAtivo &&
+    ehSemPrazo(direito.mensalidadeValidaAte) &&
+    (await ehParceiroSemPrazo(sessao.usuarioId));
   const resumo = parceria
     ? {
         titulo: "Parceria Lupa",
