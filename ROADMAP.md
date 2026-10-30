@@ -8,9 +8,21 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 28/10/2026.**
+**Última atualização: 30/10/2026.**
 
 ## Concluído
+
+Em 30/10/2026:
+
+- App no computador: a Lupa foi desenhada para o celular e, num monitor, o
+  conteúdo ficava numa coluna estreita no meio da tela, mais fina que o
+  cabeçalho. A partir de 1024 px o cabeçalho, o conteúdo e o rodapé usam a
+  mesma largura; vagas e serviços aparecem em três colunas; a vaga e o
+  profissional ganham duas colunas com a candidatura presa ao lado; o perfil
+  e o painel da empresa também; entrar e criar conta têm um painel de
+  apresentação; os planos aparecem todos à vista; e há um rodapé. Abaixo de
+  1024 px nada mudou —
+  [#525](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/525)
 
 Em 28/10/2026:
 
