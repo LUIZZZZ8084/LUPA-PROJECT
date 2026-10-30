@@ -15,7 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { formatMoneyBRL } from "@/lib/format";
+import { formatMoneyBRL, formatPrecoBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CustoMensal } from "@/server/custos/tipos";
 import type { PainelAdmin } from "@/server/metrics/tipos";
@@ -63,6 +63,13 @@ const COR_DA_REGIAO: Record<Regiao, string> = {
 };
 
 const porcento = (f: number) => `${Math.round(f * 100)}%`;
+
+/*
+ * Quanto a receita cobre, truncado — a conta do bloco "O Lupa já se paga?"
+ * (#523). Arredondar dava 75% no medidor e 74% no bloco logo abaixo, e
+ * dizia "100%" com a conta ainda não paga.
+ */
+const cobertura = (f: number) => `${Math.floor(f * 100)}%`;
 const inteiro = (n: number) => Math.round(n).toLocaleString("pt-BR");
 
 /* ---------------- peças compartilhadas ---------------- */
@@ -262,7 +269,7 @@ function Medidor({ fracao }: { fracao: number | null }) {
       aria-label={
         fracao === null
           ? "Sem custo cadastrado para comparar"
-          : `A receita cobre ${porcento(fracao)} do custo do mês`
+          : `A receita cobre ${cobertura(fracao)} do custo do mês`
       }
     >
       <path
@@ -292,7 +299,7 @@ function Medidor({ fracao }: { fracao: number | null }) {
         className="fill-[var(--color-ink)] font-bold"
         fontSize={24}
       >
-        {fracao === null ? "—" : porcento(fracao)}
+        {fracao === null ? "—" : cobertura(fracao)}
       </text>
       <text
         x={90}
@@ -345,7 +352,7 @@ function CartaoReceita({
           ? "Cadastre os custos em “O Lupa já se paga?” para ver a meta."
           : fracao >= 1
             ? "A receita que se repete já paga os custos do mês."
-            : `Faltam ${reais(Math.max(0, custo - receita.recorrenteAtivoCentavos))} por mês para empatar.`}
+            : `Faltam ${formatPrecoBRL(Math.max(0, custo - receita.recorrenteAtivoCentavos) / 100)} por mês para empatar.`}
       </p>
     </Cartao>
   );

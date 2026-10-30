@@ -191,6 +191,8 @@ function LinhaParceria({ linha }: { linha: LinhaDeParceria }) {
             variant="outline"
             size="sm"
             onClick={() => setConfirmando(true)}
+            // Um "Encerrar" por parceria: o nome diz qual (#523).
+            aria-label={`Encerrar a parceria com ${linha.nome}`}
           >
             Encerrar
           </Button>
