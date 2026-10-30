@@ -119,7 +119,9 @@ describe("tela de parceiros", () => {
   it("encerrar pede confirmação antes de chamar a action", async () => {
     render(<Parceiros linhas={[linha({ situacao: "ativa" })]} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Encerrar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /^Encerrar a parceria com / }),
+    );
     expect(chamadas.encerrar).toEqual([]);
     expect(screen.getByText(/pagou por conta própria/i)).toBeTruthy();
 
@@ -140,6 +142,8 @@ describe("tela de parceiros", () => {
     );
 
     expect(screen.getByText(/encerradas e vencidas/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Encerrar" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Encerrar a parceria com / }),
+    ).toBeNull();
   });
 });

@@ -57,9 +57,11 @@ describe("tela de testes de compra", () => {
     // O Intl separa "R$" do número com espaço inquebrável.
     expect(screen.getByText(/R\$\s14,90/)).toBeTruthy();
     expect(screen.getByText(/R\$\s99,90/)).toBeTruthy();
-    expect(
-      screen.getAllByRole("button", { name: "Comprar sem pagar" }),
-    ).toHaveLength(5);
+    // Cada botão diz de qual produto é, para o leitor de tela (#523).
+    const nomes = screen
+      .getAllByRole("button", { name: /^Comprar sem pagar: / })
+      .map((b) => b.getAttribute("aria-label"));
+    expect(new Set(nomes).size).toBe(5);
     expect(screen.getByText("Não entra no caixa")).toBeTruthy();
   });
 
@@ -77,7 +79,7 @@ describe("tela de testes de compra", () => {
     render(<TestesDeCompra precos={PRECO_CENTAVOS} />);
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Comprar sem pagar" })[0],
+      screen.getAllByRole("button", { name: /^Comprar sem pagar: / })[0],
     );
 
     await waitFor(() =>
@@ -103,7 +105,7 @@ describe("tela de testes de compra", () => {
     render(<TestesDeCompra precos={PRECO_CENTAVOS} />);
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Comprar sem pagar" })[2],
+      screen.getAllByRole("button", { name: /^Comprar sem pagar: / })[2],
     );
 
     const status = await screen.findByRole("status");
@@ -127,7 +129,7 @@ describe("tela de testes de compra", () => {
     render(<TestesDeCompra precos={PRECO_CENTAVOS} />);
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Comprar sem pagar" })[1],
+      screen.getAllByRole("button", { name: /^Comprar sem pagar: / })[1],
     );
 
     expect((await screen.findByRole("alert")).textContent).toBe(

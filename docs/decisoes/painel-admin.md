@@ -186,6 +186,14 @@ passa do ponto**: os pontos de controle ficam presos entre os dois pontos do
 trecho, porque a linha do meio separa quem procura de quem contrata, e um
 pico de candidatos desenhava um vale do lado das empresas.
 
+**O medidor faz a conta do bloco de custos (#523).** Ele arredondava a
+porcentagem e o "faltam" ao real; "O Lupa já se paga?", logo abaixo, trunca
+e mostra centavos. Com R$ 179,80 contra R$ 240,00, a tela dizia 75% e "faltam
+R$ 60" num card e 74% e "faltam R$ 60,20" no outro. Hoje os dois truncam e
+os dois mostram centavos: arredondar também diria "100%" com a conta ainda
+não paga. *Dois números para a mesma pergunta na mesma tela: a pessoa
+acredita no pior e desconfia dos dois.*
+
 ## Polling, não websocket, no painel do admin
 
 Conexão aberta em serverless exige um serviço à parte, com custo e mais uma

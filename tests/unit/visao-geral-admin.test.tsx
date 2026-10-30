@@ -171,6 +171,34 @@ describe("tela da visão geral", () => {
     expect(screen.getByText(/faltam/i)).toBeTruthy();
   });
 
+  /**
+   * O medidor e o bloco "O Lupa já se paga?" respondem a mesma pergunta na
+   * mesma tela (#523): R$ 179,80 contra R$ 240,00 é 74%, e faltam R$ 60,20 —
+   * não 75% e "R$ 60".
+   */
+  it("o medidor trunca e diz o que falta com centavos, como o bloco de custos", () => {
+    render(
+      <VisaoGeral
+        painel={{
+          ...PAINEL,
+          funil: {
+            ...PAINEL.funil,
+            receita: {
+              ...PAINEL.funil.receita,
+              recorrenteAtivoCentavos: 17_980,
+            },
+          },
+          custos: [{ ...PAINEL.custos[0], centavos: 24_000 }],
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("img", { name: /cobre 74% do custo do mês/i }),
+    ).toBeTruthy();
+    expect(screen.getByText(/Faltam R\$\s?60,20 por mês/)).toBeTruthy();
+  });
+
   it("sem custo cadastrado, o medidor não inventa porcentagem", () => {
     render(<VisaoGeral painel={{ ...PAINEL, custos: [] }} />);
 

@@ -197,6 +197,11 @@ function LinhaDeCompra({
           className="self-start"
           disabled={pendente}
           onClick={testar}
+          // Cinco botões com o mesmo texto: o nome diz de qual produto é,
+          // para o leitor de tela (#523), e contém o texto que se vê.
+          aria-label={
+            pendente ? `Liberando ${titulo}…` : `Comprar sem pagar: ${titulo}`
+          }
         >
           {pendente ? "Liberando…" : "Comprar sem pagar"}
         </Button>
