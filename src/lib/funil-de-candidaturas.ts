@@ -1,5 +1,4 @@
 import { APPLICATION_LABELS } from "./constants";
-import { vagaExpirada } from "./format";
 import type { ApplicationStatus } from "./types";
 
 /*
@@ -62,11 +61,12 @@ export function vagasVencendo<T extends { status: string; expires_at: string }>(
   dias = 3,
   agora: Date = new Date(),
 ): T[] {
-  const limite = agora.getTime() + dias * UM_DIA_MS;
-  return vagas.filter(
-    (v) =>
-      v.status === "aberta" &&
-      !vagaExpirada(v.expires_at) &&
-      Date.parse(v.expires_at) <= limite,
-  );
+  // Um relógio só, o `agora` recebido: `vagaExpirada` lê o de verdade, e
+  // misturar os dois fazia o teste quebrar conforme a data (#520).
+  const inicio = agora.getTime();
+  const limite = inicio + dias * UM_DIA_MS;
+  return vagas.filter((v) => {
+    const vence = Date.parse(v.expires_at);
+    return v.status === "aberta" && vence > inicio && vence <= limite;
+  });
 }
