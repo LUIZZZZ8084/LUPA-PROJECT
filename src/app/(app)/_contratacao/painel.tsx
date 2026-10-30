@@ -337,61 +337,71 @@ export async function PainelDeContratacao({
         lugar onde a coisa se resolve — o funil já aberto no estágio, ou a
         aba de vagas.
       */}
-      <section aria-labelledby="para-hoje" className="mb-6">
-        <h2 id="para-hoje" className="mb-3 font-bold text-base">
-          Para hoje
-        </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <CartaoDoDia
-            href={`${area.base}/funil?estagio=enviada`}
-            icone={<Inbox size={18} aria-hidden />}
-            valor={contagem.enviada}
-            rotulo={
-              contagem.enviada === 1 ? "Nova para olhar" : "Novas para olhar"
-            }
-            dica="Abrir a ficha marca como vista."
-            destaque={contagem.enviada > 0}
-          />
-          <CartaoDoDia
-            href={`${area.base}/funil?estagio=entrevista`}
-            icone={<CalendarClock size={18} aria-hidden />}
-            valor={contagem.entrevista}
-            rotulo="Em entrevista"
-            dica="Quem você chamou para conversar."
-          />
-          <CartaoDoDia
-            href={`${area.base}/vagas`}
-            icone={<Clock size={18} aria-hidden />}
-            valor={vencendo.length}
-            rotulo={
-              vencendo.length === 1
-                ? "Vaga vence em até 3 dias"
-                : "Vagas vencem em até 3 dias"
-            }
-            dica="Reative para continuar recebendo."
-            destaque={vencendo.length > 0}
-            alerta
-          />
-        </div>
-      </section>
-
-      <Panel>
-        <div className="flex items-start gap-4">
-          <Avatar
-            name={company.company_name}
-            src={company.logo_url}
-            size="lg"
-            square
-          />
-          <div className="min-w-0 flex-1">
-            <h2 className="flex items-center gap-1.5 text-lg font-bold">
-              {company.company_name}
-              <VerifiedMark size={16} />
+      {/*
+        No computador (#525) o painel vira duas colunas: o que mede (hoje,
+        números e funil) à esquerda, e o que pede ação (recomendados e
+        currículos recebidos) à direita. Os invólucros são `contents` abaixo
+        de `lg`: não existem como caixa no celular e no tablet.
+      */}
+      <div className="contents lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-x-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="contents lg:block">
+          <section aria-labelledby="para-hoje" className="mb-6">
+            <h2 id="para-hoje" className="mb-3 font-bold text-base">
+              Para hoje
             </h2>
-            <p className="mt-1 text-xs text-muted">
-              CNPJ {company.cnpj ?? "não informado"}
-            </p>
-            {/*
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <CartaoDoDia
+                href={`${area.base}/funil?estagio=enviada`}
+                icone={<Inbox size={18} aria-hidden />}
+                valor={contagem.enviada}
+                rotulo={
+                  contagem.enviada === 1
+                    ? "Nova para olhar"
+                    : "Novas para olhar"
+                }
+                dica="Abrir a ficha marca como vista."
+                destaque={contagem.enviada > 0}
+              />
+              <CartaoDoDia
+                href={`${area.base}/funil?estagio=entrevista`}
+                icone={<CalendarClock size={18} aria-hidden />}
+                valor={contagem.entrevista}
+                rotulo="Em entrevista"
+                dica="Quem você chamou para conversar."
+              />
+              <CartaoDoDia
+                href={`${area.base}/vagas`}
+                icone={<Clock size={18} aria-hidden />}
+                valor={vencendo.length}
+                rotulo={
+                  vencendo.length === 1
+                    ? "Vaga vence em até 3 dias"
+                    : "Vagas vencem em até 3 dias"
+                }
+                dica="Reative para continuar recebendo."
+                destaque={vencendo.length > 0}
+                alerta
+              />
+            </div>
+          </section>
+
+          <Panel>
+            <div className="flex items-start gap-4">
+              <Avatar
+                name={company.company_name}
+                src={company.logo_url}
+                size="lg"
+                square
+              />
+              <div className="min-w-0 flex-1">
+                <h2 className="flex items-center gap-1.5 text-lg font-bold">
+                  {company.company_name}
+                  <VerifiedMark size={16} />
+                </h2>
+                <p className="mt-1 text-xs text-muted">
+                  CNPJ {company.cnpj ?? "não informado"}
+                </p>
+                {/*
               O selo lia `company.plan`, a coluna `perfis_empresa.plano`
               que nasceu no schema e **nunca teve quem a escrevesse** — a
               armadilha do estado declarado sem produtor, registrada no
@@ -403,167 +413,171 @@ export async function PainelDeContratacao({
               Quem responde de verdade é a carteira, que a página já
               carregou logo acima para o card de saldo.
             */}
-            {/*
+                {/*
               Planos é página à parte, fora das abas (#515): a porta dela
               no painel fica ao lado do selo que diz o plano.
             */}
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3">
-              <Badge tone={direito.mensalAtivo ? "empresas" : "outline"}>
-                {direito.mensalAtivo
-                  ? seloDoDireito(direito).texto
-                  : "Pagamento por vaga"}
-              </Badge>
-              <Link
-                href={`${area.base}/creditos`}
-                className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
-              >
-                Ver planos
-              </Link>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3">
+                  <Badge tone={direito.mensalAtivo ? "empresas" : "outline"}>
+                    {direito.mensalAtivo
+                      ? seloDoDireito(direito).texto
+                      : "Pagamento por vaga"}
+                  </Badge>
+                  <Link
+                    href={`${area.base}/creditos`}
+                    className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
+                  >
+                    Ver planos
+                  </Link>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          <Stat
-            label="Vagas ativas"
-            value={stats.active_jobs}
-            accent="text-empresas"
-          />
-          <Stat label="Currículos" value={stats.applications} />
-          <Stat
-            label="Visualizações (30 dias)"
-            value={totais.visualizacoes.toLocaleString("pt-BR")}
-          />
-        </div>
+            <div className="mt-5 grid grid-cols-3 gap-3">
+              <Stat
+                label="Vagas ativas"
+                value={stats.active_jobs}
+                accent="text-empresas"
+              />
+              <Stat label="Currículos" value={stats.applications} />
+              <Stat
+                label="Visualizações (30 dias)"
+                value={totais.visualizacoes.toLocaleString("pt-BR")}
+              />
+            </div>
 
-        <SerieGrafico serie={serie} />
-      </Panel>
+            <SerieGrafico serie={serie} />
+          </Panel>
 
-      {/*
+          {/*
         O funil em números: de todas as candidaturas, quantas já foram
         olhadas, quantas chegaram à entrevista e quantas foram selecionadas.
         A porcentagem é sobre as recebidas, a mesma conta do funil do painel
         do admin (#471): "10% viraram entrevista" se lê sem conta.
       */}
-      {alcance.recebidas > 0 && (
-        <section aria-labelledby="funil-em-numeros" className="mt-6">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <h2 id="funil-em-numeros" className="font-bold text-base">
-              Do currículo à contratação
-            </h2>
-            <Link
-              href={`${area.base}/funil`}
-              className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
-            >
-              Ver candidatos
-            </Link>
-          </div>
-          <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {(
-              [
-                ["Recebidas", alcance.recebidas],
-                ["Olhadas", alcance.olhadas],
-                ["Entrevistas", alcance.entrevistas],
-                ["Selecionados", alcance.selecionados],
-              ] as const
-            ).map(([rotulo, valor], i) => {
-              const f = fracao(valor);
-              return (
-                <li
-                  key={rotulo}
-                  className="rounded-[var(--radius-card)] border border-line bg-panel p-4"
+          {alcance.recebidas > 0 && (
+            <section aria-labelledby="funil-em-numeros" className="mt-6">
+              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                <h2 id="funil-em-numeros" className="font-bold text-base">
+                  Do currículo à contratação
+                </h2>
+                <Link
+                  href={`${area.base}/funil`}
+                  className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
                 >
-                  <p className="text-muted text-xs">{rotulo}</p>
-                  <p className="mt-1 font-bold text-2xl tabular-nums">
-                    {valor.toLocaleString("pt-BR")}
-                  </p>
-                  {i > 0 && f !== null && (
-                    <>
-                      <div
-                        aria-hidden
-                        className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel-3"
-                      >
-                        <div
-                          className="h-full rounded-full bg-empresas"
-                          style={{ width: `${Math.round(f * 100)}%` }}
-                        />
-                      </div>
-                      <p className="mt-1 text-faint text-xs">
-                        {Math.round(f * 100)}% das recebidas
+                  Ver candidatos
+                </Link>
+              </div>
+              <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {(
+                  [
+                    ["Recebidas", alcance.recebidas],
+                    ["Olhadas", alcance.olhadas],
+                    ["Entrevistas", alcance.entrevistas],
+                    ["Selecionados", alcance.selecionados],
+                  ] as const
+                ).map(([rotulo, valor], i) => {
+                  const f = fracao(valor);
+                  return (
+                    <li
+                      key={rotulo}
+                      className="rounded-[var(--radius-card)] border border-line bg-panel p-4"
+                    >
+                      <p className="text-muted text-xs">{rotulo}</p>
+                      <p className="mt-1 font-bold text-2xl tabular-nums">
+                        {valor.toLocaleString("pt-BR")}
                       </p>
-                    </>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      )}
-
-      <Recomendados vagas={recomendados} base={area.base} />
-
-      {/* Candidaturas recentes: as cinco últimas; o resto está no funil. */}
-      <section aria-labelledby="recentes" className="mt-8">
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="recentes" className="font-bold text-base">
-            Currículos recebidos
-          </h2>
-          {applications.length > recentes.length && (
-            <Link
-              href={`${area.base}/funil`}
-              className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
-            >
-              Ver todos os {applications.length} candidatos
-            </Link>
+                      {i > 0 && f !== null && (
+                        <>
+                          <div
+                            aria-hidden
+                            className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel-3"
+                          >
+                            <div
+                              className="h-full rounded-full bg-empresas"
+                              style={{ width: `${Math.round(f * 100)}%` }}
+                            />
+                          </div>
+                          <p className="mt-1 text-faint text-xs">
+                            {Math.round(f * 100)}% das recebidas
+                          </p>
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
           )}
         </div>
-        {recentes.length === 0 ? (
-          <EmptyState
-            icon={<Inbox size={22} />}
-            title="Nenhuma candidatura ainda"
-            description="Assim que alguém se candidatar às suas vagas, o currículo aparece aqui."
-          />
-        ) : (
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
-            {recentes.map((app) => (
-              <li key={app.id}>
-                {/*
+
+        <div className="contents lg:block">
+          <Recomendados vagas={recomendados} base={area.base} />
+
+          {/* Candidaturas recentes: as cinco últimas; o resto está no funil. */}
+          <section aria-labelledby="recentes" className="mt-8">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="recentes" className="font-bold text-base">
+                Currículos recebidos
+              </h2>
+              {applications.length > recentes.length && (
+                <Link
+                  href={`${area.base}/funil`}
+                  className="inline-flex min-h-11 items-center text-empresas text-sm underline-offset-2 hover:underline"
+                >
+                  Ver todos os {applications.length} candidatos
+                </Link>
+              )}
+            </div>
+            {recentes.length === 0 ? (
+              <EmptyState
+                icon={<Inbox size={22} />}
+                title="Nenhuma candidatura ainda"
+                description="Assim que alguém se candidatar às suas vagas, o currículo aparece aqui."
+              />
+            ) : (
+              <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
+                {recentes.map((app) => (
+                  <li key={app.id}>
+                    {/*
                   A linha inteira abre a ficha: nome e vaga não bastam para
                   decidir chamar alguém. Mover de estágio é no funil.
                 */}
-                {/*
+                    {/*
                   Duas linhas no celular, uma no desktop (#252): os selos ao
                   lado apertavam o nome a "E…" em 360 px.
                 */}
-                <Link
-                  href={`${area.base}/candidaturas/${app.id}`}
-                  className="group flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 p-4 transition-colors hover:bg-panel-2"
-                >
-                  <Avatar
-                    name={app.candidate.full_name}
-                    src={app.candidate.avatar_url}
-                    size="sm"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-sm underline-offset-2 group-hover:underline">
-                      {app.candidate.full_name}
-                    </p>
-                    <p className="truncate text-muted text-xs">
-                      {app.job_title} · {timeAgo(app.created_at)}
-                    </p>
-                  </div>
-                  <span className="flex basis-full items-center gap-2 pl-11 sm:basis-auto sm:pl-0">
-                    <SeloDeMatch match={match.get(app.id)} />
-                    <Badge tone={APPLICATION_TONE[app.status]}>
-                      {APPLICATION_LABELS[app.status]}
-                    </Badge>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                    <Link
+                      href={`${area.base}/candidaturas/${app.id}`}
+                      className="group flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 p-4 transition-colors hover:bg-panel-2"
+                    >
+                      <Avatar
+                        name={app.candidate.full_name}
+                        src={app.candidate.avatar_url}
+                        size="sm"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-sm underline-offset-2 group-hover:underline">
+                          {app.candidate.full_name}
+                        </p>
+                        <p className="truncate text-muted text-xs">
+                          {app.job_title} · {timeAgo(app.created_at)}
+                        </p>
+                      </div>
+                      <span className="flex basis-full items-center gap-2 pl-11 sm:basis-auto sm:pl-0">
+                        <SeloDeMatch match={match.get(app.id)} />
+                        <Badge tone={APPLICATION_TONE[app.status]}>
+                          {APPLICATION_LABELS[app.status]}
+                        </Badge>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </div>
     </PageShell>
   );
 }
