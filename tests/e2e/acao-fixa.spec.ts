@@ -113,7 +113,9 @@ test.describe("vaga, celular", () => {
 test.describe("vaga, desktop", () => {
   test.use({ viewport: DESKTOP });
 
-  test("o botão aparece na primeira janela, no pé dela", async ({ page }) => {
+  test("o botão aparece na primeira janela, no cartão da coluna da direita", async ({
+    page,
+  }) => {
     await abrirPrimeiro(page, "/vagas");
 
     const botao = await caixa(
@@ -121,9 +123,13 @@ test.describe("vaga, desktop", () => {
     );
     expect(botao.y + botao.height).toBeLessThanOrEqual(DESKTOP.height);
 
-    // Sem navegação inferior no desktop: a barra vai ao pé da janela.
+    // No computador (#525) a página tem duas colunas: a barra deixa de ser
+    // presa ao pé da janela e vira o cartão da coluna da direita, que fica
+    // embaixo do cabeçalho. Quem a prende é a coluna, e não a barra.
+    expect(await posicao(page)).toBe("static");
     const b = await caixa(barra(page));
-    expect(b.y + b.height).toBeGreaterThan(DESKTOP.height - 40);
+    expect(b.x).toBeGreaterThan(DESKTOP.width / 2);
+    expect(b.y).toBeLessThan(DESKTOP.height / 2);
   });
 });
 
