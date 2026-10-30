@@ -39,7 +39,7 @@ export default function Loading() {
   return (
     <>
       <section className="aurora border-b border-line">
-        <div className="mx-auto max-w-6xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
+        <div className="mx-auto max-w-site px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12 lg:px-8">
           <Skeleton className="h-[10rem] rounded-[var(--radius-card)] sm:h-[17rem] lg:h-[534px]" />
           <div className="lg:hidden">
             <Skeleton className="mt-4 h-[26px] w-44 rounded-full sm:mt-6" />

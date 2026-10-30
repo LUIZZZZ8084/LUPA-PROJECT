@@ -138,7 +138,7 @@ export function InstalarApp() {
       aria-label="Instalar o app"
       className="border-b border-line bg-panel"
     >
-      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 sm:px-6">
+      <div className="mx-auto flex max-w-site items-center gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
         {/* Quem ouve a tela ouve a dica quando ela entra no lugar da frase. */}
         <p
           aria-live="polite"

@@ -23,6 +23,9 @@ import { cn } from "@/lib/utils";
  * (`globals.css`) a troca por corte seco — por isso o `scrollIntoView` abaixo
  * não pede `behavior: "smooth"`, que passaria por cima dela.
  *
+ * **No computador (`lg`) não é carrossel.** As opções cabem na largura e vão
+ * numa grade; os pontos e as setas somem, já que não há o que rolar.
+ *
  * Os pontos só mostram a posição: não são botões, porque quatro alvos de 44 px
  * numa fileira de pontos não cabem, e o toque já tem o gesto de arrastar. As
  * setas ficam onde há mouse; no celular elas só tomariam espaço.
@@ -93,20 +96,23 @@ export function Carrossel({
           // Um cartão em foco e a borda do vizinho à vista, para a pessoa
           // ver que há mais sem ninguém avisar.
           "-mx-1 px-1 pb-1",
+          // No computador (#525) cabem todas as opções: a faixa vira grade e
+          // não há o que rolar.
+          "lg:grid lg:snap-none lg:grid-cols-2 lg:overflow-visible xl:grid-cols-4",
         )}
       >
         {cartoes.map((cartao, i) => (
           <li
             // biome-ignore lint/suspicious/noArrayIndexKey: a lista é fixa e na mesma ordem
             key={i}
-            className="flex-none basis-[85%] snap-center sm:basis-[60%]"
+            className="flex-none basis-[85%] snap-center sm:basis-[60%] lg:basis-auto"
           >
             {cartao}
           </li>
         ))}
       </ul>
 
-      <div className="mt-3 flex items-center justify-center gap-3">
+      <div className="mt-3 flex items-center justify-center gap-3 lg:hidden">
         <button
           type="button"
           onClick={() => irPara(ativo - 1)}

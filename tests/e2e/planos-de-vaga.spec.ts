@@ -90,19 +90,23 @@ test.describe("planos de vaga", () => {
      */
     const pontos = page.locator("[data-ativo]");
     await expect(pontos).toHaveCount(4);
-    await expect(pontos.nth(0)).toHaveAttribute("data-ativo", "true");
-    await page
-      .getByRole("list", { name: "Opções de vaga e plano" })
-      .evaluate((faixa) => {
-        faixa.scrollLeft = faixa.scrollWidth;
+    // No computador (#525) as opções cabem numa grade e não há o que rolar;
+    // a rolagem só existe onde a faixa é mais larga que a janela.
+    const faixa = page.getByRole("list", { name: "Opções de vaga e plano" });
+    const rola = await faixa.evaluate(
+      (el) => el.scrollWidth > el.clientWidth + 1,
+    );
+    if (rola) {
+      await expect(pontos.nth(0)).toHaveAttribute("data-ativo", "true");
+      await faixa.evaluate((el) => {
+        el.scrollLeft = el.scrollWidth;
       });
-    await expect(pontos.nth(3)).toHaveAttribute("data-ativo", "true");
-    await page
-      .getByRole("list", { name: "Opções de vaga e plano" })
-      .evaluate((faixa) => {
-        faixa.scrollLeft = 0;
+      await expect(pontos.nth(3)).toHaveAttribute("data-ativo", "true");
+      await faixa.evaluate((el) => {
+        el.scrollLeft = 0;
       });
-    await expect(pontos.nth(0)).toHaveAttribute("data-ativo", "true");
+      await expect(pontos.nth(0)).toHaveAttribute("data-ativo", "true");
+    }
 
     // Assina o Plano 5.
     await page.getByRole("button", { name: /assinar plano 5/i }).click();

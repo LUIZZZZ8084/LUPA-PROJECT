@@ -69,7 +69,7 @@ export async function FichaDaCandidatura({
   });
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="formulario">
       <BackLink href={area.base} label={`Voltar para ${area.nome}`} />
 
       <Panel>

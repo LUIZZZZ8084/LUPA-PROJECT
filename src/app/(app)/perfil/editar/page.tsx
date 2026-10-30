@@ -24,7 +24,7 @@ export default async function EditarPerfilPage() {
   );
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="formulario">
       <BackLink href="/perfil" label="Voltar ao perfil" />
 
       <PageTitle
