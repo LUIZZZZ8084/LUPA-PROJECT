@@ -56,7 +56,7 @@ export default async function AssinaturaPage() {
   const cartaoRecusado = assinatura?.status === "pausada";
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="formulario">
       <BackLink href="/perfil" label="Voltar para o perfil" />
       <PageTitle
         title="Assinatura"

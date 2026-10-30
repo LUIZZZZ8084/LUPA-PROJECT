@@ -35,7 +35,7 @@ export default async function AvisosPage() {
   if (!usuario) notFound();
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="formulario">
       <PageTitle
         title="Avisos de vaga"
         description="Seu celular avisa quando aparecer vaga nova na cidade e na área que você escolher."

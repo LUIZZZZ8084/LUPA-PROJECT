@@ -49,7 +49,7 @@ export default async function VirarPrestadorPage() {
     exigeFotoDePerfil(temArmazenamento) && !usuario.avatarUrl;
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="formulario">
       <BackLink href="/perfil" label="Voltar ao perfil" />
       <PageTitle
         title="Oferecer serviço"

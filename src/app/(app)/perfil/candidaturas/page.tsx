@@ -26,7 +26,7 @@ export default async function MinhasCandidaturasPage() {
   const candidaturas = await getMyApplications(sessao.usuarioId);
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="formulario">
       <BackLink href="/perfil" label="Voltar ao perfil" />
       <PageTitle
         title="Minhas candidaturas"
