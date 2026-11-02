@@ -102,7 +102,12 @@ export async function VagasDaContratacao({
             }
           />
         ) : (
-          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
+          /*
+           * No computador cada vaga vira um cartão, em duas colunas (#527):
+           * a linha da largura toda deixava metade da tela vazia. Abaixo de
+           * `lg` continua a lista com divisórias.
+           */
+          <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel grid-cols-1 lg:grid lg:grid-cols-2 lg:gap-3 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent">
             {jobs.map((job) => {
               const expirada =
                 job.status === "aberta" && vagaExpirada(job.expires_at);
@@ -110,7 +115,7 @@ export async function VagasDaContratacao({
               return (
                 <li
                   key={job.id}
-                  className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4 transition-colors hover:bg-panel-2"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 p-4 transition-colors hover:bg-panel-2 lg:content-start lg:rounded-[var(--radius-card)] lg:border lg:border-line lg:bg-panel"
                 >
                   <Link
                     href={`/vagas/${job.id}`}
