@@ -112,9 +112,13 @@ export async function QuemJaSeCandidatou({
           }
         />
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
+        /* Cartões em duas ou três colunas no computador; ver as vagas. */
+        <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel grid-cols-1 lg:grid lg:grid-cols-2 lg:gap-3 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent xl:grid-cols-3">
           {talentos.map((t) => (
-            <li key={t.candidatoId}>
+            <li
+              key={t.candidatoId}
+              className="lg:overflow-hidden lg:rounded-[var(--radius-card)] lg:border lg:border-line lg:bg-panel"
+            >
               {/*
                 A linha abre a ficha da candidatura mais recente: é por ela
                 que a empresa tem direito ao currículo e ao contato, e a

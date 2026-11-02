@@ -86,18 +86,21 @@ export default async function ServicosPage({
 
   return (
     <PageShell>
-      <PageTitle
-        title="Serviços"
-        accent="text-servicos"
-        description="Profissionais da sua região, com avaliação e CPF conferido."
-      />
+      {/* Título e troca na mesma linha no computador; ver `/vagas`. */}
+      <div className="contents lg:mb-6 lg:flex lg:items-end lg:justify-between lg:gap-6 lg:*:mb-0">
+        <PageTitle
+          title="Serviços"
+          accent="text-servicos"
+          description="Profissionais da sua região, com avaliação e CPF conferido."
+        />
 
-      <AlternarBusca
-        atual="servicos"
-        q={single("q")}
-        uf={lugar.uf}
-        cidade={lugar.cidade}
-      />
+        <AlternarBusca
+          atual="servicos"
+          q={single("q")}
+          uf={lugar.uf}
+          cidade={lugar.cidade}
+        />
+      </div>
 
       <FilterBar
         accent="servicos"

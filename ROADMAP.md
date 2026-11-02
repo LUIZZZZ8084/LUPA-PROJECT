@@ -8,9 +8,18 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 30/10/2026.**
+**Última atualização: 02/11/2026.**
 
 ## Concluído
+
+Em 02/11/2026:
+
+- App no computador, segunda rodada: nas listas de vagas e serviços, o
+  título e a troca Vagas/Serviços dividem uma linha, e a busca divide outra
+  com os filtros (a busca de candidatos também); as vagas publicadas da
+  empresa viram cartões em duas colunas, e quem já se candidatou, em duas ou
+  três. Abaixo de 1024 px nada mudou —
+  [#527](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/527)
 
 Em 30/10/2026:
 

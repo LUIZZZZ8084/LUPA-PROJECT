@@ -143,11 +143,13 @@ export function FilterBar({
         else next.delete("q");
         navigate(next);
       }}
-      className="mb-5 space-y-3"
+      className="mb-5 space-y-3 lg:flex lg:items-center lg:gap-3 lg:space-y-0"
     >
       <div
         className={cn(
           "flex h-12 items-center gap-2.5 rounded-xl border border-line bg-panel px-3.5",
+          // No computador a busca e os filtros dividem uma linha (#527).
+          "lg:min-w-0 lg:flex-1",
           "transition-colors duration-200",
           focusRing,
         )}
@@ -193,7 +195,7 @@ export function FilterBar({
        * celular, sem pista nenhuma de que existia — e o de PCD, o último,
        * ficava invisível para quem não adivinhasse arrastar.
        */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 lg:max-w-[60%] lg:flex-none">
         {filters.map((filter) => (
           <FilterSelect
             key={filter.key}

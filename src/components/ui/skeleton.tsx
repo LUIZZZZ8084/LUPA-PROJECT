@@ -117,8 +117,8 @@ export function ProfissionaisEmLinhaSkeleton({
 /** Espelha FilterBar: campo de busca mais a faixa de chips. */
 export function FilterBarSkeleton() {
   return (
-    <div className="mb-5 space-y-3">
-      <Skeleton className="h-12 rounded-xl" />
+    <div className="mb-5 space-y-3 lg:flex lg:items-center lg:gap-3 lg:space-y-0">
+      <Skeleton className="h-12 rounded-xl lg:flex-1" />
       <div className="flex gap-2">
         <Skeleton className="h-9 w-28 rounded-full" />
         <Skeleton className="h-9 w-24 rounded-full" />

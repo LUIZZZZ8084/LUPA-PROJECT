@@ -140,18 +140,26 @@ export default async function VagasPage({
 
   return (
     <PageShell>
-      <PageTitle
-        title="Vagas"
-        accent="text-vagas"
-        description="Vagas de emprego no Brasil inteiro, direto de quem está contratando."
-      />
+      {/*
+        No computador o título e a troca Vagas/Serviços dividem a mesma
+        linha (#527): empilhados como no celular, o topo ocupava quatro
+        linhas antes do primeiro resultado. Abaixo de `lg` o invólucro não
+        gera caixa e nada muda.
+      */}
+      <div className="contents lg:mb-6 lg:flex lg:items-end lg:justify-between lg:gap-6 lg:*:mb-0">
+        <PageTitle
+          title="Vagas"
+          accent="text-vagas"
+          description="Vagas de emprego no Brasil inteiro, direto de quem está contratando."
+        />
 
-      <AlternarBusca
-        atual="vagas"
-        q={single("q")}
-        uf={lugar.uf}
-        cidade={lugar.cidade}
-      />
+        <AlternarBusca
+          atual="vagas"
+          q={single("q")}
+          uf={lugar.uf}
+          cidade={lugar.cidade}
+        />
+      </div>
 
       <FilterBar
         accent="vagas"
