@@ -42,21 +42,26 @@ import type { ReactNode } from "react";
  * claro usava a foto com o fundo da arte, e o escuro, o homem recortado
  * sobre faixas em CSS. Quem alternava o tema via o banner trocar de forma, e
  * isso incomoda (#378). Agora há uma foto só, o homem recortado do fundo
- * (`public/banner/trabalhador-recortado-v2.webp`, WebP com transparência),
+ * (`public/banner/trabalhador-recortado-v3.webp`, WebP com transparência),
  * sobre as mesmas duas faixas inclinadas, com a mesma posição e as mesmas
  * medidas. Fundo, borda, faixas e texto vêm de variáveis (`--banner-*`, em
  * `globals.css`), como o degradê da logo.
  *
- * **A foto é cortada acima do vão entre os antebraços (#382).** O recorte
- * original deixava um buraco transparente de uns 20 × 10 px entre os braços,
- * aberto para a borda de baixo. A foto fica encostada embaixo, então o que
- * está atrás, a faixa e o fundo do tema, aparecia por ali, e a cor mudava
- * com o tema. O arquivo termina antes do vão: 435 × 476, e não 435 × 494.
+ * **O homem cabe inteiro na foto (#529).** A anterior cortava o topo do
+ * capacete e os dois cotovelos, tinha o contorno serrilhado e, antes disso,
+ * um vão entre os antebraços aberto para a borda de baixo (#382). A atual vai
+ * do capacete, com folga em cima, ao cinto, num corte reto embaixo, com os
+ * cotovelos inteiros e os braços encostados no corpo. O arquivo tem 870 × 952,
+ * o dobro de 435 × 476: a proporção não mudou, e as contas abaixo (a largura
+ * do texto e a caixa do desfoque) continuam valendo.
  *
  * **No computador a foto tem teto de altura (`lg:max-h-[26rem]`).** O banner
  * ficou mais alto com a busca dentro, e a foto, que acompanha a altura,
  * cresceria até invadir a coluna da busca em 1024 px. Com o teto ela fica
  * encostada embaixo, à direita, e o que sobra em cima é faixa.
+ * A partir de `xl` a coluna da busca tem largura fixa e sobra espaço à
+ * direita, então o teto sobe para 30 rem: com a foto nova, que tem folga em
+ * cima e dos lados, o homem ficava pequeno no canto (#529).
  *
  * **O arquivo tem nome novo de propósito**, a cada troca de conteúdo. O
  * otimizador de imagens do Next guarda o resultado pelo endereço, e trocar o
@@ -65,7 +70,7 @@ import type { ReactNode } from "react";
  *
  * **O pé da foto some num desfoque discreto.** Cortada, a foto termina seca na
  * borda do banner, com os braços interrompidos. Por cima dela, uma camada com
- * a mesma caixa (mesma altura, mesmo teto, mesma proporção 435 × 476, colada
+ * a mesma caixa (mesma altura, mesmo teto, mesma proporção 870 × 952, colada
  * à direita e embaixo) borra o que está atrás, mais forte na borda e some uns
  * 11% acima dela (`backdrop-filter` com máscara, 2 px de raio). Não tem cor:
  * borra pixels, não pinta nenhum, então é a mesma nos dois temas. Onde o
@@ -114,18 +119,18 @@ export function BannerDaHome({
         />
 
         <Image
-          src="/banner/trabalhador-recortado-v2.webp"
+          src="/banner/trabalhador-recortado-v3.webp"
           alt=""
-          width={435}
-          height={476}
+          width={870}
+          height={952}
           priority
           sizes="(min-width: 1024px) 380px, (min-width: 640px) 248px, 146px"
-          className="absolute right-0 bottom-0 h-full w-auto max-w-none lg:max-h-[26rem]"
+          className="absolute right-0 bottom-0 h-full w-auto max-w-none lg:max-h-[26rem] xl:max-h-[30rem]"
         />
         <div
           aria-hidden
           data-desfoque-do-pe
-          className="pointer-events-none absolute right-0 bottom-0 aspect-[435/476] h-full backdrop-blur-[2px] [mask-image:linear-gradient(to_top,black,transparent_11%)] lg:max-h-[26rem]"
+          className="pointer-events-none absolute right-0 bottom-0 aspect-[870/952] h-full backdrop-blur-[2px] [mask-image:linear-gradient(to_top,black,transparent_11%)] lg:max-h-[26rem] xl:max-h-[30rem]"
         />
       </div>
 

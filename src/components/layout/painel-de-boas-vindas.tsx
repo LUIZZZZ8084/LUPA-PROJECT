@@ -63,12 +63,12 @@ export function PainelDeBoasVindas() {
       </div>
 
       <Image
-        src="/banner/trabalhador-recortado-v2.webp"
+        src="/banner/trabalhador-recortado-v3.webp"
         alt=""
-        width={435}
-        height={476}
+        width={870}
+        height={952}
         sizes="320px"
-        className="pointer-events-none mt-auto h-auto w-72 max-w-[70%] self-end"
+        className="pointer-events-none mt-auto h-auto w-80 max-w-[75%] self-end"
       />
     </aside>
   );

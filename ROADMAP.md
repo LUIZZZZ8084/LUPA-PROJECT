@@ -20,6 +20,10 @@ Em 02/11/2026:
   empresa viram cartões em duas colunas, e quem já se candidatou, em duas ou
   três. Abaixo de 1024 px nada mudou —
   [#527](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/527)
+- Foto nova do banner da home e do painel de entrar: o homem aparece inteiro,
+  do capacete ao cinto, sem o topo do capacete e os cotovelos cortados, com
+  contorno limpo nos dois temas; no computador largo ela fica maior —
+  [#529](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/529)
 
 Em 30/10/2026:
 
