@@ -34,7 +34,7 @@ describe("BannerDaHome", () => {
     expect(fotos).toHaveLength(1);
     expect(fotos[0]).toHaveAttribute("alt", "");
     expect(fotos[0].getAttribute("src")).toContain(
-      "trabalhador-recortado-v2.webp",
+      "trabalhador-recortado-v3.webp",
     );
     expect(screen.queryAllByRole("img")).toHaveLength(0);
   });
