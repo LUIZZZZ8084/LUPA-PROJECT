@@ -52,7 +52,7 @@ export async function PublicarVaga({
   ]);
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="formulario">
       <BackLink href={area.base} label={`Voltar para ${area.nome}`} />
       <PageTitle
         title="Publicar nova vaga"

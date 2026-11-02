@@ -14,7 +14,7 @@ export function DemoBanner() {
 
   return (
     <div className="border-b border-warn/25 bg-warn/10">
-      <p className="mx-auto flex max-w-6xl items-start gap-2 px-4 py-2 text-[12px] leading-relaxed text-warn sm:px-6">
+      <p className="mx-auto flex max-w-site items-start gap-2 px-4 py-2 text-[12px] leading-relaxed text-warn sm:px-6 lg:px-8">
         <Info size={14} className="mt-0.5 flex-none" />
         <span>
           <strong className="font-semibold">Demonstração.</strong> As vagas,

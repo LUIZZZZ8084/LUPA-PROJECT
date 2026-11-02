@@ -214,7 +214,7 @@ export default async function PerfilPage() {
       : null;
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="colunas">
       <PageTitle
         title="Perfil"
         description="Sua conta e seus atalhos na Lupa."
@@ -228,138 +228,152 @@ export default async function PerfilPage() {
         }
       />
 
-      {usuario ? (
-        <Panel className="mb-5">
-          <div className="flex items-start gap-4">
-            <Avatar
-              name={usuario.nomeCompleto}
-              src={usuario.avatarUrl}
-              size="lg"
-            />
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-lg font-bold">
-                {usuario.nomeCompleto}
-              </h2>
-              <p className="mt-0.5 truncate text-xs text-muted">
-                {usuario.email}
-              </p>
-              <p className="mt-0.5 text-xs text-muted">
-                {formatPhone(usuario.telefone)} · {usuario.cidade}
-              </p>
-              <div className="mt-2.5">
-                <Badge tone="neutral">
-                  {sessao && sessao.papel === "admin"
-                    ? "Administrador"
-                    : ROLE_LABELS[usuario.papel as keyof typeof ROLE_LABELS]}
-                </Badge>
+      {/*
+        No computador (#525) o perfil vira duas colunas: a conta, presa
+        embaixo do cabeçalho, à esquerda; o que depende do papel, os atalhos
+        e a LGPD à direita. Os invólucros são `contents` abaixo de `lg`, ou
+        seja, não existem como caixa no celular e no tablet.
+      */}
+      <div className="contents lg:grid lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start lg:gap-8 xl:grid-cols-[24rem_minmax(0,1fr)]">
+        <div className="contents lg:sticky lg:top-24 lg:block">
+          {usuario ? (
+            <Panel className="mb-5">
+              <div className="flex items-start gap-4">
+                <Avatar
+                  name={usuario.nomeCompleto}
+                  src={usuario.avatarUrl}
+                  size="lg"
+                />
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-lg font-bold">
+                    {usuario.nomeCompleto}
+                  </h2>
+                  <p className="mt-0.5 truncate text-xs text-muted">
+                    {usuario.email}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {formatPhone(usuario.telefone)} · {usuario.cidade}
+                  </p>
+                  <div className="mt-2.5">
+                    <Badge tone="neutral">
+                      {sessao && sessao.papel === "admin"
+                        ? "Administrador"
+                        : ROLE_LABELS[
+                            usuario.papel as keyof typeof ROLE_LABELS
+                          ]}
+                    </Badge>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <VerificationRow
-            className="mt-5"
-            phoneVerified={usuario.telefoneVerificado}
-            docVerified={usuario.docVerificado}
-            mostrarDocumento={temVerificacaoDeDocumento(usuario.papel)}
-          />
+              <VerificationRow
+                className="mt-5"
+                phoneVerified={usuario.telefoneVerificado}
+                docVerified={usuario.docVerificado}
+                mostrarDocumento={temVerificacaoDeDocumento(usuario.papel)}
+              />
 
-          {/*
+              {/*
             Só aparece para quem ainda não confirmou (#227). Selo verde
             permanente para quem já confirmou seria ruído — a pessoa não
             tem o que fazer com ele —, e é a mesma lição do selo de
             telefone, que saiu na #209 por dizer a mesma coisa para
             sempre.
           */}
-          <ConfirmarEmail verificado={usuario.emailVerificado} />
+              <ConfirmarEmail verificado={usuario.emailVerificado} />
 
-          {/*
+              {/*
             Sair dos outros aparelhos mora ao lado do sair daqui (#402): é a
             mesma pergunta — onde a conta está aberta — feita para os
             aparelhos que a pessoa não tem na mão.
           */}
-          <div className="mt-5 flex flex-wrap items-start gap-3 border-t border-line pt-4">
-            <SairButton />
-            <SairDosOutrosButton />
-          </div>
+              <div className="mt-5 flex flex-wrap items-start gap-3 border-t border-line pt-4">
+                <SairButton />
+                <SairDosOutrosButton />
+              </div>
 
-          {/*
+              {/*
             Excluir a conta (#423), direito do titular na LGPD. Por último,
             separado dos dois "sair", e só para quem a matriz deixa: a conta
             de administração não se exclui pela tela.
           */}
-          {sessao && pode(sessao.papel, "conta:excluir") && (
-            <div className="mt-4 border-t border-line pt-4">
-              <ExcluirConta />
+              {sessao && pode(sessao.papel, "conta:excluir") && (
+                <div className="mt-4 border-t border-line pt-4">
+                  <ExcluirConta />
+                </div>
+              )}
+            </Panel>
+          ) : (
+            <Panel className="mb-5 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-panel-2 text-muted">
+                <UserRound size={24} />
+              </div>
+              <h2 className="mt-4 font-bold">Você ainda não entrou</h2>
+              <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted">
+                Entre para se candidatar a vagas, gerenciar seu perfil de
+                prestador ou publicar vagas pela sua empresa.
+              </p>
+              <div className="mt-5 flex flex-wrap justify-center gap-3">
+                <ButtonLink href="/entrar" variant="vagas" size="sm">
+                  <LogIn size={15} />
+                  Entrar
+                </ButtonLink>
+                <ButtonLink href="/cadastro" variant="outline" size="sm">
+                  Criar conta
+                </ButtonLink>
+              </div>
+            </Panel>
+          )}
+        </div>
+
+        <div className="contents lg:block">
+          {sessao?.papel === "candidato_clt" && (
+            <PerfilCandidato perfil={perfil?.candidato ?? null} />
+          )}
+          {sessao?.papel === "prestador_servico" && (
+            <PerfilPrestador
+              perfil={perfil?.prestador ?? null}
+              listagem={listagem}
+              docVerificado={Boolean(usuario?.docVerificado)}
+            />
+          )}
+          {sessao?.papel === "empresa" && (
+            <PerfilEmpresa
+              empresa={perfil?.empresa ?? null}
+              docVerificado={Boolean(usuario?.docVerificado)}
+              direito={direito}
+              verificarCnpj={<VerificarCnpj />}
+            />
+          )}
+
+          {atalhos.length > 0 && (
+            <div className="space-y-2.5">
+              {atalhos.map(({ href, icon: Icon, titulo, descricao, cor }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex items-start gap-3.5 rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
+                >
+                  <Icon size={20} className={`mt-0.5 flex-none ${cor}`} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold">
+                      {titulo}
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+                      {descricao}
+                    </span>
+                  </span>
+                </Link>
+              ))}
             </div>
           )}
-        </Panel>
-      ) : (
-        <Panel className="mb-5 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-panel-2 text-muted">
-            <UserRound size={24} />
-          </div>
-          <h2 className="mt-4 font-bold">Você ainda não entrou</h2>
-          <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted">
-            Entre para se candidatar a vagas, gerenciar seu perfil de prestador
-            ou publicar vagas pela sua empresa.
-          </p>
-          <div className="mt-5 flex flex-wrap justify-center gap-3">
-            <ButtonLink href="/entrar" variant="vagas" size="sm">
-              <LogIn size={15} />
-              Entrar
-            </ButtonLink>
-            <ButtonLink href="/cadastro" variant="outline" size="sm">
-              Criar conta
-            </ButtonLink>
-          </div>
-        </Panel>
-      )}
 
-      {sessao?.papel === "candidato_clt" && (
-        <PerfilCandidato perfil={perfil?.candidato ?? null} />
-      )}
-      {sessao?.papel === "prestador_servico" && (
-        <PerfilPrestador
-          perfil={perfil?.prestador ?? null}
-          listagem={listagem}
-          docVerificado={Boolean(usuario?.docVerificado)}
-        />
-      )}
-      {sessao?.papel === "empresa" && (
-        <PerfilEmpresa
-          empresa={perfil?.empresa ?? null}
-          docVerificado={Boolean(usuario?.docVerificado)}
-          direito={direito}
-          verificarCnpj={<VerificarCnpj />}
-        />
-      )}
-
-      {atalhos.length > 0 && (
-        <div className="space-y-2.5">
-          {atalhos.map(({ href, icon: Icon, titulo, descricao, cor }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-start gap-3.5 rounded-[var(--radius-card)] border border-line bg-panel p-4 transition-colors hover:bg-panel-2"
-            >
-              <Icon size={20} className={`mt-0.5 flex-none ${cor}`} />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold">{titulo}</span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-muted">
-                  {descricao}
-                </span>
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
-
-      <Panel className="mt-6">
-        <h2 className="flex items-center gap-2 text-sm font-semibold">
-          <FileText size={16} className="text-muted" />
-          Seus dados e a LGPD
-        </h2>
-        {/*
+          <Panel className="mt-6">
+            <h2 className="flex items-center gap-2 text-sm font-semibold">
+              <FileText size={16} className="text-muted" />
+              Seus dados e a LGPD
+            </h2>
+            {/*
           Este bloco dizia duas coisas falsas ao mesmo tempo (#233): que o
           CPF era conferido na Receita, e que nenhum dos dois documentos
           ficava guardado.
@@ -372,29 +386,31 @@ export default async function PerfilPage() {
           era justamente o que o texto antigo apagava ao tratá-los como
           iguais.
         */}
-        <div className="mt-2 space-y-2 text-xs leading-relaxed text-muted">
-          <p>
-            <strong className="text-ink">
-              Seu CPF não aparece para ninguém.
-            </strong>{" "}
-            Ele fica numa área que só o servidor alcança — a mesma onde fica o
-            hash da sua senha — e serve para conferir que é válido e que não
-            está em uso por outra conta.
-          </p>
-          <p>
-            <strong className="text-ink">
-              O CNPJ é diferente, de propósito.
-            </strong>{" "}
-            É registro público: conferimos na Receita se a empresa existe e está
-            ativa, e mostramos o número no seu perfil junto com a razão social
-            que ela devolveu. Quem vai te contratar tem direito de conferir com
-            quem está tratando.
-          </p>
-          <p>Não pedimos documento nem selfie, e nunca pedimos.</p>
+            <div className="mt-2 space-y-2 text-xs leading-relaxed text-muted">
+              <p>
+                <strong className="text-ink">
+                  Seu CPF não aparece para ninguém.
+                </strong>{" "}
+                Ele fica numa área que só o servidor alcança — a mesma onde fica
+                o hash da sua senha — e serve para conferir que é válido e que
+                não está em uso por outra conta.
+              </p>
+              <p>
+                <strong className="text-ink">
+                  O CNPJ é diferente, de propósito.
+                </strong>{" "}
+                É registro público: conferimos na Receita se a empresa existe e
+                está ativa, e mostramos o número no seu perfil junto com a razão
+                social que ela devolveu. Quem vai te contratar tem direito de
+                conferir com quem está tratando.
+              </p>
+              <p>Não pedimos documento nem selfie, e nunca pedimos.</p>
+            </div>
+          </Panel>
         </div>
-      </Panel>
+      </div>
 
-      <LinksInstitucionais className="mt-5 text-center" />
+      <LinksInstitucionais className="mt-5 text-center lg:hidden" />
     </PageShell>
   );
 }

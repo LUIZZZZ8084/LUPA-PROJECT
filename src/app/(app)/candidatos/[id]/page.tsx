@@ -59,7 +59,7 @@ export default async function CandidatoPage({
    */
   if (perfil === "limite_do_dia") {
     return (
-      <PageShell width="narrow">
+      <PageShell width="formulario">
         <BackLink href="/candidatos" label="Voltar para candidatos" />
         <Panel className="mt-4">
           <h1 className="font-bold text-lg">
@@ -99,7 +99,7 @@ export default async function CandidatoPage({
   }));
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="formulario">
       <BackLink
         href={ehDono ? "/perfil" : "/candidatos"}
         label={ehDono ? "Voltar para o perfil" : "Voltar para candidatos"}

@@ -112,6 +112,11 @@
   /* Raios */
   --radius-card: 18px;
   --radius-panel: 22px;
+  /*
+   * A largura do site no computador: cabeçalho, conteúdo e rodapé usam a mesma,
+   * e por isso as bordas se alinham (#525). Abaixo de `lg` ninguém chega a ela.
+   */
+  --container-site: 80rem;
 
   /* ----------------------------------------------------------------
      Movimento

@@ -12,7 +12,22 @@ import { cn } from "@/lib/utils";
  */
 export const ID_DO_CONTEUDO = "conteudo";
 
-/** Container padrão das páginas: largura máxima, respiro e espaço da bottom nav. */
+/**
+ * Container padrão das páginas: largura máxima, respiro e espaço da bottom nav.
+ *
+ * No computador (`lg`, 1024 px) as larguras sobem para a do cabeçalho
+ * (`max-w-site`), e as bordas do conteúdo alinham com as dele (#525). Abaixo
+ * disso nada muda: o celular e o tablet seguem com a coluna de sempre.
+ *
+ * - `narrow`: texto corrido e formulário curto (entrar, termos). Fica estreito
+ *   em qualquer tela, que é a medida certa para ler.
+ * - `default`: listas e painéis, que no computador aproveitam a largura toda.
+ * - `wide`: já nascia largo.
+ * - `colunas`: estreito no celular e largo no computador, para a página que
+ *   vira duas colunas a partir de `lg` (detalhe, perfil, painel).
+ * - `formulario`: estreito no celular e, no computador, um pouco mais largo
+ *   (`max-w-4xl`), para formulário e ficha, que não ganham com a largura toda.
+ */
 export function PageShell({
   children,
   className,
@@ -20,12 +35,14 @@ export function PageShell({
 }: {
   children: ReactNode;
   className?: string;
-  width?: "default" | "narrow" | "wide";
+  width?: "default" | "narrow" | "wide" | "colunas" | "formulario";
 }) {
   const max = {
     narrow: "max-w-2xl",
-    default: "max-w-4xl",
-    wide: "max-w-6xl",
+    default: "max-w-4xl lg:max-w-site",
+    wide: "max-w-6xl lg:max-w-site",
+    colunas: "max-w-2xl lg:max-w-site",
+    formulario: "max-w-2xl lg:max-w-4xl",
   }[width];
 
   return (
@@ -35,7 +52,7 @@ export function PageShell({
       // de Tab, que é o que o atributo faz.
       tabIndex={-1}
       className={cn(
-        "mx-auto w-full px-4 pt-6 pb-28 sm:px-6 md:pb-16",
+        "mx-auto w-full px-4 pt-6 pb-28 sm:px-6 md:pb-16 lg:px-8 lg:pt-8",
         max,
         className,
       )}

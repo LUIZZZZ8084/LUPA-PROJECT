@@ -25,6 +25,10 @@ import { cn } from "@/lib/utils";
  * 1 px e a área segura do aparelho. De `md` em diante a navegação some e a
  * barra vai ao pé da janela, como um cartão com 12 px de folga.
  *
+ * **No computador ela vira cartão de coluna (#525).** A partir de `lg` a página
+ * tem duas colunas e o invólucro da coluna da direita é quem fica preso sob o
+ * cabeçalho; a barra deixa de ser `sticky` e acompanha o invólucro.
+ *
  * **Quando a ação termina, ela solta.** Quem põe `data-acao-concluida` em
  * algum filho (a candidatura enviada) faz a barra virar um bloco comum: o
  * estado final não precisa acompanhar a tela.
@@ -44,6 +48,8 @@ export function BarraDeAcaoFixa({
         "bottom-[calc(var(--barra-inferior)+1px+env(safe-area-inset-bottom))]",
         "sm:-mx-6 sm:px-6",
         "md:bottom-3 md:mx-0 md:rounded-2xl md:border md:px-4",
+        // No computador (#525) quem prende é a coluna, e a barra é só o cartão.
+        "lg:static lg:mt-0 lg:p-4",
         "has-[[data-acao-concluida]]:static",
         className,
       )}

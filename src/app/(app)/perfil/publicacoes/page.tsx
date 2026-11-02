@@ -32,7 +32,7 @@ export default async function PublicacoesPage() {
   ]);
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="formulario">
       <BackLink href="/perfil" label="Voltar ao perfil" />
       {/*
         Esta tela é a única que traz de volta um trabalho tirado do perfil,

@@ -146,7 +146,7 @@ export default async function ProviderPage({
     .slice(0, 2);
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="colunas">
       <BackLink href="/servicos" label="Voltar para serviços" />
 
       {/*
@@ -175,174 +175,185 @@ export default async function ProviderPage({
         </Panel>
       )}
 
-      <Panel>
-        <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
-          <div className="relative">
-            <Avatar
-              name={provider.full_name}
-              src={provider.avatar_url}
-              size="xl"
-            />
-            {provider.doc_verified && (
-              <span className="absolute right-0 bottom-0 rounded-full bg-panel p-0.5">
-                <VerifiedMark size={22} />
-              </span>
-            )}
-          </div>
+      {/*
+        No computador (#525) o perfil vira duas colunas: perfil, avaliar e
+        avaliações à esquerda, e à direita o contato, preso embaixo do
+        cabeçalho. Os invólucros são `contents` no celular e no tablet: não
+        existem como caixa, e a barra fixa (#479) segue contida pelo `<main>`.
+      */}
+      <div className="contents lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-x-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="contents lg:block">
+          <Panel>
+            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+              <div className="relative">
+                <Avatar
+                  name={provider.full_name}
+                  src={provider.avatar_url}
+                  size="xl"
+                />
+                {provider.doc_verified && (
+                  <span className="absolute right-0 bottom-0 rounded-full bg-panel p-0.5">
+                    <VerifiedMark size={22} />
+                  </span>
+                )}
+              </div>
 
-          <div className="mt-4 min-w-0 flex-1 sm:mt-0 sm:ml-5">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {provider.full_name}
-            </h1>
-            <p className="mt-1 text-sm font-medium text-servicos">
-              {provider.category.name}
-            </p>
-            <div className="mt-2.5 flex justify-center sm:justify-start">
-              <RatingInline
-                rating={provider.avg_rating}
-                count={provider.review_count}
-              />
-            </div>
-            <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted sm:justify-start">
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin size={13} />
-                {provider.city}
-              </span>
-              {provider.years_experience && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Briefcase size={13} />
-                  {provider.years_experience} anos de experiência
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
-                <Banknote size={13} className="text-servicos" />
-                {formatStartingPrice(provider.starting_price)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <VerificationRow
-          className="mt-5 justify-center sm:justify-start"
-          phoneVerified={provider.phone_verified}
-          docVerified={provider.doc_verified}
-        />
-
-        {/*
-         * Sem bairro, atendido ou de moradia (#321): não existe lista de
-         * bairro para o país, e o que a pessoa escrevia ali não servia a
-         * filtro nenhum. A localização é a cidade.
-         */}
-        <AbasDoPerfil
-          trabalhos={trabalhos.map((t) => ({
-            id: t.id,
-            titulo: t.titulo,
-            corpo: t.corpo,
-            imagemUrl: t.imagemUrl,
-          }))}
-          vazio={
-            ehDono
-              ? "Você ainda não publicou nenhum trabalho. Uma foto do que você já fez vale mais que qualquer descrição."
-              : "Este profissional ainda não publicou trabalhos."
-          }
-          acoesDoDono={
-            ehDono ? (
-              <GerenciarTrabalhos
-                restantes={resumoTrabalhos.restantes}
-                limite={resumoTrabalhos.limite}
-                publicar={publicarComFotoComEstado}
-              />
-            ) : null
-          }
-          /*
-           * Editar e remover vivem dentro da foto ampliada. A lista de
-           * títulos abaixo da grade desenhava o mesmo item duas vezes, e a
-           * segunda sem foto — decisão do Luiz em 03/09/2026, olhando para
-           * o resultado na tela.
-           */
-          dono={
-            ehDono
-              ? { editar: editarComFotoComEstado, excluir: arquivarPelaAba }
-              : undefined
-          }
-          /*
-           * Denunciar a foto (#452): quem olha o perfil de outra pessoa e
-           * pode denunciar. O dono tira a própria foto; o admin decide.
-           */
-          denunciar={
-            !ehDono && Boolean(sessao && pode(sessao.papel, "denuncia:criar"))
-          }
-          sobre={
-            <>
-              {provider.description && (
-                <div className="pt-5">
-                  <p className="text-muted text-sm leading-relaxed">
-                    {provider.description}
-                  </p>
-                </div>
-              )}
-
-              {(provider.instagram || provider.facebook) && (
-                <div className="mt-5 border-t border-line pt-5">
-                  <SocialLinks
-                    instagram={provider.instagram}
-                    facebook={provider.facebook}
+              <div className="mt-4 min-w-0 flex-1 sm:mt-0 sm:ml-5">
+                <h1 className="text-2xl font-bold tracking-tight">
+                  {provider.full_name}
+                </h1>
+                <p className="mt-1 text-sm font-medium text-servicos">
+                  {provider.category.name}
+                </p>
+                <div className="mt-2.5 flex justify-center sm:justify-start">
+                  <RatingInline
+                    rating={provider.avg_rating}
+                    count={provider.review_count}
                   />
                 </div>
-              )}
-            </>
-          }
-        />
-      </Panel>
-
-      {podeAvaliar && (
-        <FormularioDeAvaliacao
-          prestadorId={provider.profile_id}
-          nomeDoPrestador={provider.full_name}
-        />
-      )}
-
-      {/*
-       * A confirmação vem do servidor, não do estado do formulário.
-       *
-       * A action revalida esta rota — a nota média muda —, e a revalidação
-       * desmonta o formulário junto com o "enviado" que ele mostrava. Quem
-       * acabava de avaliar via o formulário simplesmente sumir, sem
-       * confirmação nenhuma. É a mesma armadilha do 404 depois de virar
-       * prestador: estado de cliente não sobrevive à revalidação da
-       * própria rota.
-       */}
-      {jaAvaliouEste && (
-        <Panel className="mt-5 border-vagas/30 bg-vagas/8">
-          <div className="flex items-start gap-3">
-            <Check size={20} className="mt-0.5 flex-none text-vagas" />
-            <div>
-              <h2 className="font-bold text-base">Você já avaliou</h2>
-              <p className="mt-1.5 text-muted text-sm leading-relaxed">
-                Sua avaliação está na lista abaixo. Cada pessoa avalia uma vez —
-                é o que mantém a nota honesta.
-              </p>
+                <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted sm:justify-start">
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin size={13} />
+                    {provider.city}
+                  </span>
+                  {provider.years_experience && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Briefcase size={13} />
+                      {provider.years_experience} anos de experiência
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
+                    <Banknote size={13} className="text-servicos" />
+                    {formatStartingPrice(provider.starting_price)}
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-        </Panel>
-      )}
 
-      {/* Avaliações — carregado sob demanda, ver ReviewsPanel */}
-      <ReviewsPanel
-        reviews={reviews}
-        avgRating={provider.avg_rating}
-        reviewCount={provider.review_count}
-        breakdown={breakdown}
-        denunciaDe={
-          // O próprio prestador também denuncia: avaliação falsa contra ele
-          // é o caso mais provável (#435).
-          sessao && pode(sessao.papel, "denuncia:criar")
-            ? provider.profile_id
-            : undefined
-        }
-      />
+            <VerificationRow
+              className="mt-5 justify-center sm:justify-start"
+              phoneVerified={provider.phone_verified}
+              docVerified={provider.doc_verified}
+            />
 
-      {/*
+            {/*
+             * Sem bairro, atendido ou de moradia (#321): não existe lista de
+             * bairro para o país, e o que a pessoa escrevia ali não servia a
+             * filtro nenhum. A localização é a cidade.
+             */}
+            <AbasDoPerfil
+              trabalhos={trabalhos.map((t) => ({
+                id: t.id,
+                titulo: t.titulo,
+                corpo: t.corpo,
+                imagemUrl: t.imagemUrl,
+              }))}
+              vazio={
+                ehDono
+                  ? "Você ainda não publicou nenhum trabalho. Uma foto do que você já fez vale mais que qualquer descrição."
+                  : "Este profissional ainda não publicou trabalhos."
+              }
+              acoesDoDono={
+                ehDono ? (
+                  <GerenciarTrabalhos
+                    restantes={resumoTrabalhos.restantes}
+                    limite={resumoTrabalhos.limite}
+                    publicar={publicarComFotoComEstado}
+                  />
+                ) : null
+              }
+              /*
+               * Editar e remover vivem dentro da foto ampliada. A lista de
+               * títulos abaixo da grade desenhava o mesmo item duas vezes, e a
+               * segunda sem foto — decisão do Luiz em 03/09/2026, olhando para
+               * o resultado na tela.
+               */
+              dono={
+                ehDono
+                  ? { editar: editarComFotoComEstado, excluir: arquivarPelaAba }
+                  : undefined
+              }
+              /*
+               * Denunciar a foto (#452): quem olha o perfil de outra pessoa e
+               * pode denunciar. O dono tira a própria foto; o admin decide.
+               */
+              denunciar={
+                !ehDono &&
+                Boolean(sessao && pode(sessao.papel, "denuncia:criar"))
+              }
+              sobre={
+                <>
+                  {provider.description && (
+                    <div className="pt-5">
+                      <p className="text-muted text-sm leading-relaxed">
+                        {provider.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {(provider.instagram || provider.facebook) && (
+                    <div className="mt-5 border-t border-line pt-5">
+                      <SocialLinks
+                        instagram={provider.instagram}
+                        facebook={provider.facebook}
+                      />
+                    </div>
+                  )}
+                </>
+              }
+            />
+          </Panel>
+
+          {podeAvaliar && (
+            <FormularioDeAvaliacao
+              prestadorId={provider.profile_id}
+              nomeDoPrestador={provider.full_name}
+            />
+          )}
+
+          {/*
+           * A confirmação vem do servidor, não do estado do formulário.
+           *
+           * A action revalida esta rota — a nota média muda —, e a revalidação
+           * desmonta o formulário junto com o "enviado" que ele mostrava. Quem
+           * acabava de avaliar via o formulário simplesmente sumir, sem
+           * confirmação nenhuma. É a mesma armadilha do 404 depois de virar
+           * prestador: estado de cliente não sobrevive à revalidação da
+           * própria rota.
+           */}
+          {jaAvaliouEste && (
+            <Panel className="mt-5 border-vagas/30 bg-vagas/8">
+              <div className="flex items-start gap-3">
+                <Check size={20} className="mt-0.5 flex-none text-vagas" />
+                <div>
+                  <h2 className="font-bold text-base">Você já avaliou</h2>
+                  <p className="mt-1.5 text-muted text-sm leading-relaxed">
+                    Sua avaliação está na lista abaixo. Cada pessoa avalia uma
+                    vez — é o que mantém a nota honesta.
+                  </p>
+                </div>
+              </div>
+            </Panel>
+          )}
+
+          {/* Avaliações — carregado sob demanda, ver ReviewsPanel */}
+          <ReviewsPanel
+            reviews={reviews}
+            avgRating={provider.avg_rating}
+            reviewCount={provider.review_count}
+            breakdown={breakdown}
+            denunciaDe={
+              // O próprio prestador também denuncia: avaliação falsa contra ele
+              // é o caso mais provável (#435).
+              sessao && pode(sessao.papel, "denuncia:criar")
+                ? provider.profile_id
+                : undefined
+            }
+          />
+        </div>
+
+        <div className="contents lg:sticky lg:top-24 lg:block">
+          {/*
         O contato fica na barra fixa (#479). No fim do painel ele ficava depois
         da biografia e das fotos, fora da primeira tela. A barra vem depois das
         avaliações, e não logo abaixo do painel: o lugar natural dela é onde
@@ -350,26 +361,28 @@ export default async function ProviderPage({
         então ela acompanha o perfil inteiro. A nota vem logo abaixo e segue a
         barra quando ela assenta.
       */}
-      <BarraDeAcaoFixa>
-        <WhatsAppButton
-          phone={provider.phone}
-          providerName={provider.full_name}
-          context={provider.category.name}
-          size="lg"
-          block
-        />
-      </BarraDeAcaoFixa>
-      <p className="mt-2 text-center text-xs text-faint">
-        A conversa acontece direto no seu WhatsApp. A Lupa não cobra nada de
-        quem contrata.
-      </p>
+          <BarraDeAcaoFixa>
+            <WhatsAppButton
+              phone={provider.phone}
+              providerName={provider.full_name}
+              context={provider.category.name}
+              size="lg"
+              block
+            />
+          </BarraDeAcaoFixa>
+          <p className="mt-2 text-center text-xs text-faint">
+            A conversa acontece direto no seu WhatsApp. A Lupa não cobra nada de
+            quem contrata.
+          </p>
+        </div>
+      </div>
 
       {similar.length > 0 && (
         <section className="mt-8">
           <h2 className="mb-3 text-base font-bold">
             Outros {provider.category.name.toLowerCase()}s em {provider.city}
           </h2>
-          <div className="space-y-2.5">
+          <div className="grid-cols-1 space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-2.5 lg:space-y-0 xl:grid-cols-3">
             {similar.map((p) => (
               <ProviderCard key={p.profile_id} provider={p} />
             ))}

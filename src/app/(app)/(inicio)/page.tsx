@@ -115,12 +115,12 @@ export default async function HomePage() {
       />
 
       {/*
-       * A largura é a do cabeçalho (`max-w-6xl`) desde a #443. Era
+       * A largura é a do cabeçalho (`max-w-site`) desde a #443. Era
        * `max-w-4xl`, e no computador a home ficava mais estreita que o
        * cabeçalho logo acima dela: logo e menu não alinhavam com nada.
        */}
       <section className="aurora border-b border-line">
-        <div className="mx-auto max-w-6xl px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
+        <div className="mx-auto max-w-site px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12 lg:px-8">
           {/*
            * O banner é o hero inteiro no computador (#465): selo, título,
            * busca e números numa coluna dentro dele, e a foto à direita. No
@@ -365,7 +365,7 @@ export default async function HomePage() {
          * é o fantasia do registro na Receita (#235); "Palu Soluções
          * Digitais" era o provisório, de antes de a empresa existir.
          */}
-        <p className="mt-8 text-center text-xs text-faint">
+        <p className="mt-8 text-center text-xs text-faint lg:hidden">
           Lupa · © {new Date().getFullYear()} PALU TECH. Todos os direitos
           reservados.
         </p>

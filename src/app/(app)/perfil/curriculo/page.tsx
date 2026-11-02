@@ -32,7 +32,7 @@ export default async function GeradorDeCurriculoPage() {
   const preco = formatPrecoBRL(PRECO_CENTAVOS.curriculo_pdf / 100);
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="formulario">
       <BackLink href="/perfil" label="Voltar para o perfil" />
       <PageTitle
         title="Gerador de currículo"

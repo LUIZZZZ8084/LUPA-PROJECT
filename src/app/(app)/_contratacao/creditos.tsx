@@ -79,7 +79,7 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
     : null;
 
   return (
-    <PageShell width="narrow">
+    <PageShell width="colunas">
       {/*
         Página à parte, fora das abas (#515): o caminho é de volta ao painel,
         como era antes delas.
