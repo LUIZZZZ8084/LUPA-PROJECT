@@ -99,6 +99,68 @@ test.describe("listas", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     expect(await colunasDaLista(page)).toBe(2);
   });
+
+  // O topo empilhado do celular gastava quatro linhas antes do primeiro
+  // resultado (#527).
+  async function topoDaLista(page: Page) {
+    await page.goto("/vagas");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    return {
+      titulo: await esquerdaDe(page, "main h1"),
+      troca: await esquerdaDe(page, 'nav[aria-label="Tipo de busca"]'),
+      busca: await esquerdaDe(page, 'main input[type="search"]'),
+      filtro: await esquerdaDe(page, "main form select"),
+    };
+  }
+  const meio = (c: { y: number; height: number }) => c.y + c.height / 2;
+
+  test("a 1280 px a troca fica ao lado do título e os filtros ao lado da busca", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: ALTURA });
+    const { titulo, troca, busca, filtro } = await topoDaLista(page);
+    expect(troca.x).toBeGreaterThan(titulo.x + titulo.width);
+    expect(troca.y + troca.height).toBeLessThanOrEqual(busca.y);
+    expect(filtro.x).toBeGreaterThan(busca.x + busca.width);
+    expect(Math.abs(meio(filtro) - meio(busca))).toBeLessThan(4);
+  });
+
+  test("a 820 px (tablet) o topo continua empilhado", async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: ALTURA });
+    const { titulo, troca, busca, filtro } = await topoDaLista(page);
+    expect(troca.y).toBeGreaterThan(titulo.y + titulo.height);
+    expect(filtro.y).toBeGreaterThan(busca.y + busca.height);
+  });
+});
+
+test.describe("telas da empresa", () => {
+  test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
+
+  // Linhas da largura toda deixavam metade da tela vazia (#527).
+  async function colunasDe(page: Page, rota: string) {
+    await page.goto(rota);
+    const itens = page.locator("main ul > li");
+    await expect(itens.first()).toBeVisible();
+    return itens.evaluateAll(
+      (lis) =>
+        new Set(lis.map((li) => Math.round(li.getBoundingClientRect().left)))
+          .size,
+    );
+  }
+
+  test("a 1440 px as vagas publicadas ficam em duas colunas e os talentos em três", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: ALTURA });
+    expect(await colunasDe(page, "/empresa/vagas")).toBe(2);
+    expect(await colunasDe(page, "/empresa/talentos")).toBe(3);
+  });
+
+  test("a 820 px (tablet) as duas continuam uma lista só", async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: ALTURA });
+    expect(await colunasDe(page, "/empresa/vagas")).toBe(1);
+    expect(await colunasDe(page, "/empresa/talentos")).toBe(1);
+  });
 });
 
 test.describe("vaga em duas colunas", () => {
