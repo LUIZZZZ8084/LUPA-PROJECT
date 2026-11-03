@@ -8,9 +8,18 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 02/11/2026.**
+**Última atualização: 03/11/2026.**
 
 ## Concluído
+
+Em 03/11/2026:
+
+- Currículo em PDF num modelo profissional de uma coluna, que recrutador e
+  sistema de triagem leem sem tropeçar, agora com as experiências
+  profissionais — que antes ficavam de fora. A tela do gerador avisa o que
+  falta no perfil antes do download, e a área de testes do admin mostra o
+  modelo com uma pessoa de exemplo —
+  [#531](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/531)
 
 Em 02/11/2026:
 

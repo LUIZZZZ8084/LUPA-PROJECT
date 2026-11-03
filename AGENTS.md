@@ -265,6 +265,7 @@ Preços, planos de vaga, mensalidade e teste grátis do prestador, estorno, webh
 - O caixa: todo valor que entra é registrado, e o que sai também (#179)
 - Sem carência: cartão logo depois do cadastro, com teste grátis (#170)
 - Gerador de currículo pago, sem Storage nenhum
+- O modelo do currículo em PDF (#531)
 - O plano vira o último passo do cadastro, não uma descoberta depois
 
 ### [Decisões de produto por papel](docs/decisoes/produto-por-papel.md)
