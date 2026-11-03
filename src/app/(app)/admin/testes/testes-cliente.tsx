@@ -9,7 +9,7 @@ import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL } from "@/lib/format";
 import type { DireitoDePublicar } from "@/server/carteiras/servico";
 import type { TipoPagamento } from "@/server/pagamentos/tipos";
-import { testarCompraAction } from "../actions";
+import { previaDoCurriculoAction, testarCompraAction } from "../actions";
 
 type Testavel =
   | "curriculo_pdf"
@@ -70,7 +70,10 @@ const data = (iso: string) =>
  * O download começa sozinho, porque é o que o candidato vê ao clicar em
  * "Baixar". O link fica na tela para baixar de novo sem gerar outra vez.
  */
-function arquivoDoPdf(base64: string): { url: string | null; bytes: number } {
+function arquivoDoPdf(
+  base64: string,
+  nome = "curriculo-teste.pdf",
+): { url: string | null; bytes: number } {
   const binario = atob(base64);
   const bytes = new Uint8Array(binario.length);
   for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
@@ -85,7 +88,7 @@ function arquivoDoPdf(base64: string): { url: string | null; bytes: number } {
   );
   const a = document.createElement("a");
   a.href = url;
-  a.download = "curriculo-teste.pdf";
+  a.download = nome;
   a.click();
   return { url, bytes: bytes.length };
 }
@@ -131,6 +134,8 @@ export function TestesDeCompra({
           </li>
         ))}
       </ul>
+
+      <PreviaDoModelo />
     </div>
   );
 }
@@ -281,5 +286,91 @@ function MostrarResultado({ resultado }: { resultado: Resultado }) {
         Ver na área de contratação
       </Link>
     </div>
+  );
+}
+
+/**
+ * O modelo do currículo cheio, com uma pessoa de exemplo (#531).
+ *
+ * A compra testada gera o PDF da sua conta, e o perfil de candidato do
+ * admin está vazio: sai o nome e o contato. Isto mostra o modelo como um
+ * candidato com o perfil preenchido o recebe. Não libera nem grava nada.
+ */
+function PreviaDoModelo() {
+  const [resultado, setResultado] = useState<Resultado | null>(null);
+  const [pendente, iniciar] = useTransition();
+
+  function ver() {
+    iniciar(async () => {
+      const r = await previaDoCurriculoAction({});
+      if (!r.ok) {
+        setResultado({ tipo: "erro", mensagem: r.mensagem });
+        return;
+      }
+      const { url, bytes } = arquivoDoPdf(
+        r.dados.pdfBase64,
+        "curriculo-modelo.pdf",
+      );
+      setResultado({
+        tipo: "pdf",
+        url,
+        tamanhoKb: Math.max(1, Math.round(bytes / 1024)),
+      });
+    });
+  }
+
+  return (
+    <Panel>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <FileText
+            size={18}
+            className="mt-0.5 flex-none text-empresas"
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <h2 className="font-semibold text-sm">Modelo do currículo</h2>
+            <p className="mt-1 text-muted text-sm">
+              Baixa o PDF com uma pessoa de exemplo, para ver o modelo cheio.
+              Não libera nem grava nada.
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start"
+          disabled={pendente}
+          onClick={ver}
+        >
+          {pendente ? "Montando…" : "Ver modelo com dados de exemplo"}
+        </Button>
+      </div>
+
+      {resultado?.tipo === "erro" && (
+        <p role="alert" className="mt-3 text-danger text-sm">
+          {resultado.mensagem}
+        </p>
+      )}
+      {resultado?.tipo === "pdf" && (
+        <div
+          role="status"
+          className="mt-3 rounded-xl border border-line bg-panel-2 p-3 text-sm"
+        >
+          <p>Modelo gerado ({resultado.tamanhoKb} KB).</p>
+          {resultado.url && (
+            <a
+              href={resultado.url}
+              download="curriculo-modelo.pdf"
+              className="mt-2 inline-flex items-center gap-1.5 font-medium text-empresas underline-offset-2 hover:underline"
+            >
+              <Download size={14} aria-hidden />
+              Baixar de novo
+            </a>
+          )}
+        </div>
+      )}
+    </Panel>
   );
 }

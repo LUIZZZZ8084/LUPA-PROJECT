@@ -40,6 +40,7 @@ import {
 } from "@/server/pagamentos";
 import { RepositorioMemoria, usarRepositorio } from "@/server/repositories";
 import {
+  previaDoCurriculo,
   testarCompraDeVaga,
   testarCompraDoCurriculo,
 } from "@/server/testes-de-compra/servico";
@@ -175,5 +176,19 @@ describe("testes de compra do admin", () => {
 
     await expect(testarCompraDeVaga(null, "empresa_mensal")).rejects.toThrow();
     expect(pagamentos.todos()).toEqual([]);
+  });
+
+  it("a prévia do modelo monta o PDF de exemplo sem liberar nem gravar nada", async () => {
+    const admin = await sessao("admin");
+
+    const pdf = await previaDoCurriculo(admin);
+
+    expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(await usuarios.perfilCandidato(admin.usuarioId)).toBeNull();
+    expect(pagamentos.todos()).toEqual([]);
+
+    const candidato = await sessao("candidato_clt");
+    const erro = await previaDoCurriculo(candidato).catch((e: unknown) => e);
+    expect(ehAppError(erro) && erro.codigo).toBe("sem_permissao");
   });
 });
