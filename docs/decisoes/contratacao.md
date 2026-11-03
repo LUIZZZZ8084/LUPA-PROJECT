@@ -479,6 +479,38 @@ frase diz o que fazer — plano cheio e saldo acabado são frases diferentes,
 porque a saída é diferente — e o link leva aos planos. Nos outros, o
 contador só informa: o botão de publicar já está no topo do painel.
 
+## O candidato chama a empresa, e o perfil dele já traz o funil (#533)
+
+Pedido do Luiz em 03/11/2026: uma mensagem pronta para o candidato chamar a
+empresa no WhatsApp, com a vaga, a declaração de interesse e o link do perfil,
+e a empresa conseguir, por esse link, olhar a pessoa e movê-la no funil.
+
+**O botão é de quem já se candidatou.** Está em "Minhas candidaturas", um por
+candidatura (`linksParaChamarAEmpresa`). Decisão do Luiz entre as duas
+opções: deixar chamar sem candidatura pediria um link assinado que libera
+currículo a quem nunca o entregou, e o banco recusa candidatura sem as
+respostas de triagem, então a empresa nem conseguiria adicionar a pessoa ao
+funil em vaga com perguntas. O telefone da empresa sai só pelo caminho da
+candidatura **da própria sessão**; a vaga pública não mostra contato (#490), e
+um "telefone da empresa da vaga X" por parâmetro seria a porta dos fundos. A
+mensagem (`mensagemParaEmpresa`) abre escrita no WhatsApp e a pessoa edita
+antes de enviar, como a da empresa (#493).
+
+**Candidatar-se é o consentimento para esta empresa ver o perfil.**
+`/candidatos/[id]` só abria para quem ligou "quero que empresas me
+encontrem", e o link do perfil de quem apenas se candidatou respondia 404.
+Agora a empresa dona da vaga abre o perfil de quem se candidatou a ela, tenha
+a pessoa ligado a busca ou não. Esse ramo não passa pela conferência de CNPJ
+nem pelo teto de perfis do dia (#433): os dois seguram a busca por quem nunca
+falou com a empresa, e a candidatura já está no painel dela. Outra empresa
+continua recebendo 404.
+
+**O perfil traz as opções de funil.** As candidaturas da pessoa às vagas da
+empresa aparecem com o mesmo seletor de estágio do funil e o atalho para a
+ficha com o currículo. O botão de WhatsApp do perfil, para quem se candidatou,
+usa a mensagem de candidatura em vez da de orçamento do prestador, que não
+fazia sentido ali.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a

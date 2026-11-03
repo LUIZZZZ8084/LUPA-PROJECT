@@ -51,8 +51,9 @@ export function ApplyButton({
           Candidatura enviada
         </Button>
         <p className="text-center text-xs text-muted">
-          A empresa recebe seu perfil e currículo. Você acompanha o status em
-          &ldquo;Minhas candidaturas&rdquo;.
+          A empresa recebe seu perfil e currículo. Em &ldquo;Minhas
+          candidaturas&rdquo; você acompanha o status e chama a empresa no
+          WhatsApp.
         </p>
       </div>
     );
