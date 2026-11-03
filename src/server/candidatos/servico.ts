@@ -8,6 +8,7 @@ import {
 } from "@/lib/data";
 import { grauDeProximidade, type Origem } from "@/lib/proximidade";
 import { formaCanonica } from "@/lib/skills";
+import type { ApplicationStatus } from "@/lib/types";
 import { consumirOrcamento } from "../auth/rate-limit";
 import { type Autenticado, pode } from "../auth/rbac";
 import { AppError, erros } from "../errors";
@@ -144,6 +145,15 @@ export interface PerfilDeCandidato {
    * que impede a tela de oferecer o que o segundo não autorizou.
    */
   candidaturaId: string | null;
+  /**
+   * Todas as candidaturas desta pessoa às vagas da empresa que olha, da mais
+   * nova para a mais antiga (#533).
+   *
+   * É o que liga as opções de funil na página do candidato: a empresa move
+   * cada uma de estágio sem ir até a ficha. Vazia para quem só está
+   * disponível, pelo mesmo motivo de `candidaturaId`.
+   */
+  candidaturas: { id: string; vaga: string; status: ApplicationStatus }[];
 }
 
 /**
@@ -231,6 +241,56 @@ export async function perfilDoCandidato(
       ehDono: true,
       visivelParaEmpresas: perfil?.visivelParaEmpresas ?? false,
       candidaturaId: null,
+      candidaturas: [],
+    };
+  }
+
+  /*
+   * A candidatura é procurada entre as *desta* empresa. Buscar por
+   * candidato e conferir o dono depois daria o mesmo resultado hoje e
+   * deixaria a porta aberta para alguém esquecer a segunda metade — o
+   * mesmo raciocínio da ficha em `candidaturas/ficha.ts`.
+   */
+  const daEmpresa = pode(sessao.papel, "vaga:ver_candidaturas_proprias")
+    ? await getCompanyApplications(empresaDoPainel(sessao.usuarioId))
+    : [];
+  const dela = daEmpresa.filter((c) => c.candidate_id === id);
+  const candidaturaId = dela[0]?.id ?? null;
+
+  /*
+   * Quem se candidatou a uma vaga desta empresa abre o perfil sem ter ligado
+   * "quero que empresas me encontrem" (#533). São consentimentos diferentes:
+   * aquele é para ser achado por quem nunca se candidatou; este é o ato de
+   * se candidatar, que já entrega contato e currículo a esta empresa — e é a
+   * mensagem pronta do WhatsApp que manda a empresa para cá. Sem isto, o
+   * link do perfil mandado por quem não ligou a opção respondia 404.
+   *
+   * Também não passa pela conferência de CNPJ nem pelo teto do dia: as duas
+   * seguram a busca por quem nunca falou com a empresa, e a candidatura já
+   * está no painel dela de qualquer jeito.
+   */
+  if (dela.length > 0) {
+    const { candidate: c } = dela[0];
+    return {
+      candidato: {
+        id,
+        full_name: c.full_name,
+        avatar_url: c.avatar_url,
+        city: c.city ?? "",
+        email: c.email,
+        phone: c.phone,
+        desired_area: c.desired_area,
+        availability: c.availability,
+        skills: c.skills,
+      },
+      ehDono: false,
+      visivelParaEmpresas: true,
+      candidaturaId,
+      candidaturas: dela.map((a) => ({
+        id: a.id,
+        vaga: a.job_title,
+        status: a.status,
+      })),
     };
   }
 
@@ -243,23 +303,10 @@ export async function perfilDoCandidato(
   if (!candidato) return null;
 
   /*
-   * A candidatura é procurada entre as *desta* empresa. Buscar por
-   * candidato e conferir o dono depois daria o mesmo resultado hoje e
-   * deixaria a porta aberta para alguém esquecer a segunda metade — o
-   * mesmo raciocínio da ficha em `candidaturas/ficha.ts`.
+   * O teto do dia (#433): conta o contato de quem não se candidatou a esta
+   * empresa, que é tudo o que sobrou depois do ramo de cima.
    */
-  const daEmpresa = await getCompanyApplications(
-    empresaDoPainel(sessao.usuarioId),
-  );
-  const candidaturaId =
-    daEmpresa.find((c) => c.candidate_id === id)?.id ?? null;
-
-  /*
-   * O teto do dia (#433). Conta só o contato de quem não se candidatou a
-   * esta empresa: quem se candidatou entregou o contato com a candidatura,
-   * e abrir o perfil dele é trabalho de recrutamento, não colheita.
-   */
-  if (!candidaturaId && sessao.papel === "empresa") {
+  if (sessao.papel === "empresa") {
     try {
       await consumirOrcamento(
         `acao:candidato.ver_perfil:u:${sessao.usuarioId}`,
@@ -278,7 +325,8 @@ export async function perfilDoCandidato(
     ehDono: false,
     // Quem chegou até aqui está na lista de quem consentiu, por definição.
     visivelParaEmpresas: true,
-    candidaturaId,
+    candidaturaId: null,
+    candidaturas: [],
   };
 }
 

@@ -362,7 +362,15 @@ describe("perfil de um candidato", () => {
    */
   it("com candidatura minha, o caminho para a ficha aparece", async () => {
     disponiveis = [pessoa("a")];
-    candidaturas["empresa-1"] = [{ id: "cand-abc", candidate_id: "a" }];
+    candidaturas["empresa-1"] = [
+      {
+        id: "cand-abc",
+        candidate_id: "a",
+        job_title: "Operador",
+        status: "enviada",
+        candidate: pessoa("a"),
+      },
+    ];
 
     const p = await perfilDoCandidato(empresa, "a");
     expect(p?.candidaturaId).toBe("cand-abc");
@@ -373,6 +381,76 @@ describe("perfil de um candidato", () => {
    * feita entre as candidaturas desta empresa, e não por candidato com
    * conferência de dono depois — o mesmo raciocínio da ficha.
    */
+  /**
+   * Quem se candidatou a uma vaga desta empresa abre o perfil sem ter ligado
+   * "quero que empresas me encontrem" (#533): se candidatar já entrega
+   * contato e currículo a ela, e a mensagem pronta do WhatsApp manda a
+   * empresa para este link.
+   */
+  describe("quem se candidatou e não consentiu na busca", () => {
+    const candidatura = (
+      id: string,
+      candidato: string,
+      status = "enviada",
+    ) => ({
+      id,
+      candidate_id: candidato,
+      job_title: `Vaga ${id}`,
+      status,
+      candidate: {
+        full_name: `Pessoa ${candidato}`,
+        avatar_url: null,
+        city: "Sorriso - MT",
+        email: "a@teste.lupa",
+        phone: "66900000009",
+        desired_area: null,
+        availability: null,
+        skills: ["CNH D"],
+      },
+    });
+
+    it("a empresa dona da vaga abre o perfil, com as candidaturas e o estágio", async () => {
+      disponiveis = [];
+      candidaturas["empresa-1"] = [
+        candidatura("c2", "a", "em_analise"),
+        candidatura("c1", "a"),
+      ];
+
+      const p = await perfilDoCandidato(empresa, "a");
+
+      expect(p?.candidato.full_name).toBe("Pessoa a");
+      expect(p?.candidato.phone).toBe("66900000009");
+      expect(p?.candidaturaId).toBe("c2");
+      expect(p?.candidaturas).toEqual([
+        { id: "c2", vaga: "Vaga c2", status: "em_analise" },
+        { id: "c1", vaga: "Vaga c1", status: "enviada" },
+      ]);
+    });
+
+    it("não gasta o teto do dia nem pede o CNPJ conferido", async () => {
+      disponiveis = [];
+      perfilDaEmpresa = { usuarioId: "empresa-1", cnpj: null };
+      candidaturas["empresa-1"] = [candidatura("c1", "a")];
+
+      expect(await perfilDoCandidato(empresa, "a")).not.toBeNull();
+      expect(teto.chaves).toEqual([]);
+    });
+
+    it("outra empresa continua recebendo 404", async () => {
+      disponiveis = [];
+      candidaturas["outra-empresa"] = [candidatura("c1", "a")];
+
+      expect(await perfilDoCandidato(empresa, "a")).toBeNull();
+    });
+
+    it("a candidatura de outra pessoa não abre o perfil desta", async () => {
+      disponiveis = [];
+      candidaturas["empresa-1"] = [candidatura("c1", "b")];
+
+      expect(await perfilDoCandidato(empresa, "a")).toBeNull();
+    });
+  });
+
   it("candidatura em outra empresa não vale como autorização", async () => {
     disponiveis = [pessoa("a")];
     candidaturas["outra-empresa"] = [{ id: "cand-xyz", candidate_id: "a" }];
@@ -522,7 +600,15 @@ describe("teto de perfis por dia", () => {
   /** Candidatura é outro consentimento, e continua chegando como sempre. */
   it("quem se candidatou à empresa não conta no teto", async () => {
     disponiveis = [pessoa("a")];
-    candidaturas["empresa-1"] = [{ id: "cand-abc", candidate_id: "a" }];
+    candidaturas["empresa-1"] = [
+      {
+        id: "cand-abc",
+        candidate_id: "a",
+        job_title: "Operador",
+        status: "enviada",
+        candidate: pessoa("a"),
+      },
+    ];
     teto.recusar = true;
 
     const p = await perfilDoCandidato(empresa, "a");
