@@ -21,6 +21,10 @@ import {
 const NB = " ";
 
 describe("formatSalaryRange", () => {
+  it("piso e teto iguais viram um valor só", () => {
+    expect(formatSalaryRange(1800, 1800)).toBe(`R$${NB}1.800`);
+  });
+
   it("mostra a faixa quando há piso e teto", () => {
     expect(formatSalaryRange(3200, 4200)).toBe(`R$${NB}3.200 – R$${NB}4.200`);
   });

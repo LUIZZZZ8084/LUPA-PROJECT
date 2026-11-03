@@ -157,7 +157,11 @@ test.describe("virar prestador", () => {
     await expect(
       page.getByRole("button", { name: /candidatar-se/i }),
     ).toHaveCount(0);
-    await expect(page.getByText(/não se candidatam a vagas/i)).toBeVisible();
+    // Em demonstração toda conta de contratante é dona das vagas de exemplo
+    // (`empresaDoPainel`), e o dono lê que a vaga é dele (#535).
+    await expect(
+      page.getByText(/não se candidatam a vagas|vaga da sua empresa/i),
+    ).toBeVisible();
   });
 
   /**
