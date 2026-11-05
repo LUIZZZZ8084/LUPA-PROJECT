@@ -40,34 +40,93 @@ const DEU_ERRADO: Record<Rota, readonly string[]> = {
   pagamentos: ["rejeitado", "cancelado"],
 };
 
-/**
- * O que dizer e para onde mandar depois de aprovado — por padrão, o
- * mesmo texto genérico de sempre (vaga, para `pagamentos`; assinatura,
- * para `assinaturas`). Só ganha entrada aqui o tipo cujo destino natural
- * não é nenhum dos dois — hoje, só `curriculo_pdf` (#47): quem comprou
- * não tem painel de empresa nem assinatura para abrir, tem um PDF para
- * baixar.
- */
-const DESTINO_PLANO_DE_VAGAS = {
-  href: "/perfil",
-  rotulo: "Ir para o perfil",
-  mensagem:
-    "Seu plano está ativo e renova sozinho todo mês. Para cancelar a renovação ou trocar de plano, abra Planos e vagas, no seu perfil.",
-};
+interface Caminho {
+  href: string;
+  rotulo: string;
+}
 
-const DESTINO_APROVADO: Partial<
-  Record<TipoPagamento, { href: string; rotulo: string; mensagem: string }>
-> = {
-  empresa_plano_5: DESTINO_PLANO_DE_VAGAS,
-  empresa_plano_10: DESTINO_PLANO_DE_VAGAS,
-  empresa_mensal: DESTINO_PLANO_DE_VAGAS,
-  curriculo_pdf: {
-    href: "/perfil/curriculo",
-    rotulo: "Baixar currículo",
-    mensagem:
-      "O gerador está liberado para sempre. Baixe agora ou quando quiser — o currículo é remontado com o que estiver no seu perfil.",
-  },
-};
+/**
+ * O que dizer e para onde mandar depois de aprovado.
+ *
+ * O fim da compra é o que fica na memória (regra do pico e do fim, #551).
+ * Antes, quem pagava um plano de vagas lia "Seu plano está ativo" e ganhava
+ * um botão para o perfil, longe do que tinha acabado de comprar. Agora a
+ * tela diz o que acontece a seguir, em passos curtos, e o botão principal é
+ * o próximo passo de verdade: publicar a vaga, ou baixar o currículo.
+ * `continuar` é para onde vai o "Continuar" de quando a confirmação demora.
+ */
+interface DepoisDeAprovar {
+  mensagem: string;
+  passos?: readonly string[];
+  principal: Caminho;
+  secundario?: Caminho;
+  continuar: string;
+  cor: "vagas" | "empresas";
+}
+
+const PASSOS_DA_VAGA = [
+  "Publique a vaga: o cargo, o salário e o que ela pede.",
+  "Os currículos chegam no painel, na aba Candidatos.",
+  "Chame quem combinar pelo WhatsApp, direto da ficha.",
+] as const;
+
+function depoisDeAprovar(
+  tipo: TipoPagamento,
+  rota: Rota,
+  base: string,
+): DepoisDeAprovar {
+  const vaga = {
+    passos: PASSOS_DA_VAGA,
+    principal: { href: `${base}/vagas/nova`, rotulo: "Publicar uma vaga" },
+    secundario: { href: base, rotulo: "Ir para o painel" },
+    continuar: base,
+    cor: "empresas",
+  } as const;
+
+  switch (tipo) {
+    case "empresa_plano_5":
+    case "empresa_plano_10":
+    case "empresa_mensal":
+      return {
+        ...vaga,
+        mensagem:
+          "Seu plano está ativo e renova sozinho todo mês. Para cancelar a renovação ou trocar de plano, abra Planos e vagas, no seu perfil.",
+      };
+    case "empresa_vaga_avulsa":
+      return {
+        ...vaga,
+        mensagem:
+          "Sua vaga já está na conta e não expira. Publique agora ou quando quiser.",
+      };
+    case "curriculo_pdf":
+      return {
+        mensagem:
+          "O gerador está liberado para sempre. Baixe agora ou quando quiser — o currículo é remontado com o que estiver no seu perfil.",
+        passos: [
+          "Confira o perfil: o PDF mostra só o que está preenchido.",
+          "Baixe o PDF e anexe onde precisar, quantas vezes quiser.",
+        ],
+        principal: { href: "/perfil/curriculo", rotulo: "Baixar currículo" },
+        secundario: { href: "/perfil/editar", rotulo: "Completar meu perfil" },
+        continuar: "/perfil/curriculo",
+        cor: "vagas",
+      };
+  }
+
+  return rota === "assinaturas"
+    ? {
+        mensagem:
+          "Sua assinatura está ativa e renova sozinha todo mês. Você pode cancelar quando quiser, no seu perfil.",
+        principal: { href: "/perfil", rotulo: "Ir para o perfil" },
+        continuar: "/perfil",
+        cor: "vagas",
+      }
+    : {
+        ...vaga,
+        mensagem:
+          "Sua vaga já está na conta e não expira. Publique agora ou quando quiser.",
+      };
+}
 
 const DESTINO_RECUSADO: Partial<Record<TipoPagamento, string>> = {
   curriculo_pdf: "/perfil/curriculo",
@@ -77,10 +136,13 @@ export function RetornoDaCompra({
   id,
   rota,
   tipo,
+  base,
 }: {
   id: string;
   rota: Rota;
   tipo: TipoPagamento;
+  /** A área de contratação de quem pagou: `/empresa` ou `/contratar`. */
+  base: string;
 }) {
   const [status, setStatus] = useState<string | null>(null);
   const [tentativas, setTentativas] = useState(0);
@@ -121,29 +183,40 @@ export function RetornoDaCompra({
   }, [resolvido, tentativas, id, rota]);
 
   if (aprovado) {
-    const destino = DESTINO_APROVADO[tipo];
+    const depois = depoisDeAprovar(tipo, rota, base);
     return (
       <Panel className="text-center">
         <CheckCircle2 size={32} className="mx-auto text-vagas" />
         <h2 className="mt-3 font-bold">Pagamento aprovado</h2>
-        <p className="mt-1.5 text-muted text-sm">
-          {destino
-            ? destino.mensagem
-            : rota === "assinaturas"
-              ? "Sua assinatura está ativa e renova sozinha todo mês. Você pode cancelar quando quiser, no seu perfil."
-              : "Sua vaga já está na conta e não expira. Você pode publicar quando quiser."}
-        </p>
-        <ButtonLink
-          href={
-            destino?.href ?? (rota === "assinaturas" ? "/perfil" : "/empresa")
-          }
-          variant="vagas"
-          size="sm"
-          className="mt-4"
-        >
-          {destino?.rotulo ??
-            (rota === "assinaturas" ? "Ir para o perfil" : "Ir para o painel")}
-        </ButtonLink>
+        <p className="mt-1.5 text-muted text-sm">{depois.mensagem}</p>
+        {depois.passos && (
+          <div className="mt-4 rounded-xl bg-panel-2 p-4 text-left">
+            <p className="font-semibold text-sm">O que fazer agora</p>
+            <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-muted text-sm leading-snug">
+              {depois.passos.map((passo) => (
+                <li key={passo}>{passo}</li>
+              ))}
+            </ol>
+          </div>
+        )}
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <ButtonLink
+            href={depois.principal.href}
+            variant={depois.cor}
+            size="sm"
+          >
+            {depois.principal.rotulo}
+          </ButtonLink>
+          {depois.secundario && (
+            <ButtonLink
+              href={depois.secundario.href}
+              variant="outline"
+              size="sm"
+            >
+              {depois.secundario.rotulo}
+            </ButtonLink>
+          )}
+        </div>
       </Panel>
     );
   }
@@ -183,10 +256,7 @@ export function RetornoDaCompra({
           Confira em alguns minutos — nada foi perdido.
         </p>
         <ButtonLink
-          href={
-            DESTINO_APROVADO[tipo]?.href ??
-            (rota === "assinaturas" ? "/perfil" : "/empresa")
-          }
+          href={depoisDeAprovar(tipo, rota, base).continuar}
           variant="outline"
           size="sm"
           className="mt-4"

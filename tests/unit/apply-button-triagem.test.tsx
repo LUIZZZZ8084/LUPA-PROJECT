@@ -146,3 +146,25 @@ describe("ApplyButton com perguntas", () => {
     );
   });
 });
+
+/**
+ * O fim da candidatura (#551): diz que deu certo, o que acontece agora e
+ * os dois caminhos dali, em vez de um botão desativado.
+ */
+describe("depois de enviar", () => {
+  it("anuncia o envio e oferece acompanhar ou ver mais vagas", async () => {
+    candidatarSe.mockResolvedValue({ ok: true });
+    render(<ApplyButton jobId="vaga-1" />);
+    fireEvent.click(screen.getByRole("button", { name: "Candidatar-se" }));
+
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("Candidatura enviada");
+    expect(status).toHaveAttribute("data-acao-concluida");
+    expect(
+      screen.getByRole("link", { name: "Acompanhar minhas candidaturas" }),
+    ).toHaveAttribute("href", "/perfil/candidaturas");
+    expect(
+      screen.getByRole("link", { name: "Ver mais vagas" }),
+    ).toHaveAttribute("href", "/vagas");
+  });
+});

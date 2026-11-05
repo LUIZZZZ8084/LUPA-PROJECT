@@ -1,4 +1,5 @@
-import type { Papel } from "../auth/rbac";
+import { progressoDoCurriculo } from "@/lib/progresso-do-curriculo";
+import type { Autenticado, Papel } from "../auth/rbac";
 import { erros } from "../errors";
 import { repositorioUsuarios } from "../repositories";
 import type {
@@ -107,4 +108,20 @@ export async function salvarPerfilDoPapel(
    * a tela diria "salvo" sem ter salvo nada.
    */
   throw erros.semPermissao("este papel não tem perfil profissional");
+}
+
+/**
+ * A barra de progresso do currículo na home (#550), só para candidato.
+ *
+ * Mora aqui, e não no serviço do currículo, porque aquele carrega o gerador
+ * de PDF, e a home não precisa dele. Sem perfil gravado ainda (a conta nunca
+ * abriu "Editar perfil"), é 0%: é justamente quem mais precisa do convite.
+ * Quem não é candidato recebe `null` e a home não mostra nada.
+ */
+export async function progressoDoCurriculoDaSessao(
+  sessao: Autenticado | null,
+): Promise<{ porcento: number; faltas: string[] } | null> {
+  if (sessao?.papel !== "candidato_clt") return null;
+  const perfil = await repositorioUsuarios().perfilCandidato(sessao.usuarioId);
+  return progressoDoCurriculo(perfil);
 }

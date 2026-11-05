@@ -1,6 +1,7 @@
 import {
   Building2,
   CalendarClock,
+  ChevronDown,
   Clock,
   Inbox,
   Plus,
@@ -509,7 +510,26 @@ export async function PainelDeContratacao({
               />
             </div>
 
-            <SerieGrafico serie={serie} />
+            {/*
+              Os gráficos dos 30 dias ficam recolhidos (#549). São consulta,
+              não o que pede atenção hoje, e abertos eram o maior bloco do
+              painel: empurravam o funil e os currículos para baixo, numa
+              tela que já tinha tutorial, contador e os cartões de hoje.
+              `<details>` abre sem JavaScript e é anunciado como botão.
+            */}
+            {serie.length > 0 && (
+              <details className="group mt-5 border-line border-t">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 pt-3 font-semibold text-empresas text-sm [&::-webkit-details-marker]:hidden">
+                  Ver o movimento dos últimos 30 dias
+                  <ChevronDown
+                    size={16}
+                    aria-hidden
+                    className="flex-none transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <SerieGrafico serie={serie} />
+              </details>
+            )}
           </Panel>
 
           {/*

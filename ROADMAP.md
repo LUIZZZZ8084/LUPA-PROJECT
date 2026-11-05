@@ -14,6 +14,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- Três ajustes de experiência a partir das leis de UX: no painel da empresa,
+  os gráficos dos 30 dias ficam recolhidos em "Ver o movimento dos últimos
+  30 dias"; o candidato vê no perfil e na home quanto do currículo está
+  preenchido, o que falta e o atalho para completar; e o fim da candidatura
+  e do pagamento diz o que acontece agora e leva ao próximo passo (acompanhar
+  candidaturas, publicar a vaga, baixar o currículo) —
+  [#549](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/549),
+  [#550](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/550),
+  [#551](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/551)
+
 - Etiquetas nas candidaturas: na ficha, a empresa marca até cinco, como
   "banco de talentos" ou "chamar na próxima". Elas aparecem no card do
   funil e filtram a aba Talentos, que junta as de todas as candidaturas da

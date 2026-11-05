@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, Loader2, Send } from "lucide-react";
+import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { useState, useTransition } from "react";
 import { candidatarSe } from "@/app/(app)/vagas/[id]/actions";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import type { PerguntaDeTriagem } from "@/lib/triagem";
 
 export function ApplyButton({
@@ -42,19 +42,46 @@ export function ApplyButton({
     });
   }
 
+  /*
+   * O fim da candidatura é o que fica na memória (regra do pico e do fim,
+   * #551). Era um botão desativado e uma frase miúda: a pessoa não sabia se
+   * tinha dado certo nem o que fazer depois. Agora diz que deu certo, o que
+   * acontece a seguir e dá os dois caminhos que fazem sentido dali.
+   *
+   * `role="status"` para o leitor de tela anunciar sem roubar o foco, e
+   * `data-acao-concluida` para a barra fixa da tela soltar (#479): o bloco
+   * é maior que o botão e não pode ficar preso por cima da página.
+   */
   if (applied) {
     return (
-      // `data-acao-concluida`: a barra fixa da tela solta (#479).
-      <div data-acao-concluida className="space-y-2">
-        <Button variant="outline" size="lg" block disabled>
-          <Check size={18} className="text-vagas" />
+      <div
+        data-acao-concluida
+        role="status"
+        className="rounded-xl border border-vagas/30 bg-vagas/5 p-4"
+      >
+        <p className="flex items-center gap-2 font-bold text-vagas">
+          <CheckCircle2 size={20} aria-hidden />
           Candidatura enviada
-        </Button>
-        <p className="text-center text-xs text-muted">
-          A empresa recebe seu perfil e currículo. Em &ldquo;Minhas
-          candidaturas&rdquo; você acompanha o status e chama a empresa no
-          WhatsApp.
         </p>
+        <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm leading-snug">
+          <li>A empresa já recebeu seu perfil e seu currículo.</li>
+          <li>
+            Em &ldquo;Minhas candidaturas&rdquo; você vê quando ela olhar e se
+            chamar para entrevista.
+          </li>
+          <li>
+            Se combinar, a conversa segue pelo WhatsApp, e você também pode
+            chamar a empresa por lá.
+          </li>
+        </ol>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <ButtonLink href="/perfil/candidaturas" variant="vagas" size="sm">
+            Acompanhar minhas candidaturas
+          </ButtonLink>
+          <ButtonLink href="/vagas" variant="outline" size="sm">
+            Ver mais vagas
+          </ButtonLink>
+        </div>
       </div>
     );
   }

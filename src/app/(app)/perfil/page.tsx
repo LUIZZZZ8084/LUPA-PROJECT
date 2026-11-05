@@ -20,6 +20,7 @@ import {
   PerfilEmpresa,
   PerfilPrestador,
 } from "@/components/perfil-profissional";
+import { ProgressoDoPerfil } from "@/components/progresso-do-perfil";
 import { SairButton } from "@/components/sair-button";
 import { SairDosOutrosButton } from "@/components/sair-dos-outros-button";
 import { Avatar } from "@/components/ui/avatar";
@@ -33,6 +34,7 @@ import {
 import { ROLE_LABELS } from "@/lib/constants";
 import { getProviderById } from "@/lib/data";
 import { formatPhone } from "@/lib/format";
+import { progressoDoCurriculo } from "@/lib/progresso-do-curriculo";
 import { sessaoAtual } from "@/server/auth/cookies";
 import type { Capacidade } from "@/server/auth/rbac";
 import { pode } from "@/server/auth/rbac";
@@ -327,6 +329,17 @@ export default async function PerfilPage() {
         </div>
 
         <div className="contents lg:block">
+          {/*
+            A barra do currículo (#550) vem antes dele. Sem perfil gravado
+            ainda, o bloco do currículo já é o convite para preencher, e as
+            duas coisas juntas repetiriam o mesmo botão.
+          */}
+          {sessao?.papel === "candidato_clt" && perfil?.candidato && (
+            <ProgressoDoPerfil
+              {...progressoDoCurriculo(perfil.candidato)}
+              className="mb-5"
+            />
+          )}
           {sessao?.papel === "candidato_clt" && (
             <PerfilCandidato perfil={perfil?.candidato ?? null} />
           )}

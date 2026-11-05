@@ -17,6 +17,7 @@ import { JobCard } from "@/components/job-card";
 import { PageShell } from "@/components/layout/page-shell";
 import { Reveal } from "@/components/motion/reveal";
 import { ProfissionaisEmLinha } from "@/components/profissionais-em-linha";
+import { ProgressoDoPerfil } from "@/components/progresso-do-perfil";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { UFS } from "@/lib/cidades";
@@ -26,6 +27,7 @@ import { sessaoAtual } from "@/server/auth/cookies";
 import { origemDoUsuario } from "@/server/auth/origem";
 import { type Papel, pode } from "@/server/auth/rbac";
 import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
+import { progressoDoCurriculoDaSessao } from "@/server/perfil/servico";
 
 /**
  * O terceiro card, decidido pelo papel de quem está olhando — e, desde a
@@ -83,6 +85,7 @@ export default async function HomePage() {
   const { jobs, providers, totals } = await getHomeFeed(origem);
   const sessao = await sessaoAtual();
   const terceiroCard = cardDeServico(sessao?.papel, Boolean(sessao));
+  const progresso = await progressoDoCurriculoDaSessao(sessao);
 
   /*
    * O JSON-LD é assinado com o mesmo nonce da CSP (#223) — sem ele, a
@@ -170,6 +173,15 @@ export default async function HomePage() {
       </section>
 
       <PageShell width="wide">
+        {/*
+         * Para o candidato com o currículo pela metade, a barra de progresso
+         * (#550) abre a página, antes das vagas: é o que mais muda a chance
+         * de a empresa ler a candidatura até o fim. Com tudo preenchido ela
+         * não aparece.
+         */}
+        {progresso && (
+          <ProgressoDoPerfil {...progresso} className="mb-8 lg:max-w-3xl" />
+        )}
         {/*
          * Na tela larga (#443), vagas e profissionais lado a lado: as vagas
          * na coluna larga, os profissionais numa lateral. Empilhados, metade
