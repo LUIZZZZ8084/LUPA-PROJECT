@@ -14,6 +14,11 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- O painel de contratação e a tela de "Vaga publicada" pedem a confirmação
+  do e-mail, com o botão de reenviar: o aviso de candidatura só vai para
+  e-mail confirmado, e nenhuma empresa de produção tinha confirmado —
+  [#560](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/560)
+
 - Folga de tempo para o teste de mutação: o limite do job subiu de 25 para
   40 minutos. Com o mesmo código ele leva de 16 a mais de 25, conforme a
   máquina que o GitHub sorteia, e foi cortado quatro vezes no dia a poucos
