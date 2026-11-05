@@ -14,6 +14,11 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- A empresa recebe um e-mail quando uma vaga vai vencer em até três dias,
+  com o caminho para reativar: um por empresa e por dia, cada vaga uma vez
+  por prazo, só para e-mail confirmado. Roda no cron diário da Vercel —
+  [#561](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/561)
+
 - Folga de tempo para o teste de mutação: o limite do job subiu de 25 para
   40 minutos. Com o mesmo código ele leva de 16 a mais de 25, conforme a
   máquina que o GitHub sorteia, e foi cortado quatro vezes no dia a poucos

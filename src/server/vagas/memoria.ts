@@ -68,6 +68,15 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
     );
   }
 
+  async vencendoAte(agora: string, limite: string): Promise<Vaga[]> {
+    return [...this.itens.values()]
+      .filter(
+        (v) =>
+          v.status === "aberta" && v.expiraEm > agora && v.expiraEm <= limite,
+      )
+      .sort((a, b) => a.expiraEm.localeCompare(b.expiraEm));
+  }
+
   async criar(dados: DadosNovaVaga): Promise<Vaga> {
     const vaga: Vaga = {
       id: crypto.randomUUID(),

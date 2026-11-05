@@ -102,6 +102,11 @@ export interface RepositorioVagas {
   /** Todas as vagas, de qualquer empresa — usado pela busca pública. */
   listar(): Promise<Vaga[]>;
   /**
+   * As vagas abertas que ainda estão no ar e vencem até `limite` (#561),
+   * da que vence primeiro para a última. É a lista do aviso de vencimento.
+   */
+  vencendoAte(agora: string, limite: string): Promise<Vaga[]>;
+  /**
    * Quantas vagas da empresa estão no ar agora: abertas e dentro dos 30
    * dias (#489). É o número que o limite dos planos compara — vaga
    * encerrada ou vencida não ocupa lugar.
