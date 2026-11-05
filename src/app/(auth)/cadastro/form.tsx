@@ -34,10 +34,13 @@ const ACCENT: Record<Role, "vagas" | "servicos" | "empresas"> = {
 export function SignUpForm({
   role,
   destino,
+  veioDe,
 }: {
   role: Role;
   /** Para onde voltar depois de criar a conta, se a pessoa veio de uma vaga. */
   destino?: string;
+  /** A porta de entrada, quando é uma das medidas (#559). */
+  veioDe?: "para_empresas";
 }) {
   const [state, action, pending] = useActionState(cadastrarComEstado, inicial);
   const [cidade, setCidade] = useCidade();
@@ -175,6 +178,7 @@ export function SignUpForm({
         invisível.
       */}
       <input type="hidden" name="papel" value={role} />
+      {veioDe && <input type="hidden" name="veioDe" value={veioDe} />}
 
       <Panel className="space-y-5">
         {/*

@@ -73,6 +73,24 @@ imprime a senha uma vez no terminal de quem roda; criá-la por um agente
 poria a senha numa conversa, que é o que a #69 registra como garantia
 perdida.
 
+## Quantas contas a página para empresas trouxe (#559)
+
+A página `/para-empresas` (#537) é o link da abordagem comercial, e sem
+medida não havia como saber se alguém criava conta a partir dela. Os botões
+de criar conta da página levam `de=para_empresas` no link do cadastro, o
+formulário manda isso escondido, e a conta guarda em `usuarios.veio_de`. O
+cartão de contas do painel mostra o total.
+
+**Só o clique, nenhum dado novo de quem se cadastrou.** A coluna aceita um
+valor só, conferido pelo banco. Qualquer outro valor na URL é ignorado em
+vez de recusar o cadastro: a medida não pode custar a conta de ninguém, e
+um link mal copiado não pode virar erro na cara de quem quer contratar.
+
+Não é rastreamento de campanha: não há UTM, nem cookie, nem lembrança de
+visita anterior. Se a pessoa leu a página e voltou outro dia pelo cadastro
+direto, não conta — o número é um piso, e o painel não promete mais do que
+isso.
+
 ## Parceiros: a Lupa de graça, autorizada pelo e-mail (#505)
 
 Pedido do Luiz em 27/10/2026: ele vai fechar parcerias com quem vai usar a

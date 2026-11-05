@@ -867,3 +867,41 @@ describe("limite de tentativas no cadastro", () => {
     expect(u.email).toBe("pessoa1@teste.lupa");
   });
 });
+
+/**
+ * A porta de entrada da conta (#559): o cadastro que veio da página para
+ * empresas fica marcado, e qualquer outro valor da URL é ignorado — a medida
+ * não pode custar a conta de ninguém.
+ */
+describe("de onde veio o cadastro", () => {
+  let repo: RepositorioMemoria;
+  let restaurar: () => void;
+
+  beforeEach(() => {
+    repo = new RepositorioMemoria();
+    restaurar = usarRepositorio(repo);
+    limparLimites();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    restaurar();
+    vi.restoreAllMocks();
+  });
+
+  it("veio da página para empresas: a conta guarda isso", async () => {
+    const dados = schemaCadastro.parse({
+      ...candidato,
+      veioDe: "para_empresas",
+    });
+    const criado = await cadastrar(dados);
+    expect((await repo.porId(criado.id))?.veioDe).toBe("para_empresas");
+  });
+
+  it("valor desconhecido é ignorado, e o cadastro segue", async () => {
+    const dados = schemaCadastro.parse({ ...candidato, veioDe: "outra" });
+    expect(dados.veioDe).toBeUndefined();
+    const criado = await cadastrar(dados);
+    expect((await repo.porId(criado.id))?.veioDe).toBeNull();
+  });
+});

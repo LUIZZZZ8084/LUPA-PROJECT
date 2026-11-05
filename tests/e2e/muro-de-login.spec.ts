@@ -134,7 +134,16 @@ test.describe("muro de login", () => {
     await expect(page).toHaveURL(/\/para-empresas$/);
     await expect(
       page.getByRole("link", { name: /Criar conta de empresa/ }).first(),
-    ).toHaveAttribute("href", "/cadastro?tipo=empresa");
+    ).toHaveAttribute("href", "/cadastro?tipo=empresa&de=para_empresas");
+
+    // O cadastro aberto por ali leva a porta de entrada junto (#559).
+    await page
+      .getByRole("link", { name: /Criar conta de empresa/ })
+      .first()
+      .click();
+    await expect(page.locator('input[name="veioDe"]')).toHaveValue(
+      "para_empresas",
+    );
   });
 
   test("robots.txt e sitemap.xml respondem sem sessão", async ({ request }) => {

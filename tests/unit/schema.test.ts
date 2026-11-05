@@ -3493,6 +3493,12 @@ describe("aplica-painel-admin.sql", () => {
         );
 
       const antes = await definicoes();
+      /*
+       * O banco de antes da #471 tinha a `metricas_totais` velha, sem a
+       * coluna da #559 — que o `create or replace` desta migração não
+       * conseguiria tirar. E a #559 roda depois dela, na ordem de produção.
+       */
+      await banco.exec("drop view metricas_totais");
       const script = readFileSync(
         join(process.cwd(), "supabase/aplica-painel-admin.sql"),
         "utf8",
@@ -3500,6 +3506,12 @@ describe("aplica-painel-admin.sql", () => {
       await banco.exec(script);
       // Seguro de rodar mais de uma vez.
       await banco.exec(script);
+      await banco.exec(
+        readFileSync(
+          join(process.cwd(), "supabase/aplica-veio-de.sql"),
+          "utf8",
+        ),
+      );
 
       expect(await definicoes()).toEqual(antes);
       for (const view of VIEWS) {

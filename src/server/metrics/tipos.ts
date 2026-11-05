@@ -320,6 +320,8 @@ export interface Totais {
   prestadores: number;
   empresas: number;
   vagasAbertas: number;
+  /** Contas criadas pelo botão da página para empresas (#559). */
+  pelaPaginaDeEmpresas: number;
 }
 
 /**

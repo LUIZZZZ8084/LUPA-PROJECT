@@ -51,7 +51,10 @@ describe("página para empresas", () => {
     });
     expect(criar.length).toBeGreaterThan(0);
     for (const link of criar) {
-      expect(link).toHaveAttribute("href", "/cadastro?tipo=empresa");
+      expect(link).toHaveAttribute(
+        "href",
+        "/cadastro?tipo=empresa&de=para_empresas",
+      );
     }
     expect(
       screen.getByRole("link", { name: "Já tenho conta" }),

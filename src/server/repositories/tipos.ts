@@ -38,6 +38,8 @@ export interface Usuario {
   docVerificado: boolean;
   criadoEm: string;
   ultimoAcessoEm: string | null;
+  /** Por qual porta a conta entrou (#559); só a página para empresas. */
+  veioDe?: "para_empresas" | null;
 }
 
 /** O que pode circular pela aplicação: sem hash de senha. */
@@ -83,6 +85,7 @@ export interface DadosNovoUsuario {
   telefone: string;
   cidade: string;
   avatarUrl?: string | null;
+  veioDe?: "para_empresas" | null;
 }
 
 export interface PerfilEmpresa {

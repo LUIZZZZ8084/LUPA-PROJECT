@@ -137,6 +137,7 @@ export async function cadastrar(
     cpf: dados.papel === "empresa" ? (dados.cpf ?? null) : dados.cpf,
     telefone: dados.telefone,
     cidade: dados.cidade,
+    veioDe: dados.veioDe ?? null,
   });
 
   // O perfil específico do papel é criado junto: um usuário sem perfil

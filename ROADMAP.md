@@ -14,6 +14,11 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- O painel do admin conta quantas contas foram criadas pelo botão da página
+  "Para empresas": o cadastro aberto por ali leva a porta de entrada, e a
+  conta guarda só isso —
+  [#559](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/559)
+
 - Folga de tempo para o teste de mutação: o limite do job subiu de 25 para
   40 minutos. Com o mesmo código ele leva de 16 a mais de 25, conforme a
   máquina que o GitHub sorteia, e foi cortado quatro vezes no dia a poucos

@@ -49,6 +49,7 @@ function paraUsuario(linha: Record<string, unknown>): Usuario {
     docVerificado: Boolean(linha.doc_verificado),
     criadoEm: String(linha.criado_em),
     ultimoAcessoEm: (linha.ultimo_acesso_em as string | null) ?? null,
+    veioDe: (linha.veio_de as "para_empresas" | null) ?? null,
   };
 }
 
@@ -105,6 +106,7 @@ export class RepositorioPostgres implements RepositorioUsuarios {
         telefone: dados.telefone,
         cidade: dados.cidade,
         avatar_url: dados.avatarUrl ?? null,
+        veio_de: dados.veioDe ?? null,
       })
       .select("*")
       .single();

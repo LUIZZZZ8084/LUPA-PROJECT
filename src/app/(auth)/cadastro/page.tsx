@@ -93,9 +93,15 @@ export default async function CadastroPage({
   searchParams: Promise<{
     tipo?: string | string[];
     destino?: string | string[];
+    de?: string | string[];
   }>;
 }) {
-  const { tipo, destino: destinoBruto } = await searchParams;
+  const { tipo, destino: destinoBruto, de } = await searchParams;
+  // Por qual porta chegou (#559): só a página para empresas é marcada.
+  const veioDe =
+    (Array.isArray(de) ? de[0] : de) === "para_empresas"
+      ? "para_empresas"
+      : undefined;
   const selected = Array.isArray(tipo) ? tipo[0] : tipo;
   /*
    * Quem chega pelo "Criar conta" de uma vaga (#490) volta para ela depois.
@@ -116,7 +122,7 @@ export default async function CadastroPage({
      */
     return (
       <PageShell width="narrow">
-        <SignUpForm role={selected} destino={destino} />
+        <SignUpForm role={selected} destino={destino} veioDe={veioDe} />
       </PageShell>
     );
   }

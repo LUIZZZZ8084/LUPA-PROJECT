@@ -53,6 +53,7 @@ export class RepositorioMetricasPostgres implements RepositorioMetricas {
       prestadores: Number(data?.prestadores ?? 0),
       empresas: Number(data?.empresas ?? 0),
       vagasAbertas: Number(data?.vagas_abertas ?? 0),
+      pelaPaginaDeEmpresas: Number(data?.pela_pagina_de_empresas ?? 0),
     };
   }
 
