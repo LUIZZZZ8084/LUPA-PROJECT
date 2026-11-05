@@ -384,6 +384,27 @@ describe("identificadores de rastreio", () => {
     }
   });
 
+  /*
+   * O SDK grava o `sentry.previous_trace` sempre com o sampled no fim
+   * (`linkedTraces.js`). Sem ele, não é o formato do SDK, e a exceção não
+   * vale (#557).
+   */
+  it("o previous_trace passa só no formato do SDK, com o sampled no fim", () => {
+    for (const sampled of ["0", "1"]) {
+      const valor = `${TRACE}-${SPAN}-${sampled}`;
+      expect(
+        scrubSensitiveData({ "sentry.previous_trace": valor })[
+          "sentry.previous_trace"
+        ],
+      ).toBe(valor);
+    }
+    expect(
+      scrubSensitiveData({ "sentry.previous_trace": `${TRACE}-${SPAN}` })[
+        "sentry.previous_trace"
+      ],
+    ).toContain("[telefone]");
+  });
+
   it("o valor tem de ser só o identificador, sem texto antes nem depois", () => {
     const HEX = "abcdefabcdefabcd";
     expect(
