@@ -40,7 +40,8 @@ export interface Vaga {
   /**
    * Até três perguntas de sim ou não para quem se candidata (#491). Vazio na
    * maioria das vagas e em toda vaga publicada antes de elas existirem.
-   * Como o resto da vaga, não se edita depois de publicada.
+   * Não se edita depois de publicada (#544): mudar a pergunta mudaria o
+   * critério para quem já respondeu.
    */
   perguntas: PerguntaDeTriagem[];
   status: StatusVaga;

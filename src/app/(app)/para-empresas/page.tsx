@@ -235,9 +235,10 @@ export default async function ParaEmpresasPage() {
             sem conta vê contato nenhum.
           </Duvida>
           <Duvida titulo="Posso editar a vaga depois?">
-            Ainda não. Antes de publicar, você confere tudo numa tela de
-            revisão. Se a vaga já foi preenchida, encerre: o lugar dela no plano
-            volta na hora.
+            Pode: descrição, endereço, habilidades e salário, sem gastar outra
+            vaga. Cargo, cidade e contrato ficam como estão, porque é o que quem
+            se candidatou viu. Se a vaga já foi preenchida, encerre: o lugar
+            dela no plano volta na hora.
           </Duvida>
         </div>
         <p className="mt-4 text-muted text-sm">

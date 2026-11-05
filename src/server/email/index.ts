@@ -41,7 +41,12 @@ export interface Email {
    * Existe para não ser preciso pôr o assunto, e muito menos o endereço,
    * no registro da falha.
    */
-  tipo: "recuperacao" | "verificacao_email" | "suporte";
+  tipo:
+    | "recuperacao"
+    | "verificacao_email"
+    | "suporte"
+    // A empresa avisada de candidatura nova (#543).
+    | "aviso_candidatura";
 }
 
 export type ResultadoEnvio =

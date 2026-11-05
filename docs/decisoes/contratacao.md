@@ -608,6 +608,69 @@ filtro vêm de todo mundo, não só de quem passou nos outros filtros, senão a
 opção escolhida sumiria da lista — e só aparecem quando a empresa já
 etiquetou alguém.
 
+## Editar a vaga publicada, com o que a define travado (#544)
+
+Pedido do Luiz em 05/11/2026. A edição tinha saído na #173 por dois motivos,
+e os dois continuam valendo: reescrever por dentro uma vaga paga para virar
+outra, e quem se candidatou descobrir na entrevista que a vaga mudou. Só que
+a regra inteira obrigava a encerrar e publicar de novo por um erro de
+digitação, gastando outra vaga do plano — e é a primeira pergunta de quem
+contrata.
+
+**Os dois motivos se resolvem travando campos, não a edição.**
+
+- Cargo, área, cidade, contrato, modalidade, PCD e perguntas de triagem não
+  mudam. A vaga de motorista em Sorriso continua sendo de motorista em
+  Sorriso; virar outra vaga custa outra vaga. O prazo de 30 dias também
+  fica. Os campos travados nem estão no schema da action: o que não chega
+  ao servidor não tem como ser gravado.
+- Com candidatura recebida, o salário não diminui — nem o piso, nem o teto.
+  Quem se candidatou viu o salário anunciado. Subir, corrigir o endereço ou
+  detalhar a descrição só ajuda essa pessoa.
+
+As perguntas ficam travadas por um motivo a mais: mudar a pergunta mudaria
+o critério para quem já respondeu, e a triagem separaria gente pelo que ela
+não leu.
+
+**A revisão antes de publicar continua**, agora avisando o que trava. Só
+edita vaga no ar; a encerrada ou vencida não tem o que corrigir, e o caminho
+é "Publicar outra parecida". A capacidade é nova, `vaga:editar_propria`,
+nos três papéis que publicam.
+
+Ficou de fora: marcar a vaga como "atualizada" para quem já se candidatou.
+Com o que define a vaga travado, o que muda não muda a decisão de ninguém.
+
+## A empresa é avisada por e-mail quando chega candidatura (#543)
+
+Pedido do Luiz em 05/11/2026. Até aqui a Lupa não avisava a empresa de nada:
+os únicos e-mails eram recuperação de senha, confirmação de e-mail e suporte,
+e o push só ia para quem procura vaga. A empresa só sabia de uma candidatura
+abrindo o painel, e a agência que publica e não volta perdia o candidato —
+que ficava sem resposta, achando que a vaga era de mentira.
+
+**Um e-mail por empresa a cada duas horas, no máximo.** Vaga boa recebe dez
+candidaturas numa manhã; dez e-mails ensinam a mandar a Lupa para o spam e
+gastam a cota do Resend, o gargalo já registrado para os 10 mil usuários. O
+e-mail que sai diz quantas candidaturas estão esperando olhar, então quem
+abre o painel vê todas. A janela usa o mesmo contador por chave dos tetos de
+ação (`consumirOrcamento`), sem tabela nova.
+
+Descartado: o resumo diário por cron. Ele gasta menos e-mail, mas a empresa
+saberia da candidatura no dia seguinte — e quem procura emprego se candidata
+a várias vagas no mesmo dia, e quem responde primeiro contrata.
+
+**Só para e-mail confirmado.** A conta pode ter sido criada com o e-mail de
+outra pessoa (a mesma razão de `saudacao`, #445), e o aviso leva o nome de
+quem se candidatou: a um endereço que ninguém confirmou, seria entregar esse
+nome a um estranho.
+
+**O e-mail não leva contato.** Só o primeiro nome, o cargo e o link do funil
+da área de quem contrata (`/empresa` ou `/contratar`); telefone, currículo e
+respostas da triagem ficam atrás do login.
+
+**Sai depois da resposta** (`after`), e falhar não desfaz a candidatura: o
+aviso é consequência, e o painel continua mostrando tudo.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a

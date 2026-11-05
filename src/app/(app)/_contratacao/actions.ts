@@ -6,8 +6,9 @@ import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { schemaMoverCandidatura } from "@/server/candidaturas/schemas";
 import { moverCandidatura as moverCandidaturaServico } from "@/server/candidaturas/servico";
-import { schemaIdVaga } from "@/server/vagas/schemas";
+import { schemaEdicaoVaga, schemaIdVaga } from "@/server/vagas/schemas";
 import {
+  editarVaga as editarVagaServico,
   encerrarVaga as encerrarVagaServico,
   reativarVaga as reativarVagaServico,
 } from "@/server/vagas/servico";
@@ -77,3 +78,42 @@ export const moverCandidatura = criarAcao({
     return {};
   },
 });
+
+/**
+ * Corrigir o texto da vaga publicada (#544). Quem decide o que pode mudar é
+ * o schema — os campos travados nem chegam aqui — e `editarVaga`, que
+ * recusa salário menor quando já há candidatura.
+ */
+export const editarVaga = criarAcao({
+  nome: "vaga.editar",
+  entrada: schemaEdicaoVaga,
+  executar: async (dados) => {
+    const sessao = await sessaoAtual();
+    await editarVagaServico(sessao, dados);
+
+    revalidarContratacao();
+    revalidarBuscaDeVagas();
+    revalidatePath(`/vagas/${dados.id}`);
+    return {};
+  },
+});
+
+export interface EstadoEdicaoVaga {
+  ok?: boolean;
+  erro?: string;
+  campos?: Record<string, string>;
+}
+
+export async function editarVagaComEstado(
+  _anterior: EstadoEdicaoVaga,
+  formData: FormData,
+): Promise<EstadoEdicaoVaga> {
+  const resposta = await editarVaga(formData);
+  if (resposta.ok) return { ok: true };
+  return {
+    erro: resposta.mensagem,
+    campos: Object.fromEntries(
+      (resposta.campos ?? []).map((c) => [c.campo, c.mensagem]),
+    ),
+  };
+}

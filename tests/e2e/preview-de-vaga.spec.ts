@@ -2,14 +2,12 @@ import { expect, test } from "@playwright/test";
 import { ARQUIVO_SESSAO_EMPRESA } from "./helpers";
 
 /**
- * A revisão antes de publicar, e a vaga que não se edita depois (#173).
+ * A revisão antes de publicar (#173).
  *
- * As duas metades são a mesma decisão. Vaga publicada deixou de ser
- * editável porque, com cobrança por vaga (#172), editar era o caminho
- * óbvio para não pagar — publica uma e reescreve por dentro a cada vaga
- * nova. Tirar a edição sem dar uma conferência antes seria cobrar da
- * empresa o erro de digitação dela: corrigir uma vírgula custaria outro
- * crédito.
+ * Nasceu quando a vaga publicada deixou de ser editável. Desde a #544 o
+ * texto se corrige depois, mas cargo, cidade, contrato e perguntas seguem
+ * travados — e é isso que a revisão avisa antes do botão. A edição tem spec
+ * próprio, `editar-vaga.spec.ts`.
  *
  * O que se protege aqui é o par inteiro: que a revisão mostre **o que foi
  * digitado**, que ela avise antes do botão, e que voltar não perca o que
@@ -53,7 +51,7 @@ test.describe("revisão antes de publicar", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: /não pode ser editada/i,
+        name: /não mudam depois/i,
       }),
       "o aviso vem antes do botão de confirmar, não depois",
     ).toBeVisible();
@@ -165,20 +163,6 @@ test.describe("revisão antes de publicar", () => {
     ).toBeVisible({ timeout: 20_000 });
   });
 
-  /**
-   * A outra metade da regra: não existe mais tela de edição.
-   *
-   * Um link que sobrevivesse à remoção devolveria 404 na cara de quem
-   * clicasse — a armadilha do "link que aparece e devolve erro" que este
-   * projeto já registra três vezes.
-   */
-  test("o painel não oferece mais editar vaga", async ({ page }) => {
-    await page.goto("/empresa");
-
-    await expect(
-      page.locator('a[href$="/editar"][href^="/empresa/vagas/"]'),
-    ).toHaveCount(0);
-  });
   /**
    * O direito de publicar aparece antes dos campos (#193).
    *
