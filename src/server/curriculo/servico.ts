@@ -1,5 +1,6 @@
 import "server-only";
 
+import { oQueFaltaNoCurriculoDe } from "@/lib/progresso-do-curriculo";
 import { type Autenticado, exigirCapacidade } from "../auth/rbac";
 import { erros } from "../errors";
 import { repositorioUsuarios } from "../repositories";
@@ -73,15 +74,8 @@ export async function oQueFaltaNoCurriculo(
   const perfil = await repositorioUsuarios().perfilCandidato(sessao.usuarioId);
   if (!perfil) return [];
 
-  const vazio = (s: string | null) => !s?.trim();
-  return [
-    vazio(perfil.areaDesejada) && "Área desejada",
-    vazio(perfil.resumo) && "Resumo profissional",
-    perfil.experiencias.length === 0 && "Experiências profissionais",
-    vazio(perfil.formacao) && "Formação",
-    perfil.habilidades.length === 0 && "Habilidades",
-    vazio(perfil.disponibilidade) && "Disponibilidade",
-  ].filter((f): f is string => Boolean(f));
+  // A mesma conta da barra de progresso do perfil (#550).
+  return oQueFaltaNoCurriculoDe(perfil);
 }
 
 /** Se a pessoa já comprou o gerador — para a tela decidir o que mostrar. */
