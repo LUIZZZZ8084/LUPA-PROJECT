@@ -14,6 +14,12 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- O botão "Conversar no WhatsApp" passa no contraste no tema claro: tinha
+  2,51:1 em produção, no perfil do prestador e do candidato, e a varredura
+  não via porque em demonstração ele sai desativado. Os botões de chamar no
+  WhatsApp da ficha e do perfil do candidato voltam à cor do WhatsApp —
+  [#546](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/546)
+
 - A empresa recebe um e-mail quando chega candidatura: o primeiro nome de
   quem se candidatou, o cargo, quantas estão esperando e o link do funil. No
   máximo um a cada duas horas por empresa, só para e-mail confirmado, e sem
