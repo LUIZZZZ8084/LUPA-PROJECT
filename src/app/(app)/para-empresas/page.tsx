@@ -2,6 +2,7 @@ import {
   ArrowRight,
   BadgeCheck,
   BarChart3,
+  CalendarClock,
   Columns3,
   EyeOff,
   ListChecks,
@@ -55,9 +56,9 @@ export const metadata: Metadata = {
  * empresas da home já mentiu uma vez sobre a primeira vaga grátis, e há teste
  * que confere esta página contra a tabela.
  *
- * **Cada recurso listado existe hoje.** Promessa na tela é contrato: as
- * anotações (#539) entram aqui quando forem entregues, não antes. A vaga
- * confidencial (#538) entrou junto com ela.
+ * **Cada recurso listado existe hoje.** Promessa na tela é contrato: a vaga
+ * confidencial (#538) e as anotações com entrevista marcada (#539) entraram
+ * aqui no mesmo PR que as entregou, e não antes.
  */
 export default async function ParaEmpresasPage() {
   const sessao = await sessaoAtual();
@@ -302,6 +303,12 @@ const RECURSOS: readonly {
     texto:
       "As candidaturas em colunas, de recebida a selecionada. No computador, arraste o card; no celular, troque o estágio num toque.",
     icone: <Columns3 size={20} aria-hidden />,
+  },
+  {
+    titulo: "Anotações e entrevista",
+    texto:
+      "Anote o que conversou com cada pessoa e marque a entrevista: ela aparece no painel e o convite vai pronto no WhatsApp.",
+    icone: <CalendarClock size={20} aria-hidden />,
   },
   {
     titulo: "Perguntas de triagem",

@@ -70,3 +70,34 @@ export function mensagemParaEmpresa({
     `Este é o link do meu perfil e currículo: ${linkDoPerfil}`
   );
 }
+
+/**
+ * O convite para a entrevista marcada na ficha (#539).
+ *
+ * Leva o dia da semana junto da data — "qui, 06/11" se confere de cabeça,
+ * "06/11" obriga a abrir o calendário — e pede confirmação, que é o que a
+ * empresa precisa saber antes de separar o horário. Sem local, a frase não
+ * inventa um: a empresa completa antes de enviar.
+ */
+export function mensagemDeEntrevista({
+  candidato,
+  vaga,
+  empresa,
+  quando,
+  local,
+}: {
+  candidato: string;
+  vaga: string;
+  empresa: string;
+  /** Já formatado, como "qui, 06/11 às 14:30". */
+  quando: string;
+  local: string | null;
+}): string {
+  const nome = primeiroNome(candidato);
+  const saudacao = nome ? `Olá, ${nome}!` : "Olá!";
+  return (
+    `${saudacao} Aqui é da ${empresa}. Gostaríamos de convidar você para ` +
+    `uma entrevista para a vaga de ${vaga}, ${quando}` +
+    `${local ? `, em ${local}` : ""}. Pode confirmar?`
+  );
+}

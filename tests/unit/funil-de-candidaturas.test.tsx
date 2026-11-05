@@ -65,6 +65,7 @@ const card = (parcial: Partial<Card> & Pick<Card, "id" | "nome">): Card => ({
   match: null,
   motivos: [],
   whatsapp: null,
+  entrevista: null,
   ...parcial,
 });
 

@@ -13,10 +13,12 @@ import {
   getCompanyApplications,
   getCompanyJobs,
 } from "@/lib/data";
+import { formatarEntrevista } from "@/lib/entrevista";
 import { timeAgo, whatsappLink } from "@/lib/format";
 import { ehEstagio } from "@/lib/funil-de-candidaturas";
 import { TETO_CANDIDATURAS } from "@/lib/limites-de-lista";
 import { motivosDeNaoAtender } from "@/lib/triagem";
+import { acompanhamentosDe } from "@/server/acompanhamento/servico";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { matchPorCandidatura } from "@/server/candidaturas/match";
 import { temPainelDeEmpresa } from "@/server/visualizacoes/servico";
@@ -62,12 +64,16 @@ export async function FunilDaContratacao({
   const estagioInicial = ehEstagio(pedido) ? pedido : "enviada";
 
   const match = matchPorCandidatura(candidaturas, vagas);
+  const acompanhamentos = await acompanhamentosDe(
+    candidaturas.map((c) => c.id),
+  );
   const nomeDaEmpresa = empresa?.company_name ?? "nossa empresa";
 
   const cards: CardDoFunil[] = candidaturas
     .filter((c) => !vagaEscolhida || c.job_id === vagaEscolhida)
     .map((c) => {
       const m = match.get(c.id);
+      const entrevistaEm = acompanhamentos.get(c.id)?.entrevistaEm;
       return {
         id: c.id,
         nome: c.candidate.full_name,
@@ -94,6 +100,7 @@ export async function FunilDaContratacao({
               }),
             )
           : null,
+        entrevista: entrevistaEm ? formatarEntrevista(entrevistaEm) : null,
       };
     });
 

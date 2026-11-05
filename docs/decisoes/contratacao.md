@@ -544,6 +544,45 @@ Ficou de fora: o selo "agência" na conta, vários clientes por agência com
 nome guardado em privado, e a página da agência. Nada disso é necessário
 para a vaga funcionar, e cada um é uma tela a mais sem ninguém pedindo.
 
+## Anotações e entrevista marcada: o caderno de quem recruta (#539)
+
+Fase 2 do mini CRM da #511, pedida pelo Luiz em 04/11/2026 para atrair
+agências. Quem recruta todo mês precisa lembrar o que conversou com cada
+pessoa e quando é a entrevista, e isso morava no caderno ou no WhatsApp.
+
+**Na ficha da candidatura, um formulário só**: anotações (texto livre, até
+2000 letras), dia e hora da entrevista e o local. Salvo, a entrevista aparece
+na própria ficha com o botão "Enviar convite no WhatsApp" — dia da semana,
+data, hora, local e "Pode confirmar?" —, no card do funil e na lista
+"Próximas entrevistas" do painel, que só aparece quando há alguma.
+
+**Tabela à parte, e não colunas em `candidaturas`.** A candidatura é lida
+pelos dois lados — a pessoa vê o estágio em "Minhas candidaturas" —, e a
+anotação é só da empresa. Separada, nenhuma view do lado do candidato a
+alcança sem um `join` escrito de propósito; e ela cai em cascata com a
+candidatura, então excluir a conta apaga junto. O `revoke` está escrito, e a
+tabela entrou na lista `NUNCA_PUBLICAS` do teste do schema.
+
+**Hora de parede, sem fuso** (`timestamp`, não `timestamptz`). "Quinta às
+14h" é a hora no relógio de quem vai, na cidade da vaga; com fuso, a mesma
+entrevista apareceria às 13h para quem abrisse o painel em Brasília. A tela
+lê a string pedaço por pedaço, nunca por `new Date()`. O que é "hoje" para a
+lista de próximas usa Brasília, e erra por uma hora em Mato Grosso só na
+virada do dia — aceitável para uma lista.
+
+**Marcar a entrevista move a pessoa para o estágio de entrevista**, se ela
+ainda estava em "Nova" ou "Vista". É o que a empresa faria em seguida, à mão,
+e esquecer deixaria o "Em entrevista" do painel contando menos gente que a
+lista de próximas. Selecionada ou dispensada não volta para trás.
+
+**Nada vai para a pessoa sozinho.** A Lupa não manda o convite: o botão abre
+o WhatsApp da empresa com o texto escrito, e ela envia. Mandar por push ou
+e-mail em nome da empresa seria falar por ela.
+
+Ficou de fora: etiquetas ("banco de talentos", "chamar na próxima"),
+lembrete automático antes da entrevista e exportar para a agenda do celular.
+Entram com Issue própria se fizerem falta.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a

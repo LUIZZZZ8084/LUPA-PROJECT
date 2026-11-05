@@ -3,8 +3,7 @@
  *
  * O que se prova: o preço que ela anuncia é o que o servidor cobra, item a
  * item; quem não tem conta recebe o caminho de criar a de empresa; quem já
- * contrata vai para o painel; e a página não promete o que ainda não existe
- * (anotações e entrevista agendada, #539).
+ * contrata vai para o painel; e há um título só na página.
  */
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -81,12 +80,8 @@ describe("página para empresas", () => {
     expect(screen.queryByRole("link", { name: "Já tenho conta" })).toBeNull();
   });
 
-  it("tem um h1 só, e não promete o que ainda não existe", async () => {
-    const { container } = render(await Pagina());
-
+  it("tem um h1 só", async () => {
+    await renderizar();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    const texto = container.textContent ?? "";
-    expect(texto).not.toMatch(/anota[çc]/i);
-    expect(texto).not.toMatch(/agend/i);
   });
 });

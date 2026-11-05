@@ -61,6 +61,7 @@ drop table if exists visualizacoes_vaga cascade;
 drop table if exists pedidos_verificacao cascade;
 drop table if exists publicacoes cascade;
 drop table if exists avaliacoes cascade;
+drop table if exists acompanhamento_candidatura cascade;
 drop table if exists candidaturas cascade;
 drop table if exists vagas cascade;
 drop table if exists perfis_empresa cascade;
