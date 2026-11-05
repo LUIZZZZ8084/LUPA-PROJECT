@@ -31,6 +31,9 @@ test.describe("métricas do painel da empresa", () => {
       page.getByRole("heading", { name: "Minha Empresa" }),
     ).toBeVisible();
 
+    // Os gráficos abrem recolhidos (#549): primeiro o clique.
+    await expect(page.getByText("Visualizações por dia")).toBeHidden();
+    await page.getByText("Ver o movimento dos últimos 30 dias").click();
     await expect(page.getByText("Visualizações por dia")).toBeVisible();
     await expect(page.getByText("Candidaturas por dia")).toBeVisible();
 
