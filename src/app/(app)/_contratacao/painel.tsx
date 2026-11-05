@@ -27,6 +27,11 @@ import {
   getCompanyJobs,
   getCompanyStats,
 } from "@/lib/data";
+import {
+  entrevistasProximas,
+  formatarEntrevista,
+  hojeEmBrasilia,
+} from "@/lib/entrevista";
 import { timeAgo } from "@/lib/format";
 import {
   alcancePorEtapa,
@@ -36,6 +41,7 @@ import {
 import { resumoDoDireito, seloDoDireito } from "@/lib/planos-empresa";
 import type { Company } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { acompanhamentosDe } from "@/server/acompanhamento/servico";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
@@ -163,6 +169,22 @@ export async function PainelDeContratacao({
   const totais = totaisDaSerie(serie);
   const match = matchPorCandidatura(applications, jobs);
   const direito = await direitoDePublicar(sessao.usuarioId);
+
+  /*
+   * As próximas entrevistas (#539), de hoje em diante. As candidaturas são as
+   * desta empresa, lidas acima; o acompanhamento só as completa.
+   */
+  const acompanhamentos = await acompanhamentosDe(
+    applications.map((a) => a.id),
+  );
+  const porId = new Map(applications.map((a) => [a.id, a]));
+  const proximas = entrevistasProximas(
+    [...acompanhamentos.values()],
+    hojeEmBrasilia(),
+  ).flatMap((a) => {
+    const candidatura = porId.get(a.candidaturaId);
+    return candidatura ? [{ ...a, candidatura }] : [];
+  });
   const resumoDoPlano = resumoDoDireito(direito);
 
   /*
@@ -383,6 +405,47 @@ export async function PainelDeContratacao({
                 alerta
               />
             </div>
+
+            {/*
+              As entrevistas marcadas na ficha (#539), da mais próxima para a
+              mais distante. Só aparece quando há alguma: um bloco vazio todo
+              dia ensinaria a pular este pedaço do painel.
+            */}
+            {proximas.length > 0 && (
+              <Panel className="mt-3">
+                <h3 className="flex items-center gap-2 font-bold text-sm">
+                  <CalendarClock
+                    size={16}
+                    className="text-empresas"
+                    aria-hidden
+                  />
+                  Próximas entrevistas
+                </h3>
+                <ul className="mt-2 divide-y divide-line">
+                  {proximas.slice(0, 5).map((e) => (
+                    <li key={e.candidaturaId}>
+                      <Link
+                        href={`${area.base}/candidaturas/${e.candidaturaId}`}
+                        className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-0.5 py-2 text-sm hover:text-empresas"
+                      >
+                        <span className="min-w-0">
+                          <span className="font-semibold">
+                            {e.candidatura.candidate.full_name}
+                          </span>
+                          <span className="text-muted">
+                            {" "}
+                            · {e.candidatura.job_title}
+                          </span>
+                        </span>
+                        <span className="text-muted text-xs">
+                          {formatarEntrevista(e.entrevistaEm)}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </Panel>
+            )}
           </section>
 
           <Panel>

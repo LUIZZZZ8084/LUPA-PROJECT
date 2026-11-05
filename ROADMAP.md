@@ -8,9 +8,18 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 04/11/2026.**
+**Última atualização: 05/11/2026.**
 
 ## Concluído
+
+Em 05/11/2026:
+
+- Anotações e entrevista marcada na ficha da candidatura: a empresa anota o
+  que conversou com cada pessoa e marca dia, hora e local da entrevista. Só
+  ela lê. A entrevista aparece na ficha, com o convite pronto no WhatsApp,
+  no card do funil e na lista "Próximas entrevistas" do painel, e marcar leva
+  a pessoa ao estágio de entrevista —
+  [#539](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/539)
 
 Em 04/11/2026:
 
@@ -759,11 +768,6 @@ duas redes de proteção que o episódio da primeira venda expôs.
 **Tudo o que sobrou vai junto com o empacotamento em APK** — decisão do
 Luiz em 01/09/2026, que reúne numa etapa só o que antes estava
 espalhado.
-
-Pedidos de 04/11/2026, para atrair empresas e agências:
-
-- [ ] Anotações e entrevista agendada na ficha do candidato —
-      [#539](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/539)
 
 ## Depende de decisão, não de código
 

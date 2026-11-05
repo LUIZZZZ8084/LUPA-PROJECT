@@ -571,6 +571,37 @@ create index candidaturas_vaga_idx on candidaturas (vaga_id);
 create index candidaturas_candidato_idx on candidaturas (candidato_id);
 
 /*
+ * O que a empresa anota sobre uma candidatura, e a entrevista marcada (#539).
+ *
+ * **Tabela à parte, e não colunas em `candidaturas`**, porque o leitor é
+ * outro. A candidatura é da pessoa e da empresa ao mesmo tempo — a pessoa vê
+ * o estágio dela em "Minhas candidaturas" —, e a anotação é só da empresa:
+ * "boa conversa, pede R$ 2.500" não pode chegar a quem se candidatou por
+ * uma view que alguém amplie amanhã. Separada, nenhuma consulta do lado do
+ * candidato a alcança sem um `join` escrito de propósito.
+ *
+ * Uma linha por candidatura, criada quando a empresa salva pela primeira
+ * vez, e apagada em cascata com ela: excluir a conta do candidato apaga a
+ * candidatura, e a anotação vai junto.
+ *
+ * `entrevista_em` é **hora de parede, sem fuso** (`timestamp`, não
+ * `timestamptz`): "quinta às 14h" é a hora no relógio de quem vai à
+ * entrevista, na cidade da vaga. Com fuso, a mesma entrevista apareceria às
+ * 13h para quem abrisse o painel em Brasília.
+ */
+create table acompanhamento_candidatura (
+  candidatura_id   uuid primary key references candidaturas(id) on delete cascade,
+  anotacao         text not null default ''
+    check (char_length(anotacao) <= 2000),
+  entrevista_em    timestamp,
+  entrevista_local text
+    check (entrevista_local is null or char_length(entrevista_local) <= 200),
+  atualizado_em    timestamptz not null default now()
+);
+
+alter table acompanhamento_candidatura enable row level security;
+
+/*
  * Vaga com perguntas não recebe candidatura sem respostas (#491).
  *
  * A aplicação confere antes, para dar a mensagem; o banco confere de novo
@@ -2414,6 +2445,9 @@ revoke select on denuncias from anon, authenticated;
 revoke select on custos_mensais from anon, authenticated;
 -- Quem tem parceria, e até quando (#505): dado da empresa.
 revoke select on parceiros from anon, authenticated;
+
+-- O que a empresa anota sobre cada candidatura (#539): só dela.
+revoke select on acompanhamento_candidatura from anon, authenticated;
 
 /*
  * E a escrita, em tudo (#421). O Supabase concede a `anon` e

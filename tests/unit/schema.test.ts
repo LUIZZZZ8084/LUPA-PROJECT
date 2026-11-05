@@ -109,6 +109,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
     const tabelas = r.rows.map((t) => t.table_name);
 
     expect(tabelas).toEqual([
+      "acompanhamento_candidatura",
       "admins",
       "assinaturas",
       "avaliacoes",
@@ -895,6 +896,8 @@ describe("grants de anon e authenticated", () => {
     "custos_mensais",
     // Quem tem parceria com a Lupa, e até quando (#505).
     "parceiros",
+    // O que a empresa anota sobre cada candidatura (#539): só dela.
+    "acompanhamento_candidatura",
     /*
      * Saber quem está de olho em vaga de motorista é a mesma classe de
      * informação que o currículo — numa cidade do tamanho de Sinop, diz
@@ -1293,7 +1296,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        order by table_name`,
     );
     // 23 desde a #235, que acrescentou `mensagens_suporte`.
-    expect(tabelas.rows).toHaveLength(24);
+    expect(tabelas.rows).toHaveLength(25);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views

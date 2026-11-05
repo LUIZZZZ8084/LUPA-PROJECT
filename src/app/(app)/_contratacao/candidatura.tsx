@@ -13,16 +13,19 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
-import { mensagemParaCandidato } from "@/lib/chamada";
+import { mensagemDeEntrevista, mensagemParaCandidato } from "@/lib/chamada";
 import { APPLICATION_LABELS, APPLICATION_TONE } from "@/lib/constants";
 import { empresaDoPainel, getCompany } from "@/lib/data";
+import { formatarEntrevista } from "@/lib/entrevista";
 import { formatPhone, timeAgo, whatsappLink } from "@/lib/format";
 import { motivosDeNaoAtender } from "@/lib/triagem";
+import { acompanhamentosDe } from "@/server/acompanhamento/servico";
 import { sessaoAtual } from "@/server/auth/cookies";
 import {
   fichaDaCandidatura,
   marcarComoVisualizada,
 } from "@/server/candidaturas/ficha";
+import { FormularioDeAcompanhamento } from "./acompanhamento-form";
 import type { AreaDeContratacao } from "./area";
 import { CopiarEmail } from "./copiar-email";
 import { MoverCandidaturaSelect } from "./mover-candidatura-select";
@@ -67,6 +70,30 @@ export async function FichaDaCandidatura({
     vaga: candidatura.job_title,
     empresa: empresa ?? "nossa empresa",
   });
+
+  /*
+   * A anotação e a entrevista (#539). A ficha já provou que a candidatura é
+   * desta empresa, e só então o acompanhamento é lido.
+   */
+  const acompanhamento = (await acompanhamentosDe([candidatura.id])).get(
+    candidatura.id,
+  );
+  const entrevista = acompanhamento?.entrevistaEm
+    ? formatarEntrevista(acompanhamento.entrevistaEm)
+    : null;
+  const convite =
+    entrevista && c.phone
+      ? whatsappLink(
+          c.phone,
+          mensagemDeEntrevista({
+            candidato: c.full_name,
+            vaga: candidatura.job_title,
+            empresa: empresa ?? "nossa empresa",
+            quando: entrevista,
+            local: acompanhamento?.entrevistaLocal ?? null,
+          }),
+        )
+      : null;
 
   return (
     <PageShell width="formulario">
@@ -264,6 +291,52 @@ export async function FichaDaCandidatura({
             </p>
           )}
         </Secao>
+      </Panel>
+
+      {/*
+        Anotações e entrevista (#539): o caderno de quem recruta, preso à
+        candidatura. Só a empresa lê — a frase diz isso antes do campo, porque
+        quem escreve "pede salário alto" precisa saber que a pessoa não vê.
+      */}
+      <Panel className="mt-5">
+        <h2 className="text-base font-bold">Anotações e entrevista</h2>
+        <p className="mt-1 text-xs text-muted">
+          Só você vê isto. A pessoa não recebe nada até você mandar o convite.
+        </p>
+
+        {entrevista && (
+          <div className="mt-4 rounded-xl border border-empresas/25 bg-empresas/8 p-3.5">
+            <p className="flex items-center gap-2 font-semibold text-sm">
+              <CalendarClock size={16} className="text-empresas" aria-hidden />
+              Entrevista {entrevista}
+            </p>
+            {acompanhamento?.entrevistaLocal && (
+              <p className="mt-0.5 pl-6 text-muted text-sm">
+                {acompanhamento.entrevistaLocal}
+              </p>
+            )}
+            {convite && (
+              <ButtonLink
+                href={convite}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="vagas"
+                size="sm"
+                className="mt-3"
+              >
+                <MessageCircle size={16} />
+                Enviar convite no WhatsApp
+              </ButtonLink>
+            )}
+          </div>
+        )}
+
+        <FormularioDeAcompanhamento
+          candidaturaId={candidatura.id}
+          anotacao={acompanhamento?.anotacao ?? ""}
+          entrevistaEm={acompanhamento?.entrevistaEm ?? null}
+          entrevistaLocal={acompanhamento?.entrevistaLocal ?? null}
+        />
       </Panel>
 
       <Panel className="mt-5">
