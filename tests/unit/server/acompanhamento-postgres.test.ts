@@ -42,6 +42,7 @@ const LINHA = {
   anotacao: "Boa conversa.",
   entrevista_em: "2026-11-06T14:30:00",
   entrevista_local: "Sala 3",
+  etiquetas: ["banco de talentos"],
   atualizado_em: "2026-11-05T10:00:00Z",
 };
 
@@ -60,6 +61,7 @@ describe("RepositorioAcompanhamentoPostgres", () => {
       anotacao: "Boa conversa.",
       entrevistaEm: "2026-11-06T14:30",
       entrevistaLocal: "Sala 3",
+      etiquetas: ["banco de talentos"],
       atualizadoEm: "2026-11-05T10:00:00Z",
     });
   });
@@ -97,6 +99,7 @@ describe("RepositorioAcompanhamentoPostgres", () => {
       anotacao: "Boa conversa.",
       entrevistaEm: "2026-11-06T14:30",
       entrevistaLocal: "Sala 3",
+      etiquetas: ["banco de talentos"],
     });
     const upsert = chamadas.find((c) => c.metodo === "upsert");
     expect(upsert?.args[1]).toEqual({ onConflict: "candidatura_id" });

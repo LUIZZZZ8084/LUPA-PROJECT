@@ -30,7 +30,7 @@ tão importante quanto o que entrou:
 | Recurso | Estado |
 |---|---|
 | Perfil público: razão social, setor, porte, site, redes, descrição, logo | Pronto |
-| Publicar e encerrar vaga | Pronto — **editar não existe**: a vaga é revisada antes de publicar, e a tela de compra diz isso |
+| Publicar, editar e encerrar vaga | Pronto — a edição corrige descrição, endereço, habilidades e salário; cargo, cidade, contrato, modalidade, PCD e perguntas ficam travados (#544) |
 | Ver candidaturas por estágio, e mover entre eles | Pronto |
 | Ficha do candidato, com currículo e contato | Pronto |
 | % de casamento com a vaga, na lista de currículos | Pronto |

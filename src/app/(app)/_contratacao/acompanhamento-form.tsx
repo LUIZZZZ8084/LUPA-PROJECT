@@ -25,11 +25,13 @@ export function FormularioDeAcompanhamento({
   anotacao,
   entrevistaEm,
   entrevistaLocal,
+  etiquetas,
 }: {
   candidaturaId: string;
   anotacao: string;
   entrevistaEm: string | null;
   entrevistaLocal: string | null;
+  etiquetas: string[];
 }) {
   const [state, action, pendente] = useActionState(
     salvarAcompanhamentoComEstado,
@@ -52,6 +54,23 @@ export function FormularioDeAcompanhamento({
           maxLength={2000}
           defaultValue={anotacao}
           placeholder="Ex.: Boa conversa por telefone. Pede R$ 2.500 e pode começar dia 10."
+        />
+      </Field>
+
+      {/*
+        Etiquetas (#545), separadas por vírgula como as habilidades: é o
+        jeito que funciona no celular. Aparecem no card do funil e filtram a
+        aba Talentos.
+      */}
+      <Field
+        label="Etiquetas"
+        error={state.campos?.etiquetas}
+        hint="Separe por vírgula, até cinco. Aparecem no funil e filtram Talentos."
+      >
+        <Input
+          name="etiquetas"
+          defaultValue={etiquetas.join(", ")}
+          placeholder="Ex.: banco de talentos, chamar na próxima"
         />
       </Field>
 

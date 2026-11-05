@@ -2,6 +2,7 @@ import "server-only";
 
 import { empresaDoPainel, getCompanyApplications } from "@/lib/data";
 import { formaCanonica } from "@/lib/skills";
+import { acompanhamentosDe } from "../acompanhamento/servico";
 import type { Autenticado } from "../auth/rbac";
 import { temPainelDeEmpresa } from "../visualizacoes/servico";
 
@@ -43,6 +44,12 @@ export interface Talento {
   };
   /** Em quantas vagas desta empresa a pessoa já se candidatou. */
   vagas: number;
+  /**
+   * As etiquetas que a empresa pôs em qualquer candidatura desta pessoa
+   * (#545). A etiqueta é da candidatura, mas "banco de talentos" fala da
+   * pessoa — a lista junta as de todas, sem repetir.
+   */
+  etiquetas: string[];
 }
 
 export interface FiltrosDeTalentos {
@@ -50,12 +57,25 @@ export interface FiltrosDeTalentos {
   habilidade?: string;
   /** Uma das `JOB_CATEGORIES`. */
   area?: string;
+  /** Uma etiqueta da empresa (#545), já em minúsculas. */
+  etiqueta?: string;
 }
 
 /**
  * Devolve `[]` — e não erro — para quem não tem painel de empresa; a página
  * responde 404 nesse caso, pela regra da casa.
  */
+/**
+ * As etiquetas em uso pela empresa, para o filtro de Talentos (#545). Só as
+ * que existem: um filtro com opção que não devolve ninguém ensinaria a não
+ * usar o filtro.
+ */
+export function etiquetasEmUso(talentos: readonly Talento[]): string[] {
+  return [...new Set(talentos.flatMap((t) => t.etiquetas))].sort((a, b) =>
+    a.localeCompare(b, "pt-BR"),
+  );
+}
+
 export async function talentosDaEmpresa(
   sessao: Autenticado | null,
   filtros: FiltrosDeTalentos = {},
@@ -70,6 +90,11 @@ export async function talentosDaEmpresa(
    * Mesma tabela de sinônimos do casamento com a vaga e da busca de
    * candidatos: quem procura "CNH D" precisa achar quem escreveu "carteira D".
    */
+  const acompanhamentos = await acompanhamentosDe(
+    candidaturas.map((c) => c.id),
+  );
+  const etiquetasDe = (id: string) => acompanhamentos.get(id)?.etiquetas ?? [];
+
   const procurada = filtros.habilidade?.trim()
     ? formaCanonica(filtros.habilidade)
     : null;
@@ -80,6 +105,9 @@ export async function talentosDaEmpresa(
     const existente = porPessoa.get(c.candidate_id);
     if (existente) {
       existente.vagas += 1;
+      existente.etiquetas = [
+        ...new Set([...existente.etiquetas, ...etiquetasDe(c.id)]),
+      ];
       // `getCompanyApplications` vem da mais nova para a mais velha, mas a
       // regra não deve depender disso: a última é a de data maior.
       if (+new Date(c.created_at) > +new Date(existente.ultima.em)) {
@@ -111,10 +139,13 @@ export async function talentosDaEmpresa(
         em: c.created_at,
       },
       vagas: 1,
+      etiquetas: etiquetasDe(c.id),
     });
   }
 
-  return [...porPessoa.values()].sort(
-    (a, b) => +new Date(b.ultima.em) - +new Date(a.ultima.em),
-  );
+  // Depois de juntar: a etiqueta pode estar em qualquer candidatura da pessoa.
+  const etiqueta = filtros.etiqueta?.trim().toLowerCase();
+  return [...porPessoa.values()]
+    .filter((t) => !etiqueta || t.etiquetas.includes(etiqueta))
+    .sort((a, b) => +new Date(b.ultima.em) - +new Date(a.ultima.em));
 }

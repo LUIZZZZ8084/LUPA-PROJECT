@@ -131,7 +131,7 @@ export async function FichaDaCandidatura({
               href={whatsappLink(c.phone, mensagem)}
               target="_blank"
               rel="noopener noreferrer"
-              variant="vagas"
+              variant="whatsapp"
             >
               <MessageCircle size={17} />
               Chamar no WhatsApp
@@ -320,7 +320,7 @@ export async function FichaDaCandidatura({
                 href={convite}
                 target="_blank"
                 rel="noopener noreferrer"
-                variant="vagas"
+                variant="whatsapp"
                 size="sm"
                 className="mt-3"
               >
@@ -336,6 +336,7 @@ export async function FichaDaCandidatura({
           anotacao={acompanhamento?.anotacao ?? ""}
           entrevistaEm={acompanhamento?.entrevistaEm ?? null}
           entrevistaLocal={acompanhamento?.entrevistaLocal ?? null}
+          etiquetas={acompanhamento?.etiquetas ?? []}
         />
       </Panel>
 

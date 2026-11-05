@@ -596,6 +596,14 @@ create table acompanhamento_candidatura (
   entrevista_em    timestamp,
   entrevista_local text
     check (entrevista_local is null or char_length(entrevista_local) <= 200),
+  /*
+   * Etiquetas livres da empresa (#545): "banco de talentos", "chamar na
+   * próxima". Até cinco, minúsculas, cada uma de 2 a 30 letras — a forma é
+   * conferida no servidor, e o teto de cinco aqui, porque a lista vai inteira
+   * para o card do funil.
+   */
+  etiquetas        text[] not null default '{}'
+    check (cardinality(etiquetas) <= 5),
   atualizado_em    timestamptz not null default now()
 );
 

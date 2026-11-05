@@ -83,3 +83,44 @@ test("anota, marca a entrevista e manda o convite pronto", async ({ page }) => {
     page.getByText(/Entrevista \S+, \d{2}\/\d{2} às 14:30/).first(),
   ).toBeVisible();
 });
+
+/**
+ * As etiquetas (#545): escritas na ficha, aparecem no card do funil e
+ * filtram a aba Talentos.
+ *
+ * Em `app-2`, e não na `app-3` do teste de cima: os dois salvam o formulário
+ * inteiro, e rodam ao mesmo tempo — o de cima, sem etiquetas, apagava as
+ * deste no meio do caminho.
+ */
+test("etiqueta na ficha, aparece no funil e filtra Talentos", async ({
+  page,
+}) => {
+  await page.goto("/empresa/candidaturas/app-2");
+  await aguardarHidratacao(page, "form");
+  await page
+    .getByLabel("Etiquetas")
+    .fill("Banco de talentos, chamar na próxima");
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.getByRole("status")).toContainText("Salvo");
+
+  await page.reload();
+  await expect(page.getByLabel("Etiquetas")).toHaveValue(
+    "banco de talentos, chamar na próxima",
+  );
+
+  await page.goto("/empresa/funil?estagio=visualizada");
+  await expect(
+    page.getByRole("list", { name: "Etiquetas" }).first(),
+  ).toContainText("banco de talentos");
+
+  await page.goto("/empresa/talentos?etiqueta=chamar%20na%20pr%C3%B3xima");
+  const linhas = page.locator('a[href*="/empresa/candidaturas/"]');
+  await expect(linhas).toHaveCount(1);
+  await expect(linhas.first()).toContainText("chamar na próxima");
+
+  await aguardarAnimacoes(page);
+  const { violations } = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(violations.map((v) => v.id)).toEqual([]);
+});

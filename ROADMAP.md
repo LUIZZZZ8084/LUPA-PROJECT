@@ -23,6 +23,31 @@ Em 05/11/2026:
   [#549](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/549),
   [#550](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/550),
   [#551](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/551)
+
+- Etiquetas nas candidaturas: na ficha, a empresa marca até cinco, como
+  "banco de talentos" ou "chamar na próxima". Elas aparecem no card do
+  funil e filtram a aba Talentos, que junta as de todas as candidaturas da
+  pessoa. Só a empresa vê —
+  [#545](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/545)
+
+- Editar a vaga publicada, pela aba Vagas: descrição, endereço, habilidades
+  e salário se corrigem sem gastar outra vaga. Cargo, cidade, área,
+  contrato, modalidade, PCD e perguntas ficam travados, e com candidatura
+  recebida o salário pode subir, mas não diminuir —
+  [#544](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/544)
+
+- O botão "Conversar no WhatsApp" passa no contraste no tema claro: tinha
+  2,51:1 em produção, no perfil do prestador e do candidato, e a varredura
+  não via porque em demonstração ele sai desativado. Os botões de chamar no
+  WhatsApp da ficha e do perfil do candidato voltam à cor do WhatsApp —
+  [#546](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/546)
+
+- A empresa recebe um e-mail quando chega candidatura: o primeiro nome de
+  quem se candidatou, o cargo, quantas estão esperando e o link do funil. No
+  máximo um a cada duas horas por empresa, só para e-mail confirmado, e sem
+  contato nenhum no texto —
+  [#543](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/543)
+
 - Anotações e entrevista marcada na ficha da candidatura: a empresa anota o
   que conversou com cada pessoa e marca dia, hora e local da entrevista. Só
   ela lê. A entrevista aparece na ficha, com o convite pronto no WhatsApp,
