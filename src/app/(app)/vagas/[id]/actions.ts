@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { MAXIMO_DE_PERGUNTAS } from "@/lib/triagem";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { avisarEmpresaDaCandidatura } from "@/server/candidaturas/aviso-a-empresa";
 import { candidatarSe as candidatarSeServico } from "@/server/candidaturas/servico";
 
 /**
@@ -27,7 +29,14 @@ export const candidatarSe = criarAcao({
   }),
   executar: async ({ vagaId, respostas }) => {
     const sessao = await sessaoAtual();
-    await candidatarSeServico(sessao, vagaId, respostas);
+    const candidatura = await candidatarSeServico(sessao, vagaId, respostas);
+
+    /*
+     * O aviso à empresa sai depois da resposta (#543): quem se candidatou
+     * quer a confirmação na tela, e uma volta ao Resend em conexão ruim
+     * faria o botão parecer travado. Falha aqui fica no log.
+     */
+    after(() => avisarEmpresaDaCandidatura(candidatura));
 
     revalidatePath(`/vagas/${vagaId}`);
     revalidatePath("/perfil");
