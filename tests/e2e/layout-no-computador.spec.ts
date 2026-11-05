@@ -141,10 +141,17 @@ test.describe("telas da empresa", () => {
     await page.goto(rota);
     const itens = page.locator("main ul > li");
     await expect(itens.first()).toBeVisible();
+    /*
+     * Só os itens da lista de fora: dentro de cada pessoa há a lista das
+     * etiquetas (#545), e cada etiqueta contaria como uma coluna a mais.
+     */
     return itens.evaluateAll(
       (lis) =>
-        new Set(lis.map((li) => Math.round(li.getBoundingClientRect().left)))
-          .size,
+        new Set(
+          lis
+            .filter((li) => !li.parentElement?.closest("li"))
+            .map((li) => Math.round(li.getBoundingClientRect().left)),
+        ).size,
     );
   }
 

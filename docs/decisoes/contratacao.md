@@ -583,6 +583,31 @@ Ficou de fora: etiquetas ("banco de talentos", "chamar na próxima"),
 lembrete automático antes da entrevista e exportar para a agenda do celular.
 Entram com Issue própria se fizerem falta.
 
+## Etiquetas nas candidaturas, e o filtro em Talentos (#545)
+
+Ficaram de fora da #539 e vieram logo depois, pedidas pelo Luiz em
+05/11/2026: quem recruta todo mês — a agência em especial — reaproveita
+candidatos entre vagas e clientes, e não tinha como marcar "banco de
+talentos" ou "chamar na próxima".
+
+**Na mesma tabela das anotações**, `acompanhamento_candidatura`, como uma
+coluna `etiquetas text[]`. Herdam a privacidade (só a empresa lê, `revoke`
+escrito), a RLS e a cascata — excluir a conta do candidato apaga junto. Uma
+tabela de etiquetas com nome e cor seria um cadastro a mais para manter, sem
+ninguém pedindo.
+
+**Texto livre, separado por vírgula**, como as habilidades: é o jeito que
+funciona no celular. O servidor normaliza — minúsculas, sem espaço repetido,
+sem repetir — para "Banco de talentos" e "banco de  talentos" serem a mesma
+no filtro. Até cinco, de 2 a 30 letras; o teto de cinco também é do banco.
+
+**A etiqueta é da candidatura, e o filtro é da pessoa.** Talentos mostra uma
+linha por pessoa, e "banco de talentos" fala dela: a linha junta as
+etiquetas de todas as candidaturas, e o filtro olha a junção. As opções do
+filtro vêm de todo mundo, não só de quem passou nos outros filtros, senão a
+opção escolhida sumiria da lista — e só aparecem quando a empresa já
+etiquetou alguém.
+
 ## Editar a vaga publicada, com o que a define travado (#544)
 
 Pedido do Luiz em 05/11/2026. A edição tinha saído na #173 por dois motivos,

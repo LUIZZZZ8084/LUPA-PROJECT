@@ -308,7 +308,7 @@ const RECURSOS: readonly {
   {
     titulo: "Anotações e entrevista",
     texto:
-      "Anote o que conversou com cada pessoa e marque a entrevista: ela aparece no painel e o convite vai pronto no WhatsApp.",
+      "Anote o que conversou, etiquete quem guardar para a próxima e marque a entrevista: ela aparece no painel e o convite vai pronto no WhatsApp.",
     icone: <CalendarClock size={20} aria-hidden />,
   },
   {

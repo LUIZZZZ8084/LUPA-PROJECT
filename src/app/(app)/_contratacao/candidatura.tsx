@@ -336,6 +336,7 @@ export async function FichaDaCandidatura({
           anotacao={acompanhamento?.anotacao ?? ""}
           entrevistaEm={acompanhamento?.entrevistaEm ?? null}
           entrevistaLocal={acompanhamento?.entrevistaLocal ?? null}
+          etiquetas={acompanhamento?.etiquetas ?? []}
         />
       </Panel>
 

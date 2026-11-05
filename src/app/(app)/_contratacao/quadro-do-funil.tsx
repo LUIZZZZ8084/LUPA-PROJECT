@@ -30,6 +30,8 @@ export interface CardDoFunil {
   whatsapp: string | null;
   /** A entrevista marcada na ficha (#539), já formatada; nula sem entrevista. */
   entrevista: string | null;
+  /** As etiquetas da empresa para esta candidatura (#545). */
+  etiquetas: string[];
 }
 
 const COR_DA_COLUNA: Record<ApplicationStatus, string> = {
@@ -298,6 +300,19 @@ function Cartao({
           <span className="block truncate text-muted text-xs">{card.vaga}</span>
         </span>
       </Link>
+
+      {card.etiquetas.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-1" aria-label="Etiquetas">
+          {card.etiquetas.map((e) => (
+            <li
+              key={e}
+              className="rounded-full bg-panel-2 px-2 py-0.5 text-muted text-xs"
+            >
+              {e}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {card.entrevista && (
         <p className="mt-2 flex items-center gap-1.5 font-medium text-xs">

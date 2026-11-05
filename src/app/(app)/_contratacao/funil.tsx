@@ -73,7 +73,8 @@ export async function FunilDaContratacao({
     .filter((c) => !vagaEscolhida || c.job_id === vagaEscolhida)
     .map((c) => {
       const m = match.get(c.id);
-      const entrevistaEm = acompanhamentos.get(c.id)?.entrevistaEm;
+      const acompanhamento = acompanhamentos.get(c.id);
+      const entrevistaEm = acompanhamento?.entrevistaEm;
       return {
         id: c.id,
         nome: c.candidate.full_name,
@@ -101,6 +102,7 @@ export async function FunilDaContratacao({
             )
           : null,
         entrevista: entrevistaEm ? formatarEntrevista(entrevistaEm) : null,
+        etiquetas: acompanhamento?.etiquetas ?? [],
       };
     });
 

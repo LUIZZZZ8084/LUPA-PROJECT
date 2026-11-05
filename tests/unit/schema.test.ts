@@ -723,6 +723,66 @@ describe("views devolvem o formato que a aplicação espera", () => {
   }, 60_000);
 
   /**
+   * As etiquetas da empresa (#545) moram no acompanhamento, que já é só dela.
+   * O teto de cinco é do banco; a migração chega a um banco sem a coluna.
+   */
+  it("o acompanhamento guarda até cinco etiquetas", async () => {
+    const pessoa = await db.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('etiqueta@teste.lupa', 'h', 'candidato_clt', 'Pessoa', '66999110077', 'Sinop - MT')
+       returning id`,
+    );
+    const vaga = await db.query<{ id: string }>("select id from vagas limit 1");
+    const c = await db.query<{ id: string }>(
+      `insert into candidaturas (vaga_id, candidato_id) values ($1, $2)
+       returning id`,
+      [vaga.rows[0].id, pessoa.rows[0].id],
+    );
+    await db.query(
+      `insert into acompanhamento_candidatura (candidatura_id, etiquetas)
+       values ($1, array['banco de talentos'])
+       on conflict (candidatura_id) do update set etiquetas = excluded.etiquetas`,
+      [c.rows[0].id],
+    );
+    await expect(
+      db.query(
+        "update acompanhamento_candidatura set etiquetas = array['a','b','c','d','e','f'] where candidatura_id = $1",
+        [c.rows[0].id],
+      ),
+    ).rejects.toThrow();
+    // Apagar a pessoa leva a candidatura e o acompanhamento em cascata.
+    await db.query("delete from usuarios where id = $1", [pessoa.rows[0].id]);
+    const sobrou = await db.query(
+      "select 1 from acompanhamento_candidatura where candidatura_id = $1",
+      [c.rows[0].id],
+    );
+    expect(sobrou.rows).toHaveLength(0);
+  });
+
+  it("a migração das etiquetas acrescenta a coluna, e roda de novo", async () => {
+    const MIGRACAO = readFileSync(
+      join(process.cwd(), "supabase/aplica-etiquetas.sql"),
+      "utf8",
+    );
+    const antigo = await PGlite.create();
+    try {
+      await antigo.exec(SCHEMA);
+      await antigo.exec(
+        "alter table acompanhamento_candidatura drop column etiquetas",
+      );
+      await antigo.exec(MIGRACAO);
+      await antigo.exec(MIGRACAO);
+      const r = await antigo.query<{ n: number }>(
+        `select count(*)::int as n from information_schema.columns
+          where table_name = 'acompanhamento_candidatura' and column_name = 'etiquetas'`,
+      );
+      expect(r.rows[0].n).toBe(1);
+    } finally {
+      await antigo.close();
+    }
+  }, 60_000);
+
+  /**
    * A vaga de agência descreve o cliente sem dizer quem é (#538). A coluna é
    * só a descrição, e a view a expõe no fim; o teto de 80 letras é do banco.
    */

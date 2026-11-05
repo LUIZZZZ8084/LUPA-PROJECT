@@ -31,4 +31,26 @@ export const schemaAcompanhamento = z.object({
     .max(200, "O local tem no máximo 200 letras.")
     .optional()
     .transform((t) => t || null),
+  /*
+   * Etiquetas (#545): chegam como texto separado por vírgula, o jeito que
+   * funciona no celular. Viram minúsculas e sem espaço repetido, para
+   * "Banco de talentos" e "banco de  talentos" serem a mesma no filtro, e
+   * repetidas caem.
+   */
+  etiquetas: z
+    .string()
+    .optional()
+    .transform((t) => [
+      ...new Set(
+        (t ?? "")
+          .split(",")
+          .map((e) => e.trim().replace(/\s+/g, " ").toLowerCase())
+          .filter(Boolean),
+      ),
+    ])
+    .refine((lista) => lista.length <= 5, "No máximo cinco etiquetas.")
+    .refine(
+      (lista) => lista.every((e) => e.length >= 2 && e.length <= 30),
+      "Cada etiqueta tem de 2 a 30 letras.",
+    ),
 });

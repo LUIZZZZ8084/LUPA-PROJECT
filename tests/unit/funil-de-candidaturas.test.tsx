@@ -66,6 +66,7 @@ const card = (parcial: Partial<Card> & Pick<Card, "id" | "nome">): Card => ({
   motivos: [],
   whatsapp: null,
   entrevista: null,
+  etiquetas: [],
   ...parcial,
 });
 
