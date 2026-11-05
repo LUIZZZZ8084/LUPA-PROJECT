@@ -52,8 +52,36 @@ export async function curriculoEmPdf(usuarioId: string): Promise<Buffer> {
     resumo: perfil.resumo,
     formacao: perfil.formacao,
     habilidades: perfil.habilidades,
+    experiencias: perfil.experiencias,
     disponibilidade: perfil.disponibilidade,
   });
+}
+
+/**
+ * O que falta no perfil para o currículo não sair magro (#531).
+ *
+ * O PDF só mostra o que está preenchido — seção vazia não entra —, e quem
+ * comprava sem ter preenchido nada recebia o nome e o contato e mais nada.
+ * A tela do gerador mostra esta lista antes do download, na ordem em que as
+ * seções aparecem no PDF, para a pessoa completar antes de mandar a uma
+ * empresa.
+ */
+export async function oQueFaltaNoCurriculo(
+  sessao: Autenticado | null,
+): Promise<string[]> {
+  if (!sessao) return [];
+  const perfil = await repositorioUsuarios().perfilCandidato(sessao.usuarioId);
+  if (!perfil) return [];
+
+  const vazio = (s: string | null) => !s?.trim();
+  return [
+    vazio(perfil.areaDesejada) && "Área desejada",
+    vazio(perfil.resumo) && "Resumo profissional",
+    perfil.experiencias.length === 0 && "Experiências profissionais",
+    vazio(perfil.formacao) && "Formação",
+    perfil.habilidades.length === 0 && "Habilidades",
+    vazio(perfil.disponibilidade) && "Disponibilidade",
+  ].filter((f): f is string => Boolean(f));
 }
 
 /** Se a pessoa já comprou o gerador — para a tela decidir o que mostrar. */

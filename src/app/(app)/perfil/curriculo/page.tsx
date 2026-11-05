@@ -1,14 +1,17 @@
-import { Check, Download, FileText } from "lucide-react";
+import { Check, Download, FileText, PenLine } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackLink, PageShell, PageTitle } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
-import { ButtonAnchor } from "@/components/ui/button";
+import { ButtonAnchor, ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { formatPrecoBRL } from "@/lib/format";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
-import { geradorCurriculoLiberado } from "@/server/curriculo/servico";
+import {
+  geradorCurriculoLiberado,
+  oQueFaltaNoCurriculo,
+} from "@/server/curriculo/servico";
 import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
 import { ComprarGeradorButton } from "./comprar-button";
 
@@ -19,7 +22,8 @@ export const metadata: Metadata = {
 const BENEFICIOS = [
   "Gere quantas vezes quiser, para sempre — sem comprar de novo",
   "O PDF é montado com o que estiver salvo no seu perfil na hora do download",
-  "Currículo limpo, pronto para anexar em qualquer candidatura",
+  "Modelo profissional de uma coluna, que recrutador e sistema de triagem leem sem tropeçar",
+  "Suas experiências, formação e habilidades organizadas, prontas para anexar",
 ];
 
 export default async function GeradorDeCurriculoPage() {
@@ -28,7 +32,10 @@ export default async function GeradorDeCurriculoPage() {
     notFound();
   }
 
-  const liberado = await geradorCurriculoLiberado(sessao);
+  const [liberado, faltas] = await Promise.all([
+    geradorCurriculoLiberado(sessao),
+    oQueFaltaNoCurriculo(sessao),
+  ]);
   const preco = formatPrecoBRL(PRECO_CENTAVOS.curriculo_pdf / 100);
 
   return (
@@ -90,6 +97,43 @@ export default async function GeradorDeCurriculoPage() {
           </div>
         </div>
       </Panel>
+
+      {/*
+        O PDF só mostra o que está preenchido (#531). Sem este aviso, quem
+        compra com o perfil vazio baixa uma folha com o nome e o contato e
+        conclui que o gerador não funciona.
+      */}
+      {faltas.length > 0 && (
+        <Panel className="mt-5 border-warn/30 bg-warn/5">
+          <div className="flex items-start gap-3">
+            <PenLine size={20} className="mt-0.5 flex-none text-warn" />
+            <div className="min-w-0 flex-1">
+              <h2 className="font-bold text-base">
+                Seu currículo vai sair incompleto
+              </h2>
+              <p className="mt-1.5 text-muted text-sm leading-relaxed">
+                O PDF mostra só o que está no seu perfil. Preencha estes campos
+                antes de mandar a uma empresa:
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {faltas.map((f) => (
+                  <li key={f}>
+                    <Badge tone="outline">{f}</Badge>
+                  </li>
+                ))}
+              </ul>
+              <ButtonLink
+                href="/perfil/editar"
+                variant="outline"
+                size="sm"
+                className="mt-4"
+              >
+                Completar meu perfil
+              </ButtonLink>
+            </div>
+          </div>
+        </Panel>
+      )}
     </PageShell>
   );
 }

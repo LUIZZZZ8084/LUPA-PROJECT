@@ -34,6 +34,7 @@ import {
 } from "@/server/parceiros/servico";
 import {
   COMPRAS_DE_VAGA_TESTAVEIS,
+  previaDoCurriculo,
   testarCompraDeVaga,
   testarCompraDoCurriculo,
 } from "@/server/testes-de-compra/servico";
@@ -255,5 +256,19 @@ export const testarCompraAction = criarAcao({
     // no painel e na tela de planos.
     revalidatePath("/empresa", "layout");
     return { tipo, pdfBase64: null, carteira };
+  },
+});
+
+/*
+ * O modelo do currículo com uma pessoa de exemplo (#531). Não compra nem
+ * grava nada: é a mesma montagem do PDF, com dados inventados, para ver o
+ * modelo cheio quando o perfil do admin está vazio.
+ */
+export const previaDoCurriculoAction = criarAcao({
+  nome: "admin.previa_curriculo",
+  entrada: z.object({}),
+  executar: async () => {
+    const pdf = await previaDoCurriculo(await sessaoAtual());
+    return { pdfBase64: pdf.toString("base64") };
   },
 });

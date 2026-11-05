@@ -105,6 +105,8 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
   // Testar uma compra é um clique por vez, conferindo o resultado (#516). O
   // currículo monta um PDF, o pedido mais caro de CPU do app.
   "admin.testar_compra": porJanela(20),
+  // A prévia do modelo monta o mesmo PDF (#531).
+  "admin.previa_curriculo": porJanela(20),
 
   /*
    * Candidatar-se é o verbo mais usado do app, e por quem tem menos

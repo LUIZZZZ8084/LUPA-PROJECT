@@ -13,6 +13,7 @@ import type { Autenticado } from "@/server/auth/rbac";
 import {
   geradorCurriculoLiberado,
   gerarCurriculoDoCandidato,
+  oQueFaltaNoCurriculo,
 } from "@/server/curriculo/servico";
 import { RepositorioMemoria, usarRepositorio } from "@/server/repositories";
 
@@ -150,5 +151,72 @@ describe("geradorCurriculoLiberado", () => {
 
     await repo.definirGeradorCurriculoLiberado(candidatoId, true);
     expect(await geradorCurriculoLiberado(sessao)).toBe(true);
+  });
+});
+
+/**
+ * O aviso da tela do gerador (#531): o PDF só mostra o que está no perfil,
+ * e a lista diz o que falta, na ordem das seções do PDF.
+ */
+describe("oQueFaltaNoCurriculo", () => {
+  let repo: RepositorioMemoria;
+  let restaurar: () => void;
+  let sessao: Autenticado;
+
+  beforeEach(async () => {
+    repo = new RepositorioMemoria();
+    restaurar = usarRepositorio(repo);
+
+    const candidato = await repo.criar({
+      email: "candidato3@teste.lupa",
+      senhaHash: "hash",
+      papel: "candidato_clt",
+      nomeCompleto: "Candidato de Teste",
+      telefone: "66999990000",
+      cidade: "Sinop - MT",
+    });
+    await repo.criarPerfilCandidato({
+      usuarioId: candidato.id,
+      areaDesejada: "Agronegócio",
+      // Só espaço conta como vazio: o PDF também não mostra.
+      resumo: "   ",
+      curriculoUrl: null,
+      disponibilidade: null,
+      formacao: "Ensino médio completo",
+      habilidades: ["CNH D"],
+      experiencias: [],
+      visivelParaEmpresas: false,
+      geradorCurriculoLiberado: false,
+    });
+    sessao = { usuarioId: candidato.id, papel: "candidato_clt" };
+  });
+
+  afterEach(() => {
+    restaurar();
+  });
+
+  it("lista o que está vazio, na ordem do PDF", async () => {
+    expect(await oQueFaltaNoCurriculo(sessao)).toEqual([
+      "Resumo profissional",
+      "Experiências profissionais",
+      "Disponibilidade",
+    ]);
+  });
+
+  it("perfil completo não tem aviso, e sem sessão também não", async () => {
+    await repo.salvarPerfilCandidato(sessao.usuarioId, {
+      areaDesejada: "Agronegócio",
+      resumo: "Operador de colheitadeira.",
+      formacao: "Ensino médio completo",
+      habilidades: ["CNH D"],
+      experiencias: [
+        { role: "Operador", company: "Fazenda Boa Vista", period: "2020" },
+      ],
+      disponibilidade: "Imediata",
+      visivelParaEmpresas: false,
+    });
+
+    expect(await oQueFaltaNoCurriculo(sessao)).toEqual([]);
+    expect(await oQueFaltaNoCurriculo(null)).toEqual([]);
   });
 });

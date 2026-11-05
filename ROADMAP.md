@@ -37,6 +37,15 @@ Em 04/11/2026:
   entrar ganharam o link, e ela entrou no sitemap —
   [#537](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/537)
 
+Em 03/11/2026:
+
+- Currículo em PDF num modelo profissional de uma coluna, que recrutador e
+  sistema de triagem leem sem tropeçar, agora com as experiências
+  profissionais — que antes ficavam de fora. A tela do gerador avisa o que
+  falta no perfil antes do download, e a área de testes do admin mostra o
+  modelo com uma pessoa de exemplo —
+  [#531](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/531)
+
 Em 02/11/2026:
 
 - App no computador, segunda rodada: nas listas de vagas e serviços, o

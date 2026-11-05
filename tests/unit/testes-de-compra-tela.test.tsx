@@ -15,6 +15,10 @@ const chamadas = vi.hoisted(() => ({
 }));
 
 vi.mock("@/app/(app)/admin/actions", () => ({
+  previaDoCurriculoAction: async () => {
+    chamadas.tipos.push("previa");
+    return { ok: true, dados: { pdfBase64: "JVBERi0=" } };
+  },
   testarCompraAction: async ({ tipo }: { tipo: string }) => {
     chamadas.tipos.push(tipo);
     return chamadas.resposta;
@@ -135,5 +139,18 @@ describe("tela de testes de compra", () => {
     expect((await screen.findByRole("alert")).textContent).toBe(
       "Você não tem permissão para isso.",
     );
+  });
+
+  it("a prévia do modelo monta o PDF de exemplo, separada das compras", async () => {
+    render(<TestesDeCompra precos={PRECO_CENTAVOS} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ver modelo com dados de exemplo" }),
+    );
+
+    expect((await screen.findByRole("status")).textContent).toMatch(
+      /Modelo gerado/,
+    );
+    expect(chamadas.tipos).toEqual(["previa"]);
   });
 });

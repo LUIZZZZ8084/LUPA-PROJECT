@@ -5,6 +5,8 @@ import {
   type DireitoDePublicar,
   direitoDePublicar,
 } from "../carteiras/servico";
+import { CURRICULO_DE_EXEMPLO } from "../curriculo/exemplo";
+import { gerarCurriculoPdf } from "../curriculo/gerar";
 import { curriculoEmPdf } from "../curriculo/servico";
 import { aplicarCompraSemCobranca } from "../pagamentos/servico";
 import type { TipoPagamento } from "../pagamentos/tipos";
@@ -82,4 +84,19 @@ export async function testarCompraDeVaga(
   const admin = exigirCapacidade(sessao, "admin:testar_compras");
   await aplicarCompraSemCobranca(admin, tipo);
   return direitoDePublicar(admin.usuarioId);
+}
+
+/**
+ * O modelo do currículo cheio, com uma pessoa de exemplo (#531).
+ *
+ * A compra testada acima gera o PDF da conta do admin, que não tem perfil
+ * de candidato preenchido — sai o nome e o contato, e o modelo não aparece.
+ * Esta prévia passa pela mesma `gerarCurriculoPdf` com dados inventados, e
+ * não libera nem grava nada.
+ */
+export async function previaDoCurriculo(
+  sessao: Autenticado | null,
+): Promise<Buffer> {
+  exigirCapacidade(sessao, "admin:testar_compras");
+  return gerarCurriculoPdf(CURRICULO_DE_EXEMPLO);
 }

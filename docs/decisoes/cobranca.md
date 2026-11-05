@@ -617,6 +617,45 @@ outros** — `aplicarEfeito` e `desfazerEfeitoDoTipo`, em
 `src/server/candidatos/servico.ts`, no mesmo padrão de `estenderMensalidade`
 para o prestador: `pagamentos` aciona, o domínio decide.
 
+## O modelo do currículo em PDF (#531)
+
+Pedido do Paulinho em 03/11/2026: o PDF "saía com duas linhas". Eram dois
+defeitos juntos. **As experiências nunca chegavam ao PDF**: o perfil guarda
+cargo, empresa, período e descrição, e `gerarCurriculoPdf` não recebia esse
+campo — justamente a seção que o recrutador lê primeiro. E **o modelo era
+cru**: nome, uma linha de contato e caixinhas cinzas para as habilidades.
+
+O modelo novo tem uma coluna, nesta ordem: Objetivo, Resumo profissional,
+Experiência profissional, Formação, Habilidades e Disponibilidade. É o
+formato que recrutador e sistema de triagem leem sem tropeçar. A ordem mora
+em `secoesDoCurriculo`, testada sem abrir o PDF, e **seção vazia não entra**.
+
+**A experiência vem antes da formação.** Para quem procura emprego aqui —
+operador, motorista, vendedor —, o que decide a entrevista é onde a pessoa já
+trabalhou. Cada experiência fica inteira numa página só (`wrap: false`).
+
+**Ficou de fora, de propósito:** duas colunas, foto e gráfico de nível de
+habilidade. O sistema de triagem lê a página como texto corrido: coluna
+lateral vira frase embaralhada, e caixa desenhada não é texto. Pelo mesmo
+motivo, as habilidades saíram das caixinhas e viraram texto com marcador, e
+os títulos não têm espaçamento entre letras — conferido extraindo o texto do
+PDF, que lia "D I S P O N I B I L I DA D E". Também não há hifenização: a
+do react-pdf parte a palavra com regra de inglês ("dis-tribuição"). E não
+há marca da Lupa na folha: o currículo é de quem pagou por ele.
+
+**Três armadilhas do react-pdf**, registradas no próprio estilo:
+`lineHeight` na `Page` some com o rodapé de número de página; num `View`
+em volta, é herdado multiplicado e abre a página inteira; e em cada texto
+precisa do `fontSize` junto, senão multiplica o tamanho padrão da
+biblioteca, e não o da página.
+
+**O PDF só mostra o que está no perfil**, e quem comprava com o perfil
+vazio baixava uma folha com o nome e o contato. A tela do gerador agora
+lista o que falta (`oQueFaltaNoCurriculo`), na ordem das seções, com o
+caminho para completar. E a área de testes do admin ganhou "Ver modelo com
+dados de exemplo" (`CURRICULO_DE_EXEMPLO`), porque o perfil de candidato do
+admin está vazio e a compra testada não mostrava o modelo.
+
 ## O plano vira o último passo do cadastro, não uma descoberta depois
 
 Pedido do Paulinho (#184): quem se cadastrava como prestador ou como
