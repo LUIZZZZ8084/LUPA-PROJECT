@@ -1,6 +1,7 @@
 import { LOGO_HORIZONTAL, NOME, simbolo } from "@/components/brand/marca";
 import { formatSalaryRange } from "@/lib/format";
 import type { JobListing } from "@/lib/types";
+import { quemContrata } from "@/lib/vaga-confidencial";
 
 /**
  * As duas imagens de uma vaga: a miniatura do link e a arte de story (#490).
@@ -41,7 +42,7 @@ export function dadosDaImagem(job: JobListing): DadosDaImagem {
   const salario = formatSalaryRange(job.salary_min, job.salary_max);
   return {
     cargo: job.title,
-    empresa: job.company.company_name,
+    empresa: quemContrata(job),
     cidade: job.neighborhood ? `${job.neighborhood}, ${job.city}` : job.city,
     endereco: job.address,
     salario: salario === "A combinar" ? null : salario,

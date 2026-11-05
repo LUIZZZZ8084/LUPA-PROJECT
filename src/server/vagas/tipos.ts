@@ -29,6 +29,11 @@ export interface Vaga {
   modalidade: WorkMode | null;
   /** Vaga para pessoa com deficiência (#456). Antiga é `false`. */
   paraPcd: boolean;
+  /**
+   * A vaga é para um cliente de quem publicou, e esta é a descrição dele,
+   * sem o nome (#538). `null` é a vaga comum, da própria empresa.
+   */
+  contratanteConfidencial: string | null;
   salarioMin: number | null;
   salarioMax: number | null;
   habilidades: string[];
@@ -56,6 +61,7 @@ export interface DadosNovaVaga {
   tipoContrato: string;
   modalidade: WorkMode;
   paraPcd: boolean;
+  contratanteConfidencial?: string | null;
   salarioMin?: number | null;
   salarioMax?: number | null;
   habilidades?: string[];

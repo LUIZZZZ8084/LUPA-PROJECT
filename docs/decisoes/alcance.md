@@ -135,9 +135,10 @@ pública: a regra de cima continua de pé para tudo o que mostra pessoas.
 mesmos da tela de compra. Há teste que confere cada preço da página contra
 a tabela.
 
-**Só promete o que existe.** A vaga confidencial (#538) e as anotações com
-entrevista agendada (#539) foram pedidas junto, e entram no texto quando
-forem entregues; o teste da página reprova as duas palavras até lá.
+**Só promete o que existe.** As anotações com entrevista agendada (#539)
+foram pedidas junto, e entram no texto quando forem entregues; o teste da
+página reprova as palavras até lá. A vaga confidencial (#538) entrou na
+página no mesmo PR que a entregou.
 "Editar a vaga" aparece como resposta honesta ("ainda não") porque é a
 primeira pergunta de quem contrata.
 

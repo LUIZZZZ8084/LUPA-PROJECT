@@ -55,6 +55,7 @@ const DADOS_VAGA = {
   tipoContrato: "CLT",
   modalidade: "presencial" as const,
   paraPcd: false,
+  contratanteConfidencial: null,
   endereco: "Av. das Itaúbas, 1200",
 };
 
@@ -196,6 +197,7 @@ describe("visualizações de vaga", () => {
       tipoContrato: null,
       modalidade: null,
       paraPcd: false,
+      contratanteConfidencial: null,
       salarioMin: null,
       salarioMax: null,
       habilidades: [],
