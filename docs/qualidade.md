@@ -94,7 +94,15 @@ Escopo: só a lógica pura de `src/lib`. Score atual **62%**, acima do mínimo
 de 60. A distribuição é honesta: `demo.ts` 100%, `format.ts` 89%,
 `observability.ts` 67%, `data.ts` 49%. A lacuna real é `data.ts` — os ramos
 de construção de consulta têm asserções menos precisas do que poderiam.
-Roda só na `main`, porque leva alguns minutos.
+Roda só na `main`, porque leva de 16 a mais de 25 minutos com o mesmo
+código, conforme a máquina do runner; por isso o limite do job é 40
+([#555](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/555)).
+
+Quase metade desse tempo vai em 64 mutantes estáticos: constantes e regex de
+topo de módulo, que rodam todos os testes relacionados porque o Stryker não
+sabe qual deles os cobre. `ignoreStatic` cortaria esse tempo, mas tiraria os
+64 da nota. O caminho que não perde sinal é matar os sete que sobrevivem,
+que hoje rodam 1.369 testes cada um.
 
 ## Lint e qualidade de código
 
