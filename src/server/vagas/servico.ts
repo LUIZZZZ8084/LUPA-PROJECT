@@ -1,5 +1,6 @@
 import { vagaExpirada } from "@/lib/format";
 import { type Autenticado, exigirCapacidade, exigirDono } from "../auth/rbac";
+import { repositorioCandidaturas } from "../candidaturas";
 import {
   devolverCobranca,
   direitoDePublicar,
@@ -161,20 +162,82 @@ async function motivoDaRecusa(usuarioId: string): Promise<string> {
   return "Para publicar, compre uma vaga avulsa ou assine um plano.";
 }
 
-/*
- * `editarVaga` e `vagaParaEditar` saíram na #173.
+/**
+ * Corrigir o texto da vaga publicada (#544).
  *
- * Vaga publicada não se edita mais. Com cobrança por vaga (#172), editar
- * era o caminho óbvio para não pagar: publica uma e, a cada vaga nova,
- * reescreve a mesma por dentro — o anúncio muda de conteúdo e nunca custa
- * de novo. E do outro lado o dano é pior: quem se candidatou a uma vaga
- * de motorista descobriria, no dia da entrevista, que ela virou outra
- * coisa.
+ * A edição saiu na #173 por dois motivos, e os dois continuam valendo — o
+ * que mudou é que eles se resolvem travando campos, e não a edição inteira:
  *
- * O que substitui é a revisão obrigatória antes de publicar, com o aviso
- * de que não dá para editar depois — e `encerrarVaga`, logo abaixo, para
- * quem se arrependeu do anúncio inteiro.
+ * - **Reescrever uma vaga paga como se fosse outra.** Cargo, categoria,
+ *   cidade, contrato, modalidade, PCD e perguntas não mudam: a vaga de
+ *   motorista em Sorriso continua sendo de motorista em Sorriso, e virar
+ *   outra vaga custa outra vaga. O prazo de 30 dias também não muda.
+ * - **Quem se candidatou descobrir na entrevista que a vaga mudou.** Com
+ *   candidatura recebida, o salário não diminui — nem o piso, nem o teto.
+ *   Subir, corrigir o endereço ou detalhar a descrição só ajuda quem já se
+ *   candidatou.
+ *
+ * O que sobrou da #173 é a revisão antes de publicar, que continua: ela
+ * pega o erro antes, e a edição é para o que passou mesmo assim.
  */
+export async function editarVaga(
+  sessao: Autenticado | null,
+  dados: {
+    id: string;
+    descricao: string;
+    bairro?: string | null;
+    endereco: string;
+    habilidades?: string[];
+    salarioMin?: number | null;
+    salarioMax?: number | null;
+  },
+): Promise<Vaga> {
+  const autenticado = exigirCapacidade(sessao, "vaga:editar_propria");
+  const atual = await vagaDaEmpresa(autenticado, dados.id);
+
+  if (atual.status !== "aberta" || vagaExpirada(atual.expiraEm)) {
+    throw erros.conflito(
+      "Esta vaga não está no ar. Para anunciar de novo, publique outra parecida.",
+    );
+  }
+
+  const salarioMin = dados.salarioMin ?? null;
+  const salarioMax = dados.salarioMax ?? null;
+  const candidaturas = await repositorioCandidaturas().porVaga(atual.id);
+  const diminuiu = (novo: number | null, antigo: number | null) =>
+    antigo !== null && (novo === null || novo < antigo);
+  if (
+    candidaturas.length > 0 &&
+    (diminuiu(salarioMin, atual.salarioMin) ||
+      diminuiu(salarioMax, atual.salarioMax))
+  ) {
+    throw erros.validacao(
+      [
+        {
+          campo: "salarioMin",
+          mensagem:
+            "Já há candidaturas: o salário pode subir, mas não diminuir.",
+        },
+      ],
+      "Quem já se candidatou viu o salário anunciado. Ele pode subir, mas não diminuir.",
+    );
+  }
+
+  const vaga = await repositorioVagas().atualizar(atual.id, {
+    descricao: dados.descricao,
+    bairro: dados.bairro ?? null,
+    endereco: dados.endereco,
+    habilidades: dados.habilidades ?? [],
+    salarioMin,
+    salarioMax,
+  });
+  log.info("vaga editada", {
+    acao: "vaga.editar",
+    papel: autenticado.papel,
+    comCandidaturas: candidaturas.length > 0,
+  });
+  return vaga;
+}
 
 export async function encerrarVaga(
   sessao: Autenticado | null,

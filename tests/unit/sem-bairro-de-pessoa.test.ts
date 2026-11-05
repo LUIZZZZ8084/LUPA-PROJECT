@@ -60,8 +60,8 @@ const FALA_DA_VAGA = [
   /^server\/vagas\//,
   // `zBairro` valida o texto livre da vaga.
   /^server\/validation\.ts$/,
-  // O formulário de publicar e a revisão antes de publicar.
-  /^app\/\(app\)\/_contratacao\/(nova-vaga-form|revisao)\.tsx$/,
+  // O formulário de publicar, a revisão antes de publicar e a edição (#544).
+  /^app\/\(app\)\/_contratacao\/(nova-vaga-form|revisao|editar-vaga|editar-vaga-form)\.tsx$/,
   // A vaga na tela: card e detalhe.
   /^components\/job-card\.tsx$/,
   /^app\/\(app\)\/vagas\/\[id\]\/page\.tsx$/,

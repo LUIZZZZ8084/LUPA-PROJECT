@@ -217,8 +217,22 @@ export const schemaNovaVaga = z
     }),
   );
 
+/*
+ * Editar a vaga publicada (#544): só o que corrige o anúncio sem trocar a
+ * vaga. Cargo, categoria, cidade, contrato, modalidade, PCD e perguntas
+ * ficam de fora do schema — o que não chega aqui não tem como ser gravado,
+ * mesmo que alguém mande pela action direto.
+ */
 export const schemaEdicaoVaga = z
-  .object({ id: z.string().trim().min(1, "Vaga inválida."), ...camposVaga })
+  .object({
+    id: z.string().trim().min(1, "Vaga inválida."),
+    descricao: camposVaga.descricao,
+    bairro: camposVaga.bairro,
+    endereco: camposVaga.endereco,
+    habilidades: camposVaga.habilidades,
+    salarioMin: camposVaga.salarioMin,
+    salarioMax: camposVaga.salarioMax,
+  })
   .refine(refinoSalario, {
     message: "O teto precisa ser maior que o piso.",
     path: ["salarioMax"],

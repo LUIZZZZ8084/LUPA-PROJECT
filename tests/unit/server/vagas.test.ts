@@ -357,20 +357,10 @@ describe("vagas do painel da empresa", () => {
     });
   });
 
-  /**
-   * Editar vaga publicada saiu na #173.
-   *
-   * Não é lacuna: com cobrança por vaga, editar era o caminho para não
-   * pagar — publica uma e reescreve por dentro a cada vaga nova. E quem
-   * se candidatou a um anúncio tem direito a ele continuar sendo o mesmo.
-   * O que existe no lugar é a revisão obrigatória antes de publicar, e
-   * `encerrarVaga` para quem se arrependeu do anúncio inteiro.
+  /*
+   * Editar vaga publicada voltou na #544, com o que a define travado: as
+   * regras moram em `vagas-edicao.test.ts`.
    */
-  it("não existe mais como editar uma vaga publicada", async () => {
-    const servico = await import("@/server/vagas/servico");
-    expect(Object.keys(servico)).not.toContain("editarVaga");
-    expect(Object.keys(servico)).not.toContain("vagaParaEditar");
-  });
 
   describe("encerrar", () => {
     it("some da busca (status fechada), mas os dados continuam", async () => {

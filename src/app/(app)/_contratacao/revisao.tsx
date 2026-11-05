@@ -15,9 +15,10 @@ function ehModalidade(valor: string): valor is WorkMode {
 /**
  * O que a empresa preencheu, mostrado como o candidato vai ver.
  *
- * Existe por um motivo que a #173 registra: **depois de publicada, a vaga
- * não pode mais ser editada**. Sem uma conferência antes, o único jeito de
- * corrigir uma vírgula seria publicar de novo — e publicar custa crédito.
+ * Nasceu quando a vaga publicada não se editava (#173). Desde a #544 o
+ * texto se corrige depois, mas o que define a vaga — cargo, cidade,
+ * contrato, modalidade, PCD e perguntas — continua travado, e errar um deles
+ * custa publicar outra.
  *
  * O preview lê os mesmos campos que vão para o banco, e não um segundo
  * caminho de dados: o que a pessoa confere aqui é literalmente o que ela
@@ -105,17 +106,19 @@ export function RevisaoDaVaga({ dados }: { dados: DadosDaVaga }) {
           <AlertTriangle size={20} className="mt-0.5 flex-none text-warn" />
           <div>
             <h2 className="font-bold text-base">
-              Depois de publicada, esta vaga não pode ser editada
+              Confira o cargo, a cidade e o contrato: eles não mudam depois
             </h2>
             <ul className="mt-2 space-y-1.5 text-muted text-sm leading-relaxed">
               <li>
-                Confira o cargo, o salário e a descrição agora. Corrigir depois
-                só publicando outra vaga, e{" "}
+                Cargo, cidade, área, contrato, modalidade, PCD e perguntas ficam
+                como estão. Corrigir um deles só publicando outra vaga, e{" "}
                 <strong className="text-ink">isso gasta outra vaga</strong>.
               </li>
               <li>
-                Você pode <strong className="text-ink">encerrar</strong> a vaga
-                quando quiser — o que não dá é trocar o conteúdo dela.
+                A descrição, o endereço, as habilidades e o salário você{" "}
+                <strong className="text-ink">edita depois</strong>, pela aba
+                Vagas. Com candidatura recebida, o salário pode subir, mas não
+                diminuir.
               </li>
               <li>
                 A vaga fica <strong className="text-ink">30 dias</strong> no ar.

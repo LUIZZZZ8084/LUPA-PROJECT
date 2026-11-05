@@ -1,4 +1,4 @@
-import { FileText, Plus } from "lucide-react";
+import { FileText, Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -165,7 +165,19 @@ export async function VagasDaContratacao({
                         <ReativarVagaButton id={job.id} />
                       </div>
                     ) : (
-                      <EncerrarVagaButton id={job.id} titulo={job.title} />
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        {/* Corrigir o texto sem gastar outra vaga (#544). */}
+                        <ButtonLink
+                          href={`${area.base}/vagas/${job.id}/editar`}
+                          variant="outline"
+                          size="sm"
+                          aria-label={`Editar a vaga ${job.title}`}
+                        >
+                          <Pencil size={14} aria-hidden />
+                          Editar
+                        </ButtonLink>
+                        <EncerrarVagaButton id={job.id} titulo={job.title} />
+                      </div>
                     ))}
                   {resultado && (
                     <div className="basis-full">

@@ -14,6 +14,12 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- Editar a vaga publicada, pela aba Vagas: descrição, endereço, habilidades
+  e salário se corrigem sem gastar outra vaga. Cargo, cidade, área,
+  contrato, modalidade, PCD e perguntas ficam travados, e com candidatura
+  recebida o salário pode subir, mas não diminuir —
+  [#544](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/544)
+
 - O botão "Conversar no WhatsApp" passa no contraste no tema claro: tinha
   2,51:1 em produção, no perfil do prestador e do candidato, e a varredura
   não via porque em demonstração ele sai desativado. Os botões de chamar no
