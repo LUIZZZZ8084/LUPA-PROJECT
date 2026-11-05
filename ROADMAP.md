@@ -20,6 +20,12 @@ Em 05/11/2026:
   WhatsApp da ficha e do perfil do candidato voltam à cor do WhatsApp —
   [#546](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/546)
 
+- A empresa recebe um e-mail quando chega candidatura: o primeiro nome de
+  quem se candidatou, o cargo, quantas estão esperando e o link do funil. No
+  máximo um a cada duas horas por empresa, só para e-mail confirmado, e sem
+  contato nenhum no texto —
+  [#543](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/543)
+
 - Anotações e entrevista marcada na ficha da candidatura: a empresa anota o
   que conversou com cada pessoa e marca dia, hora e local da entrevista. Só
   ela lê. A entrevista aparece na ficha, com o convite pronto no WhatsApp,
