@@ -4,6 +4,7 @@ import {
   EyeOff,
   FileText,
   MapPin,
+  MessageCircle,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -20,6 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import { WhatsAppButton } from "@/components/whatsapp-button";
+import { mensagemParaCandidato } from "@/lib/chamada";
+import { empresaDoPainel, getCompany } from "@/lib/data";
+import { whatsappLink } from "@/lib/format";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { perfilDoCandidato } from "@/server/candidatos/servico";
@@ -29,6 +33,7 @@ import {
   resumo as resumoDePublicacoes,
 } from "@/server/publicacoes/servico";
 import { areaDoPapel } from "../../_contratacao/area";
+import { MoverCandidaturaSelect } from "../../_contratacao/mover-candidatura-select";
 
 export const metadata: Metadata = {
   title: "Perfil do candidato",
@@ -76,7 +81,34 @@ export default async function CandidatoPage({
     );
   }
 
-  const { candidato: c, candidaturaId, ehDono, visivelParaEmpresas } = perfil;
+  const {
+    candidato: c,
+    candidaturaId,
+    candidaturas,
+    ehDono,
+    visivelParaEmpresas,
+  } = perfil;
+  const areaDeQuemOlha = sessao ? areaDoPapel(sessao.papel) : null;
+  const baseDaArea = areaDeQuemOlha?.base ?? "/empresa";
+
+  /*
+   * Quem se candidatou é chamado com a mensagem de candidatura (#493), e não
+   * com a de orçamento do botão de prestador, que não faz sentido aqui. A
+   * mensagem leva a vaga da candidatura mais recente.
+   */
+  const chamadaDeCandidatura =
+    candidaturas.length > 0 && c.phone
+      ? whatsappLink(
+          c.phone,
+          mensagemParaCandidato({
+            candidato: c.full_name,
+            vaga: candidaturas[0].vaga,
+            empresa:
+              (await getCompany(empresaDoPainel(sessao?.usuarioId ?? null)))
+                ?.company_name ?? "nossa empresa",
+          }),
+        )
+      : null;
 
   /*
    * O feed do candidato, nas mesmas condições do prestador.
@@ -124,18 +156,71 @@ export default async function CandidatoPage({
           </div>
         </div>
 
-        {c.phone && (
+        {chamadaDeCandidatura ? (
           <div className="mt-5">
-            <WhatsAppButton
-              phone={c.phone}
-              providerName={c.full_name}
-              context={c.desired_area ?? "uma vaga"}
+            <ButtonLink
+              href={chamadaDeCandidatura}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="vagas"
               size="lg"
               block
-            />
+            >
+              <MessageCircle size={18} />
+              Chamar no WhatsApp
+            </ButtonLink>
           </div>
+        ) : (
+          c.phone && (
+            <div className="mt-5">
+              <WhatsAppButton
+                phone={c.phone}
+                providerName={c.full_name}
+                context={c.desired_area ?? "uma vaga"}
+                size="lg"
+                block
+              />
+            </div>
+          )
         )}
       </Panel>
+
+      {candidaturas.length > 0 && (
+        /*
+         * O funil na página do candidato (#533). A mensagem pronta do
+         * WhatsApp manda a empresa para cá, e daqui ela precisa conseguir
+         * decidir: mover a candidatura de estágio ou abrir a ficha, sem
+         * procurar a pessoa de novo no painel.
+         */
+        <Panel className="mt-5">
+          <h2 className="font-semibold text-sm">No funil de candidatos</h2>
+          <p className="mt-1 text-muted text-xs leading-relaxed">
+            As candidaturas desta pessoa às suas vagas. Mude o estágio aqui, ou
+            abra a ficha para ver o currículo.
+          </p>
+          <ul className="mt-3 divide-y divide-line">
+            {candidaturas.map((a) => (
+              <li
+                key={a.id}
+                className="flex flex-wrap items-start justify-between gap-3 py-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-sm">{a.vaga}</p>
+                  <ButtonLink
+                    href={`${baseDaArea}/candidaturas/${a.id}`}
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                  >
+                    Abrir ficha com currículo
+                  </ButtonLink>
+                </div>
+                <MoverCandidaturaSelect id={a.id} statusAtual={a.status} />
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
 
       {ehDono && !visivelParaEmpresas && (
         /*
@@ -257,7 +342,7 @@ export default async function CandidatoPage({
                           o prestador que contrata cairia na área da
                           empresa, lendo "Voltar para Minha Empresa".
                         */
-                        href={`${(sessao && areaDoPapel(sessao.papel)?.base) || "/empresa"}/candidaturas/${candidaturaId}`}
+                        href={`${baseDaArea}/candidaturas/${candidaturaId}`}
                         variant="empresas"
                         size="sm"
                       >

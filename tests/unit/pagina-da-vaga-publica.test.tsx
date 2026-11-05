@@ -311,3 +311,44 @@ describe("prévia do link", () => {
     expect(meta.title).toBe("Vaga não encontrada");
   });
 });
+
+/**
+ * A vaga de agência (#538): a descrição do cliente e a agência que publicou
+ * aparecem no detalhe, no título e na prévia do link — nunca a agência
+ * sozinha como se fosse a contratante.
+ */
+describe("vaga confidencial", () => {
+  beforeEach(() => {
+    estado.sessao = null;
+    estado.vaga = { ...VAGA, hiring_for: "Indústria de alimentos" };
+    estado.contadas = [];
+  });
+
+  it("diz quem contrata sem o nome, e quem recebe as candidaturas", async () => {
+    await abrir();
+
+    expect(
+      screen.getByText("Indústria de alimentos, via Agro Norte"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/o nome de quem contrata fica em sigilo/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Agro Norte publicou e recebe as candidaturas/),
+    ).toBeTruthy();
+  });
+
+  it("o título e a prévia levam a descrição do cliente", async () => {
+    const meta = await generateMetadata({ params: parametros });
+    expect(meta.title).toContain("Indústria de alimentos, via Agro Norte");
+    expect(String(meta.description)).toContain(
+      "Indústria de alimentos, via Agro Norte",
+    );
+  });
+
+  it("vaga comum não ganha a frase de sigilo", async () => {
+    estado.vaga = VAGA;
+    await abrir();
+    expect(screen.queryByText(/fica em sigilo/)).toBeNull();
+  });
+});

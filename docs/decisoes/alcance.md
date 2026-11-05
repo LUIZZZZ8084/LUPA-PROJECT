@@ -117,6 +117,36 @@ comum: o `Link` do Next pré-busca o destino, e este endpoint renderiza uma
 imagem a cada chamada. Os Termos e a Política de Privacidade dizem que a vaga é
 visível sem conta (a lição da #235: texto legal sai do que o produto faz).
 
+## A página para empresas, aberta sem login (#537)
+
+Pedido do Luiz em 04/11/2026, para a reta final: deixar a Lupa mais atraente
+para empresas e agências de emprego. O app é fechado por login, e a empresa
+que recebia o link numa abordagem caía em "Entrar" sem ver nada do que ia
+comprar. `/para-empresas` é esse link: o que a empresa recebe, os passos, os
+preços e as dúvidas de quem contrata, com o caminho de criar a conta.
+
+**Abre sem sessão, e não lê dado de ninguém.** Nenhuma contagem de contas,
+vagas ou cidades: número numa página comercial vira afirmação, e o alcance
+por cidade já tem lugar, na tela de planos, para quem tem conta (#489). Por
+isso ela pode estar em `ABERTAS` sem reabrir a discussão da navegação
+pública: a regra de cima continua de pé para tudo o que mostra pessoas.
+
+**O preço vem de `PRECO_CENTAVOS`**, e o rótulo de `PLANOS_DE_VAGA`, os
+mesmos da tela de compra. Há teste que confere cada preço da página contra
+a tabela.
+
+**Só promete o que existe.** A vaga confidencial (#538) e as anotações com
+entrevista marcada (#539) foram pedidas junto, e cada uma entrou no texto da
+página no mesmo PR que a entregou — enquanto não existiam, o teste da página
+reprovava as palavras.
+"Editar a vaga" aparece como resposta honesta ("ainda não") porque é a
+primeira pergunta de quem contrata.
+
+O cabeçalho mudou junto: "Para empresas" leva o visitante e o candidato a
+esta página, e a empresa ao painel. Antes levava todo mundo ao painel, e o
+visitante ia parar no login. A home, o rodapé do computador e o painel ao
+lado de entrar ganharam o mesmo link, e a página entrou no sitemap.
+
 ## A vitrine de produção mostra só quem existe (#302)
 
 As contas de exemplo do `seed.sql` — 9 prestadores, 3 empresas e as vagas

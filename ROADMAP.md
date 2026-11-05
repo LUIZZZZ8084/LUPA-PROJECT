@@ -8,9 +8,34 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 03/11/2026.**
+**Última atualização: 05/11/2026.**
 
 ## Concluído
+
+Em 05/11/2026:
+
+- Anotações e entrevista marcada na ficha da candidatura: a empresa anota o
+  que conversou com cada pessoa e marca dia, hora e local da entrevista. Só
+  ela lê. A entrevista aparece na ficha, com o convite pronto no WhatsApp,
+  no card do funil e na lista "Próximas entrevistas" do painel, e marcar leva
+  a pessoa ao estágio de entrevista —
+  [#539](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/539)
+
+Em 04/11/2026:
+
+- Vaga confidencial para agências: ao publicar, a agência descreve o cliente
+  sem dizer o nome, e a vaga aparece como "Indústria de alimentos, via
+  Agência X" no card, no detalhe, na prévia do link e na arte do story, com
+  a frase que explica o sigilo. O nome do cliente nunca é gravado —
+  [#538](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/538)
+
+- Página "Para empresas" aberta sem login, o link da abordagem comercial a
+  empresas e agências: o que a empresa recebe, como funciona, os preços
+  (lidos da mesma tabela da cobrança) e as dúvidas de quem contrata, com o
+  caminho de criar a conta. O "Para empresas" do cabeçalho leva o visitante
+  e o candidato até ela, e a empresa ao painel; a home, o rodapé e a tela de
+  entrar ganharam o link, e ela entrou no sitemap —
+  [#537](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/537)
 
 Em 03/11/2026:
 

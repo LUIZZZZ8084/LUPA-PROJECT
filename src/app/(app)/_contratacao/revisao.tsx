@@ -31,6 +31,8 @@ export interface DadosDaVaga {
   modalidade: string;
   /** "sim" ou "nao" — vem do rádio, e sem resposta fica vazio (#456). */
   paraPcd: string;
+  /** O cliente em sigilo da vaga de agência (#538), ou vazio. */
+  contratanteConfidencial: string;
   cidade: string;
   bairro: string;
   endereco: string;
@@ -50,6 +52,7 @@ export function lerDoFormulario(formData: FormData): DadosDaVaga {
     tipoContrato: ler("tipoContrato"),
     modalidade: ler("modalidade"),
     paraPcd: ler("paraPcd"),
+    contratanteConfidencial: ler("contratanteConfidencial"),
     cidade: ler("cidade"),
     bairro: ler("bairro"),
     endereco: ler("endereco"),
@@ -129,6 +132,12 @@ export function RevisaoDaVaga({ dados }: { dados: DadosDaVaga }) {
         </p>
 
         <h3 className="mt-2 font-bold text-lg leading-snug">{dados.titulo}</h3>
+        {dados.contratanteConfidencial && (
+          <p className="mt-1 text-muted text-sm">
+            {dados.contratanteConfidencial}, via a sua empresa · vaga
+            confidencial
+          </p>
+        )}
 
         <div className="mt-2 flex flex-wrap gap-1.5">
           {dados.categoria && <Badge tone="vagas">{dados.categoria}</Badge>}

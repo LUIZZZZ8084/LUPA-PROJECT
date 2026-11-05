@@ -32,6 +32,8 @@ export function formatSalaryRange(
   min: number | null | undefined,
   max: number | null | undefined,
 ): string {
+  // Piso e teto iguais são um valor só: "R$ 1.800 – R$ 1.800" parece erro.
+  if (min && max && min === max) return brl.format(min);
   if (min && max) return `${brl.format(min)} – ${brl.format(max)}`;
   if (min) return `A partir de ${brl.format(min)}`;
   if (max) return `Até ${brl.format(max)}`;

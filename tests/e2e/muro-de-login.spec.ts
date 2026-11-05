@@ -122,6 +122,21 @@ test.describe("muro de login", () => {
    * exceção no matcher, ou um crawler sem cookie bate num redirecionamento
    * para `/entrar` em vez de encontrar a política.
    */
+  /**
+   * A página para empresas (#537) é o link da abordagem comercial: quem a
+   * recebe ainda não tem conta, e cair em "Entrar" era o problema.
+   */
+  test("a página para empresas abre sem sessão, com o caminho de criar conta", async ({
+    page,
+  }) => {
+    const resposta = await page.goto("/para-empresas");
+    expect(resposta?.status()).toBe(200);
+    await expect(page).toHaveURL(/\/para-empresas$/);
+    await expect(
+      page.getByRole("link", { name: /Criar conta de empresa/ }).first(),
+    ).toHaveAttribute("href", "/cadastro?tipo=empresa");
+  });
+
   test("robots.txt e sitemap.xml respondem sem sessão", async ({ request }) => {
     const robots = await request.get("/robots.txt", { maxRedirects: 0 });
     expect(robots.status()).toBe(200);
@@ -129,7 +144,9 @@ test.describe("muro de login", () => {
 
     const sitemap = await request.get("/sitemap.xml", { maxRedirects: 0 });
     expect(sitemap.status()).toBe(200);
-    expect(await sitemap.text()).toContain("<urlset");
+    const corpo = await sitemap.text();
+    expect(corpo).toContain("<urlset");
+    expect(corpo).toContain("/para-empresas</loc>");
   });
 
   /*

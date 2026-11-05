@@ -1,4 +1,4 @@
-import { Briefcase } from "lucide-react";
+import { Briefcase, MessageCircle } from "lucide-react";
 import type { Metadata } from "next";
 import {
   BackLink,
@@ -15,6 +15,7 @@ import {
 import { getMyApplications } from "@/lib/data";
 import { timeAgo } from "@/lib/format";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
+import { linksParaChamarAEmpresa } from "@/server/candidaturas/chamar-empresa";
 
 export const metadata: Metadata = {
   title: "Minhas candidaturas",
@@ -23,7 +24,10 @@ export const metadata: Metadata = {
 export default async function MinhasCandidaturasPage() {
   const sessao = await sessaoOuEntrar("/perfil/candidaturas");
 
-  const candidaturas = await getMyApplications(sessao.usuarioId);
+  const [candidaturas, chamar] = await Promise.all([
+    getMyApplications(sessao.usuarioId),
+    linksParaChamarAEmpresa(sessao),
+  ]);
 
   return (
     <PageShell width="formulario">
@@ -48,16 +52,38 @@ export default async function MinhasCandidaturasPage() {
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel">
           {candidaturas.map((c) => (
-            <li key={c.id} className="flex items-center gap-3 p-4">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{c.job_title}</p>
-                <p className="mt-0.5 text-xs text-muted">
-                  {c.company_name} · {timeAgo(c.created_at)}
-                </p>
+            <li key={c.id} className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">
+                    {c.job_title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {c.company_name} · {timeAgo(c.created_at)}
+                  </p>
+                </div>
+                <Badge tone={APPLICATION_TONE[c.status]}>
+                  {APPLICATION_LABELS_CANDIDATO[c.status]}
+                </Badge>
               </div>
-              <Badge tone={APPLICATION_TONE[c.status]}>
-                {APPLICATION_LABELS_CANDIDATO[c.status]}
-              </Badge>
+              {/*
+                A mensagem abre escrita no campo do WhatsApp e a pessoa edita
+                antes de enviar (#533): o texto é ponto de partida, como o da
+                empresa (#493).
+              */}
+              {chamar.get(c.id) && (
+                <ButtonLink
+                  href={chamar.get(c.id) as string}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                >
+                  <MessageCircle size={15} />
+                  Chamar a empresa no WhatsApp
+                </ButtonLink>
+              )}
             </li>
           ))}
         </ul>

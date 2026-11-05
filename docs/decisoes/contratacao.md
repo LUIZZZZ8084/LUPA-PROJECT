@@ -479,6 +479,110 @@ frase diz o que fazer — plano cheio e saldo acabado são frases diferentes,
 porque a saída é diferente — e o link leva aos planos. Nos outros, o
 contador só informa: o botão de publicar já está no topo do painel.
 
+## O candidato chama a empresa, e o perfil dele já traz o funil (#533)
+
+Pedido do Luiz em 03/11/2026: uma mensagem pronta para o candidato chamar a
+empresa no WhatsApp, com a vaga, a declaração de interesse e o link do perfil,
+e a empresa conseguir, por esse link, olhar a pessoa e movê-la no funil.
+
+**O botão é de quem já se candidatou.** Está em "Minhas candidaturas", um por
+candidatura (`linksParaChamarAEmpresa`). Decisão do Luiz entre as duas
+opções: deixar chamar sem candidatura pediria um link assinado que libera
+currículo a quem nunca o entregou, e o banco recusa candidatura sem as
+respostas de triagem, então a empresa nem conseguiria adicionar a pessoa ao
+funil em vaga com perguntas. O telefone da empresa sai só pelo caminho da
+candidatura **da própria sessão**; a vaga pública não mostra contato (#490), e
+um "telefone da empresa da vaga X" por parâmetro seria a porta dos fundos. A
+mensagem (`mensagemParaEmpresa`) abre escrita no WhatsApp e a pessoa edita
+antes de enviar, como a da empresa (#493).
+
+**Candidatar-se é o consentimento para esta empresa ver o perfil.**
+`/candidatos/[id]` só abria para quem ligou "quero que empresas me
+encontrem", e o link do perfil de quem apenas se candidatou respondia 404.
+Agora a empresa dona da vaga abre o perfil de quem se candidatou a ela, tenha
+a pessoa ligado a busca ou não. Esse ramo não passa pela conferência de CNPJ
+nem pelo teto de perfis do dia (#433): os dois seguram a busca por quem nunca
+falou com a empresa, e a candidatura já está no painel dela. Outra empresa
+continua recebendo 404.
+
+**O perfil traz as opções de funil.** As candidaturas da pessoa às vagas da
+empresa aparecem com o mesmo seletor de estágio do funil e o atalho para a
+ficha com o currículo. O botão de WhatsApp do perfil, para quem se candidatou,
+usa a mensagem de candidatura em vez da de orçamento do prestador, que não
+fazia sentido ali.
+
+## Vaga confidencial: a agência descreve o cliente, e o nome nunca é gravado (#538)
+
+Pedido do Luiz em 04/11/2026, para atrair agências de emprego: a agência
+publica vaga para os clientes dela, e se a vaga mostra o nome do cliente o
+candidato vai direto nele.
+
+**O nome do cliente não é pedido nem gravado.** A vaga ganha
+`contratante_confidencial`, uma descrição de até 80 letras ("Indústria de
+alimentos de grande porte"), e aparece como "Indústria de alimentos, via
+Agência X" no card, no detalhe, no título e na prévia do link e na arte do
+story. O detalhe diz, com todas as letras, que o nome fica em sigilo e que a
+agência publicou e recebe as candidaturas: o candidato precisa saber com
+quem vai falar, e "via" sem explicação pareceria esconder alguma coisa.
+
+**Por que não "esconder o nome da empresa"**, que era a outra leitura da
+Issue: `vagas` e `perfis_empresa` são legíveis pela chave anônima, que está
+no navegador. Um nome gravado e só não desenhado na tela sai numa consulta à
+API, e a vaga comum da mesma empresa liga o `empresa_id` ao nome. Sigilo de
+verdade para a empresa que publica com a própria conta exigiria tirar a
+leitura pública de `vagas` e da view, e passar a busca para o servidor — uma
+mudança de arquitetura que ninguém pediu ainda. Para a agência isso não faz
+falta: quem precisa ficar oculto é o cliente, e ele não está na Lupa.
+
+**Um campo só, opcional, em branco por padrão.** Nada de caixa "esta vaga é
+confidencial" com um campo que aparece: a vaga comum não precisa pensar
+nisto, e o campo preenchido já é a resposta. `quemContrata`
+(`src/lib/vaga-confidencial.ts`) é o único lugar que monta o nome: escrito
+em cada tela, o quinto lugar esqueceria o "via".
+
+Ficou de fora: o selo "agência" na conta, vários clientes por agência com
+nome guardado em privado, e a página da agência. Nada disso é necessário
+para a vaga funcionar, e cada um é uma tela a mais sem ninguém pedindo.
+
+## Anotações e entrevista marcada: o caderno de quem recruta (#539)
+
+Fase 2 do mini CRM da #511, pedida pelo Luiz em 04/11/2026 para atrair
+agências. Quem recruta todo mês precisa lembrar o que conversou com cada
+pessoa e quando é a entrevista, e isso morava no caderno ou no WhatsApp.
+
+**Na ficha da candidatura, um formulário só**: anotações (texto livre, até
+2000 letras), dia e hora da entrevista e o local. Salvo, a entrevista aparece
+na própria ficha com o botão "Enviar convite no WhatsApp" — dia da semana,
+data, hora, local e "Pode confirmar?" —, no card do funil e na lista
+"Próximas entrevistas" do painel, que só aparece quando há alguma.
+
+**Tabela à parte, e não colunas em `candidaturas`.** A candidatura é lida
+pelos dois lados — a pessoa vê o estágio em "Minhas candidaturas" —, e a
+anotação é só da empresa. Separada, nenhuma view do lado do candidato a
+alcança sem um `join` escrito de propósito; e ela cai em cascata com a
+candidatura, então excluir a conta apaga junto. O `revoke` está escrito, e a
+tabela entrou na lista `NUNCA_PUBLICAS` do teste do schema.
+
+**Hora de parede, sem fuso** (`timestamp`, não `timestamptz`). "Quinta às
+14h" é a hora no relógio de quem vai, na cidade da vaga; com fuso, a mesma
+entrevista apareceria às 13h para quem abrisse o painel em Brasília. A tela
+lê a string pedaço por pedaço, nunca por `new Date()`. O que é "hoje" para a
+lista de próximas usa Brasília, e erra por uma hora em Mato Grosso só na
+virada do dia — aceitável para uma lista.
+
+**Marcar a entrevista move a pessoa para o estágio de entrevista**, se ela
+ainda estava em "Nova" ou "Vista". É o que a empresa faria em seguida, à mão,
+e esquecer deixaria o "Em entrevista" do painel contando menos gente que a
+lista de próximas. Selecionada ou dispensada não volta para trás.
+
+**Nada vai para a pessoa sozinho.** A Lupa não manda o convite: o botão abre
+o WhatsApp da empresa com o texto escrito, e ela envia. Mandar por push ou
+e-mail em nome da empresa seria falar por ela.
+
+Ficou de fora: etiquetas ("banco de talentos", "chamar na próxima"),
+lembrete automático antes da entrevista e exportar para a agenda do celular.
+Entram com Issue própria se fizerem falta.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a

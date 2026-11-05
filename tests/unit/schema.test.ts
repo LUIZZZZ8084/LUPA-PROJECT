@@ -109,6 +109,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
     const tabelas = r.rows.map((t) => t.table_name);
 
     expect(tabelas).toEqual([
+      "acompanhamento_candidatura",
       "admins",
       "assinaturas",
       "avaliacoes",
@@ -722,6 +723,79 @@ describe("views devolvem o formato que a aplicação espera", () => {
   }, 60_000);
 
   /**
+   * A vaga de agência descreve o cliente sem dizer quem é (#538). A coluna é
+   * só a descrição, e a view a expõe no fim; o teto de 80 letras é do banco.
+   */
+  it("a vaga confidencial guarda a descrição do cliente, e a view a expõe", async () => {
+    const existente = await db.query<{ empresa_id: string }>(
+      "select empresa_id from vagas limit 1",
+    );
+    const r = await db.query<{ id: string }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade, contratante_confidencial)
+       values ($1, 'Teste confidencial', 'Descrição de teste para a vaga confidencial, longa o bastante.', 'Sinop - MT', 'Indústria de alimentos')
+       returning id`,
+      [existente.rows[0].empresa_id],
+    );
+    const lida = await db.query<{ hiring_for: string | null }>(
+      "select hiring_for from job_listings where id = $1",
+      [r.rows[0].id],
+    );
+    expect(lida.rows[0].hiring_for).toBe("Indústria de alimentos");
+
+    await expect(
+      db.query("update vagas set contratante_confidencial = $1 where id = $2", [
+        "x".repeat(81),
+        r.rows[0].id,
+      ]),
+    ).rejects.toThrow();
+  });
+
+  it("a migração da vaga confidencial acrescenta a coluna a um banco que não a tem, e roda de novo", async () => {
+    const MIGRACAO = readFileSync(
+      join(process.cwd(), "supabase/aplica-vaga-confidencial.sql"),
+      "utf8",
+    );
+    const antigo = await PGlite.create();
+    try {
+      await antigo.exec(SCHEMA);
+      // Volta ao banco de antes: sem a coluna, com a view sem `hiring_for`.
+      await antigo.exec(`
+        drop view job_listings;
+        create view job_listings with (security_invoker = false) as
+        select v.id, v.empresa_id as company_id, v.titulo as title,
+               v.descricao as description, v.categoria as category,
+               v.cidade as city, v.bairro as neighborhood,
+               v.endereco as address, v.tipo_contrato as contract_type,
+               v.salario_min as salary_min, v.salario_max as salary_max,
+               v.habilidades as skills, v.status, v.criado_em as created_at,
+               '{}'::jsonb as company, 0::bigint as applicant_count,
+               v.expira_em as expires_at, v.modalidade as work_mode,
+               v.para_pcd as for_pcd, v.perguntas as screening_questions
+          from vagas v;
+      `);
+      await antigo.exec(
+        "alter table vagas drop column contratante_confidencial",
+      );
+
+      await antigo.exec(MIGRACAO);
+      await antigo.exec(MIGRACAO);
+
+      const r = await antigo.query<{ coluna: string }>(
+        `select column_name as coluna from information_schema.columns
+          where (table_name = 'vagas' and column_name = 'contratante_confidencial')
+             or (table_name = 'job_listings' and column_name = 'hiring_for')
+          order by 1`,
+      );
+      expect(r.rows.map((x) => x.coluna)).toEqual([
+        "contratante_confidencial",
+        "hiring_for",
+      ]);
+    } finally {
+      await antigo.close();
+    }
+  }, 60_000);
+
+  /**
    * Quem contrata é pessoa ou empresa, e a vaga diz qual (#129).
    *
    * O que vai na view é o booleano derivado do CNPJ, nunca o documento:
@@ -822,6 +896,8 @@ describe("grants de anon e authenticated", () => {
     "custos_mensais",
     // Quem tem parceria com a Lupa, e até quando (#505).
     "parceiros",
+    // O que a empresa anota sobre cada candidatura (#539): só dela.
+    "acompanhamento_candidatura",
     /*
      * Saber quem está de olho em vaga de motorista é a mesma classe de
      * informação que o currículo — numa cidade do tamanho de Sinop, diz
@@ -1220,7 +1296,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        order by table_name`,
     );
     // 23 desde a #235, que acrescentou `mensagens_suporte`.
-    expect(tabelas.rows).toHaveLength(24);
+    expect(tabelas.rows).toHaveLength(25);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -4330,6 +4406,10 @@ describe("aplica-triagem.sql", () => {
     "utf8",
   );
   const VIEWS = ["job_listings", "company_applications"];
+  const DEPOIS_DA_TRIAGEM = readFileSync(
+    join(process.cwd(), "supabase/aplica-vaga-confidencial.sql"),
+    "utf8",
+  );
 
   async function bancoDeAntes() {
     const banco = await PGlite.create();
@@ -4387,6 +4467,12 @@ describe("aplica-triagem.sql", () => {
       await banco.exec(SCRIPT);
       // Seguro de rodar mais de uma vez.
       await banco.exec(SCRIPT);
+      /*
+       * E a migração que veio depois (#538), na ordem em que a produção as
+       * roda: a view do `schema.sql` já tem a coluna dela, e comparar só com
+       * a triagem cobraria desta o que ela não tinha como saber.
+       */
+      await banco.exec(DEPOIS_DA_TRIAGEM);
 
       const colunas = await banco.query<{ table_name: string }>(
         `select table_name from information_schema.columns

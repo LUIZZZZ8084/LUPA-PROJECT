@@ -32,6 +32,8 @@ import {
   vagaExpirada,
 } from "@/lib/format";
 import { ehRastreador } from "@/lib/rastreador";
+import { cn } from "@/lib/utils";
+import { quemContrata } from "@/lib/vaga-confidencial";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { contarVisualizacao } from "@/server/visualizacoes";
@@ -51,10 +53,10 @@ export async function generateMetadata({
    * Nada de contato — a página abre sem login, e o que ela mostra a quem
    * não tem conta é só isto.
    */
-  const titulo = `${job.title} — ${job.company.company_name}`;
+  const titulo = `${job.title} — ${quemContrata(job)}`;
   const salario = formatSalaryRange(job.salary_min, job.salary_max);
   const descricao =
-    `${job.company.company_name} · ${job.city}` +
+    `${quemContrata(job)} · ${job.city}` +
     `${salario === "A combinar" ? "" : ` · ${salario}`}. ` +
     job.description.slice(0, 120);
   const aberta = job.status === "aberta" && !vagaExpirada(job.expires_at);
@@ -130,6 +132,15 @@ export default async function JobDetailPage({
   const abertaParaCandidatar =
     job.status === "aberta" && !expirada && podeCandidatar;
 
+  const temLateral =
+    abertaParaCandidatar ||
+    (!sessao && job.status === "aberta" && !expirada) ||
+    Boolean(
+      sessao &&
+        pode(sessao.papel, "denuncia:criar") &&
+        sessao.usuarioId !== job.company_id,
+    );
+
   return (
     <PageShell width="colunas">
       {/*
@@ -146,7 +157,7 @@ export default async function JobDetailPage({
           vagaId={job.id}
           cargo={job.title}
           cidade={job.city}
-          empresa={job.company.company_name}
+          empresa={quemContrata(job)}
         />
       )}
 
@@ -158,7 +169,18 @@ export default async function JobDetailPage({
         diretos do `<main>`, e a barra fixa do celular segue contida pelo
         mesmo bloco de antes (#479).
       */}
-      <div className="contents lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-x-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div
+        className={cn(
+          "contents",
+          /*
+           * Sem nada para pôr na coluna da direita (a própria empresa, ou
+           * uma vaga encerrada vista por quem tem sessão), a descrição ocupa
+           * a largura toda em vez de deixar um vazio de 22rem ao lado.
+           */
+          temLateral &&
+            "lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-x-8 xl:grid-cols-[minmax(0,1fr)_24rem]",
+        )}
+      >
         <Panel>
           <div className="flex items-start gap-4">
             <Avatar
@@ -173,9 +195,21 @@ export default async function JobDetailPage({
               </h1>
               <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted">
                 <Building2 size={14} />
-                {job.company.company_name}
+                {quemContrata(job)}
                 {job.company.doc_verified && <VerifiedMark size={14} />}
               </p>
+
+              {/*
+               * A vaga de agência (#538): o nome do cliente não existe na
+               * Lupa, e a frase diz isso em vez de deixar a pessoa achar que
+               * a agência é a contratante — ou que a vaga esconde algo.
+               */}
+              {job.hiring_for && (
+                <p className="mt-1 text-xs text-faint">
+                  Vaga confidencial: o nome de quem contrata fica em sigilo.{" "}
+                  {job.company.company_name} publicou e recebe as candidaturas.
+                </p>
+              )}
 
               {/*
                * No detalhe a frase é inteira, porque é aqui que a pessoa
@@ -325,6 +359,11 @@ export default async function JobDetailPage({
                  */
                 <p className="text-center text-muted text-sm">
                   Entre ou crie uma conta para se candidatar.
+                </p>
+              ) : ehDono ? (
+                <p className="text-center text-muted text-sm">
+                  Esta é a vaga da sua empresa. Quem se candidatar aparece nos
+                  Candidatos do painel.
                 </p>
               ) : (
                 /*

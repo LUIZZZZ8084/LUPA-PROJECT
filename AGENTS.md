@@ -225,6 +225,9 @@ As duas portas de contratação, os campos da vaga, a triagem, o funil de candid
 - Perguntas de triagem: separar sem esconder (#491)
 - A área de contratação como mini CRM: abas, funil e o resumo do dia (#511)
 - O contador de vagas para publicar (#518)
+- O candidato chama a empresa, e o perfil dele já traz o funil (#533)
+- Vaga confidencial: a agência descreve o cliente, e o nome nunca é gravado (#538)
+- Anotações e entrevista marcada: o caderno de quem recruta (#539)
 - Na % de casamento, zero é uma afirmação
 - Vaga expira em 30 dias, e reativar custa o mesmo que publicar
 
@@ -233,6 +236,7 @@ As duas portas de contratação, os campos da vaga, a triagem, o funil de candid
 O que é público, o Brasil inteiro, a ordem por proximidade, o aviso de vaga, o convite para instalar e as contagens sem dono.
 
 - Navegação pública, revertida — e parcialmente revertida de novo
+- A página para empresas, aberta sem login (#537)
 - A vitrine de produção mostra só quem existe (#302)
 - O Brasil inteiro, e não mais só Mato Grosso (#301)
 - Perto se mede por região do IBGE, não por quilômetro

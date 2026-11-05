@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
+import { CalendarClock, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type DragEvent, useId, useState, useTransition } from "react";
@@ -28,6 +28,8 @@ export interface CardDoFunil {
   motivos: string[];
   /** O `wa.me` pronto, com a mensagem; nulo sem telefone. */
   whatsapp: string | null;
+  /** A entrevista marcada na ficha (#539), já formatada; nula sem entrevista. */
+  entrevista: string | null;
 }
 
 const COR_DA_COLUNA: Record<ApplicationStatus, string> = {
@@ -296,6 +298,17 @@ function Cartao({
           <span className="block truncate text-muted text-xs">{card.vaga}</span>
         </span>
       </Link>
+
+      {card.entrevista && (
+        <p className="mt-2 flex items-center gap-1.5 font-medium text-xs">
+          <CalendarClock
+            size={14}
+            className="flex-none text-empresas"
+            aria-hidden
+          />
+          Entrevista {card.entrevista}
+        </p>
+      )}
 
       {card.motivos.length > 0 && (
         <p className="mt-2 text-warn text-xs leading-snug">
