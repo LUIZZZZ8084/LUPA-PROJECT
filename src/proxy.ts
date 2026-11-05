@@ -172,6 +172,13 @@ const ABERTAS = [
   "/termos",
   "/privacidade",
   "/suporte",
+  /*
+   * A porta comercial (#537): o link que se manda para a empresa e para a
+   * agência numa abordagem. Ela não lê dado de ninguém, só o produto e o
+   * preço — quem cai aqui sem conta precisa ver o que vai comprar antes de
+   * criar uma.
+   */
+  "/para-empresas",
 ];
 
 /**

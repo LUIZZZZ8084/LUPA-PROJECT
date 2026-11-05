@@ -38,6 +38,12 @@ export function RodapeDoComputador({ visitante }: { visitante: boolean }) {
           <p className="mt-1 max-w-md text-muted text-sm leading-relaxed">
             Vagas e profissionais perto de você, de forma simples e rápida.
           </p>
+          <Link
+            href="/para-empresas"
+            className="mt-2 inline-flex min-h-11 items-center text-sm underline"
+          >
+            Lupa para empresas e agências
+          </Link>
         </div>
 
         <div className="flex flex-col items-end gap-3">

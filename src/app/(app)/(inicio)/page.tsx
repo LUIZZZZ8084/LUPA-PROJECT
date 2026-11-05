@@ -277,10 +277,15 @@ export default async function HomePage() {
                   </p>
                 </div>
               </div>
-              <ButtonLink href="/empresa" variant="empresas">
-                Painel da empresa
-                <ArrowRight size={16} />
-              </ButtonLink>
+              <div className="flex flex-wrap gap-3">
+                <ButtonLink href="/para-empresas" variant="outline">
+                  Como funciona
+                </ButtonLink>
+                <ButtonLink href="/empresa" variant="empresas">
+                  Painel da empresa
+                  <ArrowRight size={16} />
+                </ButtonLink>
+              </div>
             </div>
           </Panel>
         </Reveal>

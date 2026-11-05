@@ -67,6 +67,8 @@ export const ROTAS: readonly RotaVarrida[] = [
   { path: "/termos", nome: "Termos de Uso" },
   { path: "/privacidade", nome: "Política de Privacidade" },
   { path: "/suporte", nome: "Suporte" },
+  /** A porta comercial (#537), aberta sem sessão. */
+  { path: "/para-empresas", nome: "Para empresas" },
 ] as const;
 
 /**
