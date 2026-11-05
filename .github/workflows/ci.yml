@@ -174,7 +174,14 @@ jobs:
     # Leva alguns minutos e mede a qualidade dos testes, não do produto:
     # roda só na main, para não atrasar o retorno em cada pull request.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    timeout-minutes: 25
+    # Com o mesmo código, o job leva de 16 a mais de 25 minutos: depende da
+    # máquina que o GitHub sorteia. Em 05/11/2026 o mesmo commit foi cortado
+    # aos 25 min numa máquina (rodada inicial do Vitest em 89 s) e passou em
+    # 20 min na seguinte (65 s); a mais rápida do dia fez tudo em 16 (48 s).
+    # Foram quatro cortes no dia, todos a poucos mutantes do fim (#555).
+    # 40 dá folga sobre a mais lenta vista e continua sendo teto: mutante em
+    # laço infinito já é cortado pelo `timeoutMS` do stryker.config.mjs.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
 

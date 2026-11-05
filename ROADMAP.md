@@ -14,6 +14,13 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- Folga de tempo para o teste de mutação: o limite do job subiu de 25 para
+  40 minutos. Com o mesmo código ele leva de 16 a mais de 25, conforme a
+  máquina que o GitHub sorteia, e foi cortado quatro vezes no dia a poucos
+  mutantes do fim. O que ele mede não mudou: mesmos arquivos, mesmos
+  mutadores e o piso de 60% —
+  [#555](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/555)
+
 - Três ajustes de experiência a partir das leis de UX: no painel da empresa,
   os gráficos dos 30 dias ficam recolhidos em "Ver o movimento dos últimos
   30 dias"; o candidato vê no perfil e na home quanto do currículo está
