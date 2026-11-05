@@ -15,7 +15,10 @@ import { JOB_CATEGORIES } from "@/lib/constants";
 import { pluralize, timeAgo } from "@/lib/format";
 import { TETO_CANDIDATURAS } from "@/lib/limites-de-lista";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
-import { talentosDaEmpresa } from "@/server/candidaturas/talentos";
+import {
+  etiquetasEmUso,
+  talentosDaEmpresa,
+} from "@/server/candidaturas/talentos";
 import { temPainelDeEmpresa } from "@/server/visualizacoes/servico";
 import { AbasDaContratacao } from "./abas";
 import type { AreaDeContratacao } from "./area";
@@ -44,12 +47,16 @@ export async function QuemJaSeCandidatou({
   const params = await searchParams;
   const habilidade = umParametro(params, "q");
   const areaDesejada = umParametro(params, "area");
+  const etiqueta = umParametro(params, "etiqueta");
 
-  const talentos = await talentosDaEmpresa(sessao, {
-    habilidade,
-    area: areaDesejada,
-  });
-  const filtrando = Boolean(habilidade || areaDesejada);
+  const [talentos, todos] = await Promise.all([
+    talentosDaEmpresa(sessao, { habilidade, area: areaDesejada, etiqueta }),
+    // As opções do filtro de etiqueta vêm de todo mundo, e não só de quem
+    // passou nos outros filtros: senão a opção escolhida sumiria da lista.
+    talentosDaEmpresa(sessao),
+  ]);
+  const etiquetas = etiquetasEmUso(todos);
+  const filtrando = Boolean(habilidade || areaDesejada || etiqueta);
 
   return (
     <PageShell>
@@ -63,13 +70,23 @@ export async function QuemJaSeCandidatou({
       <FilterBar
         accent="vagas"
         searchPlaceholder="Buscar por habilidade, ex.: colheitadeira"
-        values={{ q: habilidade, area: areaDesejada }}
+        values={{ q: habilidade, area: areaDesejada, etiqueta }}
         filters={[
           {
             key: "area",
             placeholder: "Área desejada",
             options: JOB_CATEGORIES.map((c) => ({ value: c, label: c })),
           },
+          // Só aparece quando a empresa já etiquetou alguém (#545).
+          ...(etiquetas.length > 0
+            ? [
+                {
+                  key: "etiqueta",
+                  placeholder: "Etiqueta",
+                  options: etiquetas.map((e) => ({ value: e, label: e })),
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -88,7 +105,7 @@ export async function QuemJaSeCandidatou({
           }
           description={
             filtrando
-              ? "Tente outra habilidade ou remova a área desejada."
+              ? "Tente outra habilidade, ou remova a área e a etiqueta."
               : "Assim que alguém se candidatar a uma vaga sua, a pessoa passa a aparecer aqui — e continua aparecendo quando você abrir outras vagas."
           }
           action={
@@ -145,6 +162,22 @@ export async function QuemJaSeCandidatou({
                     · {timeAgo(t.ultima.em)}
                     {t.vagas > 1 && ` · ${pluralize(t.vagas, "vaga", "vagas")}`}
                   </p>
+
+                  {t.etiquetas.length > 0 && (
+                    <ul
+                      className="mt-1.5 flex flex-wrap gap-1"
+                      aria-label="Etiquetas"
+                    >
+                      {t.etiquetas.map((e) => (
+                        <li
+                          key={e}
+                          className="rounded-full bg-panel-2 px-2 py-0.5 text-muted text-xs"
+                        >
+                          {e}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
                   {t.casadas.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">

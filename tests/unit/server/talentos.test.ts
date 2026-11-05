@@ -26,8 +26,18 @@ vi.mock("@/lib/data", () => ({
   },
 }));
 
+import {
+  RepositorioAcompanhamentoMemoria,
+  usarRepositorioAcompanhamento,
+} from "@/server/acompanhamento";
 import type { Autenticado } from "@/server/auth/rbac";
-import { talentosDaEmpresa } from "@/server/candidaturas/talentos";
+import {
+  etiquetasEmUso,
+  talentosDaEmpresa,
+} from "@/server/candidaturas/talentos";
+
+// As etiquetas (#545) moram no acompanhamento; em memória, para o teste.
+let acompanhamentos = new RepositorioAcompanhamentoMemoria();
 
 const empresa: Autenticado = { usuarioId: "empresa-1", papel: "empresa" };
 const outraEmpresa: Autenticado = { usuarioId: "empresa-2", papel: "empresa" };
@@ -75,6 +85,58 @@ describe("talentosDaEmpresa", () => {
   beforeEach(() => {
     dados.chamadas = [];
     dados.porEmpresa = new Map();
+    acompanhamentos = new RepositorioAcompanhamentoMemoria();
+    return usarRepositorioAcompanhamento(acompanhamentos);
+  });
+
+  /*
+   * A etiqueta é da candidatura, mas "banco de talentos" fala da pessoa: a
+   * linha junta as de todas as candidaturas dela, e o filtro olha a junção.
+   */
+  describe("etiquetas (#545)", () => {
+    const etiquetar = (candidaturaId: string, etiquetas: string[]) =>
+      acompanhamentos.salvar({
+        candidaturaId,
+        anotacao: "",
+        entrevistaEm: null,
+        entrevistaLocal: null,
+        etiquetas,
+      });
+
+    beforeEach(async () => {
+      dados.porEmpresa.set("empresa-1", [
+        candidatura("c1", "Ana", "Motorista", "10"),
+        candidatura("c2", "Ana", "Operador", "12"),
+        candidatura("c3", "Bia", "Motorista", "11"),
+      ]);
+      await etiquetar("c1", ["banco de talentos"]);
+      await etiquetar("c2", ["chamar na próxima", "banco de talentos"]);
+    });
+
+    it("a pessoa junta as etiquetas de todas as candidaturas, sem repetir", async () => {
+      const [ana] = await talentosDaEmpresa(empresa, {
+        etiqueta: "chamar na próxima",
+      });
+      expect(ana.nome).toBe("Ana");
+      expect([...ana.etiquetas].sort()).toEqual([
+        "banco de talentos",
+        "chamar na próxima",
+      ]);
+    });
+
+    it("o filtro por etiqueta deixa só quem a tem", async () => {
+      const lista = await talentosDaEmpresa(empresa, {
+        etiqueta: "Banco de Talentos",
+      });
+      expect(lista.map((t) => t.nome)).toEqual(["Ana"]);
+    });
+
+    it("as etiquetas em uso vêm de todo mundo, em ordem", async () => {
+      expect(etiquetasEmUso(await talentosDaEmpresa(empresa))).toEqual([
+        "banco de talentos",
+        "chamar na próxima",
+      ]);
+    });
   });
 
   it("quem se candidatou a três vagas aparece uma vez, com a mais recente", async () => {

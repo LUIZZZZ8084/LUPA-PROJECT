@@ -23,6 +23,7 @@ function paraAcompanhamento(linha: Record<string, unknown>): Acompanhamento {
     anotacao: String(linha.anotacao ?? ""),
     entrevistaEm: horaDeParede(linha.entrevista_em),
     entrevistaLocal: (linha.entrevista_local as string | null) ?? null,
+    etiquetas: (linha.etiquetas as string[] | null) ?? [],
     atualizadoEm: String(linha.atualizado_em),
   };
 }
@@ -78,6 +79,7 @@ export class RepositorioAcompanhamentoPostgres
           anotacao: dados.anotacao,
           entrevista_em: dados.entrevistaEm,
           entrevista_local: dados.entrevistaLocal,
+          etiquetas: dados.etiquetas,
           atualizado_em: new Date().toISOString(),
         },
         { onConflict: "candidatura_id" },

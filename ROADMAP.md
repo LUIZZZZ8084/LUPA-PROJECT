@@ -14,6 +14,12 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- Etiquetas nas candidaturas: na ficha, a empresa marca até cinco, como
+  "banco de talentos" ou "chamar na próxima". Elas aparecem no card do
+  funil e filtram a aba Talentos, que junta as de todas as candidaturas da
+  pessoa. Só a empresa vê —
+  [#545](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/545)
+
 - Anotações e entrevista marcada na ficha da candidatura: a empresa anota o
   que conversou com cada pessoa e marca dia, hora e local da entrevista. Só
   ela lê. A entrevista aparece na ficha, com o convite pronto no WhatsApp,

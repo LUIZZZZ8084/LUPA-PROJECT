@@ -75,6 +75,7 @@ const dados = (candidaturaId: string, entrevistaEm: string | null) => ({
   anotacao: "Boa conversa. Pede R$ 2.500.",
   entrevistaEm,
   entrevistaLocal: entrevistaEm ? "Av. das Itaúbas, 1200" : null,
+  etiquetas: [],
 });
 
 describe("salvar acompanhamento", () => {
@@ -164,7 +165,30 @@ describe("schemaAcompanhamento", () => {
       anotacao: "",
       entrevistaEm: null,
       entrevistaLocal: null,
+      etiquetas: [],
     });
+  });
+
+  it("etiquetas viram minúsculas, sem espaço repetido nem repetidas", () => {
+    const r = schemaAcompanhamento.safeParse({
+      candidaturaId: "c1",
+      etiquetas: " Banco de  talentos, chamar na próxima ,banco de talentos,",
+    });
+    expect(r.success && r.data.etiquetas).toEqual([
+      "banco de talentos",
+      "chamar na próxima",
+    ]);
+  });
+
+  it.each([
+    ["mais de cinco", "a1, a2, a3, a4, a5, a6"],
+    ["uma curta demais", "x"],
+    ["uma longa demais", "x".repeat(31)],
+  ])("recusa etiquetas com %s", (_motivo, etiquetas) => {
+    expect(
+      schemaAcompanhamento.safeParse({ candidaturaId: "c1", etiquetas })
+        .success,
+    ).toBe(false);
   });
 
   it.each(["06/11/2026 14:30", "2026-11-06", "2026-13-40T99:99"])(

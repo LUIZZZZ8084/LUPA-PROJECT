@@ -16,6 +16,8 @@ export interface Acompanhamento {
    */
   entrevistaEm: string | null;
   entrevistaLocal: string | null;
+  /** Até cinco, minúsculas, na ordem em que foram escritas (#545). */
+  etiquetas: string[];
   atualizadoEm: string;
 }
 
