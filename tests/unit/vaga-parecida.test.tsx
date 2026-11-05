@@ -25,6 +25,7 @@ const MODELO: Omit<DadosDaVaga, "perguntas"> = {
   tipoContrato: "CLT",
   modalidade: "presencial",
   paraPcd: "nao",
+  contratanteConfidencial: "",
   cidade: "Sorriso - MT",
   bairro: "Centro",
   endereco: "Rua das Palmeiras, 50",

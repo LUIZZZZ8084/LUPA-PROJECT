@@ -14,6 +14,8 @@ export interface ModeloDeVaga {
   modalidade: string;
   /** "sim" ou "nao", como o rádio do formulário. */
   paraPcd: string;
+  /** O cliente em sigilo da vaga de agência (#538), ou vazio. */
+  contratanteConfidencial: string;
   cidade: string;
   bairro: string;
   endereco: string;
@@ -47,6 +49,7 @@ export async function modeloDeVaga(
     tipoContrato: vaga.contract_type ?? "",
     modalidade: vaga.work_mode ?? "",
     paraPcd: vaga.for_pcd ? "sim" : "nao",
+    contratanteConfidencial: vaga.hiring_for ?? "",
     cidade: vaga.city,
     bairro: vaga.neighborhood ?? "",
     endereco: vaga.address ?? "",

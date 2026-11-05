@@ -65,6 +65,26 @@ const zPerguntaOpcional = z
   )
   .optional();
 
+/*
+ * O cliente em sigilo da vaga de agência (#538): uma descrição, nunca um
+ * nome. Em branco é a vaga comum, da própria empresa. Sem link, pela mesma
+ * razão do cargo — é texto de terceiro que a Lupa mostra a todo mundo.
+ */
+const zContratanteConfidencial = z
+  .string()
+  .trim()
+  .max(80, "Descreva o cliente em até 80 letras.")
+  .refine(
+    (texto) => texto === "" || texto.length >= 3,
+    "Descreva o cliente com pelo menos 3 letras.",
+  )
+  .refine(
+    (texto) => !PARECE_LINK.test(texto),
+    "A descrição do cliente não pode ter link.",
+  )
+  .optional()
+  .transform((texto) => texto || null);
+
 /** Caixa de marcar: chega como "on" ou não chega — ausência é "não". */
 const zMarcada = z.preprocess(
   (v) => v === "on" || v === "sim" || v === true,
@@ -153,7 +173,11 @@ const refinoSalario = (v: { salarioMin?: number; salarioMax?: number }) =>
   !v.salarioMin || !v.salarioMax || v.salarioMax >= v.salarioMin;
 
 export const schemaNovaVaga = z
-  .object({ ...camposVaga, ...camposDePergunta })
+  .object({
+    ...camposVaga,
+    ...camposDePergunta,
+    contratanteConfidencial: zContratanteConfidencial,
+  })
   .refine(refinoSalario, {
     message: "O teto precisa ser maior que o piso.",
     path: ["salarioMax"],

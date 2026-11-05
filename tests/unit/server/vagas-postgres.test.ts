@@ -97,6 +97,7 @@ describe("RepositorioVagasPostgres", () => {
       tipoContrato: LINHA.tipo_contrato,
       modalidade: LINHA.modalidade,
       paraPcd: false,
+      contratanteConfidencial: null,
       salarioMin: null,
       salarioMax: null,
       habilidades: ["Colheitadeira"],

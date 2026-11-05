@@ -4,7 +4,7 @@
  * O que se prova: o preço que ela anuncia é o que o servidor cobra, item a
  * item; quem não tem conta recebe o caminho de criar a de empresa; quem já
  * contrata vai para o painel; e a página não promete o que ainda não existe
- * (vaga confidencial, #538, e anotações, #539).
+ * (anotações e entrevista agendada, #539).
  */
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -86,7 +86,6 @@ describe("página para empresas", () => {
 
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     const texto = container.textContent ?? "";
-    expect(texto).not.toMatch(/confidencial/i);
     expect(texto).not.toMatch(/anota[çc]/i);
     expect(texto).not.toMatch(/agend/i);
   });

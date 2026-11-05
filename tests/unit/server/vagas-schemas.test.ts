@@ -336,3 +336,42 @@ describe("perguntas de triagem", () => {
     expect(r.success && "perguntas" in r.data).toBe(true);
   });
 });
+
+/*
+ * O cliente em sigilo da vaga de agência (#538): opcional, uma descrição de
+ * até 80 letras e sem link. Em branco vira `null`, a vaga comum.
+ */
+describe("contratante confidencial", () => {
+  it("em branco é a vaga comum", () => {
+    const r = schemaNovaVaga.safeParse({
+      ...DADOS,
+      contratanteConfidencial: "",
+    });
+    expect(r.success && r.data.contratanteConfidencial).toBeNull();
+    const ausente = schemaNovaVaga.safeParse(DADOS);
+    expect(ausente.success && ausente.data.contratanteConfidencial).toBeNull();
+  });
+
+  it("guarda a descrição, sem os espaços das pontas", () => {
+    const r = schemaNovaVaga.safeParse({
+      ...DADOS,
+      contratanteConfidencial: "  Indústria de alimentos  ",
+    });
+    expect(r.success && r.data.contratanteConfidencial).toBe(
+      "Indústria de alimentos",
+    );
+  });
+
+  it.each([
+    ["link", "Cliente em www.cliente.example"],
+    ["texto longo", "x".repeat(81)],
+    ["texto curto", "ab"],
+  ])("recusa %s", (_motivo, contratanteConfidencial) => {
+    const r = schemaNovaVaga.safeParse({ ...DADOS, contratanteConfidencial });
+    expect(r.success).toBe(false);
+    expect(
+      !r.success &&
+        r.error.issues.some((i) => i.path[0] === "contratanteConfidencial"),
+    ).toBe(true);
+  });
+});

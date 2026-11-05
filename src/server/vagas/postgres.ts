@@ -27,6 +27,8 @@ function paraVaga(linha: Record<string, unknown>): Vaga {
     tipoContrato: (linha.tipo_contrato as string | null) ?? null,
     modalidade: (linha.modalidade as WorkMode | null) ?? null,
     paraPcd: Boolean(linha.para_pcd),
+    contratanteConfidencial:
+      (linha.contratante_confidencial as string | null) ?? null,
     salarioMin: (linha.salario_min as number | null) ?? null,
     salarioMax: (linha.salario_max as number | null) ?? null,
     habilidades: (linha.habilidades as string[] | null) ?? [],
@@ -121,6 +123,7 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
         tipo_contrato: dados.tipoContrato,
         modalidade: dados.modalidade,
         para_pcd: dados.paraPcd,
+        contratante_confidencial: dados.contratanteConfidencial ?? null,
         salario_min: dados.salarioMin ?? null,
         salario_max: dados.salarioMax ?? null,
         habilidades: dados.habilidades ?? [],

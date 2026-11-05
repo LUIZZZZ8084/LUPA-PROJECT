@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   BarChart3,
   Columns3,
+  EyeOff,
   ListChecks,
   MessageCircle,
   Search,
@@ -54,9 +55,9 @@ export const metadata: Metadata = {
  * empresas da home já mentiu uma vez sobre a primeira vaga grátis, e há teste
  * que confere esta página contra a tabela.
  *
- * **Cada recurso listado existe hoje.** Promessa na tela é contrato: a vaga
- * confidencial (#538) e as anotações (#539) entram aqui quando forem
- * entregues, não antes.
+ * **Cada recurso listado existe hoje.** Promessa na tela é contrato: as
+ * anotações (#539) entram aqui quando forem entregues, não antes. A vaga
+ * confidencial (#538) entrou junto com ela.
  */
 export default async function ParaEmpresasPage() {
   const sessao = await sessaoAtual();
@@ -219,7 +220,8 @@ export default async function ParaEmpresasPage() {
             Serve. O plano ilimitado deixa quantas vagas quiser no ar, o funil
             separa os candidatos de cada vaga e “Quem já se candidatou” reúne
             todo mundo que já passou por você, com filtro por habilidade, para a
-            próxima vaga parecida.
+            próxima vaga parecida. E a vaga pode ser confidencial: o cliente
+            aparece descrito, sem o nome.
           </Duvida>
           <Duvida titulo="Preciso ter CNPJ?">
             Não para publicar: dá para contratar com CPF. O CNPJ conferido na
@@ -342,6 +344,12 @@ const RECURSOS: readonly {
     texto:
       "Empresa com CNPJ conferido procura também entre quem pediu para ser encontrado.",
     icone: <Search size={20} aria-hidden />,
+  },
+  {
+    titulo: "Vaga confidencial",
+    texto:
+      "Para agências: descreva o cliente sem dizer o nome. A vaga aparece como confidencial, via a sua empresa, que recebe as candidaturas.",
+    icone: <EyeOff size={20} aria-hidden />,
   },
   {
     titulo: "Candidatos de verdade",

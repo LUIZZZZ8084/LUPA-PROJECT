@@ -395,6 +395,24 @@ export function NewJobForm({
             )}
           </fieldset>
 
+          {/*
+            A vaga de agência (#538). Um campo só, opcional e em branco por
+            padrão: a vaga comum não precisa pensar nisto. O nome do cliente
+            não é pedido em lugar nenhum — o que não é gravado não vaza.
+          */}
+          <Field
+            label="Vaga para um cliente seu? (agências)"
+            error={state.campos?.contratanteConfidencial}
+            hint="Opcional. Descreva o cliente sem dizer o nome. A vaga aparece como confidencial, com esta descrição e o nome da sua empresa, que recebe as candidaturas."
+          >
+            <Input
+              name="contratanteConfidencial"
+              maxLength={80}
+              placeholder="Ex.: Indústria de alimentos de grande porte"
+              defaultValue={modelo?.contratanteConfidencial}
+            />
+          </Field>
+
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <CampoCidade
               value={cidade}

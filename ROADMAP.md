@@ -14,6 +14,12 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 04/11/2026:
 
+- Vaga confidencial para agências: ao publicar, a agência descreve o cliente
+  sem dizer o nome, e a vaga aparece como "Indústria de alimentos, via
+  Agência X" no card, no detalhe, na prévia do link e na arte do story, com
+  a frase que explica o sigilo. O nome do cliente nunca é gravado —
+  [#538](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/538)
+
 - Página "Para empresas" aberta sem login, o link da abordagem comercial a
   empresas e agências: o que a empresa recebe, como funciona, os preços
   (lidos da mesma tabela da cobrança) e as dúvidas de quem contrata, com o
@@ -756,8 +762,6 @@ espalhado.
 
 Pedidos de 04/11/2026, para atrair empresas e agências:
 
-- [ ] Vaga confidencial ou em nome de cliente —
-      [#538](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/538)
 - [ ] Anotações e entrevista agendada na ficha do candidato —
       [#539](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/539)
 

@@ -63,7 +63,22 @@ export function JobCard({
          * contratam de verdade —, é a informação que faltava.
          */}
         <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-muted">
-          <span className="truncate">{job.company.company_name}</span>
+          {/*
+           * Na vaga de agência (#538) a descrição do cliente e o "via" são
+           * dois pedaços: a descrição tem até 80 letras e seria cortada
+           * levando junto o nome de quem recebe a candidatura — que é o que
+           * a pessoa precisa saber. Cede a descrição, e o "via" fica.
+           */}
+          {job.hiring_for ? (
+            <>
+              <span className="truncate">{job.hiring_for},</span>{" "}
+              <span className="max-w-[55%] flex-none truncate">
+                via {job.company.company_name}
+              </span>
+            </>
+          ) : (
+            <span className="truncate">{job.company.company_name}</span>
+          )}
           {job.company.doc_verified && <VerifiedMark size={13} />}
           {job.company.pessoa_fisica && (
             <span className="flex-none text-xs text-faint">

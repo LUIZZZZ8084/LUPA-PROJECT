@@ -511,6 +511,39 @@ ficha com o currículo. O botão de WhatsApp do perfil, para quem se candidatou,
 usa a mensagem de candidatura em vez da de orçamento do prestador, que não
 fazia sentido ali.
 
+## Vaga confidencial: a agência descreve o cliente, e o nome nunca é gravado (#538)
+
+Pedido do Luiz em 04/11/2026, para atrair agências de emprego: a agência
+publica vaga para os clientes dela, e se a vaga mostra o nome do cliente o
+candidato vai direto nele.
+
+**O nome do cliente não é pedido nem gravado.** A vaga ganha
+`contratante_confidencial`, uma descrição de até 80 letras ("Indústria de
+alimentos de grande porte"), e aparece como "Indústria de alimentos, via
+Agência X" no card, no detalhe, no título e na prévia do link e na arte do
+story. O detalhe diz, com todas as letras, que o nome fica em sigilo e que a
+agência publicou e recebe as candidaturas: o candidato precisa saber com
+quem vai falar, e "via" sem explicação pareceria esconder alguma coisa.
+
+**Por que não "esconder o nome da empresa"**, que era a outra leitura da
+Issue: `vagas` e `perfis_empresa` são legíveis pela chave anônima, que está
+no navegador. Um nome gravado e só não desenhado na tela sai numa consulta à
+API, e a vaga comum da mesma empresa liga o `empresa_id` ao nome. Sigilo de
+verdade para a empresa que publica com a própria conta exigiria tirar a
+leitura pública de `vagas` e da view, e passar a busca para o servidor — uma
+mudança de arquitetura que ninguém pediu ainda. Para a agência isso não faz
+falta: quem precisa ficar oculto é o cliente, e ele não está na Lupa.
+
+**Um campo só, opcional, em branco por padrão.** Nada de caixa "esta vaga é
+confidencial" com um campo que aparece: a vaga comum não precisa pensar
+nisto, e o campo preenchido já é a resposta. `quemContrata`
+(`src/lib/vaga-confidencial.ts`) é o único lugar que monta o nome: escrito
+em cada tela, o quinto lugar esqueceria o "via".
+
+Ficou de fora: o selo "agência" na conta, vários clientes por agência com
+nome guardado em privado, e a página da agência. Nada disso é necessário
+para a vaga funcionar, e cada um é uma tela a mais sem ninguém pedindo.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a

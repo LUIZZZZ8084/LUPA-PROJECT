@@ -477,6 +477,20 @@ create table vagas (
    * e o filtro funciona sem isso.
    */
   para_pcd      boolean not null default false,
+  /*
+   * A vaga é para um cliente de quem publicou, e o nome dele fica em sigilo
+   * (#538). É o caso da agência de emprego: publica com a própria conta e
+   * descreve o cliente sem dizer quem é ("Indústria de alimentos").
+   *
+   * **O nome do cliente nunca é gravado**, e é isso que garante o sigilo:
+   * `vagas` e `perfis_empresa` são legíveis pela chave anônima, então
+   * esconder um nome que estivesse no banco seria só não desenhá-lo na tela.
+   * O que aparece é esta descrição e a conta que publicou, que é quem recebe
+   * as candidaturas. Nulo é a vaga comum, da própria empresa.
+   */
+  contratante_confidencial text
+    check (contratante_confidencial is null
+           or char_length(contratante_confidencial) between 3 and 80),
   salario_min   numeric(10,2),
   salario_max   numeric(10,2),
 
@@ -1837,7 +1851,9 @@ select
   -- E depois dela, pela mesma regra (#456): coluna nova só no fim.
   v.para_pcd                  as for_pcd,
   -- E as perguntas de triagem (#491), pela mesma regra.
-  v.perguntas                 as screening_questions
+  v.perguntas                 as screening_questions,
+  -- E o cliente em sigilo da agência (#538), pela mesma regra.
+  v.contratante_confidencial  as hiring_for
 from vagas v
 join perfis_empresa e on e.usuario_id = v.empresa_id
 join usuarios u on u.id = e.usuario_id;

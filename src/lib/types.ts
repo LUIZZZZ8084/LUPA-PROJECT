@@ -119,6 +119,12 @@ export interface Job {
   work_mode: WorkMode | null;
   /** Vaga para pessoa com deficiência (PCD), informada pela empresa (#456). */
   for_pcd: boolean;
+  /**
+   * A vaga é para um cliente de quem publicou, e isto o descreve sem o nome
+   * (#538) — a agência de emprego. Opcional porque banco sem a migração
+   * aplicada não devolve o campo; `null` é a vaga comum.
+   */
+  hiring_for?: string | null;
   salary_min: number | null;
   salary_max: number | null;
   /** O que a vaga pede. Vazio quando a empresa não declarou — aí o
