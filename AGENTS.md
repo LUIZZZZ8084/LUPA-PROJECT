@@ -229,6 +229,7 @@ As duas portas de contratação, os campos da vaga, a triagem, o funil de candid
 - Vaga confidencial: a agência descreve o cliente, e o nome nunca é gravado (#538)
 - Anotações e entrevista marcada: o caderno de quem recruta (#539)
 - Editar a vaga publicada, com o que a define travado (#544)
+- A empresa é avisada por e-mail quando chega candidatura (#543)
 - Na % de casamento, zero é uma afirmação
 - Vaga expira em 30 dias, e reativar custa o mesmo que publicar
 
