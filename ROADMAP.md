@@ -14,6 +14,12 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- Editar a vaga publicada, pela aba Vagas: descrição, endereço, habilidades
+  e salário se corrigem sem gastar outra vaga. Cargo, cidade, área,
+  contrato, modalidade, PCD e perguntas ficam travados, e com candidatura
+  recebida o salário pode subir, mas não diminuir —
+  [#544](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/544)
+
 - Anotações e entrevista marcada na ficha da candidatura: a empresa anota o
   que conversou com cada pessoa e marca dia, hora e local da entrevista. Só
   ela lê. A entrevista aparece na ficha, com o convite pronto no WhatsApp,

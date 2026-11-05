@@ -583,6 +583,38 @@ Ficou de fora: etiquetas ("banco de talentos", "chamar na próxima"),
 lembrete automático antes da entrevista e exportar para a agenda do celular.
 Entram com Issue própria se fizerem falta.
 
+## Editar a vaga publicada, com o que a define travado (#544)
+
+Pedido do Luiz em 05/11/2026. A edição tinha saído na #173 por dois motivos,
+e os dois continuam valendo: reescrever por dentro uma vaga paga para virar
+outra, e quem se candidatou descobrir na entrevista que a vaga mudou. Só que
+a regra inteira obrigava a encerrar e publicar de novo por um erro de
+digitação, gastando outra vaga do plano — e é a primeira pergunta de quem
+contrata.
+
+**Os dois motivos se resolvem travando campos, não a edição.**
+
+- Cargo, área, cidade, contrato, modalidade, PCD e perguntas de triagem não
+  mudam. A vaga de motorista em Sorriso continua sendo de motorista em
+  Sorriso; virar outra vaga custa outra vaga. O prazo de 30 dias também
+  fica. Os campos travados nem estão no schema da action: o que não chega
+  ao servidor não tem como ser gravado.
+- Com candidatura recebida, o salário não diminui — nem o piso, nem o teto.
+  Quem se candidatou viu o salário anunciado. Subir, corrigir o endereço ou
+  detalhar a descrição só ajuda essa pessoa.
+
+As perguntas ficam travadas por um motivo a mais: mudar a pergunta mudaria
+o critério para quem já respondeu, e a triagem separaria gente pelo que ela
+não leu.
+
+**A revisão antes de publicar continua**, agora avisando o que trava. Só
+edita vaga no ar; a encerrada ou vencida não tem o que corrigir, e o caminho
+é "Publicar outra parecida". A capacidade é nova, `vaga:editar_propria`,
+nos três papéis que publicam.
+
+Ficou de fora: marcar a vaga como "atualizada" para quem já se candidatou.
+Com o que define a vaga travado, o que muda não muda a decisão de ninguém.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a

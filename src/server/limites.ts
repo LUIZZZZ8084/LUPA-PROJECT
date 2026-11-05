@@ -115,6 +115,8 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
    */
   "candidatura.criar": porJanela(15),
   "candidatura.mover_estagio": porJanela(60),
+  // Corrigir o texto da vaga (#544): poucas vezes, e sempre pela tela.
+  "vaga.editar": porJanela(20),
   // Anotar e marcar entrevista (#539): o mesmo ritmo de mover de estágio.
   "candidatura.acompanhamento": porJanela(60),
 

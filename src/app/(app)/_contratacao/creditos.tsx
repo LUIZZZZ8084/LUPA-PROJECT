@@ -312,9 +312,10 @@ export async function ComprarVagas({ area }: { area: AreaDeContratacao }) {
           </li>
           <li>
             <strong className="text-ink">
-              Depois de publicada, a vaga não pode ser editada.
+              Cargo, cidade e contrato não mudam depois de publicar.
             </strong>{" "}
-            Você confere tudo numa tela de revisão antes de publicar.
+            Descrição, endereço, habilidades e salário se editam pela aba Vagas,
+            sem gastar outra vaga.
           </li>
         </ul>
       </Panel>

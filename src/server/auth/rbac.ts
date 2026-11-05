@@ -71,6 +71,12 @@ export type Capacidade =
   | "vaga:publicar"
   | "vaga:encerrar_propria"
   /*
+   * Corrigir o texto da própria vaga depois de publicada (#544): descrição,
+   * salário, endereço e habilidades. O que define a vaga — cargo, cidade,
+   * contrato, perguntas — não muda, e quem decide isso é `editarVaga`.
+   */
+  | "vaga:editar_propria"
+  /*
    * Reativar vaga que passou dos 30 dias — nunca a que foi encerrada à
    * mão. Renova só o prazo, mas **não de graça**: gasta uma vaga do
    * saldo, como publicar (#172), senão bastaria publicar uma vez e
@@ -211,6 +217,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
      */
     "vaga:publicar",
     "vaga:encerrar_propria",
+    "vaga:editar_propria",
     "vaga:reativar_propria",
     "vaga:ver_candidaturas_proprias",
     "candidatura:mover_estagio",
@@ -223,6 +230,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "denuncia:criar",
     "vaga:publicar",
     "vaga:encerrar_propria",
+    "vaga:editar_propria",
     "vaga:reativar_propria",
     "vaga:ver_candidaturas_proprias",
     "candidatura:mover_estagio",
@@ -272,6 +280,7 @@ const MATRIZ: Record<Papel, readonly Capacidade[]> = {
     "candidato:buscar_disponiveis",
     "vaga:publicar",
     "vaga:encerrar_propria",
+    "vaga:editar_propria",
     "vaga:reativar_propria",
     "vaga:ver_candidaturas_proprias",
     "candidatura:mover_estagio",

@@ -32,10 +32,10 @@ const inicial: EstadoVaga = {};
 /**
  * Publicar vaga, em duas etapas: preencher e conferir.
  *
- * A conferência não é conforto — é a outra metade da regra de que **vaga
- * publicada não se edita** (#173). Sem ela, corrigir um salário errado
- * custaria outro crédito, e o erro seria nosso por não ter mostrado o que
- * ia ao ar.
+ * A conferência nasceu com a regra de que vaga publicada não se editava
+ * (#173). Desde a #544 o texto se corrige depois — mas cargo, cidade,
+ * contrato e perguntas continuam travados, e errar um deles custa outra
+ * vaga. É isso que a revisão pega antes de ir ao ar.
  *
  * **O preview lê o mesmo `FormData` que vai para a action**, e não um
  * estado paralelo mantido a cada tecla. Dois caminhos de dados aqui
