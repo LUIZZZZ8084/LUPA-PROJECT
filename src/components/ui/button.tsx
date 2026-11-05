@@ -17,7 +17,14 @@ const button = cva(
         servicos: "bg-servicos text-bg hover:bg-servicos/90",
         /** Ação principal de empresas. */
         empresas: "bg-empresas text-bg hover:bg-empresas/90",
-        whatsapp: "bg-whatsapp text-[#062a12] hover:bg-whatsapp/90",
+        /*
+         * Texto na cor do fundo da página, como os outros (#546). Era um
+         * verde-escuro fixo, `#062a12`, pensado para o verde claro do tema
+         * escuro — e no claro, sobre o verde escurecido, dava 2,51:1. A
+         * varredura nunca viu: em demonstração o botão sai desativado, e o
+         * contraste reprovava só em produção, com telefone de verdade.
+         */
+        whatsapp: "bg-whatsapp text-bg hover:bg-whatsapp/90",
         outline:
           "border border-line bg-transparent text-ink hover:bg-panel-2 hover:border-panel-3",
         ghost: "bg-transparent text-muted hover:bg-panel-2 hover:text-ink",

@@ -14,6 +14,12 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- O botão "Conversar no WhatsApp" passa no contraste no tema claro: tinha
+  2,51:1 em produção, no perfil do prestador e do candidato, e a varredura
+  não via porque em demonstração ele sai desativado. Os botões de chamar no
+  WhatsApp da ficha e do perfil do candidato voltam à cor do WhatsApp —
+  [#546](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/546)
+
 - Anotações e entrevista marcada na ficha da candidatura: a empresa anota o
   que conversou com cada pessoa e marca dia, hora e local da entrevista. Só
   ela lê. A entrevista aparece na ficha, com o convite pronto no WhatsApp,

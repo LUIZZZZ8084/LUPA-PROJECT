@@ -162,7 +162,7 @@ export default async function CandidatoPage({
               href={chamadaDeCandidatura}
               target="_blank"
               rel="noopener noreferrer"
-              variant="vagas"
+              variant="whatsapp"
               size="lg"
               block
             >
