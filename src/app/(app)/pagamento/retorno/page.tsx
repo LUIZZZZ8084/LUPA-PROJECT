@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { repositorioPagamentos } from "@/server/pagamentos";
+import { areaDoPapel } from "../../_contratacao/area";
 import { RetornoDaCompra } from "./retorno-cliente";
 
 export const metadata: Metadata = {
@@ -55,6 +56,7 @@ export default async function RetornoPagamentoPage({
         id={alvo.id}
         rota={idAssinatura ? "assinaturas" : "pagamentos"}
         tipo={alvo.tipo}
+        base={areaDoPapel(sessao.papel)?.base ?? "/empresa"}
       />
     </PageShell>
   );
