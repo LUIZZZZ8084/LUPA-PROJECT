@@ -430,6 +430,20 @@ describe("segredo em parâmetro de URL (#360)", () => {
     expect(scrubSensitiveData(evento)).toEqual(evento);
   });
 
+  /*
+   * Fora de URL, o segredo vem depois de espaço: numa mensagem de erro ou
+   * num breadcrumb do console. Sem o `\s` na lista de separadores, só o
+   * `?`, o `&` e o `;` abririam o parâmetro (#557).
+   */
+  it("segredo depois de espaço, fora de URL, também sai", () => {
+    const limpo = scrubSensitiveData({
+      mensagem: "link vencido: token=Zk3-9_aBcDeF",
+      breadcrumb: "redefinir\tsenha=x1y2z3",
+    });
+    expect(limpo.mensagem).toBe("link vencido: token=[removido]");
+    expect(limpo.breadcrumb).toBe("redefinir\tsenha=[removido]");
+  });
+
   it("outros nomes de segredo na URL também saem", () => {
     const limpo = scrubSensitiveData({
       url: "https://x.test/cb?access_token=abc123&senha=x1&ok=1",
