@@ -365,6 +365,55 @@ describe("identificadores de rastreio", () => {
   it("hexadecimal fora de uma chave de identificador continua mascarado", () => {
     expect(scrubSensitiveData({ obs: TRACE }).obs).toContain("[telefone]");
   });
+
+  /*
+   * As duas âncoras de cada expressão (#557). Sem o `^` ou o `$`, a
+   * exceção passaria a valer para o que só se parece com o identificador,
+   * e o telefone dentro do valor sairia inteiro.
+   */
+  it("a chave tem de ser a do SDK inteira, não só começar ou terminar como ela", () => {
+    for (const chave of [
+      "anotacao_trace_id",
+      "pre_release",
+      "trace_id_anterior",
+      "release_notes",
+    ]) {
+      expect(scrubSensitiveData({ [chave]: TRACE })[chave]).toContain(
+        "[telefone]",
+      );
+    }
+  });
+
+  /*
+   * O SDK grava o `sentry.previous_trace` sempre com o sampled no fim
+   * (`linkedTraces.js`). Sem ele, não é o formato do SDK, e a exceção não
+   * vale (#557).
+   */
+  it("o previous_trace passa só no formato do SDK, com o sampled no fim", () => {
+    for (const sampled of ["0", "1"]) {
+      const valor = `${TRACE}-${SPAN}-${sampled}`;
+      expect(
+        scrubSensitiveData({ "sentry.previous_trace": valor })[
+          "sentry.previous_trace"
+        ],
+      ).toBe(valor);
+    }
+    expect(
+      scrubSensitiveData({ "sentry.previous_trace": `${TRACE}-${SPAN}` })[
+        "sentry.previous_trace"
+      ],
+    ).toContain("[telefone]");
+  });
+
+  it("o valor tem de ser só o identificador, sem texto antes nem depois", () => {
+    const HEX = "abcdefabcdefabcd";
+    expect(
+      scrubSensitiveData({ trace_id: `ligar 66999110001 ${HEX}` }).trace_id,
+    ).toBe(`ligar [telefone] ${HEX}`);
+    expect(
+      scrubSensitiveData({ span_id: `${HEX} ligar 66999110001` }).span_id,
+    ).toBe(`${HEX} ligar [telefone]`);
+  });
 });
 
 describe("segredo em parâmetro de URL (#360)", () => {
@@ -400,6 +449,20 @@ describe("segredo em parâmetro de URL (#360)", () => {
       mensagem: "o token expirou, peça outro",
     };
     expect(scrubSensitiveData(evento)).toEqual(evento);
+  });
+
+  /*
+   * Fora de URL, o segredo vem depois de espaço: numa mensagem de erro ou
+   * num breadcrumb do console. Sem o `\s` na lista de separadores, só o
+   * `?`, o `&` e o `;` abririam o parâmetro (#557).
+   */
+  it("segredo depois de espaço, fora de URL, também sai", () => {
+    const limpo = scrubSensitiveData({
+      mensagem: "link vencido: token=Zk3-9_aBcDeF",
+      breadcrumb: "redefinir\tsenha=x1y2z3",
+    });
+    expect(limpo.mensagem).toBe("link vencido: token=[removido]");
+    expect(limpo.breadcrumb).toBe("redefinir\tsenha=[removido]");
   });
 
   it("outros nomes de segredo na URL também saem", () => {

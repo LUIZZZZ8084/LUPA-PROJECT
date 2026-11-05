@@ -31,6 +31,16 @@ Em 05/11/2026:
   [#550](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/550),
   [#551](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/551)
 
+- Os sete mutantes estáticos que sobreviviam ao teste de mutação agora
+  morrem, e cada um era uma lacuna real: sem as âncoras das expressões de
+  rastreio, ou sem o espaço como separador de parâmetro secreto, telefone e
+  token sairiam sem máscara para o Sentry, e nenhum teste quebrava. A
+  exceção do `sentry.previous_trace` passa a aceitar só o formato que o SDK
+  grava, com o sampled no fim. O desempate de vagas por data ganhou teste
+  que não depende de a consulta chegar ordenada, e que matou também os três
+  mutantes antigos da mesma linha —
+  [#557](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/557)
+
 - Etiquetas nas candidaturas: na ficha, a empresa marca até cinco, como
   "banco de talentos" ou "chamar na próxima". Elas aparecem no card do
   funil e filtram a aba Talentos, que junta as de todas as candidaturas da

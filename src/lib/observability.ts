@@ -75,10 +75,16 @@ const INTERNAS_DO_SDK = new Set(["sdkProcessingMetadata"]);
  * ligação com o deploy — e é por release que o Sentry diz em que versão um
  * erro apareceu. Depende do sorteio do hash, por isso passou por um deploy
  * inteiro sem ninguém ver.
+ *
+ * **O sufixo é o do `sentry.previous_trace`, e só ele (#557).** O SDK o
+ * grava como `traceId-spanId-0` ou `-1`, sempre com o último pedaço
+ * (`linkedTraces.js`, em `@sentry/browser`). A expressão aceitava também
+ * sem ele, um formato que o SDK não gera: folga aqui é dado que deixa de
+ * ser mascarado.
  */
 const CHAVES_DE_RASTREIO =
   /^(?:__span|(?:sentry\.)?(?:release|trace_id|span_id|parent_span_id|segment_id|event_id|replay_id|profile_id|previous_trace))$/;
-const FORMATO_DE_RASTREIO = /^[0-9a-f]{16,40}(?:-[0-9a-f]{16}(?:-[01])?)?$/i;
+const FORMATO_DE_RASTREIO = /^[0-9a-f]{16,40}(?:-[0-9a-f]{16}-[01])?$/i;
 
 /**
  * Parâmetro de URL que carrega segredo (#360).

@@ -285,6 +285,41 @@ describe("camada de dados com Supabase ligado", () => {
     expect(ordem?.args).toEqual(["created_at", { ascending: false }]);
   });
 
+  /*
+   * Com a consulta já ordenada e o `sort` estável, o desempate por data
+   * nunca decide nada: o teste equivalente do modo demonstração passa até
+   * sem ele, porque o repositório também já devolve ordenado. O desempate
+   * existe para a ordem final não depender disso (#557), então aqui as
+   * mesmas linhas chegam em duas ordens diferentes, e o resultado tem de
+   * ser um só.
+   */
+  it("empate na proximidade desempata pela vaga mais nova, em qualquer ordem de chegada", async () => {
+    const vaga = (id: string, city: string, dia: number) => ({
+      ...VAGA_DO_BANCO,
+      id,
+      city,
+      created_at: new Date(Date.UTC(2026, 10, dia)).toISOString(),
+    });
+    const cuiaba = vaga("cuiaba-mais-nova", "Cuiabá - MT", 4);
+    const antiga = vaga("sinop-antiga", "Sinop - MT", 1);
+    const nova = vaga("sinop-nova", "Sinop - MT", 2);
+
+    for (const chegada of [
+      [cuiaba, antiga, nova],
+      [nova, antiga, cuiaba],
+    ]) {
+      respostaAtual = { data: chegada, error: null };
+
+      const { itens } = await getJobs({ perto: { cidade: "Sinop - MT" } });
+
+      expect(itens.map((v) => v.id)).toEqual([
+        "sinop-nova",
+        "sinop-antiga",
+        "cuiaba-mais-nova",
+      ]);
+    }
+  });
+
   it("prestador vem da melhor nota para a pior", async () => {
     respostaAtual = { data: [], error: null };
 
