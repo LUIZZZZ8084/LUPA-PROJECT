@@ -583,6 +583,37 @@ Ficou de fora: etiquetas ("banco de talentos", "chamar na próxima"),
 lembrete automático antes da entrevista e exportar para a agenda do celular.
 Entram com Issue própria se fizerem falta.
 
+## A empresa é avisada por e-mail quando chega candidatura (#543)
+
+Pedido do Luiz em 05/11/2026. Até aqui a Lupa não avisava a empresa de nada:
+os únicos e-mails eram recuperação de senha, confirmação de e-mail e suporte,
+e o push só ia para quem procura vaga. A empresa só sabia de uma candidatura
+abrindo o painel, e a agência que publica e não volta perdia o candidato —
+que ficava sem resposta, achando que a vaga era de mentira.
+
+**Um e-mail por empresa a cada duas horas, no máximo.** Vaga boa recebe dez
+candidaturas numa manhã; dez e-mails ensinam a mandar a Lupa para o spam e
+gastam a cota do Resend, o gargalo já registrado para os 10 mil usuários. O
+e-mail que sai diz quantas candidaturas estão esperando olhar, então quem
+abre o painel vê todas. A janela usa o mesmo contador por chave dos tetos de
+ação (`consumirOrcamento`), sem tabela nova.
+
+Descartado: o resumo diário por cron. Ele gasta menos e-mail, mas a empresa
+saberia da candidatura no dia seguinte — e quem procura emprego se candidata
+a várias vagas no mesmo dia, e quem responde primeiro contrata.
+
+**Só para e-mail confirmado.** A conta pode ter sido criada com o e-mail de
+outra pessoa (a mesma razão de `saudacao`, #445), e o aviso leva o nome de
+quem se candidatou: a um endereço que ninguém confirmou, seria entregar esse
+nome a um estranho.
+
+**O e-mail não leva contato.** Só o primeiro nome, o cargo e o link do funil
+da área de quem contrata (`/empresa` ou `/contratar`); telefone, currículo e
+respostas da triagem ficam atrás do login.
+
+**Sai depois da resposta** (`after`), e falhar não desfaz a candidatura: o
+aviso é consequência, e o painel continua mostrando tudo.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a
