@@ -101,8 +101,10 @@ código, conforme a máquina do runner; por isso o limite do job é 40
 Quase metade desse tempo vai em 64 mutantes estáticos: constantes e regex de
 topo de módulo, que rodam todos os testes relacionados porque o Stryker não
 sabe qual deles os cobre. `ignoreStatic` cortaria esse tempo, mas tiraria os
-64 da nota. O caminho que não perde sinal é matar os sete que sobrevivem,
-que hoje rodam 1.369 testes cada um.
+64 da nota. O caminho que não perde sinal é matar o estático que sobrevive:
+ele roda todos os testes relacionados até o fim (1.369 em 05/11/2026), e o
+que morre para no primeiro que falha. Os sete que havia nessa data são a
+[#557](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/557).
 
 ## Lint e qualidade de código
 
