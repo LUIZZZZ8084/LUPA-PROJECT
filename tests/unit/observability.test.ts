@@ -365,6 +365,34 @@ describe("identificadores de rastreio", () => {
   it("hexadecimal fora de uma chave de identificador continua mascarado", () => {
     expect(scrubSensitiveData({ obs: TRACE }).obs).toContain("[telefone]");
   });
+
+  /*
+   * As duas âncoras de cada expressão (#557). Sem o `^` ou o `$`, a
+   * exceção passaria a valer para o que só se parece com o identificador,
+   * e o telefone dentro do valor sairia inteiro.
+   */
+  it("a chave tem de ser a do SDK inteira, não só começar ou terminar como ela", () => {
+    for (const chave of [
+      "anotacao_trace_id",
+      "pre_release",
+      "trace_id_anterior",
+      "release_notes",
+    ]) {
+      expect(scrubSensitiveData({ [chave]: TRACE })[chave]).toContain(
+        "[telefone]",
+      );
+    }
+  });
+
+  it("o valor tem de ser só o identificador, sem texto antes nem depois", () => {
+    const HEX = "abcdefabcdefabcd";
+    expect(
+      scrubSensitiveData({ trace_id: `ligar 66999110001 ${HEX}` }).trace_id,
+    ).toBe(`ligar [telefone] ${HEX}`);
+    expect(
+      scrubSensitiveData({ span_id: `${HEX} ligar 66999110001` }).span_id,
+    ).toBe(`${HEX} ligar [telefone]`);
+  });
 });
 
 describe("segredo em parâmetro de URL (#360)", () => {
