@@ -18,12 +18,22 @@ import { cn } from "@/lib/utils";
  * "Para empresas" é o convite certo para quem ainda não contrata — e para
  * o prestador ele estaria mentindo: a área dele é `/contratar`, e é lá que
  * a tela fala a língua de quem contrata sem ter CNPJ.
+ *
+ * Para quem ainda não contrata — visitante e candidato —, o convite leva à
+ * página que explica o produto (#537), e não ao painel: o visitante caía no
+ * login, e o candidato, numa tela dizendo o que lhe falta.
  */
 function links(papel: string | undefined) {
   const contratacao =
     papel === "prestador_servico"
       ? { href: "/contratar", label: "Contratar", accent: "text-empresas" }
-      : { href: "/empresa", label: "Para empresas", accent: "text-empresas" };
+      : papel === "empresa" || papel === "admin"
+        ? { href: "/empresa", label: "Para empresas", accent: "text-empresas" }
+        : {
+            href: "/para-empresas",
+            label: "Para empresas",
+            accent: "text-empresas",
+          };
 
   return [
     { href: "/vagas", label: "Vagas", accent: "text-vagas" },

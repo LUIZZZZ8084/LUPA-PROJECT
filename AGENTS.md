@@ -234,6 +234,7 @@ As duas portas de contratação, os campos da vaga, a triagem, o funil de candid
 O que é público, o Brasil inteiro, a ordem por proximidade, o aviso de vaga, o convite para instalar e as contagens sem dono.
 
 - Navegação pública, revertida — e parcialmente revertida de novo
+- A página para empresas, aberta sem login (#537)
 - A vitrine de produção mostra só quem existe (#302)
 - O Brasil inteiro, e não mais só Mato Grosso (#301)
 - Perto se mede por região do IBGE, não por quilômetro

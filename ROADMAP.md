@@ -8,9 +8,19 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 02/11/2026.**
+**Última atualização: 04/11/2026.**
 
 ## Concluído
+
+Em 04/11/2026:
+
+- Página "Para empresas" aberta sem login, o link da abordagem comercial a
+  empresas e agências: o que a empresa recebe, como funciona, os preços
+  (lidos da mesma tabela da cobrança) e as dúvidas de quem contrata, com o
+  caminho de criar a conta. O "Para empresas" do cabeçalho leva o visitante
+  e o candidato até ela, e a empresa ao painel; a home, o rodapé e a tela de
+  entrar ganharam o link, e ela entrou no sitemap —
+  [#537](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/537)
 
 Em 02/11/2026:
 
@@ -743,6 +753,13 @@ duas redes de proteção que o episódio da primeira venda expôs.
 **Tudo o que sobrou vai junto com o empacotamento em APK** — decisão do
 Luiz em 01/09/2026, que reúne numa etapa só o que antes estava
 espalhado.
+
+Pedidos de 04/11/2026, para atrair empresas e agências:
+
+- [ ] Vaga confidencial ou em nome de cliente —
+      [#538](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/538)
+- [ ] Anotações e entrevista agendada na ficha do candidato —
+      [#539](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/539)
 
 ## Depende de decisão, não de código
 

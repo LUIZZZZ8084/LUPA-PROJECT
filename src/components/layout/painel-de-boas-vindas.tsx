@@ -1,5 +1,6 @@
 import { BadgeCheck, MapPin, ShieldCheck } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 const PONTOS = [
   {
@@ -60,6 +61,16 @@ export function PainelDeBoasVindas() {
             </li>
           ))}
         </ul>
+
+        <p className="mt-8 text-muted text-sm">
+          Sua empresa contrata?{" "}
+          <Link
+            href="/para-empresas"
+            className="font-semibold text-ink underline"
+          >
+            Veja o que a Lupa faz por ela
+          </Link>
+        </p>
       </div>
 
       <Image
