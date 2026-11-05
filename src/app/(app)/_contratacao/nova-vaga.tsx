@@ -64,6 +64,7 @@ export async function PublicarVaga({
         area={area}
         direito={direito}
         modelo={modelo}
+        emailConfirmado={usuario?.emailVerificado ?? true}
       />
     </PageShell>
   );

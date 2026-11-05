@@ -671,6 +671,15 @@ respostas da triagem ficam atrás do login.
 **Sai depois da resposta** (`after`), e falhar não desfaz a candidatura: o
 aviso é consequência, e o painel continua mostrando tudo.
 
+**E o pedido de confirmação foi para onde quem contrata está (#560).** No
+dia em que o aviso subiu, nenhuma das 8 contas de empresa de produção tinha
+o e-mail confirmado — o pedido morava só no Perfil, onde quem contrata quase
+não vai —, e o aviso não chegava a ninguém. Hoje o painel de contratação e a
+tela de "Vaga publicada" pedem a confirmação, com o motivo de lá (saber de
+cada candidatura) e o mesmo botão de reenviar do Perfil, com a mesma cota.
+Some quando a pessoa confirma. A regra de só mandar para e-mail confirmado
+não mudou: o que mudou foi onde se pede.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a
