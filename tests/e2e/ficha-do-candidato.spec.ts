@@ -52,7 +52,15 @@ test.describe("ficha do candidato", () => {
   test("a linha da lista abre a pessoa", async ({ page }) => {
     await page.goto("/empresa");
 
-    const primeira = page.locator('a[href^="/empresa/candidaturas/"]').first();
+    /*
+     * Da lista de currículos recebidos, e não o primeiro link da página: a
+     * lista de próximas entrevistas (#539) também aponta para a ficha, e vem
+     * antes dela.
+     */
+    const primeira = page
+      .getByRole("region", { name: "Currículos recebidos" })
+      .locator('a[href^="/empresa/candidaturas/"]')
+      .first();
     await expect(primeira).toBeVisible();
 
     // O nome, e não o texto inteiro da linha: ali dentro também estão as
@@ -72,7 +80,11 @@ test.describe("ficha do candidato", () => {
     page,
   }) => {
     await page.goto("/empresa");
-    await page.locator('a[href^="/empresa/candidaturas/"]').first().click();
+    await page
+      .getByRole("region", { name: "Currículos recebidos" })
+      .locator('a[href^="/empresa/candidaturas/"]')
+      .first()
+      .click();
 
     const whats = page.getByRole("link", { name: /chamar no whatsapp/i });
     await expect(whats).toBeVisible();
@@ -96,7 +108,11 @@ test.describe("ficha do candidato", () => {
 
   test("mostra o currículo, ou diz que não tem", async ({ page }) => {
     await page.goto("/empresa");
-    await page.locator('a[href^="/empresa/candidaturas/"]').first().click();
+    await page
+      .getByRole("region", { name: "Currículos recebidos" })
+      .locator('a[href^="/empresa/candidaturas/"]')
+      .first()
+      .click();
 
     await expect(
       page.getByRole("heading", { name: "Currículo em PDF" }),
@@ -126,7 +142,11 @@ test.describe("ficha do candidato", () => {
     page,
   }) => {
     await page.goto("/empresa");
-    await page.locator('a[href^="/empresa/candidaturas/"]').first().click();
+    await page
+      .getByRole("region", { name: "Currículos recebidos" })
+      .locator('a[href^="/empresa/candidaturas/"]')
+      .first()
+      .click();
 
     const selo = page
       .locator("main")
