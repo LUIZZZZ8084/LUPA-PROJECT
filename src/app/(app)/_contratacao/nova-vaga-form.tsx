@@ -24,6 +24,7 @@ import {
 import { type DireitoParaTela, resumoDoDireito } from "@/lib/planos-empresa";
 import { cn } from "@/lib/utils";
 import type { AreaDeContratacao } from "./area";
+import { ConfirmarParaAvisos } from "./confirmar-para-avisos";
 import { type EstadoVaga, publicarVagaComEstado } from "./nova-vaga-actions";
 import { type DadosDaVaga, lerDoFormulario, RevisaoDaVaga } from "./revisao";
 
@@ -52,9 +53,15 @@ export function NewJobForm({
   area,
   direito,
   modelo = null,
+  emailConfirmado = true,
 }: {
   cidadeDaEmpresa: string;
   area: AreaDeContratacao;
+  /**
+   * Sem e-mail confirmado, o aviso de candidatura não sai (#560), e a tela
+   * de "Vaga publicada" é o momento de dizer isso.
+   */
+  emailConfirmado?: boolean;
   /**
    * O texto de uma vaga antiga da própria empresa, para publicar outra
    * parecida (#492). Só preenche os campos: nada vai ao ar sem a revisão, e a
@@ -115,6 +122,10 @@ export function NewJobForm({
             />
           </div>
         )}
+        <ConfirmarParaAvisos
+          verificado={emailConfirmado}
+          className="mx-auto mt-5 max-w-sm text-left"
+        />
         <div className="mt-6 flex justify-center gap-3">
           <ButtonLink href={area.base} variant="empresas" size="sm">
             Ir para o painel
