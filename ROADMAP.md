@@ -8,9 +8,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 05/11/2026.**
+**Última atualização: 06/11/2026.**
 
 ## Concluído
+
+Em 06/11/2026:
+
+- As duas varreduras diárias passaram de Cron Jobs, formato que a Vercel
+  descontinuou, para Schedules: mesmo horário, mesmas rotas, e agora com
+  histórico de cada execução por 90 dias no painel da Vercel —
+  [#565](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/565)
 
 Em 05/11/2026:
 
