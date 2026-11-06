@@ -218,7 +218,14 @@ create table usuarios (
   teste_gratis_usado_em timestamptz,
 
   constraint email_com_formato check (position('@' in email) > 1),
-  constraint telefone_so_digitos check (telefone ~ '^[0-9]{10,13}$')
+  constraint telefone_so_digitos check (telefone ~ '^[0-9]{10,13}$'),
+  /*
+   * De qual porta de entrada a conta veio (#559). Hoje só uma é marcada: a
+   * página para empresas (#537), o link da abordagem comercial — é o número
+   * que diz se ela converte. Nulo é todo o resto. Só o clique, nenhum dado
+   * novo de quem se cadastrou.
+   */
+  veio_de text check (veio_de is null or veio_de = 'para_empresas')
 );
 
 -- Um CPF, uma conta. Parcial porque empresa não tem CPF nenhum — é CNPJ —
@@ -2029,7 +2036,7 @@ left join categorias_servico cs on cs.id = pp.categoria_id;
 create view metricas_totais
 with (security_invoker = false) as
 with contas as (
-  select papel from usuarios
+  select papel, veio_de from usuarios
   where papel <> 'admin' and senha_hash <> '!conta-excluida'
 )
 select
@@ -2038,7 +2045,9 @@ select
   (select count(*) from contas where papel = 'prestador_servico')   as prestadores,
   (select count(*) from contas where papel = 'empresa')             as empresas,
   (select count(*) from vagas
-     where status = 'aberta' and expira_em > now())                 as vagas_abertas;
+     where status = 'aberta' and expira_em > now())                 as vagas_abertas,
+  -- Por último, a regra do `create or replace view` (#559).
+  (select count(*) from contas where veio_de = 'para_empresas')     as pela_pagina_de_empresas;
 
 /*
  * Fuso de Cuiabá, não UTC: um cadastro às 21h em Sinop precisa contar no dia

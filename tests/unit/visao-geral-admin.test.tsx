@@ -62,6 +62,7 @@ const PAINEL: PainelAdmin = {
     prestadores: 5,
     empresas: 4,
     vagasAbertas: 3,
+    pelaPaginaDeEmpresas: 2,
   },
   cadastros: dias([0, 1, 2, 0, 1, 3, 2, 1, 0, 0, 1, 2, 1, 1]),
   lugares: {

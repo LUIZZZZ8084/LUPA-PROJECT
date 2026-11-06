@@ -88,6 +88,7 @@ export class RepositorioMemoria implements RepositorioUsuarios {
       docVerificado: false,
       criadoEm: new Date().toISOString(),
       ultimoAcessoEm: null,
+      veioDe: dados.veioDe ?? null,
     };
 
     this.usuarios.set(usuario.id, usuario);

@@ -55,6 +55,7 @@ describe("RepositorioMetricasPostgres", () => {
         prestadores: "15",
         empresas: "7",
         vagas_abertas: "9",
+        pela_pagina_de_empresas: "3",
       },
       error: null,
     });
@@ -65,6 +66,7 @@ describe("RepositorioMetricasPostgres", () => {
       prestadores: 15,
       empresas: 7,
       vagasAbertas: 9,
+      pelaPaginaDeEmpresas: 3,
     });
   });
 

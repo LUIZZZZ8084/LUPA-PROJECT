@@ -31,6 +31,12 @@ const base = {
    * esse palpite erra para quase todo mundo.
    */
   cidade: zCidade,
+  /*
+   * Por qual porta a pessoa chegou ao cadastro (#559). Vem da URL, então
+   * qualquer outro valor é ignorado em vez de recusar o cadastro: a medida
+   * não pode custar a conta de ninguém.
+   */
+  veioDe: z.enum(["para_empresas"]).optional().catch(undefined),
 };
 
 /**

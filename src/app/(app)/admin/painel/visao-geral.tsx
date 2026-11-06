@@ -561,6 +561,16 @@ function CartaoContas({ painel }: { painel: PainelAdmin }) {
               {inteiro(painel.totais.vagasAbertas)}
             </dd>
           </div>
+          {/*
+            Quantas contas o link da abordagem comercial trouxe (#559): é o
+            número que diz se a página para empresas converte.
+          */}
+          <div>
+            <dt className="text-muted">Pela página para empresas</dt>
+            <dd className="mt-0.5 font-semibold text-base text-ink tabular-nums">
+              {inteiro(painel.totais.pelaPaginaDeEmpresas)}
+            </dd>
+          </div>
         </dl>
       </div>
       <Ondas painel={painel} />

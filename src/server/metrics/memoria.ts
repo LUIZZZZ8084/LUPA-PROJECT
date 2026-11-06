@@ -53,6 +53,9 @@ export class RepositorioMetricasMemoria implements RepositorioMetricas {
       prestadores: contar("prestador_servico") + prestadores.itens.length,
       empresas: contar("empresa"),
       vagasAbertas: vagas.itens.length,
+      pelaPaginaDeEmpresas: cadastrados.filter(
+        (u) => u.veioDe === "para_empresas",
+      ).length,
     };
   }
 

@@ -118,6 +118,7 @@ describe("RepositorioPostgres", () => {
       docVerificado: false,
       criadoEm: LINHA.criado_em,
       ultimoAcessoEm: null,
+      veioDe: null,
     });
   });
 

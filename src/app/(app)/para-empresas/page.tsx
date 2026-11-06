@@ -30,6 +30,12 @@ import {
 } from "@/server/pagamentos/planos";
 import type { TipoPagamento } from "@/server/pagamentos/tipos";
 
+/**
+ * O cadastro de empresa, marcado com a porta de entrada (#559): é o que deixa
+ * o painel do admin contar quantas contas a página trouxe.
+ */
+const CADASTRO = "/cadastro?tipo=empresa&de=para_empresas";
+
 const DESCRICAO =
   "Publique vagas, receba candidatos da sua região e organize tudo num funil, com triagem e chamado no WhatsApp. Primeira vaga grátis para empresa com CNPJ conferido.";
 
@@ -89,11 +95,7 @@ export default async function ParaEmpresasPage() {
               </ButtonLink>
             ) : (
               <>
-                <ButtonLink
-                  href="/cadastro?tipo=empresa"
-                  variant="empresas"
-                  size="lg"
-                >
+                <ButtonLink href={CADASTRO} variant="empresas" size="lg">
                   Criar conta de empresa
                   <ArrowRight size={16} />
                 </ButtonLink>
@@ -262,7 +264,7 @@ export default async function ParaEmpresasPage() {
                 vaga é por nossa conta.
               </p>
             </div>
-            <ButtonLink href="/cadastro?tipo=empresa" variant="empresas">
+            <ButtonLink href={CADASTRO} variant="empresas">
               Criar conta de empresa
               <ArrowRight size={16} />
             </ButtonLink>

@@ -28,6 +28,7 @@ function repoFalso(
       prestadores: 0,
       empresas: 0,
       vagasAbertas: 0,
+      pelaPaginaDeEmpresas: 0,
     }),
     cadastrosPorDia: async () => [],
     contasPorLugar: async () => ({ estados: [], cidades: [] }),
