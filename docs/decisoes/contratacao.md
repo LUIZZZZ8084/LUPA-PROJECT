@@ -671,6 +671,15 @@ respostas da triagem ficam atrás do login.
 **Sai depois da resposta** (`after`), e falhar não desfaz a candidatura: o
 aviso é consequência, e o painel continua mostrando tudo.
 
+**E o pedido de confirmação foi para onde quem contrata está (#560).** No
+dia em que o aviso subiu, nenhuma das 8 contas de empresa de produção tinha
+o e-mail confirmado — o pedido morava só no Perfil, onde quem contrata quase
+não vai —, e o aviso não chegava a ninguém. Hoje o painel de contratação e a
+tela de "Vaga publicada" pedem a confirmação, com o motivo de lá (saber de
+cada candidatura) e o mesmo botão de reenviar do Perfil, com a mesma cota.
+Some quando a pessoa confirma. A regra de só mandar para e-mail confirmado
+não mudou: o que mudou foi onde se pede.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a
@@ -692,6 +701,23 @@ selo, ou descartaria quem só não preencheu um campo. Achado testando na
 tela, não lendo o código.
 
 ## Vaga expira em 30 dias, e reativar custa o mesmo que publicar
+
+**E a empresa é avisada por e-mail antes (#561).** O "vence em até 3 dias"
+só existia no painel, para quem o abre; quem publica e não volta perdia a
+vaga sem perceber, e a reativação nunca acontecia. Uma varredura diária, no
+cron da Vercel (`/api/cron/avisar-vagas-vencendo`, 12h UTC), manda **um
+e-mail por empresa** com as vagas dela que vencem nos próximos três dias —
+três vagas vencendo juntas são um e-mail, não três. Cada vaga entra **uma
+vez por prazo**: a chave do aviso leva o id e a data de vencimento, no mesmo
+contador dos tetos de ação, então a vaga avisada hoje não volta amanhã, e a
+reativada ganha prazo novo e, com ele, aviso novo. Só para e-mail
+confirmado, como o aviso de candidatura (#543).
+
+O portão do `CRON_SECRET` saiu de dentro da varredura de pagamentos para
+`src/app/api/cron/portao.ts`, usado pelas duas rotas: a regra de quem
+dispara uma varredura é uma só, e duas cópias dela são onde uma acaba
+esquecida.
+
 
 Vaga publicada ficava aberta para sempre. Numa plataforma de emprego isso
 sustenta falsa esperança: candidatar-se a uma vaga de meses atrás, que pode

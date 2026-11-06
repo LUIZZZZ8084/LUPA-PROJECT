@@ -108,6 +108,22 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
     return (data ?? []).map(paraVaga);
   }
 
+  async vencendoAte(agora: string, limite: string): Promise<Vaga[]> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("vagas")
+      .select("*")
+      .eq("status", "aberta")
+      .gt("expira_em", agora)
+      .lte("expira_em", limite)
+      .order("expira_em", { ascending: true })
+      // Um dia de vagas vencendo no país inteiro; o resto fica para amanhã.
+      .limit(TETO_DO_DONO);
+
+    if (error) throw erros.indisponivel(error.message);
+    return (data ?? []).map(paraVaga);
+  }
+
   async criar(dados: DadosNovaVaga): Promise<Vaga> {
     const supabase = await cliente();
     const { data, error } = await supabase

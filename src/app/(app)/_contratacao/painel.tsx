@@ -56,6 +56,7 @@ import {
 } from "@/server/visualizacoes/servico";
 import { AbasDaContratacao } from "./abas";
 import { type AreaDeContratacao, areaDoPapel } from "./area";
+import { ConfirmarParaAvisos } from "./confirmar-para-avisos";
 import { ContadorDeVagas } from "./contador-de-vagas";
 import { Recomendados } from "./recomendados";
 import { SeloDeMatch } from "./selo-de-match";
@@ -169,7 +170,10 @@ export async function PainelDeContratacao({
     ]);
   const totais = totaisDaSerie(serie);
   const match = matchPorCandidatura(applications, jobs);
-  const direito = await direitoDePublicar(sessao.usuarioId);
+  const [direito, conta] = await Promise.all([
+    direitoDePublicar(sessao.usuarioId),
+    usuarioDaSessao(sessao.usuarioId),
+  ]);
 
   /*
    * As próximas entrevistas (#539), de hoje em diante. As candidaturas são as
@@ -354,6 +358,12 @@ export async function PainelDeContratacao({
         decide se o "Publicar nova vaga" lá em cima vai dar certo.
       */}
       <ContadorDeVagas direito={direito} base={area.base} />
+
+      {/* Sem e-mail confirmado, o aviso de candidatura não sai (#560). */}
+      <ConfirmarParaAvisos
+        verificado={conta?.emailVerificado ?? true}
+        className="mb-6"
+      />
 
       {/*
         Para hoje: três números que viram um clique. Cada cartão leva ao
