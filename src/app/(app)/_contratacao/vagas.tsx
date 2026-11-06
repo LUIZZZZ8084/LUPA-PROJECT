@@ -1,6 +1,7 @@
 import { FileText, Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EnviarVagaNoWhatsApp } from "@/components/compartilhar-vaga";
 import {
   EmptyState,
   PageShell,
@@ -18,6 +19,7 @@ import {
   LIMIAR_MUITO_COMPATIVEL,
   resultadosDasVagas,
 } from "@/lib/resultado-da-vaga";
+import { quemContrata } from "@/lib/vaga-confidencial";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { matchPorCandidatura } from "@/server/candidaturas/match";
 import {
@@ -166,6 +168,13 @@ export async function VagasDaContratacao({
                       </div>
                     ) : (
                       <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        {/* Divulgar sem abrir a vaga (#567). */}
+                        <EnviarVagaNoWhatsApp
+                          vagaId={job.id}
+                          cargo={job.title}
+                          cidade={job.city}
+                          empresa={quemContrata(job)}
+                        />
                         {/* Corrigir o texto sem gastar outra vaga (#544). */}
                         <ButtonLink
                           href={`${area.base}/vagas/${job.id}/editar`}

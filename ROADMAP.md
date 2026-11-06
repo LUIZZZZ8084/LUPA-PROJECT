@@ -8,9 +8,16 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 05/11/2026.**
+**Última atualização: 06/11/2026.**
 
 ## Concluído
+
+Em 06/11/2026:
+
+- Cada vaga ativa da aba Vagas, na área de contratação, ganhou o atalho
+  "Divulgar", que abre o WhatsApp com a mensagem e o link da vaga. Antes era
+  preciso abrir a vaga para chegar ao painel de divulgação da #490 —
+  [#567](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/567)
 
 Em 05/11/2026:
 
