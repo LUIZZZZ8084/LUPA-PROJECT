@@ -46,7 +46,9 @@ export interface Email {
     | "verificacao_email"
     | "suporte"
     // A empresa avisada de candidatura nova (#543).
-    | "aviso_candidatura";
+    | "aviso_candidatura"
+    // A empresa avisada de que uma vaga vai vencer (#561).
+    | "aviso_vencimento";
 }
 
 export type ResultadoEnvio =

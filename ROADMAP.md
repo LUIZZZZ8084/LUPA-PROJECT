@@ -14,6 +14,11 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 05/11/2026:
 
+- A empresa recebe um e-mail quando uma vaga vai vencer em até três dias,
+  com o caminho para reativar: um por empresa e por dia, cada vaga uma vez
+  por prazo, só para e-mail confirmado. Roda no cron diário da Vercel —
+  [#561](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/561)
+
 - O painel de contratação e a tela de "Vaga publicada" pedem a confirmação
   do e-mail, com o botão de reenviar: o aviso de candidatura só vai para
   e-mail confirmado, e nenhuma empresa de produção tinha confirmado —
