@@ -167,7 +167,7 @@ export async function VagasDaContratacao({
                         <ReativarVagaButton id={job.id} />
                       </div>
                     ) : (
-                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
                         {/* Divulgar sem abrir a vaga (#567). */}
                         <EnviarVagaNoWhatsApp
                           vagaId={job.id}
