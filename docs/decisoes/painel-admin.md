@@ -91,6 +91,52 @@ visita anterior. Se a pessoa leu a página e voltou outro dia pelo cadastro
 direto, não conta — o número é um piso, e o painel não promete mais do que
 isso.
 
+## A conversão da página para empresas, semana a semana (#568)
+
+A #559 deu o numerador — quantas contas o botão da página criou. Faltava o
+denominador: quantas vezes a página foi aberta. Agora `/para-empresas`
+conta a visita por dia em `visitas_pagina`, e o painel mostra as últimas
+oito semanas com visitas, contas e a conversão.
+
+**Conta só quem a página convida.** Quem já contrata — empresa, prestador,
+admin — vê "Ir para o painel" e não entra na conta: somá-lo inflaria o
+denominador com quem nunca ia se cadastrar, a começar pelo próprio admin
+abrindo a página para conferir.
+
+**A mesma forma das visualizações de vaga, pelo mesmo motivo.** Uma linha
+por página por dia, incrementada no banco, e nada que diga quem visitou —
+nem sessão, nem endereço, nem cookie. O preço, aceito: recarregar soma de
+novo, e robô de busca também. É tendência, não audiência, e o bloco diz
+isso. A semana começa na segunda e é contada em UTC, como o `current_date`
+do banco; a da noite de domingo em Brasília cai na semana seguinte, e para
+ver tendência isso não muda nada.
+
+## A última execução de cada varredura, no painel (#566)
+
+O log da Vercel no plano grátis guarda 30 minutos, e "a varredura de hoje
+rodou?" não tinha resposta fora dele. Cada varredura agora grava a última
+execução em `execucoes_varredura` — uma linha por varredura, sobrescrita —,
+e o painel mostra quando rodou, o resumo e se está atrasada.
+
+**Atrasada é "sem sucesso há mais de 26 horas", e não "a última falhou".**
+É o que cobre os três jeitos de parar: segredo ausente (o 503 grava a
+falha), segredo divergente (o 401 não grava nada) e agendamento desligado
+(nada chega). O 401 não grava porque, de fora, segredo errado e alguém
+batendo na porta sem ser a Vercel são a mesma requisição — gravar cada
+tentativa deixaria qualquer um escrever no painel. A falha também não
+apaga `ultima_ok_em`, que é por onde se sabe há quanto tempo parou.
+
+**Não é histórico.** Histórico de 90 dias a Vercel já guarda, na aba
+Schedules (#565). O que faltava era o sinal no painel que o Luiz abre todo
+dia — a lição da #196: falha fechada e silenciosa faz o mesmo estrago que
+falha aberta.
+
+As duas rotas de cron passaram a usar um caminho só,
+`src/app/api/cron/executar.ts`, com o portão, o log e o registro: com três
+passos a lembrar em cada rota, a próxima varredura que esquecesse de
+registrar apareceria como atrasada sem estar. E gravar o registro nunca
+muda a resposta da varredura: se o banco recusar, o trabalho já foi feito.
+
 ## Parceiros: a Lupa de graça, autorizada pelo e-mail (#505)
 
 Pedido do Luiz em 27/10/2026: ele vai fechar parcerias com quem vai usar a

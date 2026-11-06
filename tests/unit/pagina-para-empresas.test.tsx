@@ -3,7 +3,9 @@
  *
  * O que se prova: o preço que ela anuncia é o que o servidor cobra, item a
  * item; quem não tem conta recebe o caminho de criar a de empresa; quem já
- * contrata vai para o painel; e há um título só na página.
+ * contrata vai para o painel; há um título só na página; e a visita conta
+ * para a conversão do painel do admin só quando a página oferece a conta
+ * (#568).
  */
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,10 +15,21 @@ import { PRECO_CENTAVOS } from "@/server/pagamentos/planos";
 
 const estado = vi.hoisted(() => ({
   sessao: null as { usuarioId: string; papel: string } | null,
+  visitas: [] as string[],
 }));
 
 vi.mock("@/server/auth/cookies", () => ({
   sessaoAtual: async () => estado.sessao,
+}));
+vi.mock("next/server", () => ({
+  after: (fn: () => unknown) => {
+    void fn();
+  },
+}));
+vi.mock("@/server/visitas", () => ({
+  contarVisita: async (pagina: string) => {
+    estado.visitas.push(pagina);
+  },
 }));
 
 const { default: Pagina } = await import("@/app/(app)/para-empresas/page");
@@ -28,6 +41,7 @@ async function renderizar() {
 describe("página para empresas", () => {
   beforeEach(() => {
     estado.sessao = null;
+    estado.visitas = [];
   });
 
   it("anuncia o preço que o servidor cobra, em cada opção", async () => {
@@ -81,6 +95,21 @@ describe("página para empresas", () => {
       screen.getAllByRole("link", { name: /Criar conta de empresa/ }).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "Já tenho conta" })).toBeNull();
+  });
+
+  it("sem conta, ou com conta que não contrata, a visita conta", async () => {
+    await renderizar();
+    estado.sessao = { usuarioId: "cnd-1", papel: "candidato_clt" };
+    await renderizar();
+    expect(estado.visitas).toEqual(["para_empresas", "para_empresas"]);
+  });
+
+  it("quem já contrata não entra na conta das visitas", async () => {
+    for (const papel of ["empresa", "prestador_servico", "admin"]) {
+      estado.sessao = { usuarioId: "x", papel };
+      await renderizar();
+    }
+    expect(estado.visitas).toEqual([]);
   });
 
   it("tem um h1 só", async () => {

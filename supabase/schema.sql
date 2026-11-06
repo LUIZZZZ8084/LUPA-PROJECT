@@ -1133,6 +1133,57 @@ as $$
   do update set total = visualizacoes_vaga.total + 1;
 $$;
 
+-- ============================================================================
+-- 9d. Visitas a páginas (#568)
+--
+-- A mesma forma das visualizações de vaga: uma linha por página por dia,
+-- incrementada, e nada que diga quem visitou. Hoje só a página para
+-- empresas, contada quando ela oferece criar a conta — é o denominador da
+-- conversão no painel do admin; o numerador é `usuarios.veio_de`.
+-- ============================================================================
+
+create table visitas_pagina (
+  pagina text not null,
+  dia    date not null default current_date,
+  total  integer not null default 0,
+
+  primary key (pagina, dia),
+  constraint total_nao_negativo check (total >= 0),
+  constraint pagina_conhecida check (pagina in ('para_empresas'))
+);
+
+/* Incremento atômico, como o das visualizações. */
+create or replace function registrar_visita_pagina(p_pagina text)
+returns void
+language sql
+set search_path = public, pg_temp
+as $$
+  insert into visitas_pagina (pagina, dia, total)
+  values (p_pagina, current_date, 1)
+  on conflict (pagina, dia)
+  do update set total = visitas_pagina.total + 1;
+$$;
+
+-- ============================================================================
+-- 9e. A última execução de cada varredura agendada (#566)
+--
+-- Uma linha por varredura, sobrescrita a cada execução: não é histórico
+-- (esse a Vercel guarda, 90 dias, na aba Schedules). É o sinal que o painel
+-- do admin lê para dizer se a varredura de hoje rodou. `ultima_ok_em` só
+-- anda no sucesso: é por ela que se sabe se alguma parou.
+-- ============================================================================
+
+create table execucoes_varredura (
+  nome          text primary key,
+  rodou_em      timestamptz not null,
+  ok            boolean not null,
+  resumo        jsonb not null default '{}'::jsonb,
+  ultima_ok_em  timestamptz,
+
+  constraint varredura_conhecida
+    check (nome in ('reconciliar-pagamentos', 'avisar-vagas-vencendo'))
+);
+
 
 -- ----------------------------------------------------------------------------
 -- Notificação push (#48)
@@ -2293,6 +2344,8 @@ alter table categorias_servico  enable row level security;
 -- Sem política: ninguém lê nem escreve pela chave anônima. O incremento
 -- passa pela função, e a leitura do painel, pela chave de serviço.
 alter table visualizacoes_vaga  enable row level security;
+alter table visitas_pagina      enable row level security;
+alter table execucoes_varredura enable row level security;
 alter table buscas_sem_resultado enable row level security;
 alter table tentativas_de_acesso enable row level security;
 alter table mensagens_suporte    enable row level security;
@@ -2383,6 +2436,8 @@ grant select on job_listings, provider_listings to anon, authenticated;
 -- já tenha concedido por fora: aqui é onde qualquer um lendo este
 -- arquivo confirma que não vaza.
 revoke select on visualizacoes_vaga            from anon, authenticated;
+revoke select on visitas_pagina                from anon, authenticated;
+revoke select on execucoes_varredura           from anon, authenticated;
 revoke select on buscas_sem_resultado         from anon, authenticated;
 -- Guarda nome, e-mail e texto livre sobre a situacao de quem escreveu
 -- (#235). Nunca publica, nem para quem tem sessao: mensagem de suporte de

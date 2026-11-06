@@ -1,8 +1,5 @@
-import { NextResponse } from "next/server";
-import { comoAppError } from "@/server/errors";
-import { cronometro, log, novoRequestId } from "@/server/logger";
 import { reconciliarPagamentosPendentes } from "@/server/pagamentos/servico";
-import { recusaDoCron } from "../portao";
+import { executarVarredura } from "../executar";
 
 /**
  * A rede de proteção do webhook, disparada pelo cron da Vercel (#198).
@@ -14,9 +11,10 @@ import { recusaDoCron } from "../portao";
  * ficou `pendente` para sempre, e não havia nenhum caminho para o app
  * descobrir isso sozinho.
  *
- * A regra de negócio inteira mora em `reconciliarPagamentosPendentes`. Aqui
- * fica só o portão: esta rota mexe em dinheiro e não pode ficar aberta na
- * internet.
+ * A regra de negócio inteira mora em `reconciliarPagamentosPendentes`; o
+ * portão, o log e o registro que o painel do admin lê, em
+ * `executarVarredura` (#566). Esta rota mexe em dinheiro e não pode ficar
+ * aberta na internet.
  *
  * **O portão é `CRON_SECRET`**, que a Vercel manda como `Authorization:
  * Bearer` quando a variável existe. Sem ela configurada em produção, a rota
@@ -30,33 +28,11 @@ export const dynamic = "force-dynamic";
 /** Varredura fala com o Mercado Pago uma vez por cobrança presa. */
 export const maxDuration = 60;
 
-export async function GET(request: Request) {
-  const requestId = novoRequestId();
-  const medir = cronometro();
-
-  try {
-    const recusa = recusaDoCron(request, {
-      requestId,
-      acao: "pagamentos.reconciliar",
-    });
-    if (recusa) return recusa;
-
-    const resultado = await reconciliarPagamentosPendentes();
-
-    log.info("varredura concluída", {
-      requestId,
-      acao: "pagamentos.reconciliar",
-      vistas: resultado.vistas,
-      reconciliadas: resultado.reconciliadas,
-      ms: medir(),
-    });
-
-    return NextResponse.json(resultado, {
-      headers: { "Cache-Control": "no-store" },
-    });
-  } catch (e) {
-    const erro = comoAppError(e);
-    log.erro(erro, { requestId, acao: "pagamentos.reconciliar", ms: medir() });
-    return NextResponse.json(erro.paraCliente(), { status: erro.status });
-  }
+export function GET(request: Request) {
+  return executarVarredura(request, {
+    nome: "reconciliar-pagamentos",
+    acao: "pagamentos.reconciliar",
+    concluida: "varredura concluída",
+    rodar: () => reconciliarPagamentosPendentes(),
+  });
 }

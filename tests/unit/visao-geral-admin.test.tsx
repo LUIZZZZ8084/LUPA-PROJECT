@@ -85,6 +85,8 @@ const PAINEL: PainelAdmin = {
     contestacoes: 0,
   },
   pressao: [],
+  varreduras: [],
+  paginaDeEmpresas: [],
   apuradoEm: "2026-10-27T12:00:00.000Z",
 };
 

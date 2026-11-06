@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { after } from "next/server";
 import type { ReactNode } from "react";
 import { PageShell } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ import {
   VAGAS_NO_AR_POR_PLANO,
 } from "@/server/pagamentos/planos";
 import type { TipoPagamento } from "@/server/pagamentos/tipos";
+import { contarVisita } from "@/server/visitas";
 
 /**
  * O cadastro de empresa, marcado com a porta de entrada (#559): é o que deixa
@@ -69,6 +71,14 @@ export const metadata: Metadata = {
 export default async function ParaEmpresasPage() {
   const sessao = await sessaoAtual();
   const contrata = Boolean(sessao && pode(sessao.papel, "vaga:publicar"));
+
+  /*
+   * A visita conta para a conversão do painel do admin (#568) só quando a
+   * página oferece criar a conta: quem já contrata vê "Ir para o painel", e
+   * somá-lo inflaria o denominador com quem nunca ia se cadastrar — o
+   * admin, a começar por ele. Depois da resposta, para não atrasar a tela.
+   */
+  if (!contrata) after(() => contarVisita("para_empresas"));
 
   return (
     <PageShell width="wide">

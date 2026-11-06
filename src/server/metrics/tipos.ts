@@ -1,5 +1,7 @@
 import type { Papel } from "../auth/rbac";
 import type { CustoMensal } from "../custos/tipos";
+import type { SituacaoDaVarredura } from "../varreduras/tipos";
+import type { VisitasNoDia } from "../visitas/tipos";
 
 /**
  * Métricas do painel administrativo.
@@ -424,6 +426,79 @@ export function agregarPressao(
   );
 }
 
+/**
+ * Uma semana da página para empresas (#568): quantas vezes ela foi aberta
+ * por quem ainda não contrata, e quantas contas o botão dela criou.
+ */
+export interface SemanaDaPagina {
+  /** A segunda-feira da semana, AAAA-MM-DD (UTC). */
+  inicio: string;
+  visitas: number;
+  contas: number;
+}
+
+/** Quantas semanas o bloco mostra: dois meses, o bastante para ver tendência. */
+export const SEMANAS_DA_PAGINA = 8;
+
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+/** A segunda-feira da semana de `data`, em UTC. */
+function segundaDaSemana(data: Date): Date {
+  const deslocamento = (data.getUTCDay() + 6) % 7;
+  const d = new Date(
+    Date.UTC(data.getUTCFullYear(), data.getUTCMonth(), data.getUTCDate()),
+  );
+  return new Date(d.getTime() - deslocamento * DIA_MS);
+}
+
+/** O primeiro dia da janela de `semanas` semanas que termina na de `agora`. */
+export function inicioDasSemanas(agora: Date, semanas: number): string {
+  const segunda = segundaDaSemana(agora);
+  return new Date(segunda.getTime() - (semanas - 1) * 7 * DIA_MS)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/**
+ * Visitas e contas, semana a semana, da mais antiga para a atual — a atual
+ * ainda pela metade, e a tela diz isso.
+ *
+ * Semana sem nada aparece com zero: semana vazia é informação, e sumir com
+ * ela faria duas semanas distantes parecerem vizinhas.
+ */
+export function semanasDaPagina(
+  visitas: ReadonlyArray<VisitasNoDia>,
+  contasCriadasEm: ReadonlyArray<string>,
+  agora: Date,
+  semanas = SEMANAS_DA_PAGINA,
+): SemanaDaPagina[] {
+  const linhas = new Map<string, SemanaDaPagina>();
+  const primeira = new Date(`${inicioDasSemanas(agora, semanas)}T00:00:00Z`);
+  for (let i = 0; i < semanas; i++) {
+    const inicio = new Date(primeira.getTime() + i * 7 * DIA_MS)
+      .toISOString()
+      .slice(0, 10);
+    linhas.set(inicio, { inicio, visitas: 0, contas: 0 });
+  }
+
+  const semanaDe = (dataOuDia: string) =>
+    segundaDaSemana(
+      new Date(dataOuDia.length === 10 ? `${dataOuDia}T00:00:00Z` : dataOuDia),
+    )
+      .toISOString()
+      .slice(0, 10);
+
+  for (const v of visitas) {
+    const linha = linhas.get(semanaDe(v.dia));
+    if (linha) linha.visitas += v.total;
+  }
+  for (const criadoEm of contasCriadasEm) {
+    const linha = linhas.get(semanaDe(criadoEm));
+    if (linha) linha.contas += 1;
+  }
+  return [...linhas.values()];
+}
+
 export interface PainelAdmin {
   totais: Totais;
   cadastros: CadastrosPorDia[];
@@ -434,6 +509,10 @@ export interface PainelAdmin {
   caixa: Caixa;
   /** Quem está encostando nos tetos agora, da maior pressão para a menor. */
   pressao: PressaoNoTeto[];
+  /** As varreduras diárias e se alguma parou (#566). */
+  varreduras: SituacaoDaVarredura[];
+  /** A página para empresas, semana a semana (#568). */
+  paginaDeEmpresas: SemanaDaPagina[];
   /** Momento da apuração, para a tela mostrar há quanto tempo é o dado. */
   apuradoEm: string;
 }
@@ -463,4 +542,11 @@ export interface RepositorioMetricas {
    * que alguém abre este bloco. Mesmo raciocínio de `caixa()`.
    */
   pressaoNosTetos(limite: number): Promise<PressaoNoTeto[]>;
+
+  /**
+   * Quando foi criada cada conta que veio do botão da página para empresas,
+   * desde `desde` (AAAA-MM-DD). Só a data: é o numerador da conversão
+   * (#568), e quem é a conta não importa aqui.
+   */
+  contasPelaPaginaDesde(desde: string): Promise<string[]>;
 }

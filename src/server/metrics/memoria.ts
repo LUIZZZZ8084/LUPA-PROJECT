@@ -186,6 +186,13 @@ export class RepositorioMetricasMemoria implements RepositorioMetricas {
   async pressaoNosTetos(limite: number): Promise<PressaoNoTeto[]> {
     return agregarPressao(janelasVivas(), new Date()).slice(0, limite);
   }
+
+  async contasPelaPaginaDesde(desde: string): Promise<string[]> {
+    return this.usuarios
+      .todos()
+      .filter((u) => u.veioDe === "para_empresas" && u.criadoEm >= desde)
+      .map((u) => u.criadoEm);
+  }
 }
 
 function papeisZerados(): Record<Papel, number> {
