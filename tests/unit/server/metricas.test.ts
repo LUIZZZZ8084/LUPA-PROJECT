@@ -43,6 +43,7 @@ function repoFalso(
       contestacoes: 0,
     }),
     pressaoNosTetos: async () => [],
+    contasPelaPaginaDesde: async () => [],
     ...sobrescrever,
   };
 }

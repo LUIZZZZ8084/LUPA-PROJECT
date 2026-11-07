@@ -9,7 +9,9 @@ import type { PainelAdmin } from "@/server/metrics/tipos";
 import { CoberturaDosCustos } from "./cobertura-dos-custos";
 import { ContasPorLugarBlocos } from "./contas-por-lugar";
 import { FunilDoPainel } from "./funil";
+import { PaginaDeEmpresas } from "./pagina-de-empresas";
 import { PressaoNosTetos } from "./pressao-nos-tetos";
+import { Varreduras } from "./varreduras";
 import { VisaoGeral } from "./visao-geral";
 
 /**
@@ -203,6 +205,15 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
       <FunilDoPainel funil={painel.funil} />
 
       <ContasPorLugarBlocos lugares={painel.lugares} />
+
+      {/*
+        As varreduras (#566) e a página para empresas (#568), lado a lado:
+        dois blocos pequenos, de leitura diária.
+      */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <Varreduras varreduras={painel.varreduras} />
+        <PaginaDeEmpresas semanas={painel.paginaDeEmpresas} />
+      </div>
 
       {/*
         Por último, e dentro do polling.

@@ -14,6 +14,17 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 06/11/2026:
 
+- O painel do admin mostra a última execução de cada varredura diária —
+  quando rodou, o resumo e o aviso de "atrasada" quando passa de 26 horas
+  sem sucesso. Se o segredo do cron quebrar, aparece ali, e não só num log
+  que some em 30 minutos —
+  [#566](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/566)
+
+- O painel do admin mostra a página para empresas semana a semana: visitas
+  de quem ainda não contrata, contas criadas pelo botão e a conversão. A
+  visita é contada por dia, sem nada que diga quem visitou —
+  [#568](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/568)
+
 - Cada vaga ativa da aba Vagas, na área de contratação, ganhou o atalho
   "Divulgar", que abre o WhatsApp com a mensagem e o link da vaga. Antes era
   preciso abrir a vaga para chegar ao painel de divulgação da #490 —

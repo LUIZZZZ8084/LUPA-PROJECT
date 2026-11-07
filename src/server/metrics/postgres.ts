@@ -233,4 +233,22 @@ export class RepositorioMetricasPostgres implements RepositorioMetricas {
       pico: Number(l.pico ?? 0),
     }));
   }
+
+  /**
+   * Só `criado_em`, e só das contas marcadas: a conversão não precisa de
+   * mais nada de quem se cadastrou. Conta excluída depois entra — a página
+   * a trouxe, e é isso que se mede.
+   */
+  async contasPelaPaginaDesde(desde: string): Promise<string[]> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("criado_em")
+      .eq("veio_de", "para_empresas")
+      .gte("criado_em", `${desde}T00:00:00.000Z`)
+      .limit(TETO_ADMIN);
+
+    if (error) throw erros.indisponivel(`contas da página: ${error.message}`);
+    return (data ?? []).map((l) => String(l.criado_em));
+  }
 }

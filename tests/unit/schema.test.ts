@@ -119,6 +119,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "categorias_servico",
       "custos_mensais",
       "denuncias",
+      "execucoes_varredura",
       "inscricoes_push",
       "mensagens_suporte",
       "pagamentos",
@@ -133,6 +134,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "tokens_recuperacao",
       "usuarios",
       "vagas",
+      "visitas_pagina",
       "visualizacoes_vaga",
     ]);
   });
@@ -956,6 +958,9 @@ describe("grants de anon e authenticated", () => {
     "custos_mensais",
     // Quem tem parceria com a Lupa, e até quando (#505).
     "parceiros",
+    // Métrica de operação, só do painel do admin (#566, #568).
+    "execucoes_varredura",
+    "visitas_pagina",
     // O que a empresa anota sobre cada candidatura (#539): só dela.
     "acompanhamento_candidatura",
     /*
@@ -1356,7 +1361,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        order by table_name`,
     );
     // 23 desde a #235, que acrescentou `mensagens_suporte`.
-    expect(tabelas.rows).toHaveLength(25);
+    expect(tabelas.rows).toHaveLength(27);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -4623,4 +4628,94 @@ describe("aplica-triagem.sql", () => {
       await banco.close();
     }
   }, 90_000);
+});
+
+/**
+ * As visitas da página para empresas (#568) e o registro das varreduras
+ * (#566). O que o banco garante sozinho: a contagem soma no mesmo dia sem
+ * perder visita, só as páginas e varreduras conhecidas entram, e nenhuma
+ * das duas chaves do navegador alcança as tabelas.
+ */
+describe("visitas e varreduras", () => {
+  it("a visita soma no mesmo dia, e página desconhecida não entra", async () => {
+    await db.query("select registrar_visita_pagina('para_empresas')");
+    await db.query("select registrar_visita_pagina('para_empresas')");
+    const r = await db.query<{ total: number }>(
+      `select total from visitas_pagina
+        where pagina = 'para_empresas' and dia = current_date`,
+    );
+    expect(Number(r.rows[0].total)).toBe(2);
+
+    await expect(
+      db.query("select registrar_visita_pagina('outra_pagina')"),
+    ).rejects.toThrow();
+  });
+
+  it("uma linha por varredura, e só as que existem", async () => {
+    await db.query(
+      `insert into execucoes_varredura (nome, rodou_em, ok, resumo, ultima_ok_em)
+       values ('avisar-vagas-vencendo', now(), true, '{"vagasVencendo": 1}', now())`,
+    );
+    await expect(
+      db.query(
+        `insert into execucoes_varredura (nome, rodou_em, ok)
+         values ('avisar-vagas-vencendo', now(), false)`,
+      ),
+    ).rejects.toThrow();
+    await expect(
+      db.query(
+        `insert into execucoes_varredura (nome, rodou_em, ok)
+         values ('varredura-inventada', now(), true)`,
+      ),
+    ).rejects.toThrow();
+  });
+});
+
+describe("aplica-varreduras-e-visitas.sql", () => {
+  it("cria as duas tabelas, roda de novo e fecha para as chaves públicas", async () => {
+    const banco = await PGlite.create();
+    try {
+      await banco.exec(SCHEMA);
+      // Um banco de antes da #566 não tem nada disto.
+      await banco.exec(`
+        drop function registrar_visita_pagina(text);
+        drop table visitas_pagina;
+        drop table execucoes_varredura;
+      `);
+
+      const script = readFileSync(
+        join(process.cwd(), "supabase/aplica-varreduras-e-visitas.sql"),
+        "utf8",
+      );
+      await banco.exec(script);
+      // O Supabase concede tudo às duas chaves por padrão; o script fecha.
+      await banco.exec(
+        "grant all on visitas_pagina, execucoes_varredura to anon, authenticated",
+      );
+      await banco.exec(script);
+
+      await banco.query("select registrar_visita_pagina('para_empresas')");
+      const r = await banco.query<{ total: number }>(
+        "select total from visitas_pagina where pagina = 'para_empresas'",
+      );
+      expect(Number(r.rows[0].total)).toBe(1);
+
+      const privilegio = await banco.query<{ algum: boolean }>(
+        `select bool_or(has_table_privilege(papel, tabela, p)) as algum
+           from unnest(array['anon', 'authenticated']) as papel,
+                unnest(array['visitas_pagina', 'execucoes_varredura']) as tabela,
+                unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE',
+                             'TRUNCATE']) as p`,
+      );
+      expect(privilegio.rows[0].algum).toBe(false);
+
+      const executa = await banco.query<{ anon: boolean }>(
+        `select has_function_privilege('anon',
+           'registrar_visita_pagina(text)', 'EXECUTE') as anon`,
+      );
+      expect(executa.rows[0].anon).toBe(false);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
 });

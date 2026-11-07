@@ -1,7 +1,15 @@
 import { type Autenticado, exigirCapacidade } from "../auth/rbac";
 import { repositorioCustos } from "../custos";
+import { repositorioVarreduras } from "../varreduras";
+import { situacaoDasVarreduras } from "../varreduras/tipos";
+import { repositorioVisitas } from "../visitas";
 import { repositorioMetricas } from "./index";
-import type { PainelAdmin } from "./tipos";
+import {
+  inicioDasSemanas,
+  type PainelAdmin,
+  SEMANAS_DA_PAGINA,
+  semanasDaPagina,
+} from "./tipos";
 
 /** Quantos dias o painel mostra por padrão. */
 export const JANELA_PADRAO_DIAS = 30;
@@ -44,16 +52,36 @@ export async function painelAdmin(
    * Os custos vêm do repositório deles (#473), editados no próprio painel.
    * Quem chega aqui já passou por `admin:metricas`.
    */
-  const [totais, cadastros, lugares, funil, caixa, pressao, custos] =
-    await Promise.all([
-      repo.totais(),
-      repo.cadastrosPorDia(dias),
-      repo.contasPorLugar(CIDADES_MOSTRADAS),
-      repo.funil(),
-      repo.caixa(),
-      repo.pressaoNosTetos(TETOS_MOSTRADOS),
-      repositorioCustos().listar(),
-    ]);
+  /*
+   * As varreduras (#566) e a página para empresas (#568) entram no polling
+   * pelo mesmo motivo da pressão: são três linhas pequenas, e "a varredura
+   * de hoje rodou?" é pergunta do dia, não do mês.
+   */
+  const agora = new Date();
+  const desde = inicioDasSemanas(agora, SEMANAS_DA_PAGINA);
+  const [
+    totais,
+    cadastros,
+    lugares,
+    funil,
+    caixa,
+    pressao,
+    custos,
+    execucoes,
+    visitas,
+    contasDaPagina,
+  ] = await Promise.all([
+    repo.totais(),
+    repo.cadastrosPorDia(dias),
+    repo.contasPorLugar(CIDADES_MOSTRADAS),
+    repo.funil(),
+    repo.caixa(),
+    repo.pressaoNosTetos(TETOS_MOSTRADOS),
+    repositorioCustos().listar(),
+    repositorioVarreduras().todas(),
+    repositorioVisitas().porDia("para_empresas", desde),
+    repo.contasPelaPaginaDesde(desde),
+  ]);
 
   return {
     totais,
@@ -63,7 +91,9 @@ export async function painelAdmin(
     custos,
     caixa,
     pressao,
-    apuradoEm: new Date().toISOString(),
+    varreduras: situacaoDasVarreduras(execucoes, agora),
+    paginaDeEmpresas: semanasDaPagina(visitas, contasDaPagina, agora),
+    apuradoEm: agora.toISOString(),
   };
 }
 
