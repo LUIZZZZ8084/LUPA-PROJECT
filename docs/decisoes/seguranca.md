@@ -280,3 +280,31 @@ para atender.
 
 O que contém abuso aqui é o teto por ação (#202), que não pede nada a
 ninguém.
+
+## As varreduras agendadas: de Cron Jobs para Schedules (#565)
+
+As duas varreduras diárias — a rede de proteção dos pagamentos e o aviso
+de vaga vencendo — saíram de `crons` e foram para `schedules`, no
+`vercel.json`. A página de Cron Jobs da Vercel passou a avisar que o
+formato foi descontinuado e será migrado; trocar com calma, num PR, é
+melhor do que descobrir no dia em que parar de rodar.
+
+**As rotas não mudaram.** O Schedules chama o mesmo caminho com o mesmo
+cabeçalho `Authorization: Bearer <CRON_SECRET>`, então o portão de
+`src/app/api/cron/portao.ts` continua valendo. A única armadilha é o
+método: o Schedules usa POST quando ninguém diz nada, e as rotas só
+exportam GET. Cada agendamento leva `requestMethod: "GET"`, e
+`tests/unit/agendamentos.test.ts` reprova o que vier sem — e reprova
+também `crons` de volta no arquivo, porque com os dois cada varredura
+roda duas vezes, e a de aviso manda dois e-mails.
+
+**O que se ganhou:** histórico de cada execução por 90 dias, no painel
+da Vercel, e o botão de rodar agora. O log grátis guarda 30 minutos, e
+até aqui a única prova de que uma varredura tinha rodado era o contador
+da aba Observability.
+
+**O que se aceitou:** o Schedules está em beta, e no plano grátis a
+execução cai em algum momento dos 15 minutos depois do horário — antes
+era qualquer momento da hora. Cabe no plano grátis (até 5.000 execuções
+por mês; usamos 60). Um deploy de preview não roda agendamento: lá ele
+nasce desligado.

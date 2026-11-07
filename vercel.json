@@ -1,14 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["gru1"],
-  "crons": [
-    {
+  "schedules": {
+    "reconciliar-pagamentos": {
+      "schedule": "0 11 * * *",
       "path": "/api/cron/reconciliar-pagamentos",
-      "schedule": "0 11 * * *"
+      "requestMethod": "GET"
     },
-    {
+    "avisar-vagas-vencendo": {
+      "schedule": "0 12 * * *",
       "path": "/api/cron/avisar-vagas-vencendo",
-      "schedule": "0 12 * * *"
+      "requestMethod": "GET"
     }
-  ]
+  }
 }
