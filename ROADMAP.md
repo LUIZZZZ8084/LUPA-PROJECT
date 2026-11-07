@@ -19,6 +19,11 @@ Em 06/11/2026:
   preciso abrir a vaga para chegar ao painel de divulgação da #490 —
   [#567](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/567)
 
+- As duas varreduras diárias passaram de Cron Jobs, formato que a Vercel
+  descontinuou, para Schedules: mesmo horário, mesmas rotas, e agora com
+  histórico de cada execução por 90 dias no painel da Vercel —
+  [#565](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/565)
+
 Em 05/11/2026:
 
 - O painel do admin conta quantas contas foram criadas pelo botão da página
