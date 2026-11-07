@@ -22,6 +22,57 @@ import { Panel } from "@/components/ui/card";
  * pessoa escolhe para quem manda e o que muda — um campo a mais seria
  * atrito sem ganho.
  */
+interface VagaDivulgada {
+  vagaId: string;
+  cargo: string;
+  cidade: string;
+  /** Sem o nome da empresa, a mensagem do WhatsApp o omite. */
+  empresa?: string;
+}
+
+/**
+ * Abre o WhatsApp com a mensagem da vaga pronta. Uma regra só para o texto,
+ * usada pelo painel de divulgação e pelo atalho da aba Vagas (#567).
+ */
+function abrirWhatsAppDaVaga({
+  vagaId,
+  cargo,
+  cidade,
+  empresa,
+}: VagaDivulgada) {
+  const link = `${window.location.origin}/vagas/${encodeURIComponent(vagaId)}`;
+  const quem = empresa ? ` — ${empresa}` : "";
+  const mensagem =
+    `Estamos contratando: ${cargo}${quem}, ${cidade}.\n` +
+    `Veja a vaga e candidate-se pela Lupa: ${link}`;
+  window.open(
+    `https://wa.me/?text=${encodeURIComponent(mensagem)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+}
+
+/**
+ * O atalho da aba Vagas (#567): só o WhatsApp, que é por onde as vagas da
+ * cidade circulam. Copiar o link e baixar a arte continuam na página da
+ * vaga — a linha da lista já tem Editar e Encerrar, e mais três botões em
+ * cada vaga empurrariam o resto para fora da tela do celular.
+ */
+export function EnviarVagaNoWhatsApp(props: VagaDivulgada) {
+  return (
+    <Button
+      type="button"
+      variant="whatsapp"
+      size="sm"
+      aria-label={`Enviar a vaga ${props.cargo} no WhatsApp`}
+      onClick={() => abrirWhatsAppDaVaga(props)}
+    >
+      <Share2 size={14} aria-hidden />
+      Divulgar
+    </Button>
+  );
+}
+
 export function CompartilharVaga({
   vagaId,
   cargo,
@@ -49,15 +100,7 @@ export function CompartilharVaga({
   }
 
   function abrirWhatsApp() {
-    const quem = empresa ? ` — ${empresa}` : "";
-    const mensagem =
-      `Estamos contratando: ${cargo}${quem}, ${cidade}.\n` +
-      `Veja a vaga e candidate-se pela Lupa: ${link()}`;
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(mensagem)}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    abrirWhatsAppDaVaga({ vagaId, cargo, cidade, empresa });
   }
 
   async function copiar() {

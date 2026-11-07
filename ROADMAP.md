@@ -14,6 +14,11 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 06/11/2026:
 
+- Cada vaga ativa da aba Vagas, na área de contratação, ganhou o atalho
+  "Divulgar", que abre o WhatsApp com a mensagem e o link da vaga. Antes era
+  preciso abrir a vaga para chegar ao painel de divulgação da #490 —
+  [#567](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/567)
+
 - As duas varreduras diárias passaram de Cron Jobs, formato que a Vercel
   descontinuou, para Schedules: mesmo horário, mesmas rotas, e agora com
   histórico de cada execução por 90 dias no painel da Vercel —
