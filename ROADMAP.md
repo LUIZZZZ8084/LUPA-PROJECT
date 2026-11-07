@@ -8,9 +8,17 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 06/11/2026.**
+**Última atualização: 07/11/2026.**
 
 ## Concluído
+
+Em 07/11/2026:
+
+- Qualquer pessoa que abre uma vaga aberta — candidato, prestador, outra
+  empresa ou visitante sem conta — pode mandá-la no WhatsApp ou copiar o
+  link, com a mensagem de quem indica ("Vi esta vaga na Lupa e lembrei de
+  você"), e não a de quem contrata —
+  [#572](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/572)
 
 Em 06/11/2026:
 

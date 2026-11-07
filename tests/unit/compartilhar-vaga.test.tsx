@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CompartilharVaga,
   EnviarVagaNoWhatsApp,
+  IndicarVaga,
 } from "@/components/compartilhar-vaga";
 
 function montar(props: Partial<Parameters<typeof CompartilharVaga>[0]> = {}) {
@@ -172,5 +173,65 @@ describe("EnviarVagaNoWhatsApp", () => {
     );
     expect(alvo).toBe("_blank");
     expect(recursos).toContain("noopener");
+  });
+});
+
+/**
+ * Quem não é o dono (#572): a mensagem é de quem indica, e não de quem
+ * contrata — "Estamos contratando" na boca do amigo faria parecer que a vaga
+ * é dele.
+ */
+describe("IndicarVaga", () => {
+  const abrir = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal("open", abrir);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    abrir.mockReset();
+  });
+
+  it("o WhatsApp abre com a mensagem de quem indica, e o link da vaga", () => {
+    render(
+      <IndicarVaga
+        vagaId="vaga-3"
+        cargo="Auxiliar de Cozinha"
+        cidade="Sinop - MT"
+        empresa="Restaurante Bom Prato"
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /enviar no whatsapp/i }),
+    );
+
+    const texto = decodeURIComponent(
+      String(abrir.mock.calls[0][0]).split("text=")[1],
+    );
+    expect(texto).toBe(
+      "Vi esta vaga na Lupa e lembrei de você: Auxiliar de Cozinha — " +
+        "Restaurante Bom Prato, Sinop - MT.\nVeja e candidate-se: " +
+        `${window.location.origin}/vagas/vaga-3`,
+    );
+    expect(texto).not.toContain("Estamos contratando");
+  });
+
+  it("copiar põe o link da vaga na área de transferência", async () => {
+    const escrever = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText: escrever } });
+    render(
+      <IndicarVaga vagaId="vaga-3" cargo="Auxiliar" cidade="Sinop - MT" />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /copiar link/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Link copiado")).toBeInTheDocument(),
+    );
+    expect(escrever).toHaveBeenCalledWith(
+      `${window.location.origin}/vagas/vaga-3`,
+    );
   });
 });

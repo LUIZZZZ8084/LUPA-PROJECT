@@ -231,6 +231,7 @@ As duas portas de contratação, os campos da vaga, a triagem, o funil de candid
 - Etiquetas nas candidaturas, e o filtro em Talentos (#545)
 - Editar a vaga publicada, com o que a define travado (#544)
 - A empresa é avisada por e-mail quando chega candidatura (#543)
+- Qualquer pessoa compartilha a vaga, com a frase de quem indica (#572)
 - Na % de casamento, zero é uma afirmação
 - Vaga expira em 30 dias, e reativar custa o mesmo que publicar
 

@@ -53,6 +53,42 @@ test.describe("vaga pública", () => {
   });
 
   /**
+   * Quem chegou pelo link é quem repassa a vaga (#572): sem conta, o
+   * WhatsApp abre com a mensagem de quem indica e o link desta vaga. Nenhum
+   * `wa.me` no HTML — o endereço só nasce no clique, e a vaga continua sem
+   * contato nenhum na página.
+   */
+  test("sem conta, compartilha a vaga com a mensagem de quem indica", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const abertos: string[] = [];
+      (window as unknown as { abertos: string[] }).abertos = abertos;
+      window.open = (url) => {
+        abertos.push(String(url));
+        return null;
+      };
+    });
+    await page.goto(VAGA);
+    // A página não tem `select`: espera o React assumir pelo próprio botão.
+    await aguardarHidratacao(page, "main button");
+
+    await expect(
+      page.getByText("Conhece alguém para esta vaga?"),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Enviar no WhatsApp" }).click();
+
+    const abertos = await page.evaluate(
+      () => (window as unknown as { abertos: string[] }).abertos,
+    );
+    expect(abertos).toHaveLength(1);
+    const texto = decodeURIComponent(abertos[0].split("text=")[1]);
+    expect(texto).toContain("Vi esta vaga na Lupa");
+    expect(texto).not.toContain("Estamos contratando");
+    expect(texto).toContain(`${new URL(page.url()).origin}${VAGA}`);
+  });
+
+  /**
    * A varredura das rotas abre a vaga com sessão, e a tela sem conta tem
    * outro rodapé: o convite para entrar, preso no pé da janela. Contraste nos
    * dois temas, pelo mesmo motivo de sempre — texto sobre fundo tingido.

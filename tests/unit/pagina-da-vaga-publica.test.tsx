@@ -158,11 +158,25 @@ describe("página da vaga sem conta", () => {
     ).toBeNull();
   });
 
-  it("não oferece denunciar nem compartilhar", async () => {
+  it("não oferece denunciar, nem o painel de divulgação do dono", async () => {
     await abrir();
 
     expect(screen.queryByRole("button", { name: /denunciar/i })).toBeNull();
     expect(screen.queryByText(/divulgue esta vaga/i)).toBeNull();
+  });
+
+  /**
+   * Quem chegou pelo link sem conta é justamente quem repassa a vaga para o
+   * irmão (#572): o compartilhar não pede login.
+   */
+  it("oferece compartilhar com alguém, sem pedir conta", async () => {
+    await abrir();
+
+    expect(screen.getByText("Conhece alguém para esta vaga?")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /enviar no whatsapp/i }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /copiar link/i })).toBeTruthy();
   });
 
   describe("vaga que não está mais aberta", () => {
@@ -181,7 +195,8 @@ describe("página da vaga sem conta", () => {
         expect(
           screen.getByRole("link", { name: /ver vagas em sinop - mt/i }),
         ).toHaveAttribute("href", "/vagas?cidade=Sinop%20-%20MT");
-        // Sem convite para entrar por uma vaga que já fechou.
+        // Sem convite para entrar, nem para repassar, uma vaga que já fechou.
+        expect(screen.queryByText(/conhece alguém/i)).toBeNull();
         expect(
           screen.queryByRole("link", { name: /entrar para se candidatar/i }),
         ).toBeNull();
@@ -236,12 +251,19 @@ describe("página da vaga para quem tem conta", () => {
     expect(
       screen.getByRole("button", { name: /enviar no whatsapp/i }),
     ).toBeTruthy();
+    // O dono não ganha o "conhece alguém": o painel dele já faz isso.
+    expect(screen.queryByText(/conhece alguém/i)).toBeNull();
   });
 
-  it("outra empresa não vê o compartilhar de uma vaga que não é dela", async () => {
-    estado.sessao = { usuarioId: "empresa-2", papel: "empresa" };
+  it.each([
+    ["candidato", { usuarioId: "candidato-1", papel: "candidato_clt" }],
+    ["prestador", { usuarioId: "prestador-1", papel: "prestador_servico" }],
+    ["outra empresa", { usuarioId: "empresa-2", papel: "empresa" }],
+  ])("%s pode compartilhar, sem o painel do dono", async (_quem, sessao) => {
+    estado.sessao = sessao;
     await abrir();
 
+    expect(screen.getByText("Conhece alguém para esta vaga?")).toBeTruthy();
     expect(screen.queryByText(/divulgue esta vaga/i)).toBeNull();
   });
 
@@ -251,6 +273,7 @@ describe("página da vaga para quem tem conta", () => {
     await abrir();
 
     expect(screen.queryByText(/divulgue esta vaga/i)).toBeNull();
+    expect(screen.queryByText(/conhece alguém/i)).toBeNull();
   });
 
   it("a visita do próprio dono não conta", async () => {
