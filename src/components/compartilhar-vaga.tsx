@@ -142,20 +142,24 @@ function LinkManual({ link }: { link: string | null }) {
  * do bairro —, e até aqui precisava copiar o endereço do navegador à mão.
  * Dois botões só, WhatsApp e copiar: a arte de story é material de quem
  * divulga a própria vaga.
+ *
+ * **Discreto de propósito (#574):** nesta página o principal é
+ * candidatar-se, e um botão verde cheio aqui disputava atenção com ele. Os
+ * dois são de contorno, e o título fica no tom secundário.
  */
 export function IndicarVaga(props: VagaDivulgada) {
   const { copiado, manual, copiar } = useCopiarLink(props.vagaId);
 
   return (
     <div className="mt-6 border-line border-t pt-5">
-      <h2 className="flex items-center gap-1.5 font-semibold text-sm">
-        <Share2 size={15} className="text-vagas" aria-hidden />
+      <h2 className="flex items-center gap-1.5 font-medium text-muted text-sm">
+        <Share2 size={14} aria-hidden />
         Conhece alguém para esta vaga?
       </h2>
       <div className="mt-3 flex flex-wrap gap-2">
         <Button
           type="button"
-          variant="whatsapp"
+          variant="outline"
           size="sm"
           onClick={() => abrirWhatsAppDaVaga(props, "indicacao")}
         >
