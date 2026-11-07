@@ -30,21 +30,31 @@ interface VagaDivulgada {
   empresa?: string;
 }
 
+function linkDaVaga(vagaId: string): string {
+  return `${window.location.origin}/vagas/${encodeURIComponent(vagaId)}`;
+}
+
 /**
  * Abre o WhatsApp com a mensagem da vaga pronta. Uma regra só para o texto,
- * usada pelo painel de divulgação e pelo atalho da aba Vagas (#567).
+ * usada pelo painel de divulgação, pelo atalho da aba Vagas (#567) e pelo
+ * compartilhar de quem não é o dono (#572).
+ *
+ * **Quem manda muda a frase.** O dono diz "Estamos contratando"; quem
+ * repassa a vaga para um amigo não está contratando ninguém, e a mesma frase
+ * na boca dele faria o amigo achar que a vaga é dele.
  */
-function abrirWhatsAppDaVaga({
-  vagaId,
-  cargo,
-  cidade,
-  empresa,
-}: VagaDivulgada) {
-  const link = `${window.location.origin}/vagas/${encodeURIComponent(vagaId)}`;
+function abrirWhatsAppDaVaga(
+  { vagaId, cargo, cidade, empresa }: VagaDivulgada,
+  quemManda: "dono" | "indicacao" = "dono",
+) {
+  const link = linkDaVaga(vagaId);
   const quem = empresa ? ` — ${empresa}` : "";
   const mensagem =
-    `Estamos contratando: ${cargo}${quem}, ${cidade}.\n` +
-    `Veja a vaga e candidate-se pela Lupa: ${link}`;
+    quemManda === "dono"
+      ? `Estamos contratando: ${cargo}${quem}, ${cidade}.\n` +
+        `Veja a vaga e candidate-se pela Lupa: ${link}`
+      : `Vi esta vaga na Lupa e lembrei de você: ${cargo}${quem}, ${cidade}.\n` +
+        `Veja e candidate-se: ${link}`;
   window.open(
     `https://wa.me/?text=${encodeURIComponent(mensagem)}`,
     "_blank",
@@ -73,6 +83,92 @@ export function EnviarVagaNoWhatsApp(props: VagaDivulgada) {
   );
 }
 
+/**
+ * Copiar o link da vaga, com o aviso de copiado e o plano B: sem permissão
+ * para a área de transferência (navegador embutido de rede social, por
+ * exemplo), o link aparece na tela para ser copiado à mão.
+ */
+function useCopiarLink(vagaId: string) {
+  const [copiado, setCopiado] = useState(false);
+  const [manual, setManual] = useState<string | null>(null);
+
+  async function copiar() {
+    setManual(null);
+    try {
+      await navigator.clipboard.writeText(linkDaVaga(vagaId));
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2500);
+    } catch {
+      setManual(linkDaVaga(vagaId));
+    }
+  }
+
+  return { copiado, manual, copiar };
+}
+
+function BotaoCopiar({
+  copiado,
+  copiar,
+}: {
+  copiado: boolean;
+  copiar: () => void;
+}) {
+  return (
+    <Button type="button" variant="outline" size="sm" onClick={copiar}>
+      {copiado ? (
+        <Check size={14} className="text-vagas" />
+      ) : (
+        <Copy size={14} />
+      )}
+      {copiado ? "Link copiado" : "Copiar link"}
+    </Button>
+  );
+}
+
+function LinkManual({ link }: { link: string | null }) {
+  if (!link) return null;
+  return (
+    <p className="mt-2 break-all text-muted text-xs" role="status">
+      Copie o link: <span className="select-all text-ink">{link}</span>
+    </p>
+  );
+}
+
+/**
+ * Compartilhar a vaga sem ser o dono (#572): candidato, prestador, empresa
+ * que não a publicou, e quem abriu o link sem conta.
+ *
+ * Quem procura emprego é quem mais repassa vaga — para o irmão, para o grupo
+ * do bairro —, e até aqui precisava copiar o endereço do navegador à mão.
+ * Dois botões só, WhatsApp e copiar: a arte de story é material de quem
+ * divulga a própria vaga.
+ */
+export function IndicarVaga(props: VagaDivulgada) {
+  const { copiado, manual, copiar } = useCopiarLink(props.vagaId);
+
+  return (
+    <div className="mt-6 border-line border-t pt-5">
+      <h2 className="flex items-center gap-1.5 font-semibold text-sm">
+        <Share2 size={15} className="text-vagas" aria-hidden />
+        Conhece alguém para esta vaga?
+      </h2>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="whatsapp"
+          size="sm"
+          onClick={() => abrirWhatsAppDaVaga(props, "indicacao")}
+        >
+          <Share2 size={14} aria-hidden />
+          Enviar no WhatsApp
+        </Button>
+        <BotaoCopiar copiado={copiado} copiar={copiar} />
+      </div>
+      <LinkManual link={manual} />
+    </div>
+  );
+}
+
 export function CompartilharVaga({
   vagaId,
   cargo,
@@ -90,30 +186,10 @@ export function CompartilharVaga({
   /** Sem a moldura de painel, para caber dentro de outra tela. */
   recolhido?: boolean;
 }) {
-  const [copiado, setCopiado] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  const caminho = `/vagas/${encodeURIComponent(vagaId)}`;
-
-  function link() {
-    return `${window.location.origin}${caminho}`;
-  }
+  const { copiado, manual, copiar } = useCopiarLink(vagaId);
 
   function abrirWhatsApp() {
     abrirWhatsAppDaVaga({ vagaId, cargo, cidade, empresa });
-  }
-
-  async function copiar() {
-    setErro(null);
-    try {
-      await navigator.clipboard.writeText(link());
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 2500);
-    } catch {
-      // Sem permissão para a área de transferência (navegador embutido de
-      // rede social, por exemplo): o link aparece para ser copiado à mão.
-      setErro(link());
-    }
   }
 
   const corpo = (
@@ -137,14 +213,7 @@ export function CompartilharVaga({
           <Share2 size={14} />
           Enviar no WhatsApp
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={copiar}>
-          {copiado ? (
-            <Check size={14} className="text-vagas" />
-          ) : (
-            <Copy size={14} />
-          )}
-          {copiado ? "Link copiado" : "Copiar link"}
-        </Button>
+        <BotaoCopiar copiado={copiado} copiar={copiar} />
         {/*
           `<a>` comum, e não `Link`: o `Link` pré-busca o destino, e este é um
           endpoint que renderiza uma imagem de 1080 × 1920 a cada chamada.
@@ -160,11 +229,7 @@ export function CompartilharVaga({
         </ButtonAnchor>
       </div>
 
-      {erro && (
-        <p className="mt-2 break-all text-muted text-xs" role="status">
-          Copie o link: <span className="select-all text-ink">{erro}</span>
-        </p>
-      )}
+      <LinkManual link={manual} />
     </>
   );
 
