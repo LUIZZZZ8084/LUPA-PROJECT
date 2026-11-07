@@ -9,7 +9,10 @@
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CompartilharVaga } from "@/components/compartilhar-vaga";
+import {
+  CompartilharVaga,
+  EnviarVagaNoWhatsApp,
+} from "@/components/compartilhar-vaga";
 
 function montar(props: Partial<Parameters<typeof CompartilharVaga>[0]> = {}) {
   render(
@@ -123,5 +126,51 @@ describe("CompartilharVaga", () => {
     expect(
       screen.getByRole("link", { name: /baixar arte para story/i }),
     ).toHaveAttribute("href", "/api/vagas/a%2Fb%20c/arte");
+  });
+});
+
+/**
+ * O atalho da aba Vagas (#567): o mesmo texto do painel de divulgação, num
+ * botão só, com o nome da vaga no rótulo para o leitor de tela distinguir
+ * uma linha da outra.
+ */
+describe("EnviarVagaNoWhatsApp", () => {
+  const abrir = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal("open", abrir);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    abrir.mockReset();
+  });
+
+  it("abre o WhatsApp com a mesma mensagem do painel de divulgação", () => {
+    render(
+      <EnviarVagaNoWhatsApp
+        vagaId="vaga-9"
+        cargo="Vendedor"
+        cidade="Sorriso - MT"
+        empresa="Mercado Rede, via Agência Norte"
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Enviar a vaga Vendedor no WhatsApp",
+      }),
+    );
+
+    expect(abrir).toHaveBeenCalledTimes(1);
+    const [url, alvo, recursos] = abrir.mock.calls[0];
+    const texto = decodeURIComponent(String(url).split("text=")[1]);
+    expect(texto).toBe(
+      "Estamos contratando: Vendedor — Mercado Rede, via Agência Norte, " +
+        "Sorriso - MT.\nVeja a vaga e candidate-se pela Lupa: " +
+        `${window.location.origin}/vagas/vaga-9`,
+    );
+    expect(alvo).toBe("_blank");
+    expect(recursos).toContain("noopener");
   });
 });

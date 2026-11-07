@@ -14,6 +14,7 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 
 Em 06/11/2026:
 
+<<<<<<< HEAD
 - O painel do admin mostra a última execução de cada varredura diária —
   quando rodou, o resumo e o aviso de "atrasada" quando passa de 26 horas
   sem sucesso. Se o segredo do cron quebrar, aparece ali, e não só num log
@@ -24,6 +25,17 @@ Em 06/11/2026:
   de quem ainda não contrata, contas criadas pelo botão e a conversão. A
   visita é contada por dia, sem nada que diga quem visitou —
   [#568](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/568)
+=======
+- Cada vaga ativa da aba Vagas, na área de contratação, ganhou o atalho
+  "Divulgar", que abre o WhatsApp com a mensagem e o link da vaga. Antes era
+  preciso abrir a vaga para chegar ao painel de divulgação da #490 —
+  [#567](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/567)
+
+- As duas varreduras diárias passaram de Cron Jobs, formato que a Vercel
+  descontinuou, para Schedules: mesmo horário, mesmas rotas, e agora com
+  histórico de cada execução por 90 dias no painel da Vercel —
+  [#565](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/565)
+>>>>>>> origin/main
 
 Em 05/11/2026:
 

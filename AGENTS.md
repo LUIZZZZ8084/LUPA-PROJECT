@@ -253,6 +253,7 @@ O que é público, o Brasil inteiro, a ordem por proximidade, o aviso de vaga, o
 Filtros do PostgREST, CSP, tetos por ação e por listagem, cache, região das funções, limites de cadastro e login, e o captcha que não vai existir.
 
 - Segurança: o que já vale, e o que se decidiu não fazer
+- As varreduras agendadas: de Cron Jobs para Schedules (#565)
 
 ### [Painel do admin](docs/decisoes/painel-admin.md)
 
