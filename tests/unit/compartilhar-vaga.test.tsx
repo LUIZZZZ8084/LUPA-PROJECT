@@ -218,6 +218,21 @@ describe("IndicarVaga", () => {
     expect(texto).not.toContain("Estamos contratando");
   });
 
+  /**
+   * O principal na página é candidatar-se (#574): o compartilhar não pode
+   * ter botão de fundo cheio disputando atenção com ele.
+   */
+  it("os dois botões são de contorno, sem o verde cheio", () => {
+    render(
+      <IndicarVaga vagaId="vaga-3" cargo="Auxiliar" cidade="Sinop - MT" />,
+    );
+    for (const nome of [/enviar no whatsapp/i, /copiar link/i]) {
+      const botao = screen.getByRole("button", { name: nome });
+      expect(botao.className).not.toMatch(/(^| )bg-whatsapp( |$)/);
+      expect(botao.className).toMatch(/(^| )border( |$)/);
+    }
+  });
+
   it("copiar põe o link da vaga na área de transferência", async () => {
     const escrever = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText: escrever } });
