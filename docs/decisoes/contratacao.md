@@ -680,6 +680,25 @@ cada candidatura) e o mesmo botão de reenviar do Perfil, com a mesma cota.
 Some quando a pessoa confirma. A regra de só mandar para e-mail confirmado
 não mudou: o que mudou foi onde se pede.
 
+## Qualquer pessoa compartilha a vaga, com a frase de quem indica (#572)
+
+A divulgação da #490 e o atalho da #567 eram só do dono. Quem procura
+emprego é quem mais repassa vaga — para o irmão, para o grupo do bairro —,
+e precisava copiar o endereço do navegador à mão. Pedido do Luiz em
+07/11/2026: qualquer um tem que poder compartilhar.
+
+Na vaga aberta, quem não é o dono — com ou sem conta — vê "Conhece alguém
+para esta vaga?", com WhatsApp e copiar o link. **A frase muda com quem
+manda**: o dono diz "Estamos contratando"; quem indica diz "Vi esta vaga na
+Lupa e lembrei de você". A mesma frase do dono na boca do amigo faria quem
+recebe achar que a vaga é dele. A arte de story fica só com o dono: é
+material de quem divulga a própria vaga.
+
+O link continua sendo o da vaga, que abre sem login e sem contato nenhum
+(#490). O `wa.me` só nasce no clique, então a página segue sem nenhum
+endereço de WhatsApp no HTML. Vaga encerrada ou vencida não oferece
+compartilhar: mandaria gente para uma vaga que não recebe candidatura.
+
 ## Na % de casamento, zero é uma afirmação
 
 A lista de currículos recebidos mostra quanto o candidato casa com a

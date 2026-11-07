@@ -13,7 +13,7 @@ import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { ApplyButton } from "@/components/apply-button";
 import { BarraDeAcaoFixa } from "@/components/barra-de-acao-fixa";
-import { CompartilharVaga } from "@/components/compartilhar-vaga";
+import { CompartilharVaga, IndicarVaga } from "@/components/compartilhar-vaga";
 import { Denunciar } from "@/components/denunciar";
 import { JobCard } from "@/components/job-card";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
@@ -325,6 +325,20 @@ export default async function JobDetailPage({
               ))}
             </div>
           </div>
+
+          {/*
+            Compartilhar não é só do dono (#572): quem procura emprego é
+            quem mais repassa vaga. Com ou sem conta, enquanto a vaga recebe
+            candidatura; o dono tem o painel completo lá em cima.
+          */}
+          {!ehDono && job.status === "aberta" && !expirada && (
+            <IndicarVaga
+              vagaId={job.id}
+              cargo={job.title}
+              cidade={job.city}
+              empresa={quemContrata(job)}
+            />
+          )}
 
           {/*
           Só as mensagens ficam no painel. O botão de candidatar-se vive na
