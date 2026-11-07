@@ -50,7 +50,7 @@ describe("agendamentos da Vercel", () => {
     expect(agendamentos[0].requestMethod).toBe("GET");
 
     const fonte = readFileSync(join(PASTA_DOS_CRONS, rota, "route.ts"), "utf8");
-    expect(fonte).toMatch(/export async function GET\(/);
+    expect(fonte).toMatch(/export (async )?function GET\(/);
   });
 
   it("nenhum agendamento aponta para rota que não existe", () => {
