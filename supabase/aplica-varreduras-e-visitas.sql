@@ -58,6 +58,7 @@ revoke all on visitas_pagina      from anon, authenticated;
 revoke all on execucoes_varredura from anon, authenticated;
 revoke execute on function registrar_visita_pagina(text)
   from public, anon, authenticated;
+grant execute on function registrar_visita_pagina(text) to service_role;
 
 commit;
 
