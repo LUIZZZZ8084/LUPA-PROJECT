@@ -1,10 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
 import { z } from "zod";
 import { criarAcao } from "@/server/action";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { usuarioDaSessao } from "@/server/auth/servico";
+import { origemDaRequisicao } from "@/server/origem-da-requisicao";
 import { receberMensagemDeSuporte } from "@/server/suporte/servico";
 import { ASSUNTOS } from "@/server/suporte/tipos";
 
@@ -43,10 +43,8 @@ export const enviarMensagemDeSuporte = criarAcao({
      */
     const sessao = await sessaoAtual();
 
-    const cabecalhos = await headers();
-    const origem =
-      cabecalhos.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "desconhecida";
+    // A mesma origem de todo limite do app (#346, #578), agrupada por rede.
+    const origem = await origemDaRequisicao();
 
     await receberMensagemDeSuporte({
       ...dados,

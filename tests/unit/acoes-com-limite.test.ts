@@ -43,10 +43,26 @@ function nomesDasAcoes(): { nome: string; arquivo: string }[] {
 
   for (const arquivo of arquivosTs(RAIZ)) {
     const fonte = readFileSync(arquivo, "utf8");
+    const relativo = arquivo.replace(/\\/g, "/");
+    let porFabrica = false;
     for (const bloco of fonte.split("criarAcao({").slice(1)) {
       const nome = /^\s*nome:\s*"([^"]+)"/m.exec(bloco);
       if (nome) {
-        achados.push({ nome: nome[1], arquivo: arquivo.replace(/\\/g, "/") });
+        achados.push({ nome: nome[1], arquivo: relativo });
+      } else {
+        porFabrica = true;
+      }
+    }
+    /*
+     * Action montada por fábrica (`acaoDeEnvio("perfil.foto", ...)`): o nome
+     * não fica ao lado de `criarAcao`, e sim na chamada da fábrica. Essas
+     * passaram meses sem teto porque esta varredura não as via (#578).
+     */
+    if (porFabrica) {
+      for (const m of fonte.matchAll(
+        /\bacao\w*\(\s*"([a-z]+\.[a-z0-9_.-]+)"/g,
+      )) {
+        achados.push({ nome: m[1], arquivo: relativo });
       }
     }
   }

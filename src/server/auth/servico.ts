@@ -13,7 +13,6 @@ import {
   consumirOrcamento,
   registrarSucesso,
   reservarTentativa,
-  somarUso,
 } from "./rate-limit";
 import {
   LIMITE_DE_CADASTROS_POR_ORIGEM,
@@ -127,6 +126,19 @@ export async function cadastrar(
     );
   }
 
+  /*
+   * A vaga no teto de cadastros é reservada aqui, antes do Argon2 e da
+   * gravação, num passo só (#579). Conferir no começo e somar no fim
+   * deixava pedidos simultâneos da mesma origem passarem todos pela
+   * conferência antes de o primeiro ser somado — a mesma corrida que a
+   * #386 fechou no login. Vem depois das checagens de conflito para que
+   * só gaste vaga o cadastro que de fato vai ser criado.
+   *
+   * O teto é o do cadastro, não o da senha (#415): a origem aqui é um IP,
+   * e um IP pode ser uma sala inteira.
+   */
+  await consumirOrcamento(chave, LIMITE_DE_CADASTROS_POR_ORIGEM);
+
   const senhaHash = await gerarHash(dados.senha);
 
   let usuario = await repo.criar({
@@ -229,17 +241,6 @@ export async function cadastrar(
     papel: dados.papel,
     cidade: usuario.cidade,
   });
-
-  /*
-   * Conta o sucesso, não só a falha. No login o que se contém é adivinhação
-   * de senha, então sucesso zera o contador; aqui o que se contém é a
-   * criação em si, e zerar a cada conta criada deixaria o limite inútil
-   * justamente contra quem consegue criar.
-   *
-   * O teto é o do cadastro, não o da senha (#415): a origem aqui é um IP,
-   * e um IP pode ser uma sala inteira.
-   */
-  await somarUso(chave, LIMITE_DE_CADASTROS_POR_ORIGEM);
 
   return semSenha(usuario);
 }
