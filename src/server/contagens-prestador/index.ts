@@ -20,17 +20,6 @@ export function repositorioContagensPrestador(): RepositorioContagensPrestador {
   return cache;
 }
 
-/** Só para teste: injeta uma implementação e devolve o restaurador. */
-export function usarRepositorioContagensPrestador(
-  repo: RepositorioContagensPrestador,
-): () => void {
-  const anterior = cache;
-  cache = repo;
-  return () => {
-    cache = anterior;
-  };
-}
-
 /**
  * Conta sem deixar a falha chegar na tela. Quem abriu o perfil quer ver o
  * perfil, e quem clicou quer chegar ao WhatsApp; o número é do outro lado
