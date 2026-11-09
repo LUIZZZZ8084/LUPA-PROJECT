@@ -160,7 +160,11 @@ monitoramento que não está em uso.
 - Telefone, CPF e CNPJ soltos em texto livre são mascarados por padrão.
 - A gravação de sessão mascara **todo** texto e **todos** os campos, e só
   grava sessões que deram erro.
-- `sendDefaultPii: false`: nem IP, nem cabeçalho de identificação.
+- `dataCollection` restrito (`COLETA_DE_DADOS`): nem IP, nem cookie, nem
+  corpo de requisição, nem cabeçalho de identificação. No Sentry 11 o
+  padrão dessa opção é aberto, então a lista é escrita inteira (#596).
+- Rastros por transação (`traceLifecycle: "static"`), para continuarem
+  passando pela máscara no `beforeSendTransaction`.
 
 ### Para ligar
 
