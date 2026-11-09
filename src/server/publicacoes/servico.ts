@@ -43,14 +43,15 @@ export async function resumo(autorId: string): Promise<ResumoPublicacoes> {
   };
 }
 
-export async function criarPublicacao(
-  sessao: Autenticado | null,
-  dados: { titulo: string; corpo: string; imagemUrl?: string | null },
-): Promise<Publicacao> {
-  const autenticado = exigirCapacidade(sessao, "publicacao:criar");
-  const repo = repositorioPublicacoes();
-
-  const ativas = await repo.contarAtivas(autenticado.usuarioId);
+/**
+ * Confere se ainda cabe uma publicação ativa, e devolve quantas há.
+ *
+ * Separado para o `publicarTrabalho` perguntar **antes** de mandar a foto
+ * (#583): recusada depois do envio, a foto ficava sem dono no bucket
+ * público, sem nenhum caminho que a apagasse.
+ */
+async function conferirVagaNoFeed(autorId: string): Promise<number> {
+  const ativas = await repositorioPublicacoes().contarAtivas(autorId);
 
   if (ativas >= LIMITE_PUBLICACOES_ATIVAS) {
     /*
@@ -64,6 +65,17 @@ export async function criarPublicacao(
       { ativas, limite: LIMITE_PUBLICACOES_ATIVAS },
     );
   }
+  return ativas;
+}
+
+export async function criarPublicacao(
+  sessao: Autenticado | null,
+  dados: { titulo: string; corpo: string; imagemUrl?: string | null },
+): Promise<Publicacao> {
+  const autenticado = exigirCapacidade(sessao, "publicacao:criar");
+  const repo = repositorioPublicacoes();
+
+  const ativas = await conferirVagaNoFeed(autenticado.usuarioId);
 
   const publicacao = await repo.criar({
     autorId: autenticado.usuarioId,
@@ -101,8 +113,14 @@ export async function publicarTrabalho(
   const autenticado = exigirCapacidade(sessao, "publicacao:criar");
 
   let imagemUrl: string | null = null;
+  const comFoto = Boolean(
+    dados.foto && dados.foto.size > 0 && temArmazenamento,
+  );
 
-  if (dados.foto && dados.foto.size > 0 && temArmazenamento) {
+  // O limite antes da foto (#583): recusa não deixa arquivo para trás.
+  if (comFoto) await conferirVagaNoFeed(autenticado.usuarioId);
+
+  if (comFoto && dados.foto) {
     const { referencia } = await enviarArquivo(
       autenticado.usuarioId,
       "publicacao",
@@ -111,11 +129,20 @@ export async function publicarTrabalho(
     imagemUrl = referencia;
   }
 
-  return criarPublicacao(sessao, {
-    titulo: dados.titulo,
-    corpo: dados.corpo,
-    imagemUrl,
-  });
+  try {
+    return await criarPublicacao(sessao, {
+      titulo: dados.titulo,
+      corpo: dados.corpo,
+      imagemUrl,
+    });
+  } catch (erro) {
+    /*
+     * A foto subiu e a linha não nasceu (corrida no limite, banco fora):
+     * apaga a foto em vez de deixá-la sem dono no bucket público (#583).
+     */
+    if (imagemUrl) await apagarFotoDeTrabalho(autenticado.usuarioId, imagemUrl);
+    throw erro;
+  }
 }
 
 /**

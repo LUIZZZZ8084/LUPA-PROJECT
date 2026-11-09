@@ -13,10 +13,23 @@
  */
 const TETO_DO_PRIMEIRO_NOME = 30;
 
-export function saudacao(nomeCompleto: string): string {
+/**
+ * O primeiro nome que pode entrar num e-mail da Lupa: só letras, marcas,
+ * apóstrofo e hífen, com teto, ou vazio quando não sobra letra nenhuma.
+ *
+ * Vale para qualquer nome que a Lupa escreve num e-mail, não só o de quem
+ * recebe: o nome do candidato no aviso à empresa passa pelo mesmo filtro
+ * (#582), porque o texto chega com a assinatura da Lupa.
+ */
+export function primeiroNomeSeguro(nomeCompleto: string): string {
   const primeiro = nomeCompleto.normalize("NFC").trim().split(/\s+/u)[0] ?? "";
   const limpo = primeiro
     .replace(/[^\p{L}\p{M}'’-]/gu, "")
     .slice(0, TETO_DO_PRIMEIRO_NOME);
-  return /\p{L}/u.test(limpo) ? `Olá, ${limpo}.` : "Olá.";
+  return /\p{L}/u.test(limpo) ? limpo : "";
+}
+
+export function saudacao(nomeCompleto: string): string {
+  const limpo = primeiroNomeSeguro(nomeCompleto);
+  return limpo ? `Olá, ${limpo}.` : "Olá.";
 }

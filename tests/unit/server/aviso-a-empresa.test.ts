@@ -167,6 +167,26 @@ describe("avisar a empresa da candidatura", () => {
     expect(email.corpo).toContain("Você tem 2 candidaturas esperando");
   });
 
+  /**
+   * O nome de quem se candidata entra no e-mail com a assinatura da Lupa, e
+   * passa pelo mesmo filtro da saudação (#582): só letras, com teto. O que
+   * não for nome cai em "Uma pessoa".
+   */
+  it("nome que não é nome não entra no e-mail", async () => {
+    const cnd = usuarios.get("cnd-1");
+    if (!cnd) throw new Error("fixture");
+    usuarios.set("cnd-1", {
+      ...cnd,
+      nomeCompleto: "https://exemplo.invalid/pagar Silva",
+    });
+
+    await avisarEmpresaDaCandidatura({ vagaId: "v1", candidatoId: "cnd-1" });
+
+    const corpo = enviados[0].corpo;
+    expect(corpo).not.toContain("exemplo");
+    expect(corpo).toContain("Uma pessoa se candidatou à vaga de Operador");
+  });
+
   it("não leva contato nem sobrenome de quem se candidatou", async () => {
     await avisarEmpresaDaCandidatura({ vagaId: "v1", candidatoId: "cnd-1" });
     const corpo = enviados[0].corpo;

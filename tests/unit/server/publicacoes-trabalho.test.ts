@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const armazenamento = vi.hoisted(() => ({
   comStorage: true,
   enviados: [] as { usuarioId: string; especie: string }[],
+  apagados: [] as string[],
 }));
 
 vi.mock("@/server/arquivos/servico", () => ({
@@ -24,6 +25,10 @@ vi.mock("@/server/arquivos/servico", () => ({
   enviarArquivo: async (usuarioId: string, especie: string) => {
     armazenamento.enviados.push({ usuarioId, especie });
     return { referencia: `https://exemplo/${especie}/${usuarioId}-nova.jpg` };
+  },
+  apagarFotoDeTrabalho: async (_autor: string, url: string | null) => {
+    if (url) armazenamento.apagados.push(url);
+    return true;
   },
 }));
 
@@ -58,6 +63,7 @@ describe("publicar e editar trabalho com foto", () => {
     restaurar = usarRepositorioPublicacoes(repo);
     armazenamento.comStorage = true;
     armazenamento.enviados = [];
+    armazenamento.apagados = [];
     vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
@@ -67,6 +73,34 @@ describe("publicar e editar trabalho com foto", () => {
   });
 
   describe("publicar", () => {
+    /**
+     * O limite é conferido antes da foto (#583): recusada depois do envio,
+     * a foto ficava sem dono no bucket público.
+     */
+    it("no limite de publicações, recusa sem subir a foto", async () => {
+      for (let i = 0; i < 10; i++) {
+        await publicarTrabalho(prestador, { ...CONTEUDO, foto: null });
+      }
+
+      await expect(
+        publicarTrabalho(prestador, { ...CONTEUDO, foto: FOTO }),
+      ).rejects.toSatisfy(
+        (e) => ehAppError(e) && e.codigo === "limite_excedido",
+      );
+      expect(armazenamento.enviados).toHaveLength(0);
+    });
+
+    it("se a publicação falha depois do envio, a foto é apagada", async () => {
+      vi.spyOn(repo, "criar").mockRejectedValueOnce(new Error("banco fora"));
+
+      await expect(
+        publicarTrabalho(prestador, { ...CONTEUDO, foto: FOTO }),
+      ).rejects.toThrow("banco fora");
+      expect(armazenamento.apagados).toEqual([
+        `https://exemplo/publicacao/${prestador.usuarioId}-nova.jpg`,
+      ]);
+    });
+
     it("sem foto, publica sem subir nada ao Storage", async () => {
       const p = await publicarTrabalho(prestador, { ...CONTEUDO, foto: null });
 

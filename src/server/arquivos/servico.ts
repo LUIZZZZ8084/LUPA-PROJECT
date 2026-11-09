@@ -310,15 +310,25 @@ export async function apagarArquivosDaConta(
 
   const feed = REGRAS.publicacao;
   const pasta = `${feed.pasta}/${usuarioId}`;
-  const { data, error } = await supabase.storage
-    .from(feed.balde)
-    .list(pasta, { limit: 1000 });
-  if (error) return false;
-  if (data && data.length > 0) {
+  /*
+   * Página a página até a pasta esvaziar (#583): a listagem devolve no
+   * máximo mil, e o que passasse disso sobreviveria à exclusão da conta. O
+   * teto de voltas impede laço infinito se a remoção não fizer efeito.
+   */
+  for (let volta = 0; volta < 50; volta++) {
+    const { data, error } = await supabase.storage
+      .from(feed.balde)
+      .list(pasta, { limit: 1000 });
+    if (error) return false;
+    if (!data || data.length === 0) break;
     const { error: erroAoApagar } = await supabase.storage
       .from(feed.balde)
       .remove(data.map((arquivo) => `${pasta}/${arquivo.name}`));
-    if (erroAoApagar) tudoApagado = false;
+    if (erroAoApagar) {
+      tudoApagado = false;
+      break;
+    }
+    if (data.length < 1000) break;
   }
 
   return tudoApagado;
