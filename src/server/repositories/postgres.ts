@@ -13,6 +13,7 @@ import type {
   EdicaoPrestador,
   FinalidadeToken,
   NovoTokenDeRecuperacao,
+  OpcoesDoCnpjEmUso,
   PerfilCandidato,
   PerfilEmpresa,
   PerfilPrestador,
@@ -420,7 +421,11 @@ export class RepositorioPostgres implements RepositorioUsuarios {
    * MEI —, porque o mesmo número não pode servir para dois papéis
    * diferentes.
    */
-  async cnpjEmUso(cnpj: string, exceto?: string): Promise<boolean> {
+  async cnpjEmUso(
+    cnpj: string,
+    exceto?: string,
+    opcoes: OpcoesDoCnpjEmUso = {},
+  ): Promise<boolean> {
     const supabase = await cliente();
 
     let consultaEmpresa = supabase
@@ -435,6 +440,9 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       .eq("cnpj", cnpj);
     if (exceto) {
       consultaPrestador = consultaPrestador.neq("usuario_id", exceto);
+    }
+    if (opcoes.ignorarPrestadorNaoConferido) {
+      consultaPrestador = consultaPrestador.eq("cnpj_verificado", true);
     }
 
     const [empresa, prestador] = await Promise.all([

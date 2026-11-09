@@ -223,6 +223,17 @@ export interface EdicaoEmpresa {
   descricao: string | null;
 }
 
+/**
+ * Para o cadastro de empresa (#581): o CNPJ que um prestador informou e a
+ * Receita não confirmou não prova nada sobre quem é o dono, e não pode
+ * impedir a empresa dona de se cadastrar com o próprio número. Entre
+ * prestadores, e para o próprio prestador, o número continua valendo como
+ * ocupado — o índice único da tabela também exige isso.
+ */
+export interface OpcoesDoCnpjEmUso {
+  ignorarPrestadorNaoConferido?: boolean;
+}
+
 export interface RepositorioUsuarios {
   porEmail(email: string): Promise<Usuario | null>;
   porId(id: string): Promise<Usuario | null>;
@@ -355,7 +366,11 @@ export interface RepositorioUsuarios {
    * `exceto` exclui um usuário da checagem — para quem está regravando o
    * próprio CNPJ sem mudar o número, o que não pode contar como colisão.
    */
-  cnpjEmUso(cnpj: string, exceto?: string): Promise<boolean>;
+  cnpjEmUso(
+    cnpj: string,
+    exceto?: string,
+    opcoes?: OpcoesDoCnpjEmUso,
+  ): Promise<boolean>;
 
   /**
    * Mesma regra do CNPJ: um CPF, uma conta.

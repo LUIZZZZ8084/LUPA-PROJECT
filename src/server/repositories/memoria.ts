@@ -7,6 +7,7 @@ import type {
   EdicaoPrestador,
   FinalidadeToken,
   NovoTokenDeRecuperacao,
+  OpcoesDoCnpjEmUso,
   PerfilCandidato,
   PerfilEmpresa,
   PerfilPrestador,
@@ -256,13 +257,20 @@ export class RepositorioMemoria implements RepositorioUsuarios {
    * Varre os dois perfis que podem ter CNPJ — empresa e prestador MEI —
    * porque o mesmo número não pode servir para dois papéis diferentes.
    */
-  async cnpjEmUso(cnpj: string, exceto?: string): Promise<boolean> {
+  async cnpjEmUso(
+    cnpj: string,
+    exceto?: string,
+    opcoes: OpcoesDoCnpjEmUso = {},
+  ): Promise<boolean> {
     for (const [usuarioId, perfil] of this.empresas) {
       if (usuarioId === exceto) continue;
       if (perfil.cnpj === cnpj) return true;
     }
     for (const [usuarioId, perfil] of this.prestadores) {
       if (usuarioId === exceto) continue;
+      if (opcoes.ignorarPrestadorNaoConferido && !perfil.cnpjVerificado) {
+        continue;
+      }
       if (perfil.cnpj === cnpj) return true;
     }
     return false;
