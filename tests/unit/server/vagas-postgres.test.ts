@@ -98,6 +98,7 @@ describe("RepositorioVagasPostgres", () => {
       modalidade: LINHA.modalidade,
       paraPcd: false,
       contratanteConfidencial: null,
+      removidaEm: null,
       salarioMin: null,
       salarioMax: null,
       habilidades: ["Colheitadeira"],
@@ -264,6 +265,25 @@ describe("RepositorioVagasPostgres", () => {
     expect(vaga.status).toBe("fechada");
     const atualizacao = chamadas.find((c) => c.metodo === "update");
     expect(atualizacao?.args[0]).toEqual({ status: "fechada" });
+  });
+
+  /** Pela moderação, a vaga fica marcada como removida (#577). */
+  it("encerrar pela moderação marca a remoção", async () => {
+    resposta = {
+      data: {
+        ...LINHA,
+        status: "fechada",
+        removida_em: "2026-11-09T12:00:00Z",
+      },
+      error: null,
+    };
+    const vaga = await repo.encerrar(LINHA.id, { pelaModeracao: true });
+
+    expect(vaga.removidaEm).toBe("2026-11-09T12:00:00Z");
+    const atualizacao = chamadas.find((c) => c.metodo === "update");
+    expect(atualizacao?.args[0]).toMatchObject({ status: "fechada" });
+    const campos = (atualizacao?.args[0] ?? {}) as { removida_em?: string };
+    expect(campos.removida_em).toBeTruthy();
   });
 
   it("reativar renova o prazo, sem mexer no status", async () => {

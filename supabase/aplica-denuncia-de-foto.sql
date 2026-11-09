@@ -15,6 +15,9 @@
 
 alter type alvo_denuncia add value if not exists 'publicacao';
 
+-- A função grava `vagas.removida_em` desde a #577: a coluna vem antes.
+alter table vagas add column if not exists removida_em timestamptz;
+
 create or replace function decidir_denuncia(
   p_alvo        alvo_denuncia,
   p_alvo_id     uuid,
@@ -42,7 +45,10 @@ begin
 
   if p_tirar_do_ar then
     if p_alvo = 'vaga' then
-      update vagas set status = 'fechada' where id = p_alvo_id;
+      -- Removida pela moderação, e não só encerrada (#577): o link público
+      -- deixa de abrir, e o painel da dona diz o que houve.
+      update vagas set status = 'fechada', removida_em = now()
+       where id = p_alvo_id;
     elsif p_alvo = 'avaliacao' then
       -- O trigger de `avaliacoes` recalcula a nota do prestador.
       delete from avaliacoes where id = p_alvo_id;

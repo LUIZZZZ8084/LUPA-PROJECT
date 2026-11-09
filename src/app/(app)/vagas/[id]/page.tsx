@@ -45,7 +45,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const job = await getJobById(id);
-  if (!job) return { title: "Vaga não encontrada" };
+  // Removida pela moderação: a prévia não repete o que foi tirado do ar (#577).
+  if (!job || job.removed_at) return { title: "Vaga não encontrada" };
 
   /*
    * A prévia do link (#490): cargo, empresa, cidade e salário no título e
@@ -83,7 +84,12 @@ export default async function JobDetailPage({
 }) {
   const { id } = await params;
   const job = await getJobById(id);
-  if (!job) notFound();
+  /*
+   * A vaga que a moderação tirou do ar deixa de abrir pelo link (#577),
+   * inclusive para quem chegou por um link antigo num grupo. Encerrada
+   * pela própria empresa continua abrindo, com o aviso de que fechou.
+   */
+  if (!job || job.removed_at) notFound();
 
   // Só http(s) vira link (#354): o endereço pode ter sido gravado antes de a
   // validação por esquema existir.

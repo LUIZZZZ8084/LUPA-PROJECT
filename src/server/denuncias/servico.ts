@@ -374,7 +374,7 @@ export async function decidirDenuncia(
     // repositório; a de exemplo é estática e continua na vitrine.
     if (dados.tirarDoAr && dados.alvo === "vaga") {
       await repositorioVagas()
-        .encerrar(dados.alvoId)
+        .encerrar(dados.alvoId, { pelaModeracao: true })
         .catch(() => undefined);
     }
     if (foto) await repositorioPublicacoes().apagar(foto.id);

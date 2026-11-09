@@ -28,16 +28,18 @@ export default async function ImagemDaVaga({
   const { id } = await params;
   const job = await getJobById(id);
 
-  const vaga = job
-    ? dadosDaImagem(job)
-    : {
-        cargo: "Vaga na Lupa",
-        empresa: "Trabalho perto de você",
-        cidade: "Brasil",
-        endereco: null,
-        salario: null,
-        contrato: null,
-      };
+  // Removida pela moderação, a prévia vira a genérica da Lupa (#577).
+  const vaga =
+    job && !job.removed_at
+      ? dadosDaImagem(job)
+      : {
+          cargo: "Vaga na Lupa",
+          empresa: "Trabalho perto de você",
+          cidade: "Brasil",
+          endereco: null,
+          salario: null,
+          contrato: null,
+        };
 
   return new ImageResponse(<CartaoDaVaga vaga={vaga} />, size);
 }
