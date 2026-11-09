@@ -72,6 +72,43 @@ describe("cadastro e login", () => {
     vi.restoreAllMocks();
   });
 
+  /**
+   * O CNPJ que um prestador informou e a Receita não confirmou não prova
+   * quem é o dono, e não pode impedir a empresa dona de se cadastrar com o
+   * próprio número (#581). O conferido continua valendo como ocupado.
+   */
+  describe("CNPJ informado por prestador", () => {
+    async function prestadorCom(cnpjVerificado: boolean) {
+      const p = await cadastrar(prestador, "198.51.100.1");
+      const perfil = await repo.perfilPrestador(p.id);
+      await repo.definirCnpjPrestador(p.id, empresa.cnpj, cnpjVerificado, null);
+      expect(perfil).toBeTruthy();
+    }
+
+    it("não conferido, não bloqueia o cadastro da empresa", async () => {
+      await prestadorCom(false);
+      const criada = await cadastrar(
+        validarOk({ ...empresa, tipoDocumento: "cnpj" as const }),
+        "198.51.100.2",
+      );
+      expect(criada.papel).toBe("empresa");
+    });
+
+    it("conferido na Receita, continua ocupando o número", async () => {
+      await prestadorCom(true);
+      const emUso = await repo.cnpjEmUso(empresa.cnpj, undefined, {
+        ignorarPrestadorNaoConferido: true,
+      });
+      expect(emUso).toBe(true);
+      await expect(
+        cadastrar(
+          validarOk({ ...empresa, tipoDocumento: "cnpj" as const }),
+          "198.51.100.2",
+        ),
+      ).rejects.toSatisfy((e) => ehAppError(e) && e.codigo === "conflito");
+    });
+  });
+
   /* ---------- Schemas ---------- */
 
   describe("validação por papel", () => {

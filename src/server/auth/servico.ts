@@ -106,7 +106,15 @@ export async function cadastrar(
     throw erros.validacao([{ campo: "cpf", mensagem: "Informe o CPF." }]);
   }
 
-  if (empresaViaCnpj && dados.cnpj && (await repo.cnpjEmUso(dados.cnpj))) {
+  // CNPJ de prestador que a Receita não confirmou não bloqueia a empresa
+  // dona do número (#581).
+  if (
+    empresaViaCnpj &&
+    dados.cnpj &&
+    (await repo.cnpjEmUso(dados.cnpj, undefined, {
+      ignorarPrestadorNaoConferido: true,
+    }))
+  ) {
     throw await conflito(
       "Este CNPJ já está cadastrado. Entre com a conta existente.",
       "CNPJ duplicado",
