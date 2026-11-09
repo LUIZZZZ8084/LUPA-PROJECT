@@ -100,7 +100,11 @@ export function PainelCliente({ inicial }: { inicial: PainelAdmin }) {
         <p className="text-xs text-muted">
           Apurado{" "}
           <time dateTime={painel.apuradoEm}>
-            {new Date(painel.apuradoEm).toLocaleTimeString("pt-BR")}
+            {/* Fuso fixo: sem ele o servidor (UTC) e o navegador escrevem
+                horas diferentes, e o React descarta o HTML inteiro (#598). */}
+            {new Date(painel.apuradoEm).toLocaleTimeString("pt-BR", {
+              timeZone: "America/Sao_Paulo",
+            })}
           </time>
           {" · atualiza a cada 15s"}
         </p>
