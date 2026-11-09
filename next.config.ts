@@ -1,4 +1,4 @@
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { hostsDeImagemRemota } from "./src/lib/imagens";
 
@@ -128,7 +128,10 @@ export default sentryEnabled
       // Encaminha os eventos do navegador por uma rota do próprio domínio,
       // driblando bloqueadores de anúncio que engolem chamadas ao Sentry.
       tunnelRoute: "/monitoring",
-      disableLogger: true,
-      automaticVercelMonitors: true,
+      // Na versão 11 as duas passaram para dentro de `webpack` (#596).
+      webpack: {
+        treeshake: { removeDebugLogging: true },
+        automaticVercelMonitors: true,
+      },
     })
   : nextConfig;

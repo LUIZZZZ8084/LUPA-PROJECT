@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import {
+  CICLO_DOS_RASTROS,
+  COLETA_DE_DADOS,
   ENVIRONMENT,
   IGNORED_ERRORS,
   RELEASE,
@@ -14,6 +16,10 @@ Sentry.init({
   release: RELEASE,
   tracesSampleRate: TRACES_SAMPLE_RATE,
   ignoreErrors: IGNORED_ERRORS,
-  sendDefaultPii: false,
+  // Coleta restrita e rastros por transação: ver `observability.ts` (#596).
+  dataCollection: COLETA_DE_DADOS,
+  traceLifecycle: CICLO_DOS_RASTROS,
   beforeSend: (event) => scrubSensitiveData(event),
+  // O edge também manda rastro, e ele passa pela mesma máscara.
+  beforeSendTransaction: (event) => scrubSensitiveData(event),
 });

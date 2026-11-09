@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import {
+  CICLO_DOS_RASTROS,
+  COLETA_DE_DADOS,
   ENVIRONMENT,
   IGNORED_ERRORS,
   RELEASE,
@@ -14,8 +16,9 @@ Sentry.init({
   release: RELEASE,
   tracesSampleRate: TRACES_SAMPLE_RATE,
   ignoreErrors: IGNORED_ERRORS,
-  // Não enviar IP nem cabeçalho de identificação por padrão.
-  sendDefaultPii: false,
+  // Coleta restrita e rastros por transação: ver `observability.ts` (#596).
+  dataCollection: COLETA_DE_DADOS,
+  traceLifecycle: CICLO_DOS_RASTROS,
   beforeSend: (event) => scrubSensitiveData(event),
   beforeSendTransaction: (event) => scrubSensitiveData(event),
 });

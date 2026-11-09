@@ -1,3 +1,10 @@
+import type { init } from "@sentry/nextjs";
+
+/* O tipo não é exportado pelo SDK: vem da própria opção do `init`. */
+type DataCollection = NonNullable<
+  NonNullable<Parameters<typeof init>[0]>["dataCollection"]
+>;
+
 /**
  * Configuração compartilhada de observabilidade.
  *
@@ -216,3 +223,51 @@ export function scrubSensitiveData<T>(event: T): T {
 
   return limpar(event) as T;
 }
+
+/*
+ * Cabeçalhos que identificam a pessoa ou a rede de onde ela veio. É a lista
+ * que o Sentry usava por padrão até a versão 10, com `sendDefaultPii` em
+ * falso.
+ */
+const CABECALHOS_DE_IDENTIFICACAO = {
+  deny: ["forwarded", "-ip", "remote-", "via", "-user"],
+};
+
+/**
+ * O que o Sentry pode recolher além do erro em si (#596).
+ *
+ * Até a versão 10 isso era `sendDefaultPii: false`, e deixar sem dizer nada
+ * era restritivo. Na 11 a opção virou `dataCollection`, e o padrão inverteu:
+ * sem configurar, o SDK passa a mandar cookie, corpo de requisição e
+ * consulta ao banco. Aqui isso seria cookie de sessão, senha digitada no
+ * login e CPF no cadastro. Por isso a lista é escrita inteira, item por
+ * item: o que não estiver aqui volta ao padrão novo, que é aberto.
+ */
+export const COLETA_DE_DADOS = {
+  userInfo: false,
+  cookies: false,
+  httpHeaders: {
+    request: CABECALHOS_DE_IDENTIFICACAO,
+    response: CABECALHOS_DE_IDENTIFICACAO,
+  },
+  httpBodies: [],
+  urlQueryParams: CABECALHOS_DE_IDENTIFICACAO,
+  graphQL: { document: false, variables: false },
+  genAI: { inputs: false, outputs: false },
+  mcp: { inputs: false, outputs: false },
+  databaseQueryData: false,
+  queues: false,
+} satisfies DataCollection;
+
+/**
+ * Rastros enviados por transação inteira, como na versão 10 (#596).
+ *
+ * A 11 passou a mandar os trechos aos poucos, e nesse modo o
+ * `beforeSendTransaction` não roda: os rastros sairiam sem passar por
+ * `scrubSensitiveData`. O equivalente novo, `beforeSendSpan`, recebe outro
+ * formato, com identificadores que a máscara de telefone pode picotar (a
+ * lição das transações descartadas na #275 e na #277). Até essa migração
+ * ser feita com teste próprio, fica o modo antigo, que o SDK mantém até a
+ * versão 12.
+ */
+export const CICLO_DOS_RASTROS = "static" as const;

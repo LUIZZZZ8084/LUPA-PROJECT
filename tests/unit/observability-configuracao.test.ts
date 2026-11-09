@@ -160,3 +160,58 @@ describe("erros silenciados", () => {
     ).toBe(false);
   });
 });
+
+/*
+ * O Sentry 11 inverteu o padrão da coleta (#596): sem `dataCollection`, ele
+ * manda cookie, corpo de requisição e consulta ao banco. Aqui isso seria a
+ * sessão, a senha do login e o CPF do cadastro.
+ */
+describe("o que o Sentry pode recolher", () => {
+  it("nada além do erro: nem cookie, nem corpo, nem dado de quem usa", async () => {
+    const { COLETA_DE_DADOS } = await carregarCom({});
+    expect(COLETA_DE_DADOS.userInfo).toBe(false);
+    expect(COLETA_DE_DADOS.cookies).toBe(false);
+    expect(COLETA_DE_DADOS.httpBodies).toEqual([]);
+    expect(COLETA_DE_DADOS.databaseQueryData).toBe(false);
+    expect(COLETA_DE_DADOS.queues).toBe(false);
+    expect(COLETA_DE_DADOS.genAI).toEqual({ inputs: false, outputs: false });
+    expect(COLETA_DE_DADOS.mcp).toEqual({ inputs: false, outputs: false });
+    expect(COLETA_DE_DADOS.graphQL).toEqual({
+      document: false,
+      variables: false,
+    });
+    for (const lado of ["request", "response"] as const) {
+      expect(COLETA_DE_DADOS.httpHeaders[lado].deny).toEqual(
+        expect.arrayContaining(["forwarded", "-ip", "-user"]),
+      );
+    }
+  });
+
+  /*
+   * Constante certa que ninguém passa ao `init` não protege nada. As três
+   * inicializações leem o código-fonte: a opção esquecida numa delas volta
+   * ao padrão aberto sem nenhum erro de tipo.
+   */
+  it.each([
+    "src/instrumentation-client.ts",
+    "src/sentry.server.config.ts",
+    "src/sentry.edge.config.ts",
+  ])(
+    "%s passa a coleta restrita e o rastro que passa pela máscara",
+    async (arquivo) => {
+      const { readFileSync } = await import("node:fs");
+      const fonte = readFileSync(arquivo, "utf8");
+      expect(fonte).toContain("dataCollection: COLETA_DE_DADOS");
+      expect(fonte).toContain("traceLifecycle: CICLO_DOS_RASTROS");
+      expect(fonte).toContain(
+        "beforeSendTransaction: (event) => scrubSensitiveData(event)",
+      );
+      expect(fonte).not.toContain("sendDefaultPii");
+    },
+  );
+
+  it("os rastros vão por transação, onde a máscara roda", async () => {
+    const { CICLO_DOS_RASTROS } = await carregarCom({});
+    expect(CICLO_DOS_RASTROS).toBe("static");
+  });
+});
