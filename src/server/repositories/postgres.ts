@@ -13,6 +13,7 @@ import type {
   EdicaoPrestador,
   FinalidadeToken,
   NovoTokenDeRecuperacao,
+  OpcoesDoCnpjEmUso,
   PerfilCandidato,
   PerfilEmpresa,
   PerfilPrestador,
@@ -216,6 +217,20 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     );
   }
 
+  async corteDaConta(id: string): Promise<number | null> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("sessoes_validas_desde")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw erros.indisponivel(`corte de sessão: ${error.message}`);
+    const quando = data?.sessoes_validas_desde;
+    return quando
+      ? Math.floor(new Date(String(quando)).getTime() / 1000)
+      : null;
+  }
+
   async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
     const supabase = await cliente();
 
@@ -406,7 +421,11 @@ export class RepositorioPostgres implements RepositorioUsuarios {
    * MEI —, porque o mesmo número não pode servir para dois papéis
    * diferentes.
    */
-  async cnpjEmUso(cnpj: string, exceto?: string): Promise<boolean> {
+  async cnpjEmUso(
+    cnpj: string,
+    exceto?: string,
+    opcoes: OpcoesDoCnpjEmUso = {},
+  ): Promise<boolean> {
     const supabase = await cliente();
 
     let consultaEmpresa = supabase
@@ -421,6 +440,9 @@ export class RepositorioPostgres implements RepositorioUsuarios {
       .eq("cnpj", cnpj);
     if (exceto) {
       consultaPrestador = consultaPrestador.neq("usuario_id", exceto);
+    }
+    if (opcoes.ignorarPrestadorNaoConferido) {
+      consultaPrestador = consultaPrestador.eq("cnpj_verificado", true);
     }
 
     const [empresa, prestador] = await Promise.all([

@@ -26,7 +26,7 @@ function construtor(tabela: string) {
   // `limit` entrou com o teto das listagens (#203). Sem ele no duble, a
   // cadeia quebra e o teste reprova por falta de espelho, não por defeito
   // — falso vermelho é o que ensina a ignorar teste.
-  for (const metodo of ["select", "eq", "gte", "limit"]) {
+  for (const metodo of ["select", "eq", "gte", "order", "limit"]) {
     builder[metodo] = (...args: unknown[]) => {
       chamadas.push({ tabela, metodo, args });
       return builder;
@@ -77,21 +77,15 @@ describe("RepositorioBuscasPostgres", () => {
     await expect(repo.registrar("x", "vagas")).rejects.toSatisfy(ehAppError);
   });
 
-  it("a leitura recorta pela janela pedida", async () => {
-    await repo.maisBuscados(30, 20);
-
-    const gte = chamadas.find((c) => c.metodo === "gte");
-    expect(gte?.args[0]).toBe("dia");
-    // 30 dias atrás, no formato do `date` do Postgres.
-    expect(String(gte?.args[1])).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-  });
-
-  it("soma os dias do mesmo termo e ordena pelo mais buscado", async () => {
+  /**
+   * O ranking vem somado e ordenado da view (#585): o teto corta o
+   * resultado, e não a entrada da soma, como fazia a leitura da tabela.
+   */
+  it("lê a view somada, ordenada pelo mais buscado, com o limite pedido", async () => {
     resposta = {
       data: [
-        { termo: "soldador", total: 2 },
+        { termo: "soldador", total: 5 },
         { termo: "costureira", total: 4 },
-        { termo: "soldador", total: 3 },
       ],
       error: null,
     };
@@ -100,18 +94,10 @@ describe("RepositorioBuscasPostgres", () => {
       { termo: "soldador", total: 5 },
       { termo: "costureira", total: 4 },
     ]);
-  });
-
-  it("respeita o limite pedido", async () => {
-    resposta = {
-      data: Array.from({ length: 30 }, (_, i) => ({
-        termo: `t${i}`,
-        total: 1,
-      })),
-      error: null,
-    };
-
-    expect(await repo.maisBuscados(30, 5)).toHaveLength(5);
+    expect(chamadas[0].tabela).toBe("metricas_buscas_sem_resultado");
+    const ordem = chamadas.filter((c) => c.metodo === "order");
+    expect(ordem[0].args).toEqual(["total", { ascending: false }]);
+    expect(chamadas.find((c) => c.metodo === "limit")?.args[0]).toBe(20);
   });
 
   it("falha na consulta não vira lista vazia", async () => {

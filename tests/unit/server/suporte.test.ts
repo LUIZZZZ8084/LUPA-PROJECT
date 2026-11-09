@@ -44,7 +44,10 @@ import {
   RepositorioSuporteMemoria,
   usarRepositorioSuporte,
 } from "@/server/suporte";
-import { receberMensagemDeSuporte } from "@/server/suporte/servico";
+import {
+  receberMensagemDeSuporte,
+  TETOS_DO_SUPORTE,
+} from "@/server/suporte/servico";
 
 const PEDIDO = {
   nome: "Maria Souza",
@@ -163,5 +166,39 @@ describe("mensagem de suporte", () => {
     limparLimites();
     await receberMensagemDeSuporte({ ...PEDIDO, origem: "outra" });
     expect(repo.todas()[1].usuarioId).toBeNull();
+  });
+
+  /**
+   * Os tetos da #578: o limite por origem é reservado antes de gravar, então
+   * pedidos simultâneos não passam juntos; e o aviso por e-mail tem um teto
+   * do dia, de todas as origens, porque sai da mesma cota da recuperação de
+   * senha. Passado o teto, a mensagem ainda é gravada.
+   */
+  it("pedidos simultâneos da mesma origem respeitam o teto", async () => {
+    const r = await Promise.allSettled(
+      Array.from({ length: 12 }, (_, i) =>
+        receberMensagemDeSuporte({ ...PEDIDO, mensagem: `Simultânea ${i}.` }),
+      ),
+    );
+    expect(r.filter((x) => x.status === "fulfilled")).toHaveLength(
+      TETOS_DO_SUPORTE.porOrigem.chamadas,
+    );
+  });
+
+  it("passado o teto do dia, grava a mensagem mas não manda mais e-mail", async () => {
+    const teto = TETOS_DO_SUPORTE.avisosPorDia.chamadas;
+    for (let i = 0; i < teto + 3; i++) {
+      await receberMensagemDeSuporte({ ...PEDIDO, origem: `o-${i}` });
+    }
+    expect(repo.todas()).toHaveLength(teto + 3);
+    expect(emails).toHaveLength(teto);
+  });
+
+  it("o nome no assunto do e-mail não leva quebra de linha", async () => {
+    await receberMensagemDeSuporte({
+      ...PEDIDO,
+      nome: "Maria\r\nBcc: alguem@exemplo.test",
+    });
+    expect(emails[0].assunto).not.toMatch(/[\r\n]/);
   });
 });

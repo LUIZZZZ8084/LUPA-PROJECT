@@ -1086,6 +1086,21 @@ as $$
   do update set total = buscas_sem_resultado.total + 1;
 $$;
 
+/*
+ * O ranking do painel, somado aqui (#585).
+ *
+ * Era somado na aplicação depois de ler um teto de linhas sem ordem: com
+ * mais linhas que o teto, o ranking saía de uma amostra qualquer. Somado e
+ * ordenado no banco, o teto passa a cortar o resultado, e não a entrada.
+ * A janela é a do painel: os últimos 30 dias.
+ */
+create view metricas_buscas_sem_resultado
+with (security_invoker = false) as
+select termo, sum(total)::int as total
+from buscas_sem_resultado
+where dia >= current_date - 29
+group by termo;
+
 -- ============================================================================
 -- 9b. Visualizações de vaga
 --
@@ -2443,6 +2458,7 @@ grant select on job_listings, provider_listings to anon, authenticated;
 -- já tenha concedido por fora: aqui é onde qualquer um lendo este
 -- arquivo confirma que não vaza.
 revoke select on visualizacoes_vaga            from anon, authenticated;
+revoke select on metricas_buscas_sem_resultado from anon, authenticated;
 revoke select on visitas_pagina                from anon, authenticated;
 revoke select on execucoes_varredura           from anon, authenticated;
 revoke select on buscas_sem_resultado         from anon, authenticated;

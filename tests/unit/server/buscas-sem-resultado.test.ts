@@ -13,6 +13,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/supabase/config", () => ({ isSupabaseConfigured: true }));
 
+// O teto por conta (#585), contado em memória: o banco não existe aqui.
+const usos = new Map<string, number>();
+vi.mock("@/server/auth/rate-limit", async () => {
+  const { erros } = await import("@/server/errors");
+  return {
+    consumirOrcamento: async (chave: string, o: { chamadas: number }) => {
+      const n = (usos.get(chave) ?? 0) + 1;
+      usos.set(chave, n);
+      if (n > o.chamadas) throw erros.muitasTentativas(60);
+    },
+  };
+});
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => null,
   getCurrentUser: async () => null,
@@ -35,6 +48,7 @@ const candidato: Autenticado = { usuarioId: "c-1", papel: "candidato_clt" };
 let restaurar: () => void;
 
 beforeEach(() => {
+  usos.clear();
   restaurar?.();
   restaurar = usarRepositorioBuscas(new RepositorioBuscasMemoria());
   vi.spyOn(console, "log").mockImplementation(() => {});
@@ -74,9 +88,9 @@ describe("o termo, do jeito que vira estatística", () => {
 
 describe("contagem", () => {
   it("soma o mesmo termo, mesmo escrito diferente", async () => {
-    await contarBuscaSemResultado("Eletricista", "servicos");
-    await contarBuscaSemResultado("eletricista", "servicos");
-    await contarBuscaSemResultado("ELETRICISTA ", "servicos");
+    await contarBuscaSemResultado("Eletricista", "servicos", "u-1");
+    await contarBuscaSemResultado("eletricista", "servicos", "u-1");
+    await contarBuscaSemResultado("ELETRICISTA ", "servicos", "u-1");
 
     expect(await buscasSemResultado(admin)).toEqual([
       { termo: "eletricista", total: 3 },
@@ -84,8 +98,8 @@ describe("contagem", () => {
   });
 
   it("soma as duas telas no mesmo termo", async () => {
-    await contarBuscaSemResultado("pedreiro", "vagas");
-    await contarBuscaSemResultado("pedreiro", "servicos");
+    await contarBuscaSemResultado("pedreiro", "vagas", "u-1");
+    await contarBuscaSemResultado("pedreiro", "servicos", "u-1");
 
     expect(await buscasSemResultado(admin)).toEqual([
       { termo: "pedreiro", total: 2 },
@@ -93,9 +107,9 @@ describe("contagem", () => {
   });
 
   it("do mais buscado para o menos", async () => {
-    await contarBuscaSemResultado("soldador", "vagas");
+    await contarBuscaSemResultado("soldador", "vagas", "u-1");
     for (let i = 0; i < 3; i++) {
-      await contarBuscaSemResultado("costureira", "vagas");
+      await contarBuscaSemResultado("costureira", "vagas", "u-1");
     }
 
     expect((await buscasSemResultado(admin)).map((t) => t.termo)).toEqual([
@@ -105,9 +119,9 @@ describe("contagem", () => {
   });
 
   it("busca sem termo não vira linha", async () => {
-    await contarBuscaSemResultado(undefined, "vagas");
-    await contarBuscaSemResultado("", "vagas");
-    await contarBuscaSemResultado("z", "vagas");
+    await contarBuscaSemResultado(undefined, "vagas", "u-1");
+    await contarBuscaSemResultado("", "vagas", "u-1");
+    await contarBuscaSemResultado("z", "vagas", "u-1");
 
     expect(await buscasSemResultado(admin)).toEqual([]);
   });
@@ -125,8 +139,28 @@ describe("contagem", () => {
     });
 
     await expect(
-      contarBuscaSemResultado("eletricista", "vagas"),
+      contarBuscaSemResultado("eletricista", "vagas", "u-1"),
     ).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * Teto por conta (#585): passou dele, a busca segue e só deixa de contar.
+ * Sem conta não conta — as duas telas pedem login.
+ */
+describe("teto de registros por conta", () => {
+  it("passado o teto, a conta deixa de mexer no ranking", async () => {
+    for (let i = 0; i < 40; i++) {
+      await contarBuscaSemResultado(`termo inventado ${i}`, "vagas", "u-spam");
+    }
+    const lista = await buscasSemResultado(admin);
+    const total = lista.reduce((s, l) => s + l.total, 0);
+    expect(total).toBeLessThanOrEqual(30);
+  });
+
+  it("sem conta, não conta", async () => {
+    await contarBuscaSemResultado("marceneiro", "vagas", undefined);
+    expect(await buscasSemResultado(admin)).toEqual([]);
   });
 });
 

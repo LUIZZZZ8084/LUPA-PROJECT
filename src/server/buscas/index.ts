@@ -1,4 +1,5 @@
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { consumirOrcamento } from "../auth/rate-limit";
 import { log } from "../logger";
 import { RepositorioBuscasMemoria } from "./memoria";
 import { RepositorioBuscasPostgres } from "./postgres";
@@ -38,14 +39,26 @@ export function usarRepositorioBuscas(repo: RepositorioBuscas): () => void {
  * Termo que não vale contar é descartado aqui, e não no chamador: assim a
  * regra do que entra na estatística vive num lugar só.
  */
+/**
+ * Quantos registros uma conta faz por janela (#585). Gente buscando à toa
+ * não chega perto; script variando termo para mexer no ranking, sim. Passou
+ * do teto, a busca segue normal e só deixa de contar.
+ */
+const REGISTROS_POR_CONTA = { chamadas: 30, janelaSegundos: 10 * 60 };
+
 export async function contarBuscaSemResultado(
   bruto: string | undefined,
   onde: OndeBuscou,
+  usuarioId: string | undefined,
 ): Promise<void> {
   const termo = bruto && termoParaEstatistica(bruto);
-  if (!termo) return;
+  if (!termo || !usuarioId) return;
 
   try {
+    await consumirOrcamento(
+      `acao:busca.sem_resultado:u:${usuarioId}`,
+      REGISTROS_POR_CONTA,
+    );
     await repositorioBuscas().registrar(termo, onde);
   } catch (e) {
     log.warn("não foi possível contar a busca sem resultado", {

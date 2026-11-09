@@ -326,4 +326,24 @@ describe("CNPJ de MEI do prestador", () => {
       ),
     ).rejects.toMatchObject({ codigo: "sem_permissao" });
   });
+
+  /**
+   * Teto de consultas por conta (#578): cada tentativa vai à Receita, por um
+   * serviço público que já recusou o app uma vez. Passado o teto, a resposta
+   * é a frase de espera, e a Receita nem é chamada.
+   */
+  it("passado o teto de consultas, responde para esperar sem ir à Receita", async () => {
+    let chamadas = 0;
+    const contador = (async () => {
+      chamadas += 1;
+      return new Response("{}", { status: 404 });
+    }) as unknown as typeof fetch;
+
+    for (let i = 0; i < 5; i++) await definir(sessao(), CNPJ_VALIDO, contador);
+    const r = await definir(sessao(), CNPJ_VALIDO, contador);
+
+    expect(chamadas).toBe(5);
+    expect(r).toMatchObject({ ok: false });
+    expect(r.ok ? "" : r.motivo).toMatch(/Muitas consultas/);
+  });
 });

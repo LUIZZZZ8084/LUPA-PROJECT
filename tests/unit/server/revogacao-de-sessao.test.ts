@@ -14,6 +14,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const cortes = new Map<string, number>();
+/** Cortes que existem no banco mas ficaram fora da lista com teto (#580). */
+const foraDaLista = new Map<string, number>();
 let explodir = false;
 
 vi.mock("next/cache", () => ({
@@ -32,9 +34,12 @@ vi.mock("@/server/repositories", () => ({
       if (explodir) throw new Error("banco fora do ar");
       return new Map(cortes);
     },
+    corteDaConta: async (id: string) =>
+      cortes.get(id) ?? foraDaLista.get(id) ?? null,
   }),
 }));
 
+import { TETO_DE_CORTES_DE_SESSAO } from "@/lib/limites-de-lista";
 import { sessaoFoiRevogada } from "@/server/auth/revogacao";
 import {
   CONFIG_SESSAO,
@@ -58,6 +63,7 @@ function sessao(parcial: Partial<Sessao> = {}): Sessao {
 describe("revogação de sessão", () => {
   beforeEach(() => {
     cortes.clear();
+    foraDaLista.clear();
     explodir = false;
   });
 
@@ -110,6 +116,31 @@ describe("revogação de sessão", () => {
    * não respondeu. Errar para o lado permissivo custa uma janela a mais
    * numa revogação; errar para o fechado é o app inteiro fora do ar.
    */
+  /**
+   * A lista tem teto. Cheia, uma conta fora dela pode ter corte, e "fora
+   * da lista" não pode valer como "não revogada" (#580).
+   */
+  it("com a lista cheia, o corte de quem ficou de fora ainda vale", async () => {
+    for (let i = 0; i < TETO_DE_CORTES_DE_SESSAO; i++) {
+      cortes.set(`outra-${i}`, AGORA);
+    }
+    foraDaLista.set("u1", AGORA - 100);
+
+    expect(await sessaoFoiRevogada(sessao({ emitidoEm: AGORA - 200 }))).toBe(
+      true,
+    );
+    expect(await sessaoFoiRevogada(sessao({ emitidoEm: AGORA - 50 }))).toBe(
+      false,
+    );
+  });
+
+  it("com a lista abaixo do teto, quem não está nela não é consultado", async () => {
+    foraDaLista.set("u1", AGORA - 100);
+    expect(await sessaoFoiRevogada(sessao({ emitidoEm: AGORA - 200 }))).toBe(
+      false,
+    );
+  });
+
   it("banco fora do ar não desloga ninguém", async () => {
     explodir = true;
     cortes.set("u1", AGORA);

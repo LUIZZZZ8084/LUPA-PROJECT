@@ -30,41 +30,30 @@ export class RepositorioBuscasPostgres implements RepositorioBuscas {
       throw erros.indisponivel(`busca sem resultado: ${error.message}`);
   }
 
+  /**
+   * O ranking vem somado e ordenado da view (#585). Somar aqui depois de
+   * ler um teto de linhas sem ordem fazia o ranking sair de uma amostra
+   * qualquer quando o mês passava do teto. A janela é a da view, 30 dias.
+   */
   async maisBuscados(
-    dias: number,
+    _dias: number,
     limite: number,
   ): Promise<TermoSemResultado[]> {
     const supabase = await cliente();
-
-    const desde = new Date();
-    desde.setUTCDate(desde.getUTCDate() - (dias - 1));
-
     const { data, error } = await supabase
-      .from("buscas_sem_resultado")
+      .from("metricas_buscas_sem_resultado")
       .select("termo, total")
-      .gte("dia", desde.toISOString().slice(0, 10))
-      .limit(TETO_ADMIN);
+      .order("total", { ascending: false })
+      .order("termo", { ascending: true })
+      .limit(Math.min(limite, TETO_ADMIN));
 
     if (error) {
       throw erros.indisponivel(`buscas sem resultado: ${error.message}`);
     }
 
-    /*
-     * Somado aqui, e não por `group by`: o PostgREST não agrupa sem criar
-     * uma view para cada recorte, e o volume de um mês de termos numa
-     * cidade cabe folgado na memória de uma requisição.
-     */
-    const somados = new Map<string, number>();
-    for (const linha of data ?? []) {
-      const termo = String(linha.termo);
-      somados.set(termo, (somados.get(termo) ?? 0) + Number(linha.total));
-    }
-
-    return [...somados.entries()]
-      .map(([termo, total]) => ({ termo, total }))
-      .sort(
-        (a, b) => b.total - a.total || a.termo.localeCompare(b.termo, "pt-BR"),
-      )
-      .slice(0, limite);
+    return (data ?? []).map((l) => ({
+      termo: String(l.termo),
+      total: Number(l.total),
+    }));
   }
 }
