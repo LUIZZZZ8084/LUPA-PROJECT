@@ -163,6 +163,11 @@ export class RepositorioMemoria implements RepositorioUsuarios {
     return recentes;
   }
 
+  async corteDaConta(id: string): Promise<number | null> {
+    const quando = this.cortes.get(id);
+    return quando === undefined ? null : Math.floor(quando / 1000);
+  }
+
   async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
     // Apaga os anteriores, usados ou não, como o Postgres (#419).
     for (const [hash, token] of this.tokensDeRecuperacao) {
