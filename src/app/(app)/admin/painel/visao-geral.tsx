@@ -394,6 +394,7 @@ function Ondas({ painel }: { painel: PainelAdmin }) {
     new Date(`${dia}T12:00:00Z`).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
+      timeZone: "UTC",
     });
 
   const mover = (e: React.PointerEvent<SVGRectElement>) => {
