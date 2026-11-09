@@ -154,20 +154,20 @@ function Pessoa({
   return (
     <div className="flex items-start gap-2">
       {/*
-        Quem se candidatou tem ficha — com currículo, estágio e histórico.
-        Quem só está disponível não tem: ele entregou contato, não
-        currículo. Por isso um é link e o outro não.
+        Quem se candidatou abre a ficha, com currículo, estágio e histórico.
+        Quem só está disponível abre o perfil de candidato: é ali que o
+        contato aparece, dentro do teto diário da busca (#433, #576).
       */}
-      {pessoa.candidaturaId ? (
-        <Link
-          href={`${base}/candidaturas/${pessoa.candidaturaId}`}
-          className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-xl p-2 transition-colors hover:bg-panel-2"
-        >
-          {corpo}
-        </Link>
-      ) : (
-        <div className="flex min-w-0 flex-1 items-start gap-3 p-2">{corpo}</div>
-      )}
+      <Link
+        href={
+          pessoa.candidaturaId
+            ? `${base}/candidaturas/${pessoa.candidaturaId}`
+            : `/candidatos/${pessoa.id}`
+        }
+        className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-xl p-2 transition-colors hover:bg-panel-2"
+      >
+        {corpo}
+      </Link>
 
       {pessoa.telefone && (
         <a

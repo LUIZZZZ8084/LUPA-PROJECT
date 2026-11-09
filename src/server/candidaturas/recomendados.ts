@@ -11,6 +11,7 @@ import { grauDeProximidade, type Origem } from "@/lib/proximidade";
 import { casar, type HabilidadeCasada, habilidadesDaVaga } from "@/lib/skills";
 import type { ApplicationWithCandidate } from "@/lib/types";
 import type { Autenticado } from "../auth/rbac";
+import { acessoABuscaDeCandidatos } from "../candidatos/servico";
 import { temPainelDeEmpresa } from "../visualizacoes/servico";
 
 /**
@@ -70,10 +71,19 @@ export async function recomendadosParaEmpresa(
   if (!sessao || !temPainelDeEmpresa(sessao)) return [];
 
   const empresaId = empresaDoPainel(sessao.usuarioId);
+
+  /*
+   * Quem só pediu para ser encontrado segue a regra da busca de candidatos
+   * (#433, #576): aparece apenas para quem tem a busca liberada, e sem o
+   * telefone. O contato passa pelo perfil do candidato, que é onde vale o
+   * teto diário. Antes este bloco era um segundo caminho até os mesmos
+   * dados, com uma porta mais fraca que a da busca.
+   */
+  const buscaLiberada = (await acessoABuscaDeCandidatos(sessao)) === "liberado";
   const [vagas, candidaturas, disponiveis] = await Promise.all([
     getCompanyJobs(empresaId),
     getCompanyApplications(empresaId),
-    getCandidatosDisponiveis(),
+    buscaLiberada ? getCandidatosDisponiveis() : Promise.resolve([]),
   ]);
 
   const abertas = vagas.filter((v) => v.status === "aberta");
@@ -164,7 +174,8 @@ function deDisponivel(d: CandidatoDisponivel, pedidas: string[]): Recomendado {
     nome: d.full_name,
     avatarUrl: d.avatar_url,
     cidade: d.city,
-    telefone: d.phone,
+    // Sem telefone aqui: o contato sai do perfil, que conta no teto do dia.
+    telefone: null,
     casadas,
     deQuantas: pedidas.length,
     candidaturaId: null,

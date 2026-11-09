@@ -23,6 +23,12 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 const vagas: Record<string, unknown[]> = {};
+let acesso = "liberado";
+
+// A regra de quem alcança os disponíveis é a da busca de candidatos (#433).
+vi.mock("@/server/candidatos/servico", () => ({
+  acessoABuscaDeCandidatos: async () => acesso,
+}));
 const candidaturas: Record<string, unknown[]> = {};
 let disponiveis: unknown[] = [];
 
@@ -104,7 +110,37 @@ beforeEach(() => {
   for (const k of Object.keys(vagas)) delete vagas[k];
   for (const k of Object.keys(candidaturas)) delete candidaturas[k];
   disponiveis = [];
+  acesso = "liberado";
   vagas["empresa-1"] = [vaga()];
+});
+
+/**
+ * O bloco era um segundo caminho até o contato de quem só pediu para ser
+ * encontrado, com uma porta mais fraca que a da busca (#576). Agora segue a
+ * mesma regra: sem a busca liberada, ninguém aparece; com ela, aparece sem
+ * telefone, e o contato sai do perfil, dentro do teto diário.
+ */
+describe("regra de contato da busca de candidatos (#576)", () => {
+  it.each(["falta_cnpj_conferido", "sem_capacidade"])(
+    "sem a busca liberada (%s), a lista de disponíveis some",
+    async (semAcesso) => {
+      acesso = semAcesso;
+      disponiveis = [disponivel("d1", ["Colheitadeira"])];
+      candidaturas["empresa-1"] = [candidatura("a1", ["Colheitadeira"])];
+
+      const [v] = await recomendadosParaEmpresa(empresa);
+      expect(v.disponiveis).toEqual([]);
+      // Quem se candidatou continua: levantou a mão para esta vaga.
+      expect(nomes(v.candidatos)).toEqual(["Pessoa a1"]);
+    },
+  );
+
+  it("com a busca liberada, o disponível aparece sem telefone", async () => {
+    disponiveis = [disponivel("d1", ["Colheitadeira"])];
+    const [v] = await recomendadosParaEmpresa(empresa);
+    expect(nomes(v.disponiveis)).toEqual(["Disponível d1"]);
+    expect(v.disponiveis[0].telefone).toBeNull();
+  });
 });
 
 describe("consentimento", () => {
