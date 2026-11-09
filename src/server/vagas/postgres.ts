@@ -29,6 +29,7 @@ function paraVaga(linha: Record<string, unknown>): Vaga {
     paraPcd: Boolean(linha.para_pcd),
     contratanteConfidencial:
       (linha.contratante_confidencial as string | null) ?? null,
+    removidaEm: (linha.removida_em as string | null) ?? null,
     salarioMin: (linha.salario_min as number | null) ?? null,
     salarioMax: (linha.salario_max as number | null) ?? null,
     habilidades: (linha.habilidades as string[] | null) ?? [],
@@ -218,11 +219,19 @@ export class RepositorioVagasPostgres implements RepositorioVagas {
     return paraVaga(data);
   }
 
-  async encerrar(id: string): Promise<Vaga> {
+  async encerrar(
+    id: string,
+    opcoes: { pelaModeracao?: boolean } = {},
+  ): Promise<Vaga> {
     const supabase = await cliente();
     const { data, error } = await supabase
       .from("vagas")
-      .update({ status: "fechada" })
+      .update({
+        status: "fechada",
+        ...(opcoes.pelaModeracao
+          ? { removida_em: new Date().toISOString() }
+          : {}),
+      })
       .eq("id", id)
       .select("*")
       .single();

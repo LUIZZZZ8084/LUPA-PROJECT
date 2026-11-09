@@ -149,11 +149,15 @@ export async function VagasDaContratacao({
                             : "neutral"
                       }
                     >
-                      {expirada
-                        ? "Expirada"
-                        : job.status === "aberta"
-                          ? "Ativa"
-                          : "Encerrada"}
+                      {/* Removida pela moderação diz isso, e não só
+                          "encerrada" (#577): a dona precisa saber. */}
+                      {job.removed_at
+                        ? "Removida pela moderação"
+                        : expirada
+                          ? "Expirada"
+                          : job.status === "aberta"
+                            ? "Ativa"
+                            : "Encerrada"}
                     </Badge>
                   </Link>
                   {/*

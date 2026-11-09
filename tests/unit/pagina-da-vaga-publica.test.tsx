@@ -333,6 +333,23 @@ describe("prévia do link", () => {
     const meta = await generateMetadata({ params: parametros });
     expect(meta.title).toBe("Vaga não encontrada");
   });
+
+  /**
+   * A vaga que a moderação tirou do ar deixa de abrir pelo link (#577), e
+   * a prévia não repete o que foi removido. Encerrada pela empresa continua
+   * abrindo, com o aviso.
+   */
+  it("vaga removida pela moderação não abre e não tem prévia", async () => {
+    estado.vaga = {
+      ...VAGA,
+      status: "fechada",
+      removed_at: "2026-11-09T12:00:00.000Z",
+    };
+    const meta = await generateMetadata({ params: parametros });
+    expect(meta.title).toBe("Vaga não encontrada");
+    expect(JSON.stringify(meta)).not.toContain("Operador");
+    await expect(abrir()).rejects.toThrow();
+  });
 });
 
 /**

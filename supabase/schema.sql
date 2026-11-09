@@ -498,6 +498,8 @@ create table vagas (
   contratante_confidencial text
     check (contratante_confidencial is null
            or char_length(contratante_confidencial) between 3 and 80),
+  -- Quando a moderação tirou a vaga do ar (#577). Nulo para as demais.
+  removida_em timestamptz,
   salario_min   numeric(10,2),
   salario_max   numeric(10,2),
 
@@ -1743,7 +1745,10 @@ begin
 
   if p_tirar_do_ar then
     if p_alvo = 'vaga' then
-      update vagas set status = 'fechada' where id = p_alvo_id;
+      -- Removida pela moderação, e não só encerrada (#577): o link público
+      -- deixa de abrir, e o painel da dona diz o que houve.
+      update vagas set status = 'fechada', removida_em = now()
+       where id = p_alvo_id;
     elsif p_alvo = 'avaliacao' then
       -- O trigger de `avaliacoes` recalcula a nota do prestador.
       delete from avaliacoes where id = p_alvo_id;
@@ -1950,7 +1955,9 @@ select
   -- E as perguntas de triagem (#491), pela mesma regra.
   v.perguntas                 as screening_questions,
   -- E o cliente em sigilo da agência (#538), pela mesma regra.
-  v.contratante_confidencial  as hiring_for
+  v.contratante_confidencial  as hiring_for,
+  -- E a remoção pela moderação (#577), pela mesma regra: coluna nova no fim.
+  v.removida_em               as removed_at
 from vagas v
 join perfis_empresa e on e.usuario_id = v.empresa_id
 join usuarios u on u.id = e.usuario_id;

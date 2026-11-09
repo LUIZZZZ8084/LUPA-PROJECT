@@ -114,11 +114,18 @@ export class RepositorioVagasMemoria implements RepositorioVagas {
     return nova;
   }
 
-  async encerrar(id: string): Promise<Vaga> {
+  async encerrar(
+    id: string,
+    opcoes: { pelaModeracao?: boolean } = {},
+  ): Promise<Vaga> {
     const atual = this.itens.get(id);
     if (!atual) throw erros.naoEncontrado("Vaga");
 
-    const nova: Vaga = { ...atual, status: "fechada" };
+    const nova: Vaga = {
+      ...atual,
+      status: "fechada",
+      ...(opcoes.pelaModeracao ? { removidaEm: new Date().toISOString() } : {}),
+    };
     this.itens.set(id, nova);
     return nova;
   }

@@ -34,6 +34,11 @@ export interface Vaga {
    * sem o nome (#538). `null` é a vaga comum, da própria empresa.
    */
   contratanteConfidencial: string | null;
+  /**
+   * Quando a moderação tirou a vaga do ar (#577). Ausente ou nulo é a vaga
+   * que não foi removida — encerrar pela própria empresa não marca isto.
+   */
+  removidaEm?: string | null;
   salarioMin: number | null;
   salarioMax: number | null;
   habilidades: string[];
@@ -117,7 +122,8 @@ export interface RepositorioVagas {
   contarNoAr(empresaId: string, publicadaPor?: string): Promise<number>;
   criar(dados: DadosNovaVaga): Promise<Vaga>;
   atualizar(id: string, campos: EdicaoVaga): Promise<Vaga>;
-  encerrar(id: string): Promise<Vaga>;
+  /** `pelaModeracao` marca a vaga como removida, além de encerrada (#577). */
+  encerrar(id: string, opcoes?: { pelaModeracao?: boolean }): Promise<Vaga>;
   /** Renova o prazo por mais 30 dias. Não mexe em `status` — só quem
    * ficou "aberta" e passou do prazo tinha o que reativar. */
   reativar(id: string): Promise<Vaga>;

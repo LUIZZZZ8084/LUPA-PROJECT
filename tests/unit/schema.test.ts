@@ -3101,11 +3101,11 @@ describe("denúncias", () => {
   });
 
   /*
-   * A função de decisão existe em três arquivos: o schema e os dois
+   * A função de decisão existe em quatro arquivos: o schema e os três
    * scripts de produção. Um deles desatualizado, rodado de novo, desfaria
    * a foto sem ninguém ver.
    */
-  it("as três cópias de decidir_denuncia são iguais", () => {
+  it("as quatro cópias de decidir_denuncia são iguais", () => {
     const funcao = (texto: string) => {
       const inicio = texto.indexOf(
         "create or replace function decidir_denuncia(",
@@ -3119,6 +3119,7 @@ describe("denúncias", () => {
     expect(doSchema).toContain("delete from publicacoes");
     expect(funcao(ler("aplica-denuncias.sql"))).toBe(doSchema);
     expect(funcao(ler("aplica-denuncia-de-foto.sql"))).toBe(doSchema);
+    expect(funcao(ler("aplica-vaga-removida.sql"))).toBe(doSchema);
   });
 
   it("aplica-denuncia-de-foto.sql roda de novo num banco que já tem tudo", async () => {
@@ -4483,10 +4484,13 @@ describe("aplica-triagem.sql", () => {
     "utf8",
   );
   const VIEWS = ["job_listings", "company_applications"];
-  const DEPOIS_DA_TRIAGEM = readFileSync(
-    join(process.cwd(), "supabase/aplica-vaga-confidencial.sql"),
-    "utf8",
-  );
+  const DEPOIS_DA_TRIAGEM = [
+    "supabase/aplica-vaga-confidencial.sql",
+    // E a marca da remoção pela moderação (#577), também na view.
+    "supabase/aplica-vaga-removida.sql",
+  ]
+    .map((arquivo) => readFileSync(join(process.cwd(), arquivo), "utf8"))
+    .join("\n");
 
   async function bancoDeAntes() {
     const banco = await PGlite.create();
@@ -4714,6 +4718,56 @@ describe("aplica-varreduras-e-visitas.sql", () => {
            'registrar_visita_pagina(text)', 'EXECUTE') as anon`,
       );
       expect(executa.rows[0].anon).toBe(false);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
+});
+
+/**
+ * Vaga removida pela moderação (#577): a decisão grava a marca, a view a
+ * expõe, e o script de produção roda de novo sem estragar nada.
+ */
+describe("vaga removida pela moderação", () => {
+  it("tirar do ar marca a vaga e a view mostra a marca", async () => {
+    const empresaId = await criarUsuario("empresa", "removida@teste.lupa");
+    await db.query(
+      `insert into perfis_empresa (usuario_id, razao_social, cnpj)
+       values ($1, 'Empresa Removida', null)`,
+      [empresaId],
+    );
+    const r = await db.query<{ id: string }>(
+      `insert into vagas (empresa_id, titulo, descricao, cidade)
+       values ($1, 'Cargo', 'Descrição da vaga denunciada.', 'Sinop - MT')
+       returning id`,
+      [empresaId],
+    );
+    const id = r.rows[0].id;
+    await db.query("select decidir_denuncia('vaga', $1, true)", [id]);
+
+    const lida = await db.query<{ status: string; removed_at: string | null }>(
+      "select status, removed_at from job_listings where id = $1",
+      [id],
+    );
+    expect(lida.rows[0].status).toBe("fechada");
+    expect(lida.rows[0].removed_at).not.toBeNull();
+  });
+
+  it("aplica-vaga-removida.sql roda de novo num banco que já tem tudo", async () => {
+    const banco = await PGlite.create();
+    try {
+      await banco.exec(SCHEMA);
+      const script = readFileSync(
+        join(process.cwd(), "supabase/aplica-vaga-removida.sql"),
+        "utf8",
+      );
+      await banco.exec(script);
+      await banco.exec(script);
+      const r = await banco.query<{ n: number }>(
+        `select count(*)::int as n from information_schema.columns
+          where table_name = 'job_listings' and column_name = 'removed_at'`,
+      );
+      expect(r.rows[0].n).toBe(1);
     } finally {
       await banco.close();
     }

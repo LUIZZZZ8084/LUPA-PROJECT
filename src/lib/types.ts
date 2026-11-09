@@ -125,6 +125,12 @@ export interface Job {
    * aplicada não devolve o campo; `null` é a vaga comum.
    */
   hiring_for?: string | null;
+  /**
+   * Quando a moderação tirou a vaga do ar (#577). A página pública, a
+   * prévia e os metadados respondem "não encontrada" para ela; o painel da
+   * dona mostra que foi removida.
+   */
+  removed_at?: string | null;
   salary_min: number | null;
   salary_max: number | null;
   /** O que a vaga pede. Vazio quando a empresa não declarou — aí o

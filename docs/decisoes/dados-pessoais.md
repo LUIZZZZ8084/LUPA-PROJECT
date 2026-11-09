@@ -168,9 +168,17 @@ denúncia por qualquer conta com sessão, e um painel em `/admin`.
 **Nada sai do ar sozinho.** Ocultar depois de N denúncias seria mais
 rápido contra golpe, e daria a um concorrente o botão de derrubar o
 anúncio de outro — três contas bastariam. Quem decide é o admin, por
-`decidir_denuncia`, numa transação: tirar do ar **encerra** a vaga (o
-mesmo estado de quando o dono encerra) ou **apaga** a avaliação (a nota
-sai da média pelo trigger de sempre), e fecha as denúncias daquele alvo.
+`decidir_denuncia`, numa transação: tirar do ar **encerra e marca** a vaga
+(`removida_em`) ou **apaga** a avaliação (a nota sai da média pelo trigger
+de sempre), e fecha as denúncias daquele alvo.
+
+**Removida não é o mesmo que encerrada (#577).** No começo, tirar do ar
+deixava a vaga no mesmo estado de quando a empresa encerra — e vaga
+encerrada continua abrindo pelo link, com o aviso de que fechou, para quem
+chega por um link antigo. A vaga removida pela moderação deixa de abrir:
+página, metadados e prévia respondem "não encontrada", e o painel da dona
+diz "Removida pela moderação". É o mesmo padrão da foto, que é apagada em
+vez de arquivada porque arquivada seguiria no ar pelo endereço.
 
 **O denunciante nunca aparece para o denunciado.** A tabela é fechada
 para `anon` e `authenticated`, e só o painel do admin a lê, com a chave de
