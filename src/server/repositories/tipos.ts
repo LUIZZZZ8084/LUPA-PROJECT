@@ -268,6 +268,14 @@ export interface RepositorioUsuarios {
   cortesDeSessao(dias: number): Promise<Map<string, number>>;
 
   /**
+   * O corte de uma conta só, em segundos, ou `null` sem corte (#580).
+   *
+   * Para quando a lista de `cortesDeSessao` chegou ao teto: aí uma conta
+   * fora dela pode ter corte, e a resposta certa vem desta pergunta.
+   */
+  corteDaConta(id: string): Promise<number | null>;
+
+  /**
    * Corta as sessões da pessoa sem trocar a senha (#402) — "sair dos
    * outros aparelhos". É o mesmo corte que a troca de senha e a de papel
    * gravam; quem chama emite a sessão nova do aparelho atual **depois**.

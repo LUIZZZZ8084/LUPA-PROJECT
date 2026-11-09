@@ -1,6 +1,7 @@
 import "server-only";
 
 import { unstable_cache, updateTag } from "next/cache";
+import { TETO_DE_CORTES_DE_SESSAO } from "@/lib/limites-de-lista";
 import { repositorioUsuarios } from "../repositories";
 import { CONFIG_SESSAO, type Sessao } from "./session";
 
@@ -83,6 +84,13 @@ const lerCortes = unstable_cache(
   { revalidate: JANELA_DE_CACHE, tags: [TAG_REVOGACOES] },
 );
 
+/** O corte de uma conta, em cache, para quando a lista transbordou. */
+const lerCorteDaConta = unstable_cache(
+  async (usuarioId: string) => repositorioUsuarios().corteDaConta(usuarioId),
+  ["auth", "corte-da-conta"],
+  { revalidate: JANELA_DE_CACHE, tags: [TAG_REVOGACOES] },
+);
+
 /**
  * Esta sessão nasceu antes do corte de quem a carrega?
  *
@@ -101,7 +109,24 @@ export async function sessaoFoiRevogada(sessao: Sessao): Promise<boolean> {
     return false;
   }
 
-  const corte = cortes[sessao.usuarioId];
+  let corte: number | null | undefined = cortes[sessao.usuarioId];
+
+  /*
+   * A lista tem teto (#352). Cheia, ela pode ter deixado de fora o corte
+   * desta conta — e "fora da lista" não pode virar "não revogada", senão
+   * contas novas empurrariam o corte de outra para fora (#580). Nesse caso
+   * a pergunta vai para a própria conta, com o mesmo minuto de cache.
+   */
+  if (
+    corte === undefined &&
+    Object.keys(cortes).length >= TETO_DE_CORTES_DE_SESSAO
+  ) {
+    try {
+      corte = await lerCorteDaConta(sessao.usuarioId);
+    } catch {
+      return false;
+    }
+  }
   if (!corte) return false;
 
   /*

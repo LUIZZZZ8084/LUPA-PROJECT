@@ -216,6 +216,20 @@ export class RepositorioPostgres implements RepositorioUsuarios {
     );
   }
 
+  async corteDaConta(id: string): Promise<number | null> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("sessoes_validas_desde")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw erros.indisponivel(`corte de sessão: ${error.message}`);
+    const quando = data?.sessoes_validas_desde;
+    return quando
+      ? Math.floor(new Date(String(quando)).getTime() / 1000)
+      : null;
+  }
+
   async criarTokenDeRecuperacao(dados: NovoTokenDeRecuperacao): Promise<void> {
     const supabase = await cliente();
 
