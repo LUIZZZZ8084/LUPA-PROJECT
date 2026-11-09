@@ -75,7 +75,9 @@ export default async function ServicosPage({
   // Mesma razão do `/vagas`: só o termo, nunca quem digitou, e depois da
   // resposta.
   if (providers.length === 0) {
-    after(() => contarBuscaSemResultado(single("q"), "servicos"));
+    after(() =>
+      contarBuscaSemResultado(single("q"), "servicos", sessao?.usuarioId),
+    );
   }
 
   // A ordem é dita na tela; ver o comentário longo em `/vagas`.

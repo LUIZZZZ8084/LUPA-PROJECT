@@ -56,6 +56,7 @@ drop table if exists carteiras_vaga cascade;
 drop table if exists tokens_recuperacao cascade;
 drop table if exists tentativas_de_acesso cascade;
 drop table if exists mensagens_suporte cascade;
+drop view if exists metricas_buscas_sem_resultado cascade;
 drop table if exists buscas_sem_resultado cascade;
 drop table if exists visualizacoes_vaga cascade;
 drop table if exists visitas_pagina cascade;

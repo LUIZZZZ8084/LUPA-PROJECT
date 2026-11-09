@@ -958,6 +958,8 @@ describe("grants de anon e authenticated", () => {
     "custos_mensais",
     // Quem tem parceria com a Lupa, e até quando (#505).
     "parceiros",
+    // O ranking de buscas sem resultado, só do painel do admin (#585).
+    "metricas_buscas_sem_resultado",
     // Métrica de operação, só do painel do admin (#566, #568).
     "execucoes_varredura",
     "visitas_pagina",
@@ -1369,7 +1371,7 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
     );
     // Treze desde a #471: sai `metricas_por_local`, entram contas por
     // estado, contas por cidade e o funil.
-    expect(Number(views.rows[0].total)).toBe(13);
+    expect(Number(views.rows[0].total)).toBe(14);
   });
 
   it("não sobra tipo, função nem view órfã", async () => {
@@ -4714,6 +4716,56 @@ describe("aplica-varreduras-e-visitas.sql", () => {
            'registrar_visita_pagina(text)', 'EXECUTE') as anon`,
       );
       expect(executa.rows[0].anon).toBe(false);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
+});
+
+/**
+ * O ranking de buscas sem resultado vem somado do banco (#585): o teto do
+ * painel corta o resultado, e não a entrada da soma.
+ */
+describe("ranking de buscas sem resultado", () => {
+  it("soma por termo os últimos 30 dias, e deixa o resto de fora", async () => {
+    await db.query("delete from buscas_sem_resultado");
+    for (let i = 0; i < 3; i++) {
+      await db.query(
+        "select registrar_busca_sem_resultado('ranking', 'vagas')",
+      );
+    }
+    await db.query(
+      "select registrar_busca_sem_resultado('ranking', 'servicos')",
+    );
+    await db.query(
+      `insert into buscas_sem_resultado (termo, dia, onde, total)
+       values ('antigo', current_date - 40, 'vagas', 99)`,
+    );
+
+    const r = await db.query<{ termo: string; total: number }>(
+      "select termo, total from metricas_buscas_sem_resultado order by total desc",
+    );
+    expect(r.rows).toEqual([{ termo: "ranking", total: 4 }]);
+  });
+
+  it("aplica-ranking-de-buscas.sql roda de novo e fecha a view", async () => {
+    const banco = await PGlite.create();
+    try {
+      await banco.exec(SCHEMA);
+      await banco.exec("drop view metricas_buscas_sem_resultado");
+      const script = readFileSync(
+        join(process.cwd(), "supabase/aplica-ranking-de-buscas.sql"),
+        "utf8",
+      );
+      await banco.exec(script);
+      await banco.exec(
+        "grant select on metricas_buscas_sem_resultado to anon, authenticated",
+      );
+      await banco.exec(script);
+      const r = await banco.query<{ le: boolean }>(
+        "select has_table_privilege('anon', 'metricas_buscas_sem_resultado', 'SELECT') as le",
+      );
+      expect(r.rows[0].le).toBe(false);
     } finally {
       await banco.close();
     }
