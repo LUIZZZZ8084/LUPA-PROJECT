@@ -249,6 +249,7 @@ O que é público, o Brasil inteiro, a ordem por proximidade, o aviso de vaga, o
 - O convite para instalar, e o que cada aparelho deixa (#475)
 - Busca sem resultado é vocabulário, não histórico de pessoa
 - Visualização de vaga é contagem, não histórico
+- Visitas e chamadas do prestador, contadas como as da vaga (#604)
 
 ### [Segurança: o que já vale, e o que se decidiu não fazer](docs/decisoes/seguranca.md)
 

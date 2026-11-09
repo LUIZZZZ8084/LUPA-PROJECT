@@ -1182,6 +1182,53 @@ as $$
 $$;
 
 -- ============================================================================
+-- 9d2. Visitas e chamadas do perfil do prestador (#604)
+--
+-- O prestador paga a mensalidade e não via o que a vitrine trazia. A mesma
+-- forma das visualizações de vaga: uma linha por prestador por dia, com as
+-- visitas ao perfil e os cliques em "Conversar no WhatsApp", e nada que
+-- diga quem visitou ou chamou — saber quem procurou eletricista é histórico
+-- de pessoa, e a métrica é de tendência.
+-- ============================================================================
+
+create table contagens_prestador (
+  prestador_id uuid not null references usuarios(id) on delete cascade,
+  dia          date not null default current_date,
+  visitas      integer not null default 0,
+  contatos     integer not null default 0,
+
+  primary key (prestador_id, dia),
+  constraint contagens_nao_negativas check (visitas >= 0 and contatos >= 0)
+);
+
+/* Incremento atômico; evento desconhecido é erro, não linha zerada. */
+create or replace function registrar_contagem_prestador(
+  p_prestador uuid,
+  p_evento text
+)
+returns void
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if p_evento not in ('visita', 'contato') then
+    raise exception 'evento desconhecido: %', p_evento;
+  end if;
+
+  insert into contagens_prestador (prestador_id, dia, visitas, contatos)
+  values (
+    p_prestador,
+    current_date,
+    (p_evento = 'visita')::int,
+    (p_evento = 'contato')::int
+  )
+  on conflict (prestador_id, dia) do update set
+    visitas  = contagens_prestador.visitas  + excluded.visitas,
+    contatos = contagens_prestador.contatos + excluded.contatos;
+end;
+$$;
+
+-- ============================================================================
 -- 9e. A última execução de cada varredura agendada (#566)
 --
 -- Uma linha por varredura, sobrescrita a cada execução: não é histórico
@@ -2367,6 +2414,7 @@ alter table categorias_servico  enable row level security;
 -- passa pela função, e a leitura do painel, pela chave de serviço.
 alter table visualizacoes_vaga  enable row level security;
 alter table visitas_pagina      enable row level security;
+alter table contagens_prestador enable row level security;
 alter table execucoes_varredura enable row level security;
 alter table buscas_sem_resultado enable row level security;
 alter table tentativas_de_acesso enable row level security;
@@ -2460,6 +2508,7 @@ grant select on job_listings, provider_listings to anon, authenticated;
 revoke select on visualizacoes_vaga            from anon, authenticated;
 revoke select on metricas_buscas_sem_resultado from anon, authenticated;
 revoke select on visitas_pagina                from anon, authenticated;
+revoke select on contagens_prestador           from anon, authenticated;
 revoke select on execucoes_varredura           from anon, authenticated;
 revoke select on buscas_sem_resultado         from anon, authenticated;
 -- Guarda nome, e-mail e texto livre sobre a situacao de quem escreveu

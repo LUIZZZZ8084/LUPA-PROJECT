@@ -60,6 +60,7 @@ drop view if exists metricas_buscas_sem_resultado cascade;
 drop table if exists buscas_sem_resultado cascade;
 drop table if exists visualizacoes_vaga cascade;
 drop table if exists visitas_pagina cascade;
+drop table if exists contagens_prestador cascade;
 drop table if exists execucoes_varredura cascade;
 drop table if exists pedidos_verificacao cascade;
 drop table if exists publicacoes cascade;
@@ -85,6 +86,7 @@ drop function if exists registrar_falha_de_acesso(text, integer, integer, intege
 drop function if exists registrar_busca_sem_resultado(text, text) cascade;
 drop function if exists registrar_visualizacao(uuid) cascade;
 drop function if exists registrar_visita_pagina(text) cascade;
+drop function if exists registrar_contagem_prestador(uuid, text) cascade;
 drop function if exists conferir_limite_publicacoes() cascade;
 drop function if exists anonimizar_avaliacoes_do_autor() cascade;
 drop function if exists atualizar_nota_prestador() cascade;

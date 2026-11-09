@@ -82,6 +82,8 @@ export function ProviderCard({
             phone={provider.phone}
             providerName={provider.full_name}
             context={provider.category.name}
+            // Conta a chamada para o prestador antes do WhatsApp (#604).
+            via={`/servicos/${encodeURIComponent(provider.profile_id)}/whatsapp`}
           />
         ) : (
           <Link

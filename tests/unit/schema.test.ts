@@ -117,6 +117,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "candidaturas",
       "carteiras_vaga",
       "categorias_servico",
+      "contagens_prestador",
       "custos_mensais",
       "denuncias",
       "execucoes_varredura",
@@ -963,6 +964,8 @@ describe("grants de anon e authenticated", () => {
     // Métrica de operação, só do painel do admin (#566, #568).
     "execucoes_varredura",
     "visitas_pagina",
+    // Visitas e chamadas do prestador (#604): do painel dele, não públicas.
+    "contagens_prestador",
     // O que a empresa anota sobre cada candidatura (#539): só dela.
     "acompanhamento_candidatura",
     /*
@@ -1362,8 +1365,9 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        where table_schema = 'public' and table_type = 'BASE TABLE'
        order by table_name`,
     );
-    // 23 desde a #235, que acrescentou `mensagens_suporte`.
-    expect(tabelas.rows).toHaveLength(27);
+    // 23 desde a #235, que acrescentou `mensagens_suporte`; 28 com
+    // `contagens_prestador` (#604).
+    expect(tabelas.rows).toHaveLength(28);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -4675,6 +4679,79 @@ describe("visitas e varreduras", () => {
       ),
     ).rejects.toThrow();
   });
+});
+
+/*
+ * Visitas e chamadas do perfil do prestador (#604): soma no mesmo dia sem
+ * perder contagem, cada evento na sua coluna, e evento desconhecido não
+ * entra.
+ */
+describe("contagens do prestador", () => {
+  it("visita e contato somam no mesmo dia, cada um na sua coluna", async () => {
+    const u = await db.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('contagem@teste.lupa', 'x', 'prestador_servico', 'Pres Tador', '66999990000', 'Sinop - MT')
+       returning id`,
+    );
+    const id = u.rows[0].id;
+    await db.query("select registrar_contagem_prestador($1, 'visita')", [id]);
+    await db.query("select registrar_contagem_prestador($1, 'visita')", [id]);
+    await db.query("select registrar_contagem_prestador($1, 'contato')", [id]);
+
+    const r = await db.query<{ visitas: number; contatos: number }>(
+      `select visitas, contatos from contagens_prestador
+        where prestador_id = $1 and dia = current_date`,
+      [id],
+    );
+    expect(r.rows).toHaveLength(1);
+    expect(Number(r.rows[0].visitas)).toBe(2);
+    expect(Number(r.rows[0].contatos)).toBe(1);
+
+    await expect(
+      db.query("select registrar_contagem_prestador($1, 'clique')", [id]),
+    ).rejects.toThrow();
+  });
+});
+
+describe("aplica-contagens-do-prestador.sql", () => {
+  it("cria a tabela, roda de novo e fecha para as chaves públicas", async () => {
+    const banco = await PGlite.create();
+    try {
+      await banco.exec(SCHEMA);
+      // Um banco de antes da #604 não tem nada disto.
+      await banco.exec(`
+        drop function registrar_contagem_prestador(uuid, text);
+        drop table contagens_prestador;
+      `);
+
+      const script = readFileSync(
+        join(process.cwd(), "supabase/aplica-contagens-do-prestador.sql"),
+        "utf8",
+      );
+      await banco.exec(script);
+      // O Supabase concede tudo às duas chaves por padrão; o script fecha.
+      await banco.exec(
+        "grant all on contagens_prestador to anon, authenticated",
+      );
+      await banco.exec(script);
+
+      const privilegio = await banco.query<{ algum: boolean }>(
+        `select bool_or(has_table_privilege(papel, 'contagens_prestador', p)) as algum
+           from unnest(array['anon', 'authenticated']) as papel,
+                unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE',
+                             'TRUNCATE']) as p`,
+      );
+      expect(privilegio.rows[0].algum).toBe(false);
+
+      const executa = await banco.query<{ anon: boolean }>(
+        `select has_function_privilege('anon',
+           'registrar_contagem_prestador(uuid, text)', 'EXECUTE') as anon`,
+      );
+      expect(executa.rows[0].anon).toBe(false);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
 });
 
 describe("aplica-varreduras-e-visitas.sql", () => {

@@ -1,4 +1,4 @@
-import { resolveContact } from "@/lib/demo";
+import { buildContact } from "@/lib/contato-whatsapp";
 import { whatsappLink } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ButtonAnchor, buttonVariants } from "./ui/button";
@@ -20,29 +20,6 @@ function WhatsAppIcon({ size = 18 }: { size?: number }) {
 }
 
 /**
- * Monta a mensagem e resolve para quem o contato vai.
- *
- * Em demonstração o destino é o número do fundador, não o do prestador
- * fictício — ver src/lib/demo.ts para o porquê.
- */
-function buildContact(
-  providerPhone: string,
-  providerName: string,
-  context?: string,
-) {
-  const { phone, redirected } = resolveContact(providerPhone);
-  const firstName = providerName.split(" ")[0];
-
-  const message = redirected
-    ? `Olá! Vim pela demonstração da Lupa e cliquei no perfil de ${providerName}` +
-      `${context ? ` (${context})` : ""}.`
-    : `Olá, ${firstName}! Vi seu perfil${context ? ` de ${context}` : ""} na Lupa ` +
-      `e gostaria de um orçamento.`;
-
-  return { phone, message };
-}
-
-/**
  * Contato direto via wa.me. No V0 não existe chat interno: a conversa
  * acontece no WhatsApp, que é onde o público de Sinop já está.
  * A mensagem vai pré-preenchida para o prestador saber de onde veio o lead.
@@ -55,6 +32,7 @@ export function WhatsAppButton({
   block,
   label = "Conversar no WhatsApp",
   className,
+  via,
 }: {
   phone: string;
   providerName: string;
@@ -64,6 +42,11 @@ export function WhatsAppButton({
   block?: boolean;
   label?: string;
   className?: string;
+  /**
+   * Passar por uma rota nossa antes do WhatsApp, para contar a chamada
+   * (#604). A rota monta o mesmo `wa.me` e redireciona.
+   */
+  via?: string;
 }) {
   const { phone, message } = buildContact(providerPhone, providerName, context);
 
@@ -89,7 +72,7 @@ export function WhatsAppButton({
 
   return (
     <ButtonAnchor
-      href={whatsappLink(phone, message)}
+      href={via ?? whatsappLink(phone, message)}
       target="_blank"
       rel="noopener noreferrer"
       variant="whatsapp"
@@ -109,11 +92,14 @@ export function WhatsAppIconButton({
   providerName,
   context,
   className,
+  via,
 }: {
   phone: string;
   providerName: string;
   context?: string;
   className?: string;
+  /** Ver `WhatsAppButton`: a rota que conta a chamada antes de redirecionar. */
+  via?: string;
 }) {
   const { phone, message } = buildContact(providerPhone, providerName, context);
 
@@ -121,7 +107,7 @@ export function WhatsAppIconButton({
 
   return (
     <a
-      href={whatsappLink(phone, message)}
+      href={via ?? whatsappLink(phone, message)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`Conversar com ${providerName} no WhatsApp`}
