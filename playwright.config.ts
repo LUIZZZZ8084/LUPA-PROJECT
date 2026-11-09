@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { provedoresDesligados } from "./scripts/ambiente-de-demonstracao.mjs";
 import { ARQUIVO_SESSAO } from "./tests/e2e/helpers";
 
 const PORT = Number(process.env.PORT ?? 3100);
@@ -75,12 +76,13 @@ export default defineConfig({
            * medir sempre a mesma coisa, e isso não pode depender de qual
            * arquivo existe na máquina de quem roda.
            */
-          NEXT_PUBLIC_SUPABASE_URL: "",
-          // A chave anônima, pelo único nome que o app lê (#221, #279).
-          // Esquecer esta linha faria a suíte falar com o banco de verdade
-          // — já custou 213 contas criadas na base real.
-          SUPABASE_ANON_KEY: "",
-          SUPABASE_SERVICE_ROLE_KEY: "",
+          /*
+           * E os outros provedores também (#584): o app decide por provedor
+           * se fala com o serviço de verdade, e o `.env.local` pode ter o
+           * Mercado Pago, o Resend e o push reais. A lista mora num lugar só,
+           * com o `dev:demo`.
+           */
+          ...provedoresDesligados(),
           /*
            * O app é fechado por login, então a suíte precisa criar conta e
            * entrar — e em produção a aplicação recusa subir sem segredo de
