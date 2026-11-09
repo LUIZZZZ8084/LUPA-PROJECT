@@ -147,6 +147,31 @@ esta página, e a empresa ao painel. Antes levava todo mundo ao painel, e o
 visitante ia parar no login. A home, o rodapé do computador e o painel ao
 lado de entrar ganharam o mesmo link, e a página entrou no sitemap.
 
+## O perfil do prestador abre para leitura, para ele divulgar (#603)
+
+Mesma razão da vaga (#490), do outro lado do balcão: o prestador agora tem
+"Divulgar no WhatsApp" e "Pedir avaliação", e os dois mandam o link do
+perfil. Sem sessão, quem clicava caía numa tela de entrar antes de saber de
+quem era o link — o cliente satisfeito, que é quem avalia, desistia ali.
+
+**Só `/servicos/<id>`** (`PRESTADOR_PUBLICO` no `proxy.ts`). A lista
+`/servicos` continua fechada: a busca é funcionalidade, o perfil é o que se
+compartilha. Sem sessão a página:
+
+- não lê o telefone: o botão de WhatsApp vira "Entrar para ver o contato",
+  e os cards de prestadores parecidos usam `autenticado={false}`. O número
+  que não entra no JSX de servidor não sai no HTML;
+- abrevia o nome de quem avaliou ("Maria S."). Com o perfil aberto, o que
+  era lido por quem tem conta passou a ser lido por qualquer um e por
+  buscador, e o sobrenome dizia qual pessoa contratou qual serviço;
+- troca o formulário de avaliação por um convite para entrar, com o id
+  `avaliar`. O link de pedir avaliação termina em `#avaliar`, e o destino
+  do login guarda a âncora: entrar volta para o formulário.
+
+**O que se descartou:** abrir a avaliação sem conta. Cada pessoa avalia uma
+vez porque a avaliação tem autor; sem conta, a nota vira o que o prestador
+pedir aos parentes.
+
 ## A vitrine de produção mostra só quem existe (#302)
 
 As contas de exemplo do `seed.sql` — 9 prestadores, 3 empresas e as vagas

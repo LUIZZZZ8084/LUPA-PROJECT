@@ -1,6 +1,7 @@
 import { Banknote, Briefcase, Check, MapPin, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   arquivarPelaAba,
@@ -9,10 +10,12 @@ import {
 } from "@/app/(app)/perfil/publicacoes/actions";
 import { AbasDoPerfil, GerenciarTrabalhos } from "@/components/abas-do-perfil";
 import { BarraDeAcaoFixa } from "@/components/barra-de-acao-fixa";
+import { DivulgarPerfil } from "@/components/divulgar-perfil";
 import { BackLink, PageShell } from "@/components/layout/page-shell";
 import { ProviderCard } from "@/components/provider-card";
 import { SocialLinks } from "@/components/social-links";
 import { Avatar } from "@/components/ui/avatar";
+import { ButtonLink } from "@/components/ui/button";
 import { Panel } from "@/components/ui/card";
 import {
   Skeleton,
@@ -93,6 +96,13 @@ export async function generateMetadata({
   };
 }
 
+/** "Maria Souza" vira "Maria S."; um nome só fica como está. */
+function nomeAbreviado(nome: string): string {
+  const [primeiro, ...resto] = nome.trim().split(/\s+/);
+  const ultimo = resto.at(-1);
+  return ultimo ? `${primeiro} ${ultimo[0].toUpperCase()}.` : primeiro;
+}
+
 export default async function ProviderPage({
   params,
 }: {
@@ -103,7 +113,15 @@ export default async function ProviderPage({
   if (!provider) notFound();
 
   const sessao = await sessaoAtual();
-  const reviews = await getReviews(id);
+  /*
+   * Sem sessão, o nome de quem avaliou sai abreviado (#603). O perfil abriu
+   * para leitura, e o que era lido por quem tem conta passou a ser lido por
+   * qualquer um — e por buscador. "Maria S." diz que a avaliação é de uma
+   * pessoa; o sobrenome dizia de qual, e com qual serviço contratado.
+   */
+  const reviews = (await getReviews(id)).map((r) =>
+    sessao ? r : { ...r, reviewer_name: nomeAbreviado(r.reviewer_name) },
+  );
 
   /*
    * Só o que está no feed. Arquivado é trabalho que o prestador tirou de
@@ -304,11 +322,59 @@ export default async function ProviderPage({
             />
           </Panel>
 
-          {podeAvaliar && (
-            <FormularioDeAvaliacao
+          {/*
+           * Divulgar e pedir avaliação (#603), para o dono, logo abaixo do
+           * perfil que ele vai mandar: é olhando para ele que se decide
+           * divulgar.
+           */}
+          {ehDono && (
+            <DivulgarPerfil
               prestadorId={provider.profile_id}
-              nomeDoPrestador={provider.full_name}
+              categoria={provider.category.name}
+              cidade={provider.city}
+              className="mt-5"
             />
+          )}
+
+          {/*
+           * `#avaliar` é o destino do link que o prestador manda ao cliente
+           * (#603): com sessão, o formulário; sem, o convite para entrar, que
+           * volta para cá.
+           */}
+          {podeAvaliar && (
+            <div id="avaliar" className="scroll-mt-24">
+              <FormularioDeAvaliacao
+                prestadorId={provider.profile_id}
+                nomeDoPrestador={provider.full_name}
+              />
+            </div>
+          )}
+
+          {!sessao && (
+            <Panel id="avaliar" className="mt-5 scroll-mt-24">
+              <h2 className="font-bold text-base">
+                Já contratou {provider.full_name.split(" ")[0]}?
+              </h2>
+              <p className="mt-1.5 text-muted text-sm leading-relaxed">
+                Entre para deixar sua avaliação. Cada pessoa avalia uma vez, e é
+                isso que mantém a nota honesta.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <ButtonLink
+                  href={`/entrar?destino=${encodeURIComponent(`/servicos/${provider.profile_id}#avaliar`)}`}
+                  variant="servicos"
+                  size="sm"
+                >
+                  Entrar para avaliar
+                </ButtonLink>
+                <Link
+                  href={`/cadastro?tipo=candidato_clt&destino=${encodeURIComponent(`/servicos/${provider.profile_id}#avaliar`)}`}
+                  className="-my-3 inline-flex items-center py-3 font-medium text-servicos text-sm underline-offset-2 hover:underline"
+                >
+                  Criar conta grátis
+                </Link>
+              </div>
+            </Panel>
           )}
 
           {/*
@@ -361,14 +427,31 @@ export default async function ProviderPage({
         então ela acompanha o perfil inteiro. A nota vem logo abaixo e segue a
         barra quando ela assenta.
       */}
+          {/*
+           * Sem sessão, o telefone não é lido (#603): o botão vira convite
+           * para entrar, que volta para este perfil. É componente de
+           * servidor, então o número que não entra no JSX não sai no HTML —
+           * a mesma regra do `ProviderCard` sem sessão.
+           */}
           <BarraDeAcaoFixa>
-            <WhatsAppButton
-              phone={provider.phone}
-              providerName={provider.full_name}
-              context={provider.category.name}
-              size="lg"
-              block
-            />
+            {sessao ? (
+              <WhatsAppButton
+                phone={provider.phone}
+                providerName={provider.full_name}
+                context={provider.category.name}
+                size="lg"
+                block
+              />
+            ) : (
+              <ButtonLink
+                href={`/entrar?destino=${encodeURIComponent(`/servicos/${provider.profile_id}`)}`}
+                variant="servicos"
+                size="lg"
+                block
+              >
+                Entrar para ver o contato
+              </ButtonLink>
+            )}
           </BarraDeAcaoFixa>
           <p className="mt-2 text-center text-xs text-faint">
             A conversa acontece direto no seu WhatsApp. A Lupa não cobra nada de
@@ -384,7 +467,11 @@ export default async function ProviderPage({
           </h2>
           <div className="grid-cols-1 space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-2.5 lg:space-y-0 xl:grid-cols-3">
             {similar.map((p) => (
-              <ProviderCard key={p.profile_id} provider={p} />
+              <ProviderCard
+                key={p.profile_id}
+                provider={p}
+                autenticado={Boolean(sessao)}
+              />
             ))}
           </div>
         </section>

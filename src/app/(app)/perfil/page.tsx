@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DivulgarPerfil } from "@/components/divulgar-perfil";
 import { ExcluirConta } from "@/components/excluir-conta";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
 import { LinksInstitucionais } from "@/components/links-institucionais";
@@ -348,6 +349,18 @@ export default async function PerfilPage() {
               perfil={perfil?.prestador ?? null}
               listagem={listagem}
               docVerificado={Boolean(usuario?.docVerificado)}
+            />
+          )}
+          {/*
+            Divulgar e pedir avaliação (#603), só com o perfil publicado: sem
+            listagem, o link levaria a uma página que não existe.
+          */}
+          {listagem && (
+            <DivulgarPerfil
+              prestadorId={listagem.profile_id}
+              categoria={listagem.category.name}
+              cidade={listagem.city}
+              className="mb-5"
             />
           )}
           {sessao?.papel === "empresa" && (

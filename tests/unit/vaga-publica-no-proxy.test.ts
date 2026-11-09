@@ -60,7 +60,7 @@ describe("vaga pública no proxy", () => {
     expect(redirecionaParaOLogin(await semSessao(caminho))).toBe(true);
   });
 
-  it.each(["/servicos/abc", "/perfil", "/empresa", "/candidatos/abc"])(
+  it.each(["/perfil", "/empresa", "/candidatos/abc"])(
     "%s não ganhou nada com a mudança",
     async (caminho) => {
       expect(redirecionaParaOLogin(await semSessao(caminho))).toBe(true);
@@ -78,4 +78,24 @@ describe("vaga pública no proxy", () => {
       "default-src",
     );
   });
+
+  /*
+   * O perfil do prestador abre pela mesma razão (#603): é o link que ele
+   * divulga e manda para pedir avaliação. A lista continua fechada.
+   */
+  it.each(["/servicos/abc", "/servicos/11111111-1111-4111-8111-000000000001"])(
+    "o perfil de prestador %s abre sem sessão",
+    async (caminho) => {
+      const resposta = await semSessao(caminho);
+      expect(redirecionaParaOLogin(resposta)).toBe(false);
+      expect(resposta.status).toBe(200);
+    },
+  );
+
+  it.each(["/servicos", "/servicos/", "/servicos/abc/qualquer-coisa"])(
+    "%s continua pedindo login",
+    async (caminho) => {
+      expect(redirecionaParaOLogin(await semSessao(caminho))).toBe(true);
+    },
+  );
 });
