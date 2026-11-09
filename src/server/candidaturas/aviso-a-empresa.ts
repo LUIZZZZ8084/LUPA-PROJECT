@@ -1,9 +1,8 @@
 import "server-only";
 
-import { primeiroNome } from "@/lib/chamada";
 import { consumirOrcamento } from "../auth/rate-limit";
 import { enviarEmail } from "../email";
-import { saudacao } from "../email/saudacao";
+import { primeiroNomeSeguro, saudacao } from "../email/saudacao";
 import { AppError } from "../errors";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
@@ -92,7 +91,15 @@ export async function avisarEmpresaDaCandidatura(
   if (!(await cabeAviso(empresa.id))) return "na_janela";
 
   const candidato = await usuarios.porId(candidatura.candidatoId);
-  const nome = primeiroNome(candidato?.nomeCompleto ?? "");
+  /*
+   * O nome entra no e-mail com a assinatura da Lupa (#582). Só vale se a
+   * primeira palavra já for um nome: filtrar um endereço deixaria as letras
+   * dele coladas, e aí o certo é dizer "Uma pessoa".
+   */
+  const bruto = (candidato?.nomeCompleto ?? "").normalize("NFC").trim();
+  const primeiraPalavra = bruto.split(/\s+/u)[0] ?? "";
+  const filtrado = primeiroNomeSeguro(bruto);
+  const nomeConfiavel = filtrado === primeiraPalavra ? filtrado : "";
   const novas = await novasParaOlhar(empresa.id);
   const link = `${urlPublica()}${baseDaArea(empresa.papel)}/funil`;
 
@@ -104,7 +111,7 @@ export async function avisarEmpresaDaCandidatura(
       corpo: [
         saudacao(empresa.nomeCompleto),
         "",
-        `${nome || "Uma pessoa"} se candidatou à vaga de ${vaga.titulo} na Lupa.`,
+        `${nomeConfiavel || "Uma pessoa"} se candidatou à vaga de ${vaga.titulo} na Lupa.`,
         novas > 1 ? `Você tem ${novas} candidaturas esperando para olhar.` : "",
         "",
         "Abra o painel para ver o currículo e chamar no WhatsApp:",
