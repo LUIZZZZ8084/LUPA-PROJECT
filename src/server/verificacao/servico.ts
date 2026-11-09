@@ -1,9 +1,11 @@
 import "server-only";
 
 import { normalizarCnpj } from "@/lib/format";
+import { consumirOrcamento } from "../auth/rate-limit";
 import { type Autenticado, exigirCapacidade } from "../auth/rbac";
 import { renomearAvaliacoesDe } from "../avaliacoes/servico";
-import { erros } from "../errors";
+import { AppError, erros } from "../errors";
+import { ORCAMENTO_DA_CONSULTA_DE_CNPJ } from "../limites";
 import { log } from "../logger";
 import { repositorioUsuarios } from "../repositories";
 import { cnpjValido } from "../validation";
@@ -51,6 +53,26 @@ export type ResultadoVerificacao =
  * Não grava nada: cada chamador decide onde persistir, porque empresa e
  * prestador guardam em tabelas diferentes.
  */
+/**
+ * Reserva uma consulta do teto da conta antes de ir à Receita (#578).
+ * Estourado, devolve a frase em vez de lançar: estas ações não passam por
+ * `criarAcao`, e o erro solto viraria a tela de erro do Next.
+ */
+async function cabeConsulta(usuarioId: string): Promise<string | null> {
+  try {
+    await consumirOrcamento(
+      `acao:cnpj.consultar:u:${usuarioId}`,
+      ORCAMENTO_DA_CONSULTA_DE_CNPJ,
+    );
+    return null;
+  } catch (erro) {
+    if (erro instanceof AppError && erro.codigo === "muitas_tentativas") {
+      return "Muitas consultas seguidas. Espere alguns minutos e tente de novo.";
+    }
+    throw erro;
+  }
+}
+
 async function consultarEAvaliar(
   cnpj: string,
   buscar?: typeof fetch,
@@ -141,6 +163,9 @@ export async function verificarCnpjAutomatico(
    * Sem comparar, o erro de digitação deixa de existir como categoria: o
    * nome passa a vir da fonte, não do teclado.
    */
+  const esperar = await cabeConsulta(autenticado.usuarioId);
+  if (esperar) return { ok: false, motivo: esperar };
+
   const avaliacao = await consultarEAvaliar(empresa.cnpj, buscar);
 
   if (!avaliacao.ok) return avaliacao;
@@ -229,6 +254,9 @@ export async function definirCnpjDoPrestador(
    * o nome dele só serviria para MEI — ver o comentário de
    * `consultarEAvaliar`.
    */
+  const esperar = await cabeConsulta(autenticado.usuarioId);
+  if (esperar) return { ok: false, motivo: esperar };
+
   const avaliacao = await consultarEAvaliar(cnpj, buscar);
 
   if (!avaliacao.ok) {

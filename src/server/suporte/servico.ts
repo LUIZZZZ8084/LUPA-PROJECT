@@ -1,8 +1,9 @@
 import "server-only";
 
 import { CONTROLADOR } from "@/lib/controlador";
-import { conferirLimite, registrarFalha } from "../auth/rate-limit";
+import { consumirOrcamento } from "../auth/rate-limit";
 import { enviarEmail, temEmailConfigurado } from "../email";
+import { AppError } from "../errors";
 import { log } from "../logger";
 import { repositorioSuporte } from "./index";
 import { ASSUNTOS, type NovaMensagemDeSuporte } from "./tipos";
@@ -35,11 +36,52 @@ export interface PedidoDeSuporte {
   origem: string;
 }
 
+/**
+ * Os tetos do formulário (#578).
+ *
+ * **Por origem, reservado antes de gravar**: conferir e somar em dois
+ * passos deixava pedidos simultâneos passarem juntos (a lição da #386).
+ *
+ * **E um teto do dia para o aviso por e-mail**, de todas as origens
+ * somadas. O e-mail sai da mesma cota do provedor que a recuperação de
+ * senha e a confirmação de cadastro usam; passado o teto, a mensagem ainda
+ * é gravada e aparece para quem responde, só não gera mais e-mail no dia.
+ */
+export const TETOS_DO_SUPORTE = {
+  porOrigem: { chamadas: 5, janelaSegundos: 15 * 60 },
+  avisosPorDia: { chamadas: 20, janelaSegundos: 24 * 60 * 60 },
+};
+
+/** O nome vai no assunto do e-mail: sem quebra de linha nem controle. */
+function nomeParaAssunto(nome: string): string {
+  return nome
+    .replace(/[\p{Cc}\p{Cf}]+/gu, " ")
+    .trim()
+    .slice(0, 60);
+}
+
+async function cabeAvisoHoje(): Promise<boolean> {
+  try {
+    await consumirOrcamento(
+      "suporte:avisos-do-dia",
+      TETOS_DO_SUPORTE.avisosPorDia,
+    );
+    return true;
+  } catch (erro) {
+    if (erro instanceof AppError && erro.codigo === "muitas_tentativas") {
+      return false;
+    }
+    throw erro;
+  }
+}
+
 export async function receberMensagemDeSuporte(
   pedido: PedidoDeSuporte,
 ): Promise<void> {
-  await conferirLimite(`suporte:${pedido.origem}`);
-  await registrarFalha(`suporte:${pedido.origem}`);
+  await consumirOrcamento(
+    `suporte:${pedido.origem}`,
+    TETOS_DO_SUPORTE.porOrigem,
+  );
 
   const dados: NovaMensagemDeSuporte = {
     usuarioId: pedido.usuarioId,
@@ -65,10 +107,16 @@ export async function receberMensagemDeSuporte(
   });
 
   if (!temEmailConfigurado || !CONTROLADOR.email) return;
+  if (!(await cabeAvisoHoje())) {
+    log.warn("teto diário de avisos de suporte atingido", {
+      acao: "suporte.receber",
+    });
+    return;
+  }
 
   const resultado = await enviarEmail({
     para: CONTROLADOR.email,
-    assunto: `[Lupa/${pedido.assunto}] ${dados.nome}`,
+    assunto: `[Lupa/${pedido.assunto}] ${nomeParaAssunto(dados.nome)}`,
     corpo: [
       `Assunto: ${ASSUNTOS[pedido.assunto]}`,
       `De: ${dados.nome} <${dados.email}>`,

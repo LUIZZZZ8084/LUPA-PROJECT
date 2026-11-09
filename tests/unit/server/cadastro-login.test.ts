@@ -861,6 +861,30 @@ describe("limite de tentativas no cadastro", () => {
     await expect(cadastrar(conta(98), "203.0.113.9")).rejects.toThrow();
   });
 
+  /**
+   * Pedidos simultâneos não passam juntos (#579): a vaga no teto é
+   * reservada num passo só, antes do Argon2, como o login desde a #386.
+   */
+  it("cadastros simultâneos da mesma origem respeitam o teto", async () => {
+    const r = await Promise.allSettled(
+      Array.from({ length: TETO + 10 }, (_, i) =>
+        cadastrar(conta(i), "203.0.113.10"),
+      ),
+    );
+    expect(r.filter((x) => x.status === "fulfilled")).toHaveLength(TETO);
+  });
+
+  /** Conflito não gasta vaga de cadastro: só a conta criada conta. */
+  it("e-mail repetido não consome a vaga de quem vem depois", async () => {
+    await cadastrar(conta(0), "203.0.113.11");
+    for (let i = 0; i < 5; i++) {
+      await expect(cadastrar(conta(0), "203.0.113.11")).rejects.toThrow();
+    }
+    for (let i = 1; i < TETO; i++) {
+      await cadastrar(conta(i), "203.0.113.11");
+    }
+  });
+
   /** Sem cabeçalho de origem o app não pode parar de aceitar cadastro. */
   it("origem desconhecida ainda cadastra", async () => {
     const u = await cadastrar(conta(1));

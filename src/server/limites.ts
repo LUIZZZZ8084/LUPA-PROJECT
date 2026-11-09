@@ -149,6 +149,19 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
   "perfil.curriculo": porJanela(20),
 
   /*
+   * Envio e remoção de arquivo (#578). Cada envio decodifica e reescreve a
+   * imagem e sobe para o armazenamento: é a ação mais cara do perfil, e
+   * ficou sem teto porque o nome chega por uma fábrica, que a varredura de
+   * nomes não enxergava. Dez por janela cobre trocar a foto até acertar.
+   */
+  "perfil.foto": porJanela(10),
+  "perfil.logo": porJanela(10),
+  "perfil.curriculo-pdf": porJanela(10),
+  "perfil.foto-remover": porJanela(20),
+  "perfil.logo-remover": porJanela(20),
+  "perfil.curriculo-pdf-remover": porJanela(20),
+
+  /*
    * Tudo que fala com o Mercado Pago é mais apertado: cada chamada cria
    * recurso do lado de lá, e rajada aqui vira preferência órfã na conta.
    */
@@ -184,6 +197,16 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
  * passa disso está chamando em laço.
  */
 export const ORCAMENTO_DO_CURRICULO_PDF = porJanela(10);
+
+/**
+ * Quantas consultas de CNPJ na Receita uma conta faz por janela (#578).
+ *
+ * Fora de `ORCAMENTOS` porque as duas portas (salvar o CNPJ do prestador e
+ * conferir o da empresa) não passam por `criarAcao`. Cada consulta sai pela
+ * mesma rede da Vercel para um serviço público que já recusou o app uma vez
+ * (#318): consulta em laço de uma conta pode tirar a conferência de todas.
+ */
+export const ORCAMENTO_DA_CONSULTA_DE_CNPJ = porJanela(5);
 
 /**
  * Quantas artes de story uma empresa gera por janela (#490).
