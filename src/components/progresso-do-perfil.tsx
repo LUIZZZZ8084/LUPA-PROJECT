@@ -16,22 +16,41 @@ import { cn } from "@/lib/utils";
  *
  * **Com tudo preenchido ela some.** Um selo de 100% para sempre seria ruído,
  * a mesma lição do selo de telefone (#209).
+ *
+ * O prestador usa a mesma barra para o anúncio (#602), na cor de serviços e
+ * com o título e o motivo dele. O padrão continua sendo o do currículo.
  */
 export function ProgressoDoPerfil({
   porcento,
   faltas,
   className,
+  titulo = "Seu currículo",
+  motivo = "A empresa lê até o fim quem preenche o currículo.",
+  href = "/perfil/editar",
+  tom = "vagas",
 }: {
   porcento: number;
   faltas: readonly string[];
   className?: string;
+  /** O sujeito da frase: "Seu currículo está 50% completo". */
+  titulo?: string;
+  /** Por que vale preencher, em uma frase. */
+  motivo?: string;
+  /** Para onde o botão leva: onde se preenche a primeira parte que falta. */
+  href?: string;
+  tom?: "vagas" | "servicos";
 }) {
   if (faltas.length === 0) return null;
 
   return (
-    <Panel className={cn("border-vagas/25", className)}>
+    <Panel
+      className={cn(
+        tom === "vagas" ? "border-vagas/25" : "border-servicos/25",
+        className,
+      )}
+    >
       <h2 className="font-bold text-base">
-        Seu currículo está {porcento}% completo
+        {titulo} está {porcento}% completo
       </h2>
       <div
         role="progressbar"
@@ -42,13 +61,15 @@ export function ProgressoDoPerfil({
         className="mt-3 h-2 overflow-hidden rounded-full bg-panel-3"
       >
         <div
-          className="h-full rounded-full bg-vagas transition-[width]"
+          className={cn(
+            "h-full rounded-full transition-[width]",
+            tom === "vagas" ? "bg-vagas" : "bg-servicos",
+          )}
           style={{ width: `${porcento}%` }}
         />
       </div>
       <p className="mt-3 text-muted text-sm leading-relaxed">
-        A empresa lê até o fim quem preenche o currículo.{" "}
-        {faltas.length === 1 ? "Falta" : "Faltam"}:
+        {motivo} {faltas.length === 1 ? "Falta" : "Faltam"}:
       </p>
       <ul className="mt-2 flex flex-wrap gap-2">
         {faltas.map((f) => (
@@ -57,12 +78,7 @@ export function ProgressoDoPerfil({
           </li>
         ))}
       </ul>
-      <ButtonLink
-        href="/perfil/editar"
-        variant="vagas"
-        size="sm"
-        className="mt-4"
-      >
+      <ButtonLink href={href} variant={tom} size="sm" className="mt-4">
         Completar meu perfil
       </ButtonLink>
     </Panel>
