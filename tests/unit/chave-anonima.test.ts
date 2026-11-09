@@ -144,9 +144,15 @@ describe("a chave anônima do Supabase", () => {
    * proteção faltou.
    */
   it("a suíte e2e e o modo demonstração local zeram o nome que o app lê", () => {
+    // Desde a #584 os dois zeram pela lista única de provedores.
+    const lista = readFileSync(
+      raiz("scripts", "ambiente-de-demonstracao.mjs"),
+      "utf8",
+    );
+    expect(lista).toMatch(/"SUPABASE_ANON_KEY"/);
     for (const arquivo of ["playwright.config.ts", "scripts/dev-demo.mjs"]) {
       const texto = readFileSync(raiz(...arquivo.split("/")), "utf8");
-      expect(texto, arquivo).toMatch(/(?<!_)SUPABASE_ANON_KEY:\s*""/);
+      expect(texto, arquivo).toMatch(/\.\.\.provedoresDesligados\(\)/);
     }
   });
 });
