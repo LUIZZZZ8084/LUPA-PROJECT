@@ -20,6 +20,7 @@ import {
 } from "@/lib/constants";
 import { getJobs } from "@/lib/data";
 import { pluralize } from "@/lib/format";
+import { sessaoAtual } from "@/server/auth/cookies";
 import { origemDoUsuario } from "@/server/auth/origem";
 import { contarBuscaSemResultado } from "@/server/buscas";
 
@@ -114,7 +115,8 @@ export default async function VagasPage({
    * e partir para busca semântica é palpite.
    */
   if (jobs.length === 0) {
-    after(() => contarBuscaSemResultado(filters.q, "vagas"));
+    const sessao = await sessaoAtual();
+    after(() => contarBuscaSemResultado(filters.q, "vagas", sessao?.usuarioId));
   }
 
   /*
