@@ -198,12 +198,25 @@ const ABERTAS = [
  */
 const VAGA_PUBLICA = /^\/vagas\/[^/]+(?:\/opengraph-image(?:-[a-z0-9]+)?)?$/;
 
+/**
+ * O perfil do prestador abre do mesmo jeito, só para leitura (#603).
+ *
+ * O prestador divulga o próprio perfil no status do WhatsApp e manda o link
+ * ao cliente para pedir avaliação; sem isto, quem clica cai numa tela de
+ * entrar antes de saber de quem é o link. **Só `/servicos/<id>`**: a lista
+ * `/servicos` continua fechada, e a página sem sessão não mostra telefone nem
+ * botão de WhatsApp — troca o contato por um convite para entrar, como o
+ * `ProviderCard` com `autenticado={false}`.
+ */
+const PRESTADOR_PUBLICO = /^\/servicos\/[^/]+$/;
+
 /** Para onde mandar quem não tem sessão. */
 const ENTRADA = "/entrar";
 
 function ehRotaAberta(pathname: string): boolean {
   return (
     VAGA_PUBLICA.test(pathname) ||
+    PRESTADOR_PUBLICO.test(pathname) ||
     ABERTAS.some((rota) => pathname === rota || pathname.startsWith(`${rota}/`))
   );
 }
