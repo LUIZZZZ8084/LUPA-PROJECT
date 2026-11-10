@@ -7,9 +7,30 @@ import { erros } from "../errors";
 import type {
   Candidatura,
   DadosNovaCandidatura,
+  EventoDoHistorico,
   RepositorioCandidaturas,
   StatusCandidatura,
 } from "./tipos";
+
+/** Teto do histórico de uma candidatura: muito além do que um processo tem. */
+const TETO_DO_HISTORICO = 200;
+
+function paraEvento(linha: Record<string, unknown>): EventoDoHistorico {
+  const base = {
+    id: String(linha.id),
+    candidaturaId: String(linha.candidatura_id),
+    autorId: linha.autor_id ? String(linha.autor_id) : null,
+    criadoEm: String(linha.criado_em),
+  };
+  return linha.tipo === "contato"
+    ? { ...base, tipo: "contato", nota: String(linha.nota ?? "") }
+    : {
+        ...base,
+        tipo: "etapa",
+        de: linha.de as StatusCandidatura,
+        para: linha.para as StatusCandidatura,
+      };
+}
 
 function paraCandidatura(linha: Record<string, unknown>): Candidatura {
   return {
@@ -124,24 +145,46 @@ export class RepositorioCandidaturasPostgres
     return paraCandidatura(data);
   }
 
+  /**
+   * `mover_candidatura` (#608) muda o estágio e grava o histórico na mesma
+   * transação: um `update` e um `insert` separados deixariam candidatura
+   * movida sem registro se o segundo falhasse. `setof candidaturas` devolve
+   * zero ou uma linha; zero é "não existe".
+   */
   async moverEstagio(
     id: string,
     status: StatusCandidatura,
+    autorId: string | null,
   ): Promise<Candidatura> {
     const supabase = await cliente();
-    const { data, error } = await supabase
-      .from("candidaturas")
-      .update({ status })
-      .eq("id", id)
-      .select("*")
-      .single();
+    const { data, error } = await supabase.rpc("mover_candidatura", {
+      p_id: id,
+      p_status: status,
+      p_autor: autorId,
+    });
 
     if (error) {
-      if (error.code === "PGRST116" || ehIdInvalido(error)) {
-        throw erros.naoEncontrado("Candidatura");
-      }
+      if (ehIdInvalido(error)) throw erros.naoEncontrado("Candidatura");
       throw erros.indisponivel(error.message);
     }
-    return paraCandidatura(data);
+    const linha = Array.isArray(data) ? data[0] : data;
+    if (!linha) throw erros.naoEncontrado("Candidatura");
+    return paraCandidatura(linha);
+  }
+
+  async historicoDe(candidaturaId: string): Promise<EventoDoHistorico[]> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("historico_candidatura")
+      .select("*")
+      .eq("candidatura_id", candidaturaId)
+      .order("criado_em", { ascending: false })
+      .limit(TETO_DO_HISTORICO);
+
+    if (error) {
+      if (ehIdInvalido(error)) return [];
+      throw erros.indisponivel(error.message);
+    }
+    return (data ?? []).map(paraEvento);
   }
 }

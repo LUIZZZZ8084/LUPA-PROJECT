@@ -3,8 +3,10 @@ import { z } from "zod";
 export const ESTAGIOS_CANDIDATURA = [
   "enviada",
   "visualizada",
+  "contatada",
   "entrevista",
   "aprovada",
+  "contratada",
   "rejeitada",
 ] as const;
 

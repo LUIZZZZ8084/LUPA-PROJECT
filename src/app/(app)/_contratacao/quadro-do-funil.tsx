@@ -37,8 +37,10 @@ export interface CardDoFunil {
 const COR_DA_COLUNA: Record<ApplicationStatus, string> = {
   enviada: "bg-servicos",
   visualizada: "bg-muted",
+  contatada: "bg-empresas",
   entrevista: "bg-warn",
   aprovada: "bg-vagas",
+  contratada: "bg-vagas",
   rejeitada: "bg-danger",
 };
 
@@ -169,7 +171,7 @@ export function QuadroDoFunil({
         </div>
       </fieldset>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4 xl:grid-cols-7">
         {ESTAGIOS.map((estagio) => {
           const lista = porEstagio[estagio];
           const atendem = lista.filter((c) => c.motivos.length === 0);

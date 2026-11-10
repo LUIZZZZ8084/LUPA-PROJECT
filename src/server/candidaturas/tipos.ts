@@ -8,8 +8,10 @@
 export type StatusCandidatura =
   | "enviada"
   | "visualizada"
+  | "contatada"
   | "entrevista"
   | "aprovada"
+  | "contratada"
   | "rejeitada";
 
 export interface Candidatura {
@@ -26,6 +28,20 @@ export interface Candidatura {
   respostas: boolean[] | null;
 }
 
+/**
+ * Um acontecimento na vida da candidatura (#608): mudança de estágio, ou um
+ * contato que a empresa registrou. Só a empresa lê.
+ */
+export type EventoDoHistorico = {
+  id: string;
+  candidaturaId: string;
+  autorId: string | null;
+  criadoEm: string;
+} & (
+  | { tipo: "etapa"; de: StatusCandidatura; para: StatusCandidatura }
+  | { tipo: "contato"; nota: string }
+);
+
 export interface DadosNovaCandidatura {
   vagaId: string;
   candidatoId: string;
@@ -39,5 +55,17 @@ export interface RepositorioCandidaturas {
   /** Todas as candidaturas, de qualquer vaga — para montar o painel em demonstração. */
   listar(): Promise<Candidatura[]>;
   criar(dados: DadosNovaCandidatura): Promise<Candidatura>;
-  moverEstagio(id: string, status: StatusCandidatura): Promise<Candidatura>;
+  /**
+   * Move de estágio e grava o histórico na mesma operação (#608). `autorId`
+   * é quem moveu; nulo quando foi o próprio sistema (abrir a ficha tira de
+   * "Nova"). Mover para o estágio em que já está não grava nada.
+   */
+  moverEstagio(
+    id: string,
+    status: StatusCandidatura,
+    autorId: string | null,
+  ): Promise<Candidatura>;
+
+  /** O histórico de uma candidatura, do mais recente para o mais antigo. */
+  historicoDe(candidaturaId: string): Promise<EventoDoHistorico[]>;
 }

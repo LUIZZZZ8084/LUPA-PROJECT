@@ -117,8 +117,10 @@ describe("contas do funil", () => {
     ).toEqual({
       enviada: 2,
       visualizada: 0,
+      contatada: 0,
       entrevista: 0,
       aprovada: 1,
+      contratada: 0,
       rejeitada: 0,
     });
   });
@@ -132,11 +134,22 @@ describe("contas do funil", () => {
       alcancePorEtapa({
         enviada: 3,
         visualizada: 2,
+        contatada: 2,
         entrevista: 1,
         aprovada: 1,
+        contratada: 1,
         rejeitada: 3,
       }),
-    ).toEqual({ recebidas: 10, olhadas: 7, entrevistas: 2, selecionados: 1 });
+    ).toEqual({
+      recebidas: 13,
+      olhadas: 10,
+      // Contatado, e todo mundo que foi além dele (#608).
+      contatados: 5,
+      entrevistas: 3,
+      // Quem foi contratado também foi aprovado.
+      selecionados: 2,
+      contratados: 1,
+    });
   });
 
   it("vagas vencendo: só as abertas, no prazo, que saem em até 3 dias", () => {
@@ -174,7 +187,7 @@ describe("quadro do funil", () => {
       within(coluna(/^Entrevista: 1$/)).getByText("Ana Lima"),
     ).toBeTruthy();
     expect(
-      within(coluna(/^Selecionado: 0$/)).getByText(/ninguém neste estágio/i),
+      within(coluna(/^Aprovado: 0$/)).getByText(/ninguém neste estágio/i),
     ).toBeTruthy();
   });
 
@@ -264,11 +277,11 @@ describe("quadro do funil", () => {
     fireEvent.dragStart(everton as HTMLElement, {
       dataTransfer: transferencia,
     });
-    fireEvent.dragOver(coluna(/^Selecionado/), { dataTransfer: transferencia });
-    fireEvent.drop(coluna(/^Selecionado/), { dataTransfer: transferencia });
+    fireEvent.dragOver(coluna(/^Aprovado/), { dataTransfer: transferencia });
+    fireEvent.drop(coluna(/^Aprovado/), { dataTransfer: transferencia });
 
     expect(
-      within(coluna(/^Selecionado: 1$/)).getByText("Everton Rodrigues"),
+      within(coluna(/^Aprovado: 1$/)).getByText("Everton Rodrigues"),
     ).toBeTruthy();
     await waitFor(() =>
       expect(estado.movidas).toEqual([{ id: "a", status: "aprovada" }]),

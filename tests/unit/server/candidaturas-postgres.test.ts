@@ -34,7 +34,14 @@ function construtor(tabela: string) {
 
 vi.mock("@/lib/supabase/service", () => ({
   temChaveDeServico: true,
-  clienteDeServico: () => ({ from: (tabela: string) => construtor(tabela) }),
+  clienteDeServico: () => ({
+    from: (tabela: string) => construtor(tabela),
+    // Mover de estágio passa pela função do banco (#608).
+    rpc: async (funcao: string, args: unknown) => {
+      chamadas.push({ tabela: funcao, metodo: "rpc", args: [args] });
+      return resposta;
+    },
+  }),
 }));
 
 import { RepositorioCandidaturasPostgres } from "@/server/candidaturas/postgres";
@@ -137,20 +144,80 @@ describe("RepositorioCandidaturasPostgres", () => {
     ).rejects.toMatchObject({ codigo: "conflito" });
   });
 
-  it("moverEstagio grava o novo status", async () => {
-    resposta = { data: { ...LINHA, status: "entrevista" }, error: null };
-    const candidatura = await repo.moverEstagio(LINHA.id, "entrevista");
+  it("moverEstagio chama a função que move e registra, com quem moveu", async () => {
+    resposta = { data: [{ ...LINHA, status: "entrevista" }], error: null };
+    const candidatura = await repo.moverEstagio(
+      LINHA.id,
+      "entrevista",
+      "empresa-1",
+    );
 
     expect(candidatura.status).toBe("entrevista");
-    const atualizacao = chamadas.find((c) => c.metodo === "update");
-    expect(atualizacao?.args[0]).toEqual({ status: "entrevista" });
+    const chamada = chamadas.find((c) => c.metodo === "rpc");
+    expect(chamada?.tabela).toBe("mover_candidatura");
+    expect(chamada?.args[0]).toEqual({
+      p_id: LINHA.id,
+      p_status: "entrevista",
+      p_autor: "empresa-1",
+    });
+    // Nenhum `update` solto: o histórico não pode ficar para trás.
+    expect(chamadas.some((c) => c.metodo === "update")).toBe(false);
   });
 
   it("mover estágio de candidatura inexistente é 'não encontrado'", async () => {
-    resposta = { data: null, error: { message: "no rows", code: "PGRST116" } };
+    // A função devolve zero linhas; id sem forma de UUID volta 22P02.
+    resposta = { data: [], error: null };
     await expect(
-      repo.moverEstagio("nao-existe", "entrevista"),
+      repo.moverEstagio("nao-existe", "entrevista", null),
     ).rejects.toMatchObject({ codigo: "nao_encontrado" });
+    resposta = { data: null, error: { message: "uuid", code: "22P02" } };
+    await expect(
+      repo.moverEstagio("nao-existe", "entrevista", null),
+    ).rejects.toMatchObject({ codigo: "nao_encontrado" });
+  });
+
+  it("historicoDe devolve etapas e contatos, cada um com a sua forma", async () => {
+    resposta = {
+      data: [
+        {
+          id: "h2",
+          candidatura_id: LINHA.id,
+          tipo: "contato",
+          nota: "Liguei, retorna amanhã",
+          autor_id: "empresa-1",
+          criado_em: "2026-11-10T12:00:00Z",
+        },
+        {
+          id: "h1",
+          candidatura_id: LINHA.id,
+          tipo: "etapa",
+          de: "enviada",
+          para: "visualizada",
+          autor_id: null,
+          criado_em: "2026-11-09T12:00:00Z",
+        },
+      ],
+      error: null,
+    };
+    expect(await repo.historicoDe(LINHA.id)).toEqual([
+      {
+        id: "h2",
+        candidaturaId: LINHA.id,
+        tipo: "contato",
+        nota: "Liguei, retorna amanhã",
+        autorId: "empresa-1",
+        criadoEm: "2026-11-10T12:00:00Z",
+      },
+      {
+        id: "h1",
+        candidaturaId: LINHA.id,
+        tipo: "etapa",
+        de: "enviada",
+        para: "visualizada",
+        autorId: null,
+        criadoEm: "2026-11-09T12:00:00Z",
+      },
+    ]);
   });
 
   it("porVaga lista as candidaturas da vaga", async () => {
@@ -236,7 +303,9 @@ describe("quando o banco recusa", () => {
   it("mover estágio com falha de banco não vira não-encontrado", async () => {
     resposta = { data: null, error: QUEDA };
 
-    await expect(repo.moverEstagio("id", "entrevista")).rejects.toMatchObject({
+    await expect(
+      repo.moverEstagio("id", "entrevista", null),
+    ).rejects.toMatchObject({
       codigo: "indisponivel",
     });
   });

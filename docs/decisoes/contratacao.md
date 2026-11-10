@@ -246,8 +246,7 @@ escrito, para a vaga afirmativa.
 
 ## Estágio da candidatura: o nome depende de quem lê
 
-Os cinco estágios (`enviada`, `visualizada`, `entrevista`, `aprovada`,
-`rejeitada`) são um campo só, e **`enviada` tem dois nomes** porque os
+Os estágios (cinco até a #608, sete desde ela) são um campo só, e **`enviada` tem dois nomes** porque os
 dois lados fazem perguntas diferentes:
 
 | Quem olha | Pergunta | Lê |
@@ -266,6 +265,35 @@ falando de coisas distintas.
 Os rótulos vivem em `APPLICATION_LABELS` e `APPLICATION_LABELS_CANDIDATO`,
 com teste que trava a divergência. O valor no banco não muda: renomear o
 enum custaria migração e apagaria histórico sem ganhar nada.
+
+## Sete etapas, e o histórico de cada candidatura (#608)
+
+Primeira etapa da evolução do painel para um mini ATS, pedida pelo Luiz em
+10/11/2026. O funil ganhou **Contatado** (entre triagem e entrevista) e
+**Contratado** (depois de aprovado): não dava para separar quem a empresa
+já chamou de quem só foi olhado, nem quem foi de fato contratado de quem
+passou na seleção. "Selecionado" virou **Aprovado**, o nome que o pedido
+usa, agora que existe uma etapa depois dele. "Nova" ficou: continua
+respondendo "o que ainda não olhei?".
+
+**Para o candidato, "contatada" lê "Em triagem".** É organização da
+empresa: quem foi chamado sabe que foi. "Contratado" ele vê.
+
+**O histórico é uma tabela à parte**, `historico_candidatura`, só da
+empresa, pela mesma razão das anotações (#539). Uma linha por mudança de
+etapa (de, para, quando, quem) e, a partir da ficha nova, por contato
+registrado. **Mover e registrar são uma instrução só**, a função
+`mover_candidatura`: `update` e `insert` separados deixariam candidatura
+movida sem registro se o segundo falhasse. Mover para a etapa em que já
+está não grava nada.
+
+`autor_id` é nulo quando o sistema moveu (abrir a ficha tira de "Nova").
+Hoje o autor é sempre a conta da empresa; é a coluna que identifica o
+recrutador quando uma agência tiver mais de um usuário, sem migração.
+
+**O histórico começa no deploy.** Das candidaturas antigas só existe a
+data de envio e a etapa atual, e inventar o caminho seria registrar o que
+ninguém viu acontecer.
 
 ## O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
 

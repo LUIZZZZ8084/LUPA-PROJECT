@@ -221,6 +221,7 @@ As duas portas de contratação, os campos da vaga, a triagem, o funil de candid
 - Áreas de vaga e profissões de prestador (#457)
 - Vaga para PCD, e a vaga por sexo que não existe (#456)
 - Estágio da candidatura: o nome depende de quem lê
+- Sete etapas, e o histórico de cada candidatura (#608)
 - O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
 - Perguntas de triagem: separar sem esconder (#491)
 - A área de contratação como mini CRM: abas, funil e o resumo do dia (#511)

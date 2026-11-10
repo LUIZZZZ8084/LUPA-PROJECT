@@ -150,7 +150,9 @@ test.describe("ficha do candidato", () => {
 
     const selo = page
       .locator("main")
-      .getByText(/^(Nova|Em triagem|Entrevista|Selecionado|Reprovado)$/);
+      .getByText(
+        /^(Nova|Em triagem|Contatado|Entrevista|Aprovado|Contratado|Reprovado)$/,
+      );
     await expect(selo.first()).toBeVisible();
   });
 

@@ -81,5 +81,6 @@ export async function marcarComoVisualizada(id: string): Promise<void> {
   const atual = await repositorioCandidaturas().porId(id);
   if (atual?.status !== "enviada") return;
 
-  await repositorioCandidaturas().moverEstagio(id, "visualizada");
+  // Sem autor: quem moveu foi o sistema, ao abrir a ficha.
+  await repositorioCandidaturas().moverEstagio(id, "visualizada", null);
 }

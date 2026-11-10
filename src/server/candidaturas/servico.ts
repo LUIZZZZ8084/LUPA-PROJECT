@@ -92,7 +92,11 @@ export async function moverCandidatura(
     "Candidatura",
   );
 
-  const movida = await repositorioCandidaturas().moverEstagio(id, status);
+  const movida = await repositorioCandidaturas().moverEstagio(
+    id,
+    status,
+    autenticado.usuarioId,
+  );
   log.info("candidatura mudou de estágio", {
     acao: "candidatura.mover_estagio",
     papel: autenticado.papel,

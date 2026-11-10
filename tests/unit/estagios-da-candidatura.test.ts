@@ -22,12 +22,14 @@ import type { ApplicationStatus } from "@/lib/types";
 const ESTAGIOS: ApplicationStatus[] = [
   "enviada",
   "visualizada",
+  "contatada",
   "entrevista",
   "aprovada",
+  "contratada",
   "rejeitada",
 ];
 
-describe("os cinco estágios têm nome dos dois lados", () => {
+describe("os sete estágios têm nome dos dois lados", () => {
   it.each(ESTAGIOS)("%s tem rótulo para empresa e para candidato", (e) => {
     expect(APPLICATION_LABELS[e]).toBeTruthy();
     expect(APPLICATION_LABELS_CANDIDATO[e]).toBeTruthy();
@@ -47,7 +49,7 @@ describe("os cinco estágios têm nome dos dois lados", () => {
   });
 });
 
-describe("só `enviada` muda de nome entre os dois lados", () => {
+describe("`enviada` e `contatada` mudam de nome entre os dois lados", () => {
   /**
    * "Nova" responde à pergunta da empresa. Para o candidato não responde
    * nada — a candidatura dele nasceu nova e ele sabe disso. O que ele
@@ -64,7 +66,16 @@ describe("só `enviada` muda de nome entre os dois lados", () => {
    * pergunta diferente por trás seria só duas pessoas falando de coisas
    * distintas na mesma conversa.
    */
-  it.each(ESTAGIOS.filter((e) => e !== "enviada"))(
+  /*
+   * "Contatado" é organização da empresa (#608): quem foi chamado sabe que
+   * foi. Para a pessoa, continua em triagem até virar entrevista.
+   */
+  it("empresa lê 'Contatado', candidato continua lendo 'Em triagem'", () => {
+    expect(APPLICATION_LABELS.contatada).toBe("Contatado");
+    expect(APPLICATION_LABELS_CANDIDATO.contatada).toBe("Em triagem");
+  });
+
+  it.each(ESTAGIOS.filter((e) => e !== "enviada" && e !== "contatada"))(
     "%s se chama igual nos dois lados",
     (e) => {
       expect(APPLICATION_LABELS_CANDIDATO[e]).toBe(APPLICATION_LABELS[e]);
@@ -81,7 +92,10 @@ describe("só `enviada` muda de nome entre os dois lados", () => {
 describe("o vocabulário combinado", () => {
   it.each([
     ["visualizada", "Em triagem"],
-    ["aprovada", "Selecionado"],
+    // "Selecionado" até a #608, quando "Contratado" entrou depois dele e o
+    // Luiz pediu as etapas com estes nomes.
+    ["aprovada", "Aprovado"],
+    ["contratada", "Contratado"],
     ["rejeitada", "Reprovado"],
   ] as const)("%s se chama '%s'", (estagio, nome) => {
     expect(APPLICATION_LABELS[estagio]).toBe(nome);

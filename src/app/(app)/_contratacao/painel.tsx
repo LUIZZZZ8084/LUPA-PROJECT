@@ -567,7 +567,7 @@ export async function PainelDeContratacao({
                     ["Recebidas", alcance.recebidas],
                     ["Olhadas", alcance.olhadas],
                     ["Entrevistas", alcance.entrevistas],
-                    ["Selecionados", alcance.selecionados],
+                    ["Aprovados", alcance.selecionados],
                   ] as const
                 ).map(([rotulo, valor], i) => {
                   const f = fracao(valor);
