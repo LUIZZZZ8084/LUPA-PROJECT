@@ -100,6 +100,18 @@ export class RepositorioCandidaturasMemoria implements RepositorioCandidaturas {
       .reverse();
   }
 
+  async ultimasMovimentacoes(
+    candidaturaIds: readonly string[],
+  ): Promise<Map<string, string>> {
+    const ids = new Set(candidaturaIds);
+    const ultimas = new Map<string, string>();
+    // O histórico cresce em ordem: a última ocorrência é a mais recente.
+    for (const e of this.historico) {
+      if (ids.has(e.candidaturaId)) ultimas.set(e.candidaturaId, e.criadoEm);
+    }
+    return ultimas;
+  }
+
   limpar(): void {
     this.itens.clear();
     this.historico = [];

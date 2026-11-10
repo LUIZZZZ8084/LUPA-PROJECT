@@ -22,7 +22,15 @@ function construtor(tabela: string) {
   // `limit` entrou com o teto das listagens (#203). Sem ele no duble, a
   // cadeia quebra e o teste reprova por falta de espelho, não por defeito
   // — falso vermelho é o que ensina a ignorar teste.
-  for (const metodo of ["select", "eq", "insert", "update", "order", "limit"]) {
+  for (const metodo of [
+    "select",
+    "eq",
+    "in",
+    "insert",
+    "update",
+    "order",
+    "limit",
+  ]) {
     builder[metodo] = (...args: unknown[]) => {
       chamadas.push({ tabela, metodo, args });
       return builder;
@@ -174,6 +182,28 @@ describe("RepositorioCandidaturasPostgres", () => {
     await expect(
       repo.moverEstagio("nao-existe", "entrevista", null),
     ).rejects.toMatchObject({ codigo: "nao_encontrado" });
+  });
+
+  it("ultimasMovimentacoes fica com a mais recente de cada candidatura", async () => {
+    resposta = {
+      data: [
+        { candidatura_id: "a", criado_em: "2026-11-10T12:00:00Z" },
+        { candidatura_id: "b", criado_em: "2026-11-09T12:00:00Z" },
+        { candidatura_id: "a", criado_em: "2026-11-01T12:00:00Z" },
+      ],
+      error: null,
+    };
+    const ultimas = await repo.ultimasMovimentacoes(["a", "b", "c"]);
+    expect(Object.fromEntries(ultimas)).toEqual({
+      a: "2026-11-10T12:00:00Z",
+      b: "2026-11-09T12:00:00Z",
+    });
+  });
+
+  it("sem candidatura não consulta: `in` com lista vazia é erro", async () => {
+    chamadas.length = 0;
+    expect((await repo.ultimasMovimentacoes([])).size).toBe(0);
+    expect(chamadas).toHaveLength(0);
   });
 
   it("historicoDe devolve etapas e contatos, cada um com a sua forma", async () => {

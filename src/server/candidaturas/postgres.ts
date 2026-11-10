@@ -1,6 +1,9 @@
 import "server-only";
 
-import { TETO_CANDIDATURAS } from "@/lib/limites-de-lista";
+import {
+  TETO_CANDIDATURAS,
+  TETO_SERIE_DE_METRICAS,
+} from "@/lib/limites-de-lista";
 import { clienteDeServico } from "@/lib/supabase/service";
 import { respostasValidas } from "@/lib/triagem";
 import { erros } from "../errors";
@@ -186,5 +189,30 @@ export class RepositorioCandidaturasPostgres
       throw erros.indisponivel(error.message);
     }
     return (data ?? []).map(paraEvento);
+  }
+
+  async ultimasMovimentacoes(
+    candidaturaIds: readonly string[],
+  ): Promise<Map<string, string>> {
+    // `in` com lista vazia é erro, e empresa sem candidatura não tem o que ler.
+    if (candidaturaIds.length === 0) return new Map();
+
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("historico_candidatura")
+      .select("candidatura_id, criado_em")
+      .in("candidatura_id", [...candidaturaIds])
+      .order("criado_em", { ascending: false })
+      .limit(TETO_SERIE_DE_METRICAS);
+
+    if (error) throw erros.indisponivel(error.message);
+
+    // Vem do mais recente para o mais antigo: a primeira de cada id vale.
+    const ultimas = new Map<string, string>();
+    for (const linha of data ?? []) {
+      const id = String(linha.candidatura_id);
+      if (!ultimas.has(id)) ultimas.set(id, String(linha.criado_em));
+    }
+    return ultimas;
   }
 }
