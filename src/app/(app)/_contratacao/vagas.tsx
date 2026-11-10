@@ -202,14 +202,16 @@ export async function VagasDaContratacao({
                       />
                     </div>
                   )}
-                  {job.applicant_count > 0 && (
-                    <Link
-                      href={`${area.base}/funil?vaga=${job.id}`}
-                      className="inline-flex min-h-11 basis-full items-center text-empresas text-xs underline-offset-2 hover:underline"
-                    >
-                      Ver os candidatos desta vaga
-                    </Link>
-                  )}
+                  {/*
+                    A porta do processo seletivo da vaga (#612), sempre: sem
+                    candidato ainda, a página diz isso e mostra o prazo.
+                  */}
+                  <Link
+                    href={`${area.base}/vagas/${job.id}`}
+                    className="inline-flex min-h-11 basis-full items-center font-medium text-empresas text-sm underline-offset-2 hover:underline"
+                  >
+                    Ver processo seletivo
+                  </Link>
                 </li>
               );
             })}
