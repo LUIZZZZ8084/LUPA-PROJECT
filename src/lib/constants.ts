@@ -217,8 +217,10 @@ export const VERIFICATION_LABELS = {
 export const APPLICATION_LABELS = {
   enviada: "Nova",
   visualizada: "Em triagem",
+  contatada: "Contatado",
   entrevista: "Entrevista",
-  aprovada: "Selecionado",
+  aprovada: "Aprovado",
+  contratada: "Contratado",
   rejeitada: "Reprovado",
 } as const;
 
@@ -243,13 +245,21 @@ export const APPLICATION_LABELS = {
 export const APPLICATION_LABELS_CANDIDATO = {
   ...APPLICATION_LABELS,
   enviada: "Não visualizado",
+  /*
+   * "Contatado" é organização da empresa (#608): quem foi chamado sabe que
+   * foi, e ler isso na lista não diz nada novo. Para a pessoa, continua em
+   * triagem até virar entrevista.
+   */
+  contatada: APPLICATION_LABELS.visualizada,
 } as const;
 
 /** Cor do selo de estágio, no painel da empresa e em "Minhas candidaturas". */
 export const APPLICATION_TONE = {
   enviada: "servicos",
   visualizada: "neutral",
+  contatada: "empresas",
   entrevista: "warn",
   aprovada: "vagas",
+  contratada: "vagas",
   rejeitada: "danger",
 } as const;

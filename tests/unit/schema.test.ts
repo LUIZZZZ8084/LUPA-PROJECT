@@ -121,6 +121,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "custos_mensais",
       "denuncias",
       "execucoes_varredura",
+      "historico_candidatura",
       "inscricoes_push",
       "mensagens_suporte",
       "pagamentos",
@@ -968,6 +969,8 @@ describe("grants de anon e authenticated", () => {
     "contagens_prestador",
     // O que a empresa anota sobre cada candidatura (#539): só dela.
     "acompanhamento_candidatura",
+    // Por onde a candidatura passou e os contatos da empresa (#608): só dela.
+    "historico_candidatura",
     /*
      * Saber quem está de olho em vaga de motorista é a mesma classe de
      * informação que o currículo — numa cidade do tamanho de Sinop, diz
@@ -1366,8 +1369,8 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        order by table_name`,
     );
     // 23 desde a #235, que acrescentou `mensagens_suporte`; 28 com
-    // `contagens_prestador` (#604).
-    expect(tabelas.rows).toHaveLength(28);
+    // `contagens_prestador` (#604); 29 com `historico_candidatura` (#608).
+    expect(tabelas.rows).toHaveLength(29);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -4679,6 +4682,178 @@ describe("visitas e varreduras", () => {
       ),
     ).rejects.toThrow();
   });
+});
+
+/*
+ * Etapas novas e o histórico da candidatura (#608). O que o banco garante
+ * sozinho: mover grava o histórico na mesma instrução, mover para onde já
+ * está não grava, o registro tem a forma do tipo dele e cai em cascata.
+ */
+describe("etapas e histórico da candidatura", () => {
+  async function candidaturaNova(email: string) {
+    const pessoa = await db.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ($1, 'h', 'candidato_clt', 'Pessoa', '66999110088', 'Sinop - MT')
+       returning id`,
+      [email],
+    );
+    const vaga = await db.query<{ id: string; empresa_id: string }>(
+      "select id, empresa_id from vagas limit 1",
+    );
+    const c = await db.query<{ id: string }>(
+      `insert into candidaturas (vaga_id, candidato_id) values ($1, $2)
+       returning id`,
+      [vaga.rows[0].id, pessoa.rows[0].id],
+    );
+    return {
+      id: c.rows[0].id,
+      pessoa: pessoa.rows[0].id,
+      empresa: vaga.rows[0].empresa_id,
+    };
+  }
+
+  it("os sete estágios, na ordem do funil", async () => {
+    const r = await db.query<{ enumlabel: string }>(
+      `select enumlabel from pg_enum
+        where enumtypid = 'status_candidatura'::regtype
+        order by enumsortorder`,
+    );
+    expect(r.rows.map((l) => l.enumlabel)).toEqual([
+      "enviada",
+      "visualizada",
+      "contatada",
+      "entrevista",
+      "aprovada",
+      "contratada",
+      "rejeitada",
+    ]);
+  });
+
+  it("mover grava de, para e quem; repetir o estágio não grava de novo", async () => {
+    const c = await candidaturaNova("historico-1@teste.lupa");
+    const movida = await db.query<{ status: string }>(
+      "select status from mover_candidatura($1, 'contatada', $2)",
+      [c.id, c.empresa],
+    );
+    expect(movida.rows[0].status).toBe("contatada");
+    await db.query("select * from mover_candidatura($1, 'contatada', $2)", [
+      c.id,
+      c.empresa,
+    ]);
+    await db.query("select * from mover_candidatura($1, 'contratada', null)", [
+      c.id,
+    ]);
+
+    const h = await db.query<{ de: string; para: string; autor_id: string }>(
+      `select de, para, autor_id from historico_candidatura
+        where candidatura_id = $1 order by criado_em, para`,
+      [c.id],
+    );
+    expect(h.rows).toEqual([
+      { de: "enviada", para: "contatada", autor_id: c.empresa },
+      { de: "contatada", para: "contratada", autor_id: null },
+    ]);
+  });
+
+  it("candidatura que não existe não devolve linha, nem grava", async () => {
+    const r = await db.query(
+      "select * from mover_candidatura(gen_random_uuid(), 'entrevista', null)",
+    );
+    expect(r.rows).toHaveLength(0);
+  });
+
+  it("contato exige nota, etapa exige de e para, e tudo cai com a candidatura", async () => {
+    const c = await candidaturaNova("historico-2@teste.lupa");
+    await db.query(
+      `insert into historico_candidatura (candidatura_id, tipo, nota)
+       values ($1, 'contato', 'Liguei, retorna amanhã')`,
+      [c.id],
+    );
+    await expect(
+      db.query(
+        `insert into historico_candidatura (candidatura_id, tipo, nota)
+         values ($1, 'contato', '   ')`,
+        [c.id],
+      ),
+    ).rejects.toThrow();
+    await expect(
+      db.query(
+        `insert into historico_candidatura (candidatura_id, tipo, de)
+         values ($1, 'etapa', 'enviada')`,
+        [c.id],
+      ),
+    ).rejects.toThrow();
+
+    await db.query("delete from usuarios where id = $1", [c.pessoa]);
+    const sobrou = await db.query(
+      "select 1 from historico_candidatura where candidatura_id = $1",
+      [c.id],
+    );
+    expect(sobrou.rows).toHaveLength(0);
+  });
+});
+
+describe("aplica-etapas-e-historico.sql", () => {
+  it("acrescenta os estágios sem tocar nas candidaturas, roda de novo e fecha", async () => {
+    const banco = await PGlite.create();
+    try {
+      // Um banco de antes da #608: cinco estágios, sem histórico nem função.
+      await banco.exec(
+        SCHEMA.replace("  'contatada',\n", "").replace("  'contratada',\n", ""),
+      );
+      await banco.exec(`
+        drop function mover_candidatura(uuid, status_candidatura, uuid);
+        drop table historico_candidatura;
+      `);
+      const antes = await banco.query<{ n: number }>(
+        `select count(*)::int as n from pg_enum
+          where enumtypid = 'status_candidatura'::regtype`,
+      );
+      expect(antes.rows[0].n).toBe(5);
+
+      const script = readFileSync(
+        join(process.cwd(), "supabase/aplica-etapas-e-historico.sql"),
+        "utf8",
+      );
+      await banco.exec(script);
+      // O Supabase concede tudo às duas chaves por padrão; o script fecha.
+      await banco.exec(
+        "grant all on historico_candidatura to anon, authenticated",
+      );
+      await banco.exec(script);
+
+      const estagios = await banco.query<{ enumlabel: string }>(
+        `select enumlabel from pg_enum
+          where enumtypid = 'status_candidatura'::regtype
+          order by enumsortorder`,
+      );
+      expect(estagios.rows.map((l) => l.enumlabel)).toEqual([
+        "enviada",
+        "visualizada",
+        "contatada",
+        "entrevista",
+        "aprovada",
+        "contratada",
+        "rejeitada",
+      ]);
+
+      const privilegio = await banco.query<{ algum: boolean }>(
+        `select bool_or(has_table_privilege(papel, 'historico_candidatura', p)) as algum
+           from unnest(array['anon', 'authenticated']) as papel,
+                unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE',
+                             'TRUNCATE']) as p`,
+      );
+      expect(privilegio.rows[0].algum).toBe(false);
+
+      const executa = await banco.query<{ anon: boolean }>(
+        `select has_function_privilege('anon',
+           'mover_candidatura(uuid, status_candidatura, uuid)', 'EXECUTE') as anon`,
+      );
+      expect(executa.rows[0].anon).toBe(false);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
 });
 
 /*

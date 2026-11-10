@@ -48,9 +48,15 @@ export async function salvarAcompanhamento(
    */
   if (
     salvo.entrevistaEm &&
-    (candidatura.status === "enviada" || candidatura.status === "visualizada")
+    (candidatura.status === "enviada" ||
+      candidatura.status === "visualizada" ||
+      candidatura.status === "contatada")
   ) {
-    await repositorioCandidaturas().moverEstagio(candidatura.id, "entrevista");
+    await repositorioCandidaturas().moverEstagio(
+      candidatura.id,
+      "entrevista",
+      autenticado.usuarioId,
+    );
   }
 
   log.info("acompanhamento salvo", {

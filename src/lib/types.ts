@@ -22,8 +22,10 @@ export type VerificationStatus =
 export type ApplicationStatus =
   | "enviada"
   | "visualizada"
+  | "contatada"
   | "entrevista"
   | "aprovada"
+  | "contratada"
   | "rejeitada";
 
 export type JobStatus = "aberta" | "fechada";

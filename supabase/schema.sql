@@ -49,11 +49,15 @@ create type status_vaga as enum ('aberta', 'fechada');
 -- presencial não — sem isto, as duas pareciam iguais na busca.
 create type modalidade_vaga as enum ('presencial', 'home_office', 'hibrido');
 
+-- `contatada` e `contratada` entraram na #608: o funil não distinguia quem
+-- a empresa já tinha chamado, nem quem foi de fato contratado.
 create type status_candidatura as enum (
   'enviada',
   'visualizada',
+  'contatada',
   'entrevista',
   'aprovada',
+  'contratada',
   'rejeitada'
 );
 
@@ -617,6 +621,86 @@ create table acompanhamento_candidatura (
 );
 
 alter table acompanhamento_candidatura enable row level security;
+
+/*
+ * O histórico de cada candidatura (#608): por onde ela passou, e os
+ * contatos que a empresa registrou.
+ *
+ * Uma linha por acontecimento. `etapa` é mudança de estágio, com de e para;
+ * `contato` é o que a empresa anota de uma conversa ("liguei, retorna
+ * amanhã"), com a nota. Até aqui a ficha mostrava só o estágio de agora, e
+ * o painel não tinha como dizer que um processo está parado.
+ *
+ * `autor_id` é quem fez. Hoje é sempre a conta da empresa, ou nulo quando o
+ * próprio sistema moveu (abrir a ficha tira de "Nova"); é a coluna que
+ * identifica o recrutador quando uma agência tiver mais de um usuário.
+ *
+ * Só da empresa, como as anotações: tabela à parte, sem policy e com o
+ * `revoke` escrito, para nenhuma consulta do lado do candidato alcançá-la.
+ * Cai em cascata com a candidatura.
+ */
+create table historico_candidatura (
+  id             uuid primary key default gen_random_uuid(),
+  candidatura_id uuid not null references candidaturas(id) on delete cascade,
+  tipo           text not null check (tipo in ('etapa', 'contato')),
+  de             status_candidatura,
+  para           status_candidatura,
+  nota           text check (nota is null or char_length(nota) <= 500),
+  autor_id       uuid references usuarios(id) on delete set null,
+  criado_em      timestamptz not null default now(),
+
+  -- Etapa tem de e para; contato tem nota.
+  constraint historico_coerente check (
+    (tipo = 'etapa' and de is not null and para is not null and de <> para)
+    or (tipo = 'contato' and nota is not null and char_length(btrim(nota)) > 0)
+  )
+);
+
+create index historico_candidatura_idx
+  on historico_candidatura (candidatura_id, criado_em desc);
+-- A chave do autor também tem índice (#210): apagar a conta de quem moveu
+-- confere cada referência.
+create index historico_candidatura_autor_idx
+  on historico_candidatura (autor_id) where autor_id is not null;
+
+alter table historico_candidatura enable row level security;
+
+/*
+ * Mover de estágio e gravar o histórico numa instrução só (#608).
+ *
+ * Duas chamadas da aplicação — `update` e depois `insert` — deixariam uma
+ * candidatura movida sem registro se a segunda falhasse, e o "de" lido antes
+ * poderia já não ser o de agora. Aqui o `update` devolve o estágio anterior
+ * e o registro nasce na mesma transação. Mover para o estágio em que já
+ * está não grava nada. Devolve a candidatura, ou nenhuma linha se o id não
+ * existe.
+ */
+create or replace function mover_candidatura(
+  p_id uuid,
+  p_status status_candidatura,
+  p_autor uuid
+)
+returns setof candidaturas
+language plpgsql
+set search_path = public, pg_temp
+as $$
+declare
+  v_de status_candidatura;
+begin
+  select status into v_de from candidaturas where id = p_id for update;
+  if not found then
+    return;
+  end if;
+
+  if v_de <> p_status then
+    update candidaturas set status = p_status where id = p_id;
+    insert into historico_candidatura (candidatura_id, tipo, de, para, autor_id)
+    values (p_id, 'etapa', v_de, p_status, p_autor);
+  end if;
+
+  return query select * from candidaturas where id = p_id;
+end;
+$$;
 
 /*
  * Vaga com perguntas não recebe candidatura sem respostas (#491).
@@ -2592,6 +2676,7 @@ revoke select on parceiros from anon, authenticated;
 
 -- O que a empresa anota sobre cada candidatura (#539): só dela.
 revoke select on acompanhamento_candidatura from anon, authenticated;
+revoke select on historico_candidatura      from anon, authenticated;
 
 /*
  * E a escrita, em tudo (#421). O Supabase concede a `anon` e

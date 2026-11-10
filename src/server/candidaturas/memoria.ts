@@ -2,6 +2,7 @@ import { erros } from "../errors";
 import type {
   Candidatura,
   DadosNovaCandidatura,
+  EventoDoHistorico,
   RepositorioCandidaturas,
   StatusCandidatura,
 } from "./tipos";
@@ -16,6 +17,7 @@ import type {
  */
 export class RepositorioCandidaturasMemoria implements RepositorioCandidaturas {
   private itens = new Map<string, Candidatura>();
+  private historico: EventoDoHistorico[] = [];
 
   semear(candidaturas: Candidatura[]): void {
     if (this.itens.size > 0) return;
@@ -71,16 +73,35 @@ export class RepositorioCandidaturasMemoria implements RepositorioCandidaturas {
   async moverEstagio(
     id: string,
     status: StatusCandidatura,
+    autorId: string | null,
   ): Promise<Candidatura> {
     const atual = this.itens.get(id);
     if (!atual) throw erros.naoEncontrado("Candidatura");
+    // Como a função do banco: mover para onde já está não grava nada.
+    if (atual.status === status) return atual;
 
     const nova: Candidatura = { ...atual, status };
     this.itens.set(id, nova);
+    this.historico.push({
+      id: crypto.randomUUID(),
+      candidaturaId: id,
+      tipo: "etapa",
+      de: atual.status,
+      para: status,
+      autorId,
+      criadoEm: new Date().toISOString(),
+    });
     return nova;
+  }
+
+  async historicoDe(candidaturaId: string): Promise<EventoDoHistorico[]> {
+    return this.historico
+      .filter((e) => e.candidaturaId === candidaturaId)
+      .reverse();
   }
 
   limpar(): void {
     this.itens.clear();
+    this.historico = [];
   }
 }

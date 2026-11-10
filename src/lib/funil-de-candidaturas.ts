@@ -29,23 +29,30 @@ export function contarPorEstagio(
 /**
  * Quantas candidaturas chegaram **pelo menos** a cada estágio do caminho.
  *
- * Quem foi selecionado passou pela entrevista e pela triagem, mesmo que a
- * empresa tenha pulado de "Nova" direto para "Selecionado": o funil conta o
- * alcance, não o estágio de agora. Reprovado não entra em passo nenhum além
+ * Quem foi aprovado passou pela entrevista e pela triagem, mesmo que a
+ * empresa tenha pulado de "Nova" direto para "Aprovado": o funil conta o
+ * alcance, não o estágio de agora. O mesmo vale para contatado e contratado
+ * (#608). Reprovado não entra em passo nenhum além
  * do primeiro, porque não se sabe até onde a pessoa foi antes de sair.
  */
 export function alcancePorEtapa(contagem: ContagemPorEstagio): {
   recebidas: number;
   olhadas: number;
+  contatados: number;
   entrevistas: number;
   selecionados: number;
+  contratados: number;
 } {
   const total = ESTAGIOS.reduce((s, e) => s + contagem[e], 0);
+  const selecionados = contagem.aprovada + contagem.contratada;
+  const entrevistas = contagem.entrevista + selecionados;
   return {
     recebidas: total,
     olhadas: total - contagem.enviada,
-    entrevistas: contagem.entrevista + contagem.aprovada,
-    selecionados: contagem.aprovada,
+    contatados: contagem.contatada + entrevistas,
+    entrevistas,
+    selecionados,
+    contratados: contagem.contratada,
   };
 }
 
