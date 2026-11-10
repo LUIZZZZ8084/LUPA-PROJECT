@@ -16,6 +16,7 @@ import { DivulgarPerfil } from "@/components/divulgar-perfil";
 import { ExcluirConta } from "@/components/excluir-conta";
 import { PageShell, PageTitle } from "@/components/layout/page-shell";
 import { LinksInstitucionais } from "@/components/links-institucionais";
+import { NumerosDoPerfil } from "@/components/numeros-do-perfil";
 import {
   PerfilCandidato,
   PerfilEmpresa,
@@ -42,6 +43,10 @@ import type { Capacidade } from "@/server/auth/rbac";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
 import { direitoDePublicar } from "@/server/carteiras/servico";
+import {
+  DIAS_DOS_NUMEROS,
+  numerosDoMeuPerfil,
+} from "@/server/contagens-prestador";
 import { perfilParaEditar } from "@/server/perfil/servico";
 import { resumo as resumoDePublicacoes } from "@/server/publicacoes/servico";
 import { ConfirmarEmail } from "./confirmar-email";
@@ -219,6 +224,13 @@ export default async function PerfilPage() {
       : null;
 
   /*
+   * Visitas e chamadas do último mês (#604), com o perfil publicado. O id é
+   * o da sessão: ninguém lê o movimento de outro prestador.
+   */
+  const numeros =
+    sessao && listagem ? await numerosDoMeuPerfil(sessao.usuarioId) : null;
+
+  /*
    * O que falta no anúncio (#602). Só com o anúncio criado: sem ele, o
    * bloco do prestador já é o convite para criar, e a barra repetiria o
    * mesmo botão — a mesma regra da barra do currículo.
@@ -388,6 +400,14 @@ export default async function PerfilPage() {
             Divulgar e pedir avaliação (#603), só com o perfil publicado: sem
             listagem, o link levaria a uma página que não existe.
           */}
+          {numeros && (
+            <NumerosDoPerfil
+              visitas={numeros.visitas}
+              contatos={numeros.contatos}
+              dias={DIAS_DOS_NUMEROS}
+              className="mb-5"
+            />
+          )}
           {listagem && (
             <DivulgarPerfil
               prestadorId={listagem.profile_id}

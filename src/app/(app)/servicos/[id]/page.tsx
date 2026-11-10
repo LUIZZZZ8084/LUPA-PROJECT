@@ -1,8 +1,10 @@
 import { Banknote, Briefcase, Check, MapPin, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import {
   arquivarPelaAba,
   editarComFotoComEstado,
@@ -32,9 +34,11 @@ import {
   ratingBreakdown,
 } from "@/lib/data";
 import { formatStartingPrice } from "@/lib/format";
+import { ehRastreador } from "@/lib/rastreador";
 import { sessaoAtual } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { jaAvaliou } from "@/server/avaliacoes/servico";
+import { contarNoPerfil } from "@/server/contagens-prestador";
 import {
   listarPublicacoes,
   resumo as resumoDePublicacoes,
@@ -144,6 +148,18 @@ export default async function ProviderPage({
    * justamente para o lugar onde a foto vai aparecer.
    */
   const ehDono = sessao?.usuarioId === provider.profile_id;
+
+  /*
+   * A visita conta para o prestador (#604), com as regras da vaga: o dono
+   * não conta, nem o robô que monta a prévia quando ele cola o link no
+   * WhatsApp — o perfil abre sem sessão desde a #603, e contar o robô faria
+   * o número subir quando ele divulga. Depois da resposta, e sem derrubar
+   * a página se falhar.
+   */
+  const robo = ehRastreador((await headers()).get("user-agent"));
+  if (!ehDono && !robo) {
+    after(() => contarNoPerfil(provider.profile_id, "visita"));
+  }
   const resumoTrabalhos = await resumoDePublicacoes(provider.profile_id);
 
   const jaAvaliouEste = await jaAvaliou(sessao, provider.profile_id);
@@ -441,6 +457,7 @@ export default async function ProviderPage({
                 context={provider.category.name}
                 size="lg"
                 block
+                via={`/servicos/${encodeURIComponent(provider.profile_id)}/whatsapp`}
               />
             ) : (
               <ButtonLink

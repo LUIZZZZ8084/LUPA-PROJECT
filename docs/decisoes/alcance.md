@@ -533,3 +533,29 @@ texto, e métrica que sobe quando o dono recarrega mede o dono.
 
 O registro sai por `after()`, depois da resposta. Quem abriu a vaga quer
 ler a vaga; se a contagem falhar, vai para o log e a página segue.
+
+## Visitas e chamadas do prestador, contadas como as da vaga (#604)
+
+O prestador paga a mensalidade e não via o que a vitrine trazia: a empresa
+tinha visualizações por vaga, ele nada. Agora `/perfil` mostra, para o
+prestador com perfil publicado, as visitas ao perfil e os cliques em
+"Conversar no WhatsApp" dos últimos 30 dias.
+
+**Mesma regra da vaga:** `contagens_prestador` guarda uma linha por
+prestador por dia, incrementada por `registrar_contagem_prestador()` no
+banco, e nada que diga quem visitou ou chamou. O dono não conta, nem o robô
+que monta a prévia do link — o perfil abre sem sessão desde a #603, e contar
+o robô faria o número subir quando o prestador divulga. A tela diz que é
+contagem de cliques, não de pessoas.
+
+**A chamada é contada por uma rota, não no clique.** O botão aponta para
+`/servicos/<id>/whatsapp`, que conta e redireciona para o mesmo `wa.me`.
+Um `sendBeacon` no clique dependeria de JavaScript, e o navegador embutido
+do Instagram e do Facebook, por onde muita gente abre o link, é o lugar
+onde ele mais falha. A rota fica atrás do login, como o contato sempre
+esteve. De brinde, o telefone deixou de estar no `href` dos cards.
+
+O repositório em memória guarda o estado em `globalThis`: a visita é
+contada pela página e a chamada, pela rota, e no build cada uma tem a
+própria cópia do módulo (a armadilha da #164).
+
