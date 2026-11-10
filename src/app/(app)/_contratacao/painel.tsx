@@ -1,11 +1,18 @@
 import {
+  BadgeCheck,
+  Briefcase,
   Building2,
   CalendarClock,
+  CheckCircle2,
   ChevronDown,
+  ChevronRight,
   Clock,
+  Hourglass,
   Inbox,
+  ListChecks,
   Plus,
   UserSearch,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -26,7 +33,6 @@ import {
   getCompany,
   getCompanyApplications,
   getCompanyJobs,
-  getCompanyStats,
 } from "@/lib/data";
 import {
   entrevistasProximas,
@@ -39,6 +45,12 @@ import {
   contarPorEstagio,
   vagasVencendo,
 } from "@/lib/funil-de-candidaturas";
+import {
+  contarVagasAtivas,
+  DIAS_PARA_PARAR,
+  diasAteVencer,
+  processosParados,
+} from "@/lib/pendencias-do-painel";
 import { resumoDoDireito, seloDoDireito } from "@/lib/planos-empresa";
 import type { Company } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -46,6 +58,7 @@ import { acompanhamentosDe } from "@/server/acompanhamento/servico";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import { pode } from "@/server/auth/rbac";
 import { usuarioDaSessao } from "@/server/auth/servico";
+import { repositorioCandidaturas } from "@/server/candidaturas";
 import { matchPorCandidatura } from "@/server/candidaturas/match";
 import { recomendadosParaEmpresa } from "@/server/candidaturas/recomendados";
 import { direitoDePublicar } from "@/server/carteiras/servico";
@@ -157,12 +170,11 @@ export async function PainelDeContratacao({
   }
 
   const companyId = empresaDoPainel(sessao.usuarioId);
-  const [empresaDoBanco, jobs, applications, stats, serie, recomendados] =
+  const [empresaDoBanco, jobs, applications, serie, recomendados] =
     await Promise.all([
       getCompany(companyId),
       getCompanyJobs(companyId),
       getCompanyApplications(companyId),
-      getCompanyStats(companyId),
       // Quem não é empresa cai no estado vazio logo abaixo; pedir a série
       // antes disso trocaria a explicação por uma tela de erro.
       temPainelDeEmpresa(sessao) ? serieDoPainel(sessao) : [],
@@ -179,9 +191,16 @@ export async function PainelDeContratacao({
    * As próximas entrevistas (#539), de hoje em diante. As candidaturas são as
    * desta empresa, lidas acima; o acompanhamento só as completa.
    */
-  const acompanhamentos = await acompanhamentosDe(
-    applications.map((a) => a.id),
-  );
+  /*
+   * A última movimentação de cada candidatura (#610) diz se um processo está
+   * parado. Os ids são os das candidaturas desta empresa, lidas acima.
+   */
+  const [acompanhamentos, ultimaMovimentacao] = await Promise.all([
+    acompanhamentosDe(applications.map((a) => a.id)),
+    repositorioCandidaturas().ultimasMovimentacoes(
+      applications.map((a) => a.id),
+    ),
+  ]);
   const porId = new Map(applications.map((a) => [a.id, a]));
   const proximas = entrevistasProximas(
     [...acompanhamentos.values()],
@@ -322,6 +341,75 @@ export async function PainelDeContratacao({
   const fracao = (n: number) =>
     alcance.recebidas === 0 ? null : n / alcance.recebidas;
 
+  /*
+   * O que pede ação (#610). Cada linha leva aonde a coisa se resolve: a
+   * coluna do funil, a ficha da pessoa ou a vaga.
+   */
+  const vagasAtivas = contarVagasAtivas(jobs);
+  const semData = applications.filter(
+    (a) =>
+      a.status === "entrevista" && !acompanhamentos.get(a.id)?.entrevistaEm,
+  ).length;
+  const parados = processosParados(jobs, applications, ultimaMovimentacao);
+  const plural = (n: number, um: string, muitos: string) =>
+    `${n} ${n === 1 ? um : muitos}`;
+
+  const pendencias: Pendencia[] = [
+    ...(contagem.enviada > 0
+      ? [
+          {
+            chave: "novas",
+            href: `${area.base}/funil?estagio=enviada`,
+            icone: <Inbox size={16} aria-hidden />,
+            titulo: `${plural(contagem.enviada, "candidato aguardando", "candidatos aguardando")} análise`,
+            detalhe: "Abrir a ficha já marca como vista.",
+          },
+        ]
+      : []),
+    ...(proximas.length > 0
+      ? [
+          {
+            chave: "entrevistas",
+            href: `${area.base}/candidaturas/${proximas[0].candidaturaId}`,
+            icone: <CalendarClock size={16} aria-hidden />,
+            titulo: plural(
+              proximas.length,
+              "entrevista marcada",
+              "entrevistas marcadas",
+            ),
+            detalhe: `A próxima é ${formatarEntrevista(proximas[0].entrevistaEm)}, com ${proximas[0].candidatura.candidate.full_name}.`,
+          },
+        ]
+      : []),
+    ...(semData > 0
+      ? [
+          {
+            chave: "sem-data",
+            href: `${area.base}/funil?estagio=entrevista`,
+            icone: <Hourglass size={16} aria-hidden />,
+            titulo: `${plural(semData, "pessoa", "pessoas")} em entrevista sem data marcada`,
+            detalhe: "Marque o dia e a hora na ficha.",
+          },
+        ]
+      : []),
+    ...vencendo.slice(0, 3).map((v) => ({
+      chave: `vence-${v.id}`,
+      href: `${area.base}/vagas`,
+      icone: <Clock size={16} aria-hidden />,
+      titulo: `${v.title} vence em ${plural(diasAteVencer(v.expires_at), "dia", "dias")}`,
+      detalhe: "Reative para continuar recebendo candidaturas.",
+      alerta: true,
+    })),
+    ...parados.slice(0, 3).map((p) => ({
+      chave: `parado-${p.vagaId}`,
+      href: `${area.base}/funil?vaga=${p.vagaId}`,
+      icone: <Hourglass size={16} aria-hidden />,
+      titulo: `${p.titulo}: sem movimentação há ${p.dias} dias`,
+      detalhe: `${plural(p.esperando, "candidato esperando", "candidatos esperando")} resposta.`,
+      alerta: true,
+    })),
+  ];
+
   return (
     <PageShell>
       {/*
@@ -366,11 +454,6 @@ export async function PainelDeContratacao({
       />
 
       {/*
-        Para hoje: três números que viram um clique. Cada cartão leva ao
-        lugar onde a coisa se resolve — o funil já aberto no estágio, ou a
-        aba de vagas.
-      */}
-      {/*
         No computador (#525) o painel vira duas colunas: o que mede (hoje,
         números e funil) à esquerda, e o que pede ação (recomendados e
         currículos recebidos) à direita. Os invólucros são `contents` abaixo
@@ -378,29 +461,49 @@ export async function PainelDeContratacao({
       */}
       <div className="contents lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-x-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="contents lg:block">
-          <section aria-labelledby="para-hoje" className="mb-6">
-            <h2 id="para-hoje" className="mb-3 font-bold text-base">
-              Para hoje
+          {/*
+            Visão geral (#610): seis números de relance, cada um um clique
+            para onde a lista está. Todos saem das vagas e das candidaturas
+            desta empresa; nenhum é fixo.
+          */}
+          <section aria-labelledby="visao-geral" className="mb-6">
+            <h2 id="visao-geral" className="mb-3 font-bold text-base">
+              Visão geral
             </h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <CartaoDoDia
-                href={`${area.base}/funil?estagio=enviada`}
-                icone={<Inbox size={18} aria-hidden />}
-                valor={contagem.enviada}
+                href={`${area.base}/vagas`}
+                icone={<Briefcase size={18} aria-hidden />}
+                valor={vagasAtivas}
+                rotulo={vagasAtivas === 1 ? "Vaga ativa" : "Vagas ativas"}
+              />
+              <CartaoDoDia
+                href={`${area.base}/funil`}
+                icone={<Users size={18} aria-hidden />}
+                valor={alcance.recebidas}
                 rotulo={
-                  contagem.enviada === 1
-                    ? "Nova para olhar"
-                    : "Novas para olhar"
+                  alcance.recebidas === 1
+                    ? "Candidato recebido"
+                    : "Candidatos recebidos"
                 }
-                dica="Abrir a ficha marca como vista."
-                destaque={contagem.enviada > 0}
+              />
+              <CartaoDoDia
+                href={`${area.base}/funil?estagio=visualizada`}
+                icone={<ListChecks size={18} aria-hidden />}
+                valor={contagem.visualizada}
+                rotulo="Em triagem"
               />
               <CartaoDoDia
                 href={`${area.base}/funil?estagio=entrevista`}
                 icone={<CalendarClock size={18} aria-hidden />}
                 valor={contagem.entrevista}
                 rotulo="Em entrevista"
-                dica="Quem você chamou para conversar."
+              />
+              <CartaoDoDia
+                href={`${area.base}/funil?estagio=aprovada`}
+                icone={<BadgeCheck size={18} aria-hidden />}
+                valor={contagem.aprovada}
+                rotulo={contagem.aprovada === 1 ? "Aprovado" : "Aprovados"}
               />
               <CartaoDoDia
                 href={`${area.base}/vagas`}
@@ -408,14 +511,74 @@ export async function PainelDeContratacao({
                 valor={vencendo.length}
                 rotulo={
                   vencendo.length === 1
-                    ? "Vaga vence em até 3 dias"
-                    : "Vagas vencem em até 3 dias"
+                    ? "Vaga perto de vencer"
+                    : "Vagas perto de vencer"
                 }
-                dica="Reative para continuar recebendo."
                 destaque={vencendo.length > 0}
                 alerta
               />
             </div>
+          </section>
+
+          {/*
+            Precisa da sua atenção (#610): o que espera uma ação, uma linha
+            por coisa, e cada linha leva aonde ela se resolve. Sem nada
+            pendente a seção fica e diz isso — sumir faria a pessoa procurar.
+          */}
+          <section aria-labelledby="atencao" className="mb-6">
+            <h2 id="atencao" className="mb-3 font-bold text-base">
+              Precisa da sua atenção
+            </h2>
+            {pendencias.length === 0 ? (
+              <Panel>
+                <p className="flex items-center gap-2 font-semibold text-sm">
+                  <CheckCircle2 size={18} className="text-vagas" aria-hidden />
+                  Tudo em dia
+                </p>
+                <p className="mt-1 text-muted text-sm leading-relaxed">
+                  Nenhum candidato esperando análise, nenhuma vaga perto de
+                  vencer e nenhum processo parado há {DIAS_PARA_PARAR} dias.
+                </p>
+              </Panel>
+            ) : (
+              <ul className="space-y-2">
+                {pendencias.map((p) => (
+                  <li key={p.chave}>
+                    <Link
+                      href={p.href}
+                      className={cn(
+                        "flex min-h-11 items-center gap-3 rounded-[var(--radius-card)] border bg-panel p-3.5 transition-colors hover:bg-panel-2",
+                        p.alerta ? "border-warn/60" : "border-empresas/50",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-9 w-9 flex-none items-center justify-center rounded-xl",
+                          p.alerta
+                            ? "bg-warn/15 text-warn"
+                            : "bg-empresas/15 text-empresas",
+                        )}
+                      >
+                        {p.icone}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold text-sm">
+                          {p.titulo}
+                        </span>
+                        <span className="block text-muted text-xs">
+                          {p.detalhe}
+                        </span>
+                      </span>
+                      <ChevronRight
+                        size={16}
+                        className="flex-none text-faint"
+                        aria-hidden
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {/*
               As entrevistas marcadas na ficha (#539), da mais próxima para a
@@ -507,13 +670,17 @@ export async function PainelDeContratacao({
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-3 gap-3">
+            {/*
+              Só o movimento do mês (#610). Vagas ativas e currículos
+              recebidos saíram daqui: a visão geral, logo acima, já os mostra,
+              e o mesmo número duas vezes na tela faz procurar a diferença.
+            */}
+            <div className="mt-5 grid grid-cols-2 gap-3">
               <Stat
-                label="Vagas ativas"
-                value={stats.active_jobs}
+                label="Candidaturas (30 dias)"
+                value={totais.candidaturas.toLocaleString("pt-BR")}
                 accent="text-empresas"
               />
-              <Stat label="Currículos" value={stats.applications} />
               <Stat
                 label="Visualizações (30 dias)"
                 value={totais.visualizacoes.toLocaleString("pt-BR")}
@@ -543,8 +710,8 @@ export async function PainelDeContratacao({
           </Panel>
 
           {/*
-        O funil em números: de todas as candidaturas, quantas já foram
-        olhadas, quantas chegaram à entrevista e quantas foram selecionadas.
+        O funil em números, com as seis etapas (#610): de todos os recebidos,
+        quantos chegaram a cada uma. Conta o alcance, não a etapa de agora.
         A porcentagem é sobre as recebidas, a mesma conta do funil do painel
         do admin (#471): "10% viraram entrevista" se lê sem conta.
       */}
@@ -561,13 +728,15 @@ export async function PainelDeContratacao({
                   Ver candidatos
                 </Link>
               </div>
-              <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {(
                   [
-                    ["Recebidas", alcance.recebidas],
-                    ["Olhadas", alcance.olhadas],
-                    ["Entrevistas", alcance.entrevistas],
+                    ["Recebidos", alcance.recebidas],
+                    ["Em triagem", alcance.olhadas],
+                    ["Contatados", alcance.contatados],
+                    ["Entrevista", alcance.entrevistas],
                     ["Aprovados", alcance.selecionados],
+                    ["Contratados", alcance.contratados],
                   ] as const
                 ).map(([rotulo, valor], i) => {
                   const f = fracao(valor);
@@ -592,7 +761,7 @@ export async function PainelDeContratacao({
                             />
                           </div>
                           <p className="mt-1 text-faint text-xs">
-                            {Math.round(f * 100)}% das recebidas
+                            {Math.round(f * 100)}% dos recebidos
                           </p>
                         </>
                       )}
@@ -679,6 +848,16 @@ export async function PainelDeContratacao({
  * Um número do dia que vira um clique. `destaque` pinta a borda quando há o
  * que fazer; zero fica neutro, porque zero novas é boa notícia, não alarme.
  */
+/** Uma linha de "Precisa da sua atenção" (#610). */
+interface Pendencia {
+  chave: string;
+  href: string;
+  icone: ReactNode;
+  titulo: string;
+  detalhe: string;
+  alerta?: boolean;
+}
+
 function CartaoDoDia({
   href,
   icone,
@@ -692,7 +871,7 @@ function CartaoDoDia({
   icone: ReactNode;
   valor: number;
   rotulo: string;
-  dica: string;
+  dica?: string;
   destaque?: boolean;
   alerta?: boolean;
 }) {
@@ -725,7 +904,7 @@ function CartaoDoDia({
           {valor}
         </span>
         <span className="mt-1 block font-semibold text-sm">{rotulo}</span>
-        <span className="block text-faint text-xs">{dica}</span>
+        {dica && <span className="block text-faint text-xs">{dica}</span>}
       </span>
     </Link>
   );

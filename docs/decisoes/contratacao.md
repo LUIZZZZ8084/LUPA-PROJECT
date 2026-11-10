@@ -295,6 +295,37 @@ recrutador quando uma agência tiver mais de um usuário, sem migração.
 data de envio e a etapa atual, e inventar o caminho seria registrar o que
 ninguém viu acontecer.
 
+## O painel responde "como estão os processos" e "o que eu faço agora" (#610)
+
+Segunda etapa do mini ATS. O "Para hoje" de três cartões (#511) virou duas
+seções, porque misturava medir com pedir ação.
+
+**Visão geral** são seis números, cada um um clique para a lista: vagas
+ativas, candidatos recebidos, em triagem, em entrevista, aprovados e vagas
+perto de vencer. Saem das vagas e candidaturas da empresa; nenhum é fixo.
+
+**Precisa da sua atenção** é uma lista, uma linha por coisa a resolver:
+candidatos aguardando análise, a próxima entrevista marcada, quem está em
+entrevista sem data, cada vaga que vence em três dias e cada processo
+parado. A linha leva aonde se resolve — a coluna do funil, a ficha ou a
+vaga. Sem pendência a seção fica e diz "Tudo em dia": sumir faria a pessoa
+procurar.
+
+**Processo parado é da vaga, não da candidatura** (`processosParados`, em
+`src/lib/pendencias-do-painel.ts`): vaga no ar com gente nas etapas em
+andamento e nenhuma movimentação em sete dias. Mexer em uma pessoa prova
+que a empresa está cuidando daquele processo; listar as outras doze como
+paradas seria cobrar por trabalho em andamento. A data de cada candidatura
+é a última linha dela no histórico (#608) ou, sem nenhuma, o dia em que
+chegou. Aprovado não conta como espera: a triagem acabou.
+
+**O funil mostra as seis etapas**, ainda como alcance: quem foi contratado
+conta em todas as anteriores.
+
+O cartão da empresa perdeu "Vagas ativas" e "Currículos", que a visão geral
+mostra logo acima, e ficou com o movimento de 30 dias (candidaturas e
+visualizações).
+
 ## O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
 
 Três pedidos do Luiz em 26/10/2026, todos do lado de quem contrata, e todos

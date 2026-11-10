@@ -68,4 +68,13 @@ export interface RepositorioCandidaturas {
 
   /** O histórico de uma candidatura, do mais recente para o mais antigo. */
   historicoDe(candidaturaId: string): Promise<EventoDoHistorico[]>;
+
+  /**
+   * Quando cada candidatura foi mexida pela última vez (#610), indexado pelo
+   * id. Quem nunca foi movida não está no mapa — quem lê usa a data em que
+   * ela chegou.
+   */
+  ultimasMovimentacoes(
+    candidaturaIds: readonly string[],
+  ): Promise<Map<string, string>>;
 }

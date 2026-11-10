@@ -33,7 +33,9 @@ test("aparece na primeira visita e, fechado, não volta", async ({ page }) => {
 
   await page.reload();
   // O resumo já carregou: se o tutorial fosse voltar, já teria voltado.
-  await expect(page.getByRole("heading", { name: "Para hoje" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Visão geral" }),
+  ).toBeVisible();
   await expect(tutorial(page)).toBeHidden();
 });
 
