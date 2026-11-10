@@ -37,6 +37,7 @@ import { ROLE_LABELS } from "@/lib/constants";
 import { getProviderById } from "@/lib/data";
 import { formatPhone } from "@/lib/format";
 import { progressoDoCurriculo } from "@/lib/progresso-do-curriculo";
+import { progressoDoAnuncio } from "@/lib/progresso-do-prestador";
 import { sessaoAtual } from "@/server/auth/cookies";
 import type { Capacidade } from "@/server/auth/rbac";
 import { pode } from "@/server/auth/rbac";
@@ -47,6 +48,7 @@ import {
   numerosDoMeuPerfil,
 } from "@/server/contagens-prestador";
 import { perfilParaEditar } from "@/server/perfil/servico";
+import { resumo as resumoDePublicacoes } from "@/server/publicacoes/servico";
 import { ConfirmarEmail } from "./confirmar-email";
 import { VerificarCnpj } from "./verificar-cnpj";
 
@@ -228,6 +230,22 @@ export default async function PerfilPage() {
   const numeros =
     sessao && listagem ? await numerosDoMeuPerfil(sessao.usuarioId) : null;
 
+  /*
+   * O que falta no anúncio (#602). Só com o anúncio criado: sem ele, o
+   * bloco do prestador já é o convite para criar, e a barra repetiria o
+   * mesmo botão — a mesma regra da barra do currículo.
+   */
+  const anuncio =
+    sessao?.papel === "prestador_servico" && perfil?.prestador
+      ? progressoDoAnuncio({
+          avatarUrl: usuario?.avatarUrl ?? null,
+          descricao: perfil.prestador.descricao,
+          precoInicial: perfil.prestador.precoInicial,
+          anosExperiencia: perfil.prestador.anosExperiencia,
+          trabalhosAtivos: (await resumoDePublicacoes(sessao.usuarioId)).ativas,
+        })
+      : null;
+
   return (
     <PageShell width="colunas">
       <PageTitle
@@ -355,6 +373,21 @@ export default async function PerfilPage() {
           )}
           {sessao?.papel === "candidato_clt" && (
             <PerfilCandidato perfil={perfil?.candidato ?? null} />
+          )}
+          {anuncio && (
+            <ProgressoDoPerfil
+              porcento={anuncio.porcento}
+              faltas={anuncio.faltas.map((f) => f.rotulo)}
+              titulo="Seu anúncio"
+              motivo="Quem procura serviço chama primeiro o perfil com foto, preço e trabalho mostrado."
+              href={
+                anuncio.faltas[0]?.onde === "trabalhos"
+                  ? "/perfil/publicacoes"
+                  : "/perfil/editar"
+              }
+              tom="servicos"
+              className="mb-5"
+            />
           )}
           {sessao?.papel === "prestador_servico" && (
             <PerfilPrestador
