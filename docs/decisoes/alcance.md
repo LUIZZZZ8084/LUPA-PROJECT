@@ -172,6 +172,24 @@ compartilha. Sem sessão a página:
 vez porque a avaliação tem autor; sem conta, a nota vira o que o prestador
 pedir aos parentes.
 
+## A página da empresa, aberta a partir da vaga (#616)
+
+Pedido do Luiz em 16/11/2026: na vaga, o nome de quem contrata era só
+texto. Agora leva a `/empresas/<id>`: logo, nome, selo, setor, porte, a
+descrição do cadastro e as vagas no ar. **Abre sem login**, porque o link
+sai da vaga, que é pública (#490) — e pela mesma regra o site e as redes,
+que são contato, só aparecem para quem tem conta.
+
+`/empresas`, no plural, é a página pública; `/empresa`, no singular,
+continua sendo o painel fechado. O proxy abre só `/empresas/<id>`
+(`EMPRESA_PUBLICA`), nem a lista nem nada abaixo.
+
+**Na vaga confidencial (#538) o link é da agência que publicou.** O
+cliente nunca tem cadastro na Lupa, e a página da agência mostra a vaga com
+o "via" de sempre.
+
+Só vagas no ar: encerrada, vencida ou removida pela moderação não é oferta.
+
 ## A vitrine de produção mostra só quem existe (#302)
 
 As contas de exemplo do `seed.sql` — 9 prestadores, 3 empresas e as vagas

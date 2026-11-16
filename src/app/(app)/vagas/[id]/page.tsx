@@ -199,9 +199,20 @@ export default async function JobDetailPage({
               <h1 className="text-xl leading-tight font-bold sm:text-2xl">
                 {job.title}
               </h1>
+              {/*
+               * O nome leva à página da empresa (#616): quem lê a vaga quer
+               * saber quem contrata e o que mais ela oferece. Na vaga
+               * confidencial (#538) o link é da agência que publicou — o
+               * cliente não tem cadastro na Lupa.
+               */}
               <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted">
-                <Building2 size={14} />
-                {quemContrata(job)}
+                <Building2 size={14} aria-hidden />
+                <Link
+                  href={`/empresas/${job.company_id}`}
+                  className="-my-3 inline-flex items-center py-3 underline-offset-2 transition-colors hover:text-vagas hover:underline"
+                >
+                  {quemContrata(job)}
+                </Link>
                 {job.company.doc_verified && <VerifiedMark size={14} />}
               </p>
 

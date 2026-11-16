@@ -98,4 +98,24 @@ describe("vaga pública no proxy", () => {
       expect(redirecionaParaOLogin(await semSessao(caminho))).toBe(true);
     },
   );
+
+  /*
+   * A página da empresa abre pela mesma razão (#616): o nome dela na vaga
+   * pública leva até lá. O painel `/empresa`, no singular, continua fechado.
+   */
+  it.each([
+    "/empresas/cmp-agro-norte",
+    "/empresas/22222222-2222-4222-8222-000000000001",
+  ])("a página da empresa %s abre sem sessão", async (caminho) => {
+    const resposta = await semSessao(caminho);
+    expect(redirecionaParaOLogin(resposta)).toBe(false);
+    expect(resposta.status).toBe(200);
+  });
+
+  it.each(["/empresas", "/empresas/x/vagas", "/empresa", "/empresa/vagas"])(
+    "%s continua pedindo login",
+    async (caminho) => {
+      expect(redirecionaParaOLogin(await semSessao(caminho))).toBe(true);
+    },
+  );
 });

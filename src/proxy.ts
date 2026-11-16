@@ -210,6 +210,13 @@ const VAGA_PUBLICA = /^\/vagas\/[^/]+(?:\/opengraph-image(?:-[a-z0-9]+)?)?$/;
  */
 const PRESTADOR_PUBLICO = /^\/servicos\/[^/]+$/;
 
+/**
+ * E a página da empresa, pela mesma razão (#616): o nome dela na vaga, que
+ * abre sem login, leva até aqui. Só `/empresas/<id>`; o painel da empresa é
+ * `/empresa`, no singular, e continua fechado.
+ */
+const EMPRESA_PUBLICA = /^\/empresas\/[^/]+$/;
+
 /** Para onde mandar quem não tem sessão. */
 const ENTRADA = "/entrar";
 
@@ -217,6 +224,7 @@ function ehRotaAberta(pathname: string): boolean {
   return (
     VAGA_PUBLICA.test(pathname) ||
     PRESTADOR_PUBLICO.test(pathname) ||
+    EMPRESA_PUBLICA.test(pathname) ||
     ABERTAS.some((rota) => pathname === rota || pathname.startsWith(`${rota}/`))
   );
 }
