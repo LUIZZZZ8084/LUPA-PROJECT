@@ -59,6 +59,16 @@ export const schemaCandidato = z.object({
   papel: z.literal("candidato_clt"),
   cpf: zCpf,
   areaDesejada: z.enum(JOB_CATEGORIES),
+  /*
+   * "Quero que empresas me encontrem", escolhido no cadastro (#622). A tela
+   * traz "Sim" já marcado e "Não" ao lado; o que vale é o que chegou. Sem o
+   * campo — formulário antigo, chamada direta —, é desligado: ninguém fica
+   * visível sem ter visto a escolha.
+   */
+  visivelParaEmpresas: z.preprocess(
+    (v) => (v === undefined ? undefined : v === "sim" || v === true),
+    z.boolean().optional(),
+  ),
 });
 
 /**

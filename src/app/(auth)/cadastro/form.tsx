@@ -2,7 +2,7 @@
 
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { cadastrarComEstado, type EstadoFormulario } from "@/app/conta/actions";
 import { CampoCidade, useCidade } from "@/components/campo-cidade";
 import { BackLink, PageTitle } from "@/components/layout/page-shell";
@@ -123,8 +123,7 @@ export function SignUpForm({
 
           E o que está aqui agora não é só verdadeiro, é o que aumenta a
           chance de a pessoa ser chamada: sem habilidade declarada ela fica
-          **fora** do mapa de casamento com a vaga, e `visivel_para_empresas`
-          nasce desligada por decisão de privacidade.
+          **fora** do mapa de casamento com a vaga.
         */}
         <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
           Sua conta já está ativa. O próximo passo é completar o perfil: as
@@ -365,6 +364,8 @@ export function SignUpForm({
           </Field>
         )}
 
+        {role === "candidato_clt" && <SerEncontrado />}
+
         {role === "prestador_servico" && (
           <>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -470,5 +471,57 @@ export function SignUpForm({
         </div>
       </Panel>
     </form>
+  );
+}
+
+/**
+ * Ser encontrado por empresas, escolhido no cadastro (#622).
+ *
+ * "Sim" vem marcado: decisão do Luiz em 16/11/2026, para a busca de
+ * candidatos não nascer vazia. Mas a escolha **aparece**, com o que a
+ * empresa passa a ver, e "Não" está ao lado: consentimento na LGPD é ação
+ * da pessoa, e ligar em silêncio não vale. Quem já tinha conta não mudou.
+ */
+function SerEncontrado() {
+  const id = useId();
+  return (
+    <fieldset
+      aria-describedby={`${id}-explicacao`}
+      className="rounded-xl border border-line bg-panel-2 p-4"
+    >
+      <legend className="px-1 font-semibold text-sm">
+        Quer que empresas encontrem você?
+      </legend>
+      <p
+        id={`${id}-explicacao`}
+        className="mt-1 text-muted text-xs leading-relaxed"
+      >
+        Empresas com CNPJ conferido passam a ver seu nome, sua cidade, suas
+        habilidades e seu WhatsApp, mesmo sem você se candidatar. Seu currículo
+        continua indo só para as vagas em que você se candidatar. Dá para mudar
+        quando quiser, em Editar perfil.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+        <label className="inline-flex min-h-11 items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name="visivelParaEmpresas"
+            value="sim"
+            defaultChecked
+            className="h-4 w-4 accent-vagas"
+          />
+          Sim, quero ser encontrado
+        </label>
+        <label className="inline-flex min-h-11 items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name="visivelParaEmpresas"
+            value="nao"
+            className="h-4 w-4 accent-vagas"
+          />
+          Não, só pelas vagas em que eu me candidatar
+        </label>
+      </div>
+    </fieldset>
   );
 }

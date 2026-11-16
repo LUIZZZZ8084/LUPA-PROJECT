@@ -122,6 +122,13 @@ export async function entrarComoTeste(page: Page): Promise<string> {
   // literal fixo passa na primeira conta e é recusado na segunda.
   await page.getByLabel("CPF").fill(cpfDeTeste());
   await page.getByLabel("Área desejada").selectOption({ index: 1 });
+  /*
+   * "Não" de propósito (#622): o padrão do cadastro é "Sim", mas esta é a
+   * conta compartilhada da suíte, e visível ela entraria na busca de
+   * candidatos de todos os outros specs. O padrão "Sim" é medido em
+   * `cadastro-visivel.spec.ts`, com uma conta só dele.
+   */
+  await page.getByLabel(/Não, só pelas vagas/).check();
   await escolherCidade(page);
   await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
 

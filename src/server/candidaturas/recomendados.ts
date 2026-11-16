@@ -29,7 +29,7 @@ import { temPainelDeEmpresa } from "../visualizacoes/servico";
  * A segunda lista não existia por decisão, não por limitação. O que mudou
  * foi o consentimento passar a existir: até então a pessoa se expunha a uma
  * empresa no momento em que decidia se candidatar a ela, e não havia como
- * dizer "pode me procurar". Agora há, desligado por padrão.
+ * dizer "pode me procurar". Agora há, escolhido no cadastro (#622).
  *
  * O que a empresa alcança de quem só está disponível é **contato, não
  * currículo**. Currículo é entregue por quem se candidata.

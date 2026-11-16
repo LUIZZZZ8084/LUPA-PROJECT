@@ -26,7 +26,7 @@ import { repositorioUsuarios } from "../repositories";
  * busca livre.
  *
  * O que mudou foi o consentimento passar a existir. Só aparece aqui quem
- * ligou `visivel_para_empresas` no próprio perfil, desligado por padrão, e
+ * ligou `visivel_para_empresas` — escolhido no cadastro desde a #622 —, e
  * a fechadura mora no `where` da view `candidatos_disponiveis` — não na
  * aplicação. Assim nenhum esquecimento de filtro numa tela revela quem não
  * consentiu, e desligar tira a pessoa na mesma consulta.

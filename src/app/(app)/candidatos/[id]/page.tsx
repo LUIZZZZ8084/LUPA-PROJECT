@@ -226,12 +226,9 @@ export default async function CandidatoPage({
         /*
          * O dono precisa saber por que ninguém o encontra.
          *
-         * "Quero que empresas me encontrem" nasce desligado de propósito:
-         * numa cidade do tamanho de Sinop, quem está empregado e
-         * procurando outra coisa pode ter o patrão atual entre as
-         * empresas cadastradas. O padrão está certo — o que faltava era
-         * dizer isto na cara de quem abre a própria prévia e não se acha
-         * na busca.
+         * "Quero que empresas me encontrem" é escolhido no cadastro
+         * (#622), e quem escolheu "Não" — ou tem conta de antes disso, quando
+         * a opção nascia desligada — precisa saber por que ninguém o acha.
          */
         <Panel className="mt-5 border-warn/30 bg-warn/8">
           <p className="flex items-center gap-2 font-semibold text-sm text-warn">
@@ -240,8 +237,8 @@ export default async function CandidatoPage({
           </p>
           <p className="mt-1.5 text-muted text-sm leading-relaxed">
             Empresas não encontram você enquanto &ldquo;quero que empresas me
-            encontrem&rdquo; estiver desligado. É assim de propósito — ninguém
-            fica visível sem pedir.{" "}
+            encontrem&rdquo; estiver desligado. Ninguém fica visível sem
+            escolher.{" "}
             <Link href="/perfil/editar" className="text-vagas underline">
               Ligar no perfil
             </Link>

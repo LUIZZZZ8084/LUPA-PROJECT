@@ -46,7 +46,11 @@ async function salvarEEsperar(page: import("@playwright/test").Page) {
 test.describe.configure({ mode: "serial" });
 
 test.describe("ser encontrado por empresas", () => {
-  test("nasce desligada, e explica o que faz", async ({ page }) => {
+  // A conta da suíte escolheu "Não" no cadastro (#622); o padrão "Sim" é
+  // medido em `cadastro-visivel.spec.ts`.
+  test("desligada para quem escolheu Não, e explica o que faz", async ({
+    page,
+  }) => {
     await page.goto("/perfil/editar");
 
     const caixa = page.getByLabel(/quero que empresas me encontrem/i);
