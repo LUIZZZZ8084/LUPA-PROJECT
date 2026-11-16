@@ -404,6 +404,8 @@ test.describe("cadastro que dá erro", () => {
     await page.getByLabel("CPF").fill("12345678900");
     await page.getByLabel("Área desejada").selectOption({ index: 1 });
     await escolherCidade(page);
+    // A pergunta de ser encontrado é obrigatória (#627).
+    await page.getByLabel(/Não, só pelas vagas/).check();
     await page.getByLabel("Senha").fill("abc123");
     await page.getByRole("button", { name: /criar conta/i }).click();
 

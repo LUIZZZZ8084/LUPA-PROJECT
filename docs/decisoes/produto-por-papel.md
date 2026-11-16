@@ -55,8 +55,8 @@ título e a descrição. Sem essa reserva o bloco nasceria vazio para toda
 vaga já publicada, e ninguém preenche campo cujo resultado nunca viu.
 
 **Ser encontrado é escolha do candidato** — desligada por padrão até
-16/11/2026; desde a #622, escolhida no cadastro, com "Sim" marcado (ver a
-seção no fim deste arquivo).
+16/11/2026; desde a #622, escolhida no cadastro, com resposta obrigatória
+e nenhuma opção marcada desde a #627 (ver a seção no fim deste arquivo).
 `perfis_candidato.visivel_para_empresas` é o que separa "quem se candidatou"
 de "quem pediu para ser procurado", e o bloco de recomendados mostra os dois
 em listas separadas.
@@ -124,9 +124,16 @@ para manter sem ninguém pedindo ainda.
 
 Decisão do Luiz em 16/11/2026: a busca de candidatos ficava quase vazia,
 porque "Quero que empresas me encontrem" nascia desligado e pouca gente
-ligava depois. Agora **o cadastro de candidato pergunta**, com "Sim"
-marcado e "Não" ao lado, e diz o que a empresa passa a ver (nome, cidade,
+ligava depois. Agora **o cadastro de candidato pergunta**, com "Sim" e
+"Não" lado a lado, e diz o que a empresa passa a ver (nome, cidade,
 habilidades e WhatsApp) e onde mudar depois.
+
+**Sem opção marcada, e com resposta obrigatória (#627).** A #622 trazia
+"Sim" já marcado. Na revisão de design de 16/11/2026 isso foi trocado, com
+o OK do Luiz: o próprio argumento abaixo diz que consentimento é ação da
+pessoa, e uma opção que já vem marcada não é uma ação. Como todo cadastro
+novo tem de responder, a busca continua enchendo; o que muda é que cada
+"Sim" foi escolhido.
 
 **Por que perguntar, e não só ligar.** Consentimento na LGPD é ação da
 pessoa: caixa ligada em silêncio, ou marcada sem que ela veja, não vale. As
@@ -140,5 +147,6 @@ antigo, chamada direta ao serviço —, a conta nasce desligada.
 O que continua igual: a busca só para empresa com CNPJ conferido, o teto de
 30 perfis por dia, e a view que entrega contato e não currículo. A conta de
 candidato da suíte e2e escolhe "Não", para não entrar na busca dos outros
-specs; o padrão "Sim" é medido em `cadastro-visivel.spec.ts`.
+specs; `cadastro-visivel.spec.ts` mede que nada vem marcado, que o envio
+sem resposta não sai e que quem escolhe "Sim" nasce visível.
 

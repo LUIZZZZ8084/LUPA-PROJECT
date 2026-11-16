@@ -477,10 +477,12 @@ export function SignUpForm({
 /**
  * Ser encontrado por empresas, escolhido no cadastro (#622).
  *
- * "Sim" vem marcado: decisão do Luiz em 16/11/2026, para a busca de
- * candidatos não nascer vazia. Mas a escolha **aparece**, com o que a
- * empresa passa a ver, e "Não" está ao lado: consentimento na LGPD é ação
- * da pessoa, e ligar em silêncio não vale. Quem já tinha conta não mudou.
+ * A pergunta existe para a busca de candidatos não nascer vazia (decisão do
+ * Luiz em 16/11/2026), e a escolha **aparece**, com o que a empresa passa a
+ * ver. Nenhuma opção vem marcada e responder é obrigatório (#627):
+ * consentimento na LGPD é ação da pessoa, e um "Sim" que já vem marcado não
+ * é uma ação. Como todo cadastro novo passa pela pergunta, a busca continua
+ * enchendo. Quem já tinha conta não mudou.
  */
 function SerEncontrado() {
   const id = useId();
@@ -490,7 +492,10 @@ function SerEncontrado() {
       className="rounded-xl border border-line bg-panel-2 p-4"
     >
       <legend className="px-1 font-semibold text-sm">
-        Quer que empresas encontrem você?
+        Quer que empresas encontrem você?{" "}
+        <span aria-hidden className="text-danger">
+          *
+        </span>
       </legend>
       <p
         id={`${id}-explicacao`}
@@ -507,16 +512,17 @@ function SerEncontrado() {
             type="radio"
             name="visivelParaEmpresas"
             value="sim"
-            defaultChecked
+            required
             className="h-4 w-4 accent-vagas"
           />
-          Sim, quero ser encontrado
+          Sim, quero que empresas me encontrem
         </label>
         <label className="inline-flex min-h-11 items-center gap-2 text-sm">
           <input
             type="radio"
             name="visivelParaEmpresas"
             value="nao"
+            required
             className="h-4 w-4 accent-vagas"
           />
           Não, só pelas vagas em que eu me candidatar
