@@ -131,7 +131,7 @@ export async function FichaDaCandidatura({
         os invólucros são `contents` e a ordem é a de sempre, com a etapa
         logo depois do contato.
       */}
-      <div className="contents lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
+      <div className="contents grid-cols-1 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
         <div className="contents lg:block">
           <Panel>
             <div className="flex items-start gap-4">

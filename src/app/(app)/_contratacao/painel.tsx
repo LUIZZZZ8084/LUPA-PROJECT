@@ -471,7 +471,7 @@ export async function PainelDeContratacao({
             </p>
           </Panel>
         ) : (
-          <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">
+          <ul className="grid-cols-1 space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">
             {pendencias.map((p) => (
               <li key={p.chave}>
                 <Link
