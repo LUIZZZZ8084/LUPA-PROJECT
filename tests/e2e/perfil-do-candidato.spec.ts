@@ -59,9 +59,8 @@ test.describe("perfil do candidato", () => {
   });
 
   /**
-   * O aviso de invisível existe porque o consentimento nasce desligado —
-   * de propósito, já que o patrão atual pode estar entre as empresas
-   * cadastradas. Sem dizer isso na cara de quem abre a prévia, a pessoa
+   * O aviso de invisível existe para quem escolheu "Não" no cadastro — a
+   * conta da suíte escolhe (#622) — e para as contas de antes da escolha. Sem dizer isso na cara de quem abre a prévia, a pessoa
    * conclui que o perfil dela está quebrado.
    */
   test("avisa que só ele vê o perfil, e oferece onde ligar", async ({

@@ -54,7 +54,9 @@ A vaga declara o que pede em `vagas.habilidades`; vazio, o casamento lê o
 título e a descrição. Sem essa reserva o bloco nasceria vazio para toda
 vaga já publicada, e ninguém preenche campo cujo resultado nunca viu.
 
-**Ser encontrado é escolha do candidato, desligada por padrão.**
+**Ser encontrado é escolha do candidato** — desligada por padrão até
+16/11/2026; desde a #622, escolhida no cadastro, com "Sim" marcado (ver a
+seção no fim deste arquivo).
 `perfis_candidato.visivel_para_empresas` é o que separa "quem se candidatou"
 de "quem pediu para ser procurado", e o bloco de recomendados mostra os dois
 em listas separadas.
@@ -70,7 +72,9 @@ não pode significar "leia meu histórico inteiro".
 
 O padrão desligado é a parte que importa: numa cidade do tamanho de Sinop,
 quem está empregado e procurando outra coisa pode ter o patrão atual entre
-as empresas cadastradas.
+as empresas cadastradas. A #622 manteve esse cuidado de outro jeito: a
+escolha aparece no cadastro, com o que a empresa passa a ver, e a Política
+de Privacidade lembra quem está empregado de pensar nisso.
 
 **A busca de candidatos existe, e não é livre.** `/candidatos` lista quem
 ligou `visivel_para_empresas`, com filtro por habilidade e por área
@@ -115,3 +119,26 @@ outra empresa.
 automática, e múltiplos usuários por empresa. Os dois fazem sentido num
 produto maduro; num piloto de uma cidade, cada um é uma superfície a mais
 para manter sem ninguém pedindo ainda.
+
+## O candidato escolhe no cadastro se quer ser encontrado (#622)
+
+Decisão do Luiz em 16/11/2026: a busca de candidatos ficava quase vazia,
+porque "Quero que empresas me encontrem" nascia desligado e pouca gente
+ligava depois. Agora **o cadastro de candidato pergunta**, com "Sim"
+marcado e "Não" ao lado, e diz o que a empresa passa a ver (nome, cidade,
+habilidades e WhatsApp) e onde mudar depois.
+
+**Por que perguntar, e não só ligar.** Consentimento na LGPD é ação da
+pessoa: caixa ligada em silêncio, ou marcada sem que ela veja, não vale. As
+outras duas opções foram descartadas por isso — ligar para quem já tinha
+conta (gente que nunca escolheu passaria a expor o telefone) e ligar para
+os novos sem mostrar nada no cadastro.
+
+**Quem já tinha conta não mudou.** Sem a escolha no envio — formulário
+antigo, chamada direta ao serviço —, a conta nasce desligada.
+
+O que continua igual: a busca só para empresa com CNPJ conferido, o teto de
+30 perfis por dia, e a view que entrega contato e não currículo. A conta de
+candidato da suíte e2e escolhe "Não", para não entrar na busca dos outros
+specs; o padrão "Sim" é medido em `cadastro-visivel.spec.ts`.
+

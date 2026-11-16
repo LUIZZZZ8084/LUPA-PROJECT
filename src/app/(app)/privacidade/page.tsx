@@ -173,14 +173,15 @@ export default function PrivacidadePage() {
           </p>
         </Bloco>
         <p>
-          <strong>Ser encontrado por empresas nasce desligado.</strong> Existe
-          uma opção no perfil do candidato que permite a empresas encontrarem
-          você sem que você tenha se candidatado. Ela vem desligada, e mesmo
-          ligada entrega <em>contato</em>, não currículo. Só empresa com o CNPJ
-          conferido na Receita faz essa busca, e cada uma abre um número
-          limitado de perfis por dia. O motivo de nascer desligada é concreto:
-          numa cidade pequena, o seu patrão atual pode estar entre as empresas
-          cadastradas.
+          <strong>Ser encontrado por empresas é escolha sua.</strong> No
+          cadastro de candidato você escolhe se empresas podem encontrar você
+          sem que você tenha se candidatado; a resposta &ldquo;sim&rdquo; vem
+          marcada, e &ldquo;não&rdquo; está ao lado. Ligada, a opção entrega{" "}
+          <em>contato</em>, não currículo. Só empresa com o CNPJ conferido na
+          Receita faz essa busca, e cada uma abre um número limitado de perfis
+          por dia. Você muda a escolha quando quiser, em Editar perfil — e vale
+          pensar nisso se estiver empregado: numa cidade pequena, o seu patrão
+          atual pode estar entre as empresas cadastradas.
         </p>
       </Artigo>
 

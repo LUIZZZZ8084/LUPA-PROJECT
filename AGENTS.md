@@ -294,6 +294,7 @@ Preços, planos de vaga, mensalidade e teste grátis do prestador, estorno, webh
 O que cada papel informa no cadastro, e o que a empresa tem no painel — inclusive o que ficou de fora de propósito.
 
 - O que a empresa tem no painel
+- O candidato escolhe no cadastro se quer ser encontrado (#622)
 
 ---
 

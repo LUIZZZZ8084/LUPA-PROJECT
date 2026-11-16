@@ -119,8 +119,8 @@ export default async function CandidatosPage({
         /*
          * Dois vazios diferentes, e a diferença importa: com filtro, o
          * conselho é afrouxar a busca; sem filtro, a lista está vazia
-         * porque a opção nasce desligada — e dizer isso evita a conclusão
-         * de que a plataforma não tem gente.
+         * porque ninguém ligou a opção — e dizer isso evita a conclusão de
+         * que a plataforma não tem gente.
          */
         <EmptyState
           icon={
