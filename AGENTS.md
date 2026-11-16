@@ -176,6 +176,7 @@ Como uma conta muda de papel, o que se edita depois do cadastro, o perfil, o fee
 - O que se edita depois, e o que nunca
 - O nome é definido no cadastro, e a empresa assina com o dela (#315)
 - O limite de publicações mora no banco
+- Retratos e logos dos perfis de exemplo (#614)
 
 ### [Documentos: CPF, CNPJ e o que a verificação prova](docs/decisoes/documentos.md)
 
@@ -323,8 +324,10 @@ O que cada papel informa no cadastro, e o que a empresa tem no painel — inclus
   `verificacao` e são apagados na decisão do admin. Erros enviados ao Sentry
   passam por `scrubSensitiveData`. Senha nunca é logada. São obrigações de
   LGPD, com teste que trava.
-- **Imagens de perfil:** só avatares gerados (DiceBear, CC0). Nunca foto de
-  pessoa real sem direito de uso. Ver `scripts/gerar-avatares.mjs`.
+- **Imagens de perfil:** nunca foto de pessoa real. Os perfis de exemplo
+  usam avatar desenhado (DiceBear, CC0, `scripts/gerar-avatares.mjs`) ou
+  retrato **gerado por IA**, de pessoa que não existe (#614). Banco de
+  imagem não serve: tag de IA ali não prova nada.
 
 ---
 
