@@ -20,6 +20,7 @@ import { AbasDaContratacao } from "./abas";
 import type { AreaDeContratacao } from "./area";
 import { montarCardsDoFunil } from "./cards-do-funil";
 import { QuadroDoFunil } from "./quadro-do-funil";
+import { VistaDosCandidatos } from "./vista-dos-candidatos";
 
 /**
  * O funil de candidatos (#511): cada candidatura no estágio em que está.
@@ -75,6 +76,7 @@ export async function FunilDaContratacao({
         description="Cada candidatura no estágio em que está. Mova quem avançou, e abra a ficha para ver o currículo."
       />
       <AbasDaContratacao area={area} />
+      <VistaDosCandidatos area={area} atual="quadro" />
 
       {candidaturas.length === 0 ? (
         <EmptyState

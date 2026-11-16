@@ -321,7 +321,7 @@ export async function PainelDeContratacao({
     {
       titulo: "Chame de novo quem já se candidatou",
       texto:
-        "A aba Talentos reúne todo mundo que já se candidatou a alguma vaga sua, cada pessoa uma vez. Ao abrir uma vaga parecida, comece por lá.",
+        "A aba Talentos reúne todo mundo que já se candidatou a alguma vaga sua, cada pessoa uma vez. Guarde quem você quer chamar de novo e convide para uma vaga nova pelo WhatsApp.",
     },
     ...(buscaCandidatos
       ? [

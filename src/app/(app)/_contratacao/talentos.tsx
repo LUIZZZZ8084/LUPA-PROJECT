@@ -1,4 +1,4 @@
-import { SearchX, Users } from "lucide-react";
+import { BookmarkCheck, SearchX, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FilterBar } from "@/components/filter-bar";
@@ -12,16 +12,19 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { umParametro } from "@/lib/busca";
 import { JOB_CATEGORIES } from "@/lib/constants";
-import { pluralize, timeAgo } from "@/lib/format";
+import { empresaDoPainel, getCompany, getCompanyJobs } from "@/lib/data";
+import { pluralize, timeAgo, vagaExpirada } from "@/lib/format";
 import { TETO_CANDIDATURAS } from "@/lib/limites-de-lista";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
 import {
   etiquetasEmUso,
   talentosDaEmpresa,
 } from "@/server/candidaturas/talentos";
+import { talentosSalvosDa } from "@/server/talentos/servico";
 import { temPainelDeEmpresa } from "@/server/visualizacoes/servico";
 import { AbasDaContratacao } from "./abas";
 import type { AreaDeContratacao } from "./area";
+import { ConvidarParaVaga } from "./convidar-para-vaga";
 
 /**
  * "Quem já se candidatou": todo mundo que se candidatou a alguma vaga desta
@@ -48,6 +51,7 @@ export async function QuemJaSeCandidatou({
   const habilidade = umParametro(params, "q");
   const areaDesejada = umParametro(params, "area");
   const etiqueta = umParametro(params, "etiqueta");
+  const soGuardados = umParametro(params, "guardados") === "sim";
 
   const [talentos, todos] = await Promise.all([
     talentosDaEmpresa(sessao, { habilidade, area: areaDesejada, etiqueta }),
@@ -56,22 +60,58 @@ export async function QuemJaSeCandidatou({
     talentosDaEmpresa(sessao),
   ]);
   const etiquetas = etiquetasEmUso(todos);
-  const filtrando = Boolean(habilidade || areaDesejada || etiqueta);
+
+  /*
+   * Quem a empresa guardou na ficha (#618), e as vagas no ar para o convite
+   * (#620). A lista continua sendo de todo mundo que já se candidatou; o
+   * filtro "Só os guardados" recorta, e o selo marca.
+   */
+  const empresaId = empresaDoPainel(sessao.usuarioId);
+  const [guardados, vagasDaEmpresa, empresa] = await Promise.all([
+    talentosSalvosDa(sessao),
+    getCompanyJobs(empresaId),
+    getCompany(empresaId),
+  ]);
+  const vagasAbertas = vagasDaEmpresa
+    .filter(
+      (v) =>
+        v.status === "aberta" && !vagaExpirada(v.expires_at) && !v.removed_at,
+    )
+    .map((v) => ({ id: v.id, titulo: v.title, cidade: v.city }));
+  const nomeDaEmpresa = empresa?.company_name ?? "nossa empresa";
+  const lista = soGuardados
+    ? talentos.filter((t) => guardados.has(t.candidatoId))
+    : talentos;
+
+  const filtrando = Boolean(
+    habilidade || areaDesejada || etiqueta || soGuardados,
+  );
 
   return (
     <PageShell>
       <PageTitle
-        title="Quem já se candidatou"
+        title="Talentos"
         accent="text-empresas"
-        description="Todo mundo que já se candidatou a alguma vaga sua, sem repetir. Quem se candidatou a mais de uma aparece uma vez, com a vaga mais recente."
+        description="Todo mundo que já se candidatou a alguma vaga sua, uma vez cada. Guarde quem você quer chamar de novo, e convide para uma vaga nova."
       />
       <AbasDaContratacao area={area} />
 
       <FilterBar
         accent="vagas"
         searchPlaceholder="Buscar por habilidade, ex.: colheitadeira"
-        values={{ q: habilidade, area: areaDesejada, etiqueta }}
+        values={{
+          q: habilidade,
+          area: areaDesejada,
+          etiqueta,
+          guardados: soGuardados ? "sim" : undefined,
+        }}
         filters={[
+          // Os guardados na ficha (#618).
+          {
+            key: "guardados",
+            placeholder: "Todos",
+            options: [{ value: "sim", label: "Só os guardados" }],
+          },
           {
             key: "area",
             placeholder: "Área desejada",
@@ -91,22 +131,26 @@ export async function QuemJaSeCandidatou({
       />
 
       <p className="mb-3 text-muted text-xs">
-        {pluralize(talentos.length, "pessoa", "pessoas")} · a candidatura mais
+        {pluralize(lista.length, "pessoa", "pessoas")} · a candidatura mais
         recente primeiro
       </p>
 
-      {talentos.length === 0 ? (
+      {lista.length === 0 ? (
         <EmptyState
           icon={filtrando ? <SearchX size={22} /> : <Users size={22} />}
           title={
-            filtrando
-              ? "Ninguém com esses filtros"
-              : "Ninguém se candidatou ainda"
+            soGuardados && !habilidade && !areaDesejada && !etiqueta
+              ? "Ninguém guardado ainda"
+              : filtrando
+                ? "Ninguém com esses filtros"
+                : "Ninguém se candidatou ainda"
           }
           description={
-            filtrando
-              ? "Tente outra habilidade, ou remova a área e a etiqueta."
-              : "Assim que alguém se candidatar a uma vaga sua, a pessoa passa a aparecer aqui — e continua aparecendo quando você abrir outras vagas."
+            soGuardados && !habilidade && !areaDesejada && !etiqueta
+              ? 'Abra a ficha de quem se candidatou e toque em "Guardar nos talentos". A pessoa aparece aqui para você chamar numa próxima vaga.'
+              : filtrando
+                ? "Tente outra habilidade, ou remova a área e a etiqueta."
+                : "Assim que alguém se candidatar a uma vaga sua, a pessoa passa a aparecer aqui — e continua aparecendo quando você abrir outras vagas."
           }
           action={
             filtrando ? (
@@ -131,7 +175,7 @@ export async function QuemJaSeCandidatou({
       ) : (
         /* Cartões em duas ou três colunas no computador; ver as vagas. */
         <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-panel grid-cols-1 lg:grid lg:grid-cols-2 lg:gap-3 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent xl:grid-cols-3">
-          {talentos.map((t) => (
+          {lista.map((t) => (
             <li
               key={t.candidatoId}
               className="lg:overflow-hidden lg:rounded-[var(--radius-card)] lg:border lg:border-line lg:bg-panel"
@@ -147,8 +191,16 @@ export async function QuemJaSeCandidatou({
               >
                 <Avatar name={t.nome} src={t.avatarUrl} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-sm underline-offset-2 group-hover:underline">
-                    {t.nome}
+                  <p className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate font-semibold text-sm underline-offset-2 group-hover:underline">
+                      {t.nome}
+                    </span>
+                    {guardados.has(t.candidatoId) && (
+                      <span className="inline-flex flex-none items-center gap-1 rounded-full bg-empresas/15 px-2 py-0.5 font-medium text-empresas text-xs">
+                        <BookmarkCheck size={12} aria-hidden />
+                        Guardado
+                      </span>
+                    )}
                   </p>
                   <p className="truncate text-muted text-xs">
                     {t.areaDesejada ?? "Área não informada"}
@@ -190,6 +242,18 @@ export async function QuemJaSeCandidatou({
                   )}
                 </div>
               </Link>
+              {/*
+                Convidar para uma vaga nova (#620): fora do link da linha,
+                porque é outra ação. Só com telefone e com vaga no ar.
+              */}
+              {t.telefone && vagasAbertas.length > 0 && (
+                <ConvidarParaVaga
+                  nome={t.nome}
+                  telefone={t.telefone}
+                  empresa={nomeDaEmpresa}
+                  vagas={vagasAbertas}
+                />
+              )}
             </li>
           ))}
         </ul>

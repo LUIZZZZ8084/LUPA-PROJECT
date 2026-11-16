@@ -48,7 +48,7 @@ test.describe("resultado de cada vaga no painel", () => {
     await semViolacoes(page);
   });
 
-  test("a aba Talentos abre Quem já se candidatou", async ({ page }) => {
+  test("a aba Talentos abre a lista de talentos", async ({ page }) => {
     await page.goto("/empresa");
 
     await page
@@ -58,7 +58,7 @@ test.describe("resultado de cada vaga no painel", () => {
 
     await expect(page).toHaveURL(/\/empresa\/talentos$/);
     await expect(
-      page.getByRole("heading", { name: "Quem já se candidatou" }),
+      page.getByRole("heading", { name: "Talentos", exact: true }),
     ).toBeVisible();
   });
 });
@@ -138,7 +138,7 @@ test.describe("quem já se candidatou", () => {
     await page.goto("/empresa/talentos");
 
     await expect(
-      page.getByRole("heading", { name: "Quem já se candidatou" }),
+      page.getByRole("heading", { name: "Talentos", exact: true }),
     ).toBeVisible();
     const linhas = page.locator('a[href*="/empresa/candidaturas/"]');
     await expect(linhas.first()).toBeVisible();
