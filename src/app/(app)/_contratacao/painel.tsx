@@ -51,7 +51,11 @@ import {
   diasAteVencer,
   processosParados,
 } from "@/lib/pendencias-do-painel";
-import { resumoDoDireito, seloDoDireito } from "@/lib/planos-empresa";
+import {
+  resumoDoDireito,
+  seloDoDireito,
+  vagasParaPublicar,
+} from "@/lib/planos-empresa";
 import type { Company } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { acompanhamentosDe } from "@/server/acompanhamento/servico";
@@ -439,13 +443,124 @@ export async function PainelDeContratacao({
         }
       />
       <AbasDaContratacao area={area} />
+
+      {/*
+        Precisa da sua atenção (#610): o que espera uma ação, uma linha
+        por coisa, e cada linha leva aonde ela se resolve. Sem nada
+        pendente a seção fica e diz isso — sumir faria a pessoa procurar.
+
+        Logo abaixo das abas (#624), antes do tutorial, do contador e dos
+        números: é o que o subtítulo da página promete. Lá embaixo, depois
+        de seis cartões de número, ficava fora da primeira tela no
+        computador e na segunda tela do celular. No computador as linhas
+        vão em duas colunas, para não esticar de uma ponta à outra.
+      */}
+      <section aria-labelledby="atencao" className="mb-6">
+        <h2 id="atencao" className="mb-3 font-bold text-base">
+          Precisa da sua atenção
+        </h2>
+        {pendencias.length === 0 ? (
+          <Panel>
+            <p className="flex items-center gap-2 font-semibold text-sm">
+              <CheckCircle2 size={18} className="text-vagas" aria-hidden />
+              Tudo em dia
+            </p>
+            <p className="mt-1 text-muted text-sm leading-relaxed">
+              Nenhum candidato esperando análise, nenhuma vaga perto de vencer e
+              nenhum processo parado há {DIAS_PARA_PARAR} dias.
+            </p>
+          </Panel>
+        ) : (
+          <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">
+            {pendencias.map((p) => (
+              <li key={p.chave}>
+                <Link
+                  href={p.href}
+                  className={cn(
+                    "flex min-h-11 items-center gap-3 rounded-[var(--radius-card)] border bg-panel p-3.5 transition-colors hover:bg-panel-2",
+                    p.alerta ? "border-warn/60" : "border-empresas/50",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-9 w-9 flex-none items-center justify-center rounded-xl",
+                      p.alerta
+                        ? "bg-warn/15 text-warn"
+                        : "bg-empresas/15 text-empresas",
+                    )}
+                  >
+                    {p.icone}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-sm">
+                      {p.titulo}
+                    </span>
+                    <span className="block text-muted text-xs">
+                      {p.detalhe}
+                    </span>
+                  </span>
+                  <ChevronRight
+                    size={16}
+                    className="flex-none text-faint"
+                    aria-hidden
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/*
+          As entrevistas marcadas na ficha (#539), da mais próxima para a
+          mais distante. Só aparece quando há alguma: um bloco vazio todo
+          dia ensinaria a pular este pedaço do painel.
+        */}
+        {proximas.length > 0 && (
+          <Panel className="mt-3">
+            <h3 className="flex items-center gap-2 font-bold text-sm">
+              <CalendarClock size={16} className="text-empresas" aria-hidden />
+              Próximas entrevistas
+            </h3>
+            <ul className="mt-2 divide-y divide-line">
+              {proximas.slice(0, 5).map((e) => (
+                <li key={e.candidaturaId}>
+                  <Link
+                    href={`${area.base}/candidaturas/${e.candidaturaId}`}
+                    className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-0.5 py-2 text-sm hover:text-empresas"
+                  >
+                    <span className="min-w-0">
+                      <span className="font-semibold">
+                        {e.candidatura.candidate.full_name}
+                      </span>
+                      <span className="text-muted">
+                        {" "}
+                        · {e.candidatura.job_title}
+                      </span>
+                    </span>
+                    <span className="text-muted text-xs">
+                      {formatarEntrevista(e.entrevistaEm)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
+      </section>
+
       <TutorialDoPainel passos={passosDoTutorial} />
 
       {/*
         Quantas vagas ainda dá para publicar (#518), antes do resto: é o que
         decide se o "Publicar nova vaga" lá em cima vai dar certo.
+
+        Só quando há limite (#624). No ilimitado o cartão dizia, em letra
+        grande, "Ilimitado": nada a decidir, e o selo "Plano ilimitado
+        ativo" do cartão da empresa, mais abaixo, já diz o mesmo.
       */}
-      <ContadorDeVagas direito={direito} base={area.base} />
+      {vagasParaPublicar(direito).total !== null && (
+        <ContadorDeVagas direito={direito} base={area.base} />
+      )}
 
       {/* Sem e-mail confirmado, o aviso de candidatura não sai (#560). */}
       <ConfirmarParaAvisos
@@ -518,108 +633,6 @@ export async function PainelDeContratacao({
                 alerta
               />
             </div>
-          </section>
-
-          {/*
-            Precisa da sua atenção (#610): o que espera uma ação, uma linha
-            por coisa, e cada linha leva aonde ela se resolve. Sem nada
-            pendente a seção fica e diz isso — sumir faria a pessoa procurar.
-          */}
-          <section aria-labelledby="atencao" className="mb-6">
-            <h2 id="atencao" className="mb-3 font-bold text-base">
-              Precisa da sua atenção
-            </h2>
-            {pendencias.length === 0 ? (
-              <Panel>
-                <p className="flex items-center gap-2 font-semibold text-sm">
-                  <CheckCircle2 size={18} className="text-vagas" aria-hidden />
-                  Tudo em dia
-                </p>
-                <p className="mt-1 text-muted text-sm leading-relaxed">
-                  Nenhum candidato esperando análise, nenhuma vaga perto de
-                  vencer e nenhum processo parado há {DIAS_PARA_PARAR} dias.
-                </p>
-              </Panel>
-            ) : (
-              <ul className="space-y-2">
-                {pendencias.map((p) => (
-                  <li key={p.chave}>
-                    <Link
-                      href={p.href}
-                      className={cn(
-                        "flex min-h-11 items-center gap-3 rounded-[var(--radius-card)] border bg-panel p-3.5 transition-colors hover:bg-panel-2",
-                        p.alerta ? "border-warn/60" : "border-empresas/50",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "flex h-9 w-9 flex-none items-center justify-center rounded-xl",
-                          p.alerta
-                            ? "bg-warn/15 text-warn"
-                            : "bg-empresas/15 text-empresas",
-                        )}
-                      >
-                        {p.icone}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-semibold text-sm">
-                          {p.titulo}
-                        </span>
-                        <span className="block text-muted text-xs">
-                          {p.detalhe}
-                        </span>
-                      </span>
-                      <ChevronRight
-                        size={16}
-                        className="flex-none text-faint"
-                        aria-hidden
-                      />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {/*
-              As entrevistas marcadas na ficha (#539), da mais próxima para a
-              mais distante. Só aparece quando há alguma: um bloco vazio todo
-              dia ensinaria a pular este pedaço do painel.
-            */}
-            {proximas.length > 0 && (
-              <Panel className="mt-3">
-                <h3 className="flex items-center gap-2 font-bold text-sm">
-                  <CalendarClock
-                    size={16}
-                    className="text-empresas"
-                    aria-hidden
-                  />
-                  Próximas entrevistas
-                </h3>
-                <ul className="mt-2 divide-y divide-line">
-                  {proximas.slice(0, 5).map((e) => (
-                    <li key={e.candidaturaId}>
-                      <Link
-                        href={`${area.base}/candidaturas/${e.candidaturaId}`}
-                        className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-0.5 py-2 text-sm hover:text-empresas"
-                      >
-                        <span className="min-w-0">
-                          <span className="font-semibold">
-                            {e.candidatura.candidate.full_name}
-                          </span>
-                          <span className="text-muted">
-                            {" "}
-                            · {e.candidatura.job_title}
-                          </span>
-                        </span>
-                        <span className="text-muted text-xs">
-                          {formatarEntrevista(e.entrevistaEm)}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
-            )}
           </section>
 
           <Panel>
@@ -728,15 +741,26 @@ export async function PainelDeContratacao({
                   Ver candidatos
                 </Link>
               </div>
+              {/*
+                Rótulos no passado (#624). O funil conta quem **chegou** a
+                cada etapa, mesmo que já tenha passado dela; a visão geral,
+                lá em cima, conta quem **está** lá agora. Com o mesmo
+                "Em triagem" nos dois, a tela mostrava 2 num e 3 no outro, e
+                parecia erro.
+              */}
+              <p className="-mt-1 mb-3 text-muted text-xs">
+                De todos os currículos recebidos, quantos chegaram a cada etapa,
+                mesmo que já tenham passado dela.
+              </p>
               <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {(
                   [
                     ["Recebidos", alcance.recebidas],
-                    ["Em triagem", alcance.olhadas],
-                    ["Contatados", alcance.contatados],
-                    ["Entrevista", alcance.entrevistas],
-                    ["Aprovados", alcance.selecionados],
-                    ["Contratados", alcance.contratados],
+                    ["Passaram pela triagem", alcance.olhadas],
+                    ["Foram contatados", alcance.contatados],
+                    ["Chegaram à entrevista", alcance.entrevistas],
+                    ["Foram aprovados", alcance.selecionados],
+                    ["Foram contratados", alcance.contratados],
                   ] as const
                 ).map(([rotulo, valor], i) => {
                   const f = fracao(valor);
