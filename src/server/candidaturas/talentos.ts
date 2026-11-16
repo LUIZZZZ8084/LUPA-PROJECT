@@ -34,6 +34,8 @@ export interface Talento {
   avatarUrl: string | null;
   cidade: string | null;
   areaDesejada: string | null;
+  /** Para o convite a uma vaga nova (#620); nulo sem telefone. */
+  telefone: string | null;
   /** Habilidades que casaram com o filtro, para a tela destacar. */
   casadas: string[];
   /** A candidatura mais recente — é por ela que se abre a ficha. */
@@ -132,6 +134,7 @@ export async function talentosDaEmpresa(
       avatarUrl: c.candidate.avatar_url,
       cidade: c.candidate.city,
       areaDesejada: c.candidate.desired_area,
+      telefone: c.candidate.phone,
       casadas,
       ultima: {
         candidaturaId: c.id,

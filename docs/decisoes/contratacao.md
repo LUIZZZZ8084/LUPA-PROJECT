@@ -381,6 +381,27 @@ talentos" (#545) entrou salvo na migração.
 
 A aba Talentos passa a mostrar só os salvos na etapa seguinte.
 
+## Candidatos em quadro e em lista; Talentos com guardados e convite (#620)
+
+Quinta etapa do mini ATS.
+
+**Candidatos tem duas vistas**, Quadro (`/funil`) e Lista
+(`/candidaturas`), na mesma aba. O quadro responde "onde está cada um?"; a
+lista, "quem chegou esta semana para a vaga X?" e "cadê a Maria?", com
+filtros de vaga, etapa, período (7 ou 30 dias) e nome, aplicados no
+servidor. São dois endereços, e não um parâmetro, porque a barra de
+filtros remonta a URL só com os filtros. A lista mora em `/candidaturas`,
+onde a ficha (`/candidaturas/<id>`) já morava.
+
+**Talentos continua sendo a lista de pessoas**, uma linha por pessoa, e
+não só os guardados, como tinha sido planejado na #618: ninguém tinha sido
+guardado ainda, e a aba ficaria vazia em produção — inclusive na
+apresentação do dia. Ganhou o selo "Guardado", o filtro "Só os guardados" e
+o **convite para uma vaga**: escolhe uma vaga no ar e abre o WhatsApp da
+empresa com a mensagem e o link. É convite, não candidatura: a pessoa se
+candidata se quiser, e nada é criado em nome dela. As duas abas não se
+repetem — Talentos é a pessoa; Candidatos, cada processo.
+
 ## O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
 
 Três pedidos do Luiz em 26/10/2026, todos do lado de quem contrata, e todos

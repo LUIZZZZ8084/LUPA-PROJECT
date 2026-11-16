@@ -84,9 +84,11 @@ export const ROTAS_EMPRESA: readonly RotaVarrida[] = [
   { path: "/empresa", nome: "Painel da empresa" },
   { path: "/empresa/vagas/nova", nome: "Publicar vaga" },
   { path: "/empresa/creditos", nome: "Planos e vagas" },
-  { path: "/empresa/talentos", nome: "Quem já se candidatou" },
+  { path: "/empresa/talentos", nome: "Talentos" },
   { path: "/empresa/vagas", nome: "Vagas da empresa" },
   { path: "/empresa/funil", nome: "Funil de candidatos" },
+  // Os candidatos em lista (#620).
+  { path: "/empresa/candidaturas", nome: "Candidatos em lista" },
   // A vaga de exemplo é da empresa de demonstração, que é a da sessão (#544).
   {
     path: "/empresa/vagas/job-operador-maquinas/editar",
@@ -149,6 +151,8 @@ export const ROTAS_NAO_VARRIDAS: Record<string, string> = {
     "mesma implementação de /empresa/funil, que é varrida — só muda a base. A área do prestador é exercitada em virar-prestador.spec.ts",
   "/contratar/talentos":
     "mesma implementação de /empresa/talentos, que é varrida — só muda a base. A área do prestador é exercitada em virar-prestador.spec.ts",
+  "/contratar/candidaturas":
+    "mesma implementação de /empresa/candidaturas, que é varrida e tem e2e próprio em candidatos-e-talentos.spec.ts — só muda a base. Pela área do prestador não há e2e: exige sessão de prestador, que a suíte não compartilha.",
   "/contratar/candidaturas/[id]":
     "id resolvido em tempo de execução, como /empresa/candidaturas/[id]; mesma implementação, que é varrida pela área da empresa",
   "/perfil/publicacoes":

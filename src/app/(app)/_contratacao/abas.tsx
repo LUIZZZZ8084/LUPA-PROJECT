@@ -39,10 +39,14 @@ export function AbasDaContratacao({ area }: { area: AreaDeContratacao }) {
     >
       {ABAS.map(({ sufixo, rotulo, Icone }) => {
         const destino = `${area.base}${sufixo}`;
+        // A aba Candidatos cobre o quadro, a lista e a ficha (#620).
+        const tambem = sufixo === "/funil" ? [`${area.base}/candidaturas`] : [];
         const ativa =
           sufixo === ""
             ? caminho === area.base
-            : caminho === destino || caminho.startsWith(`${destino}/`);
+            : [destino, ...tambem].some(
+                (d) => caminho === d || caminho.startsWith(`${d}/`),
+              );
         return (
           <Link
             key={rotulo}
