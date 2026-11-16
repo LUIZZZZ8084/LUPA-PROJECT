@@ -17,6 +17,7 @@ import {
   getPerfilPublicoDaEmpresa,
 } from "@/lib/data";
 import { linkExterno, pluralize, vagaExpirada } from "@/lib/format";
+import { porteDaEmpresa } from "@/lib/porte";
 import { sessaoAtual } from "@/server/auth/cookies";
 
 /**
@@ -109,9 +110,7 @@ export default async function EmpresaPage({
                   <Badge tone="empresas">{empresa.setor}</Badge>
                 )}
                 {empresa.porte && (
-                  <Badge tone="neutral">
-                    Porte {empresa.porte.toLowerCase()}
-                  </Badge>
+                  <Badge tone="neutral">{porteDaEmpresa(empresa.porte)}</Badge>
                 )}
               </div>
             )}
