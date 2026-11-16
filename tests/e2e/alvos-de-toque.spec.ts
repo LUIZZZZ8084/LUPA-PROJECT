@@ -132,7 +132,21 @@ test.describe("alvos de toque, sem sessão", () => {
   test.skip(({ hasTouch }) => !hasTouch, "só aparelho de toque");
   test.use({ storageState: SEM_SESSAO });
 
-  for (const rota of ["/", "/entrar", "/cadastro", "/esqueci-senha"]) {
+  /*
+   * As páginas que abrem sem login (#628): a vaga, o prestador e a empresa
+   * vistos por quem ainda não tem conta, e a página para empresas. O
+   * "Criar conta grátis" da vaga tinha 40 px e ninguém media aqui.
+   */
+  for (const rota of [
+    "/",
+    "/entrar",
+    "/cadastro",
+    "/esqueci-senha",
+    "/vagas/job-operador-maquinas",
+    "/servicos/prv-joao-silva",
+    "/empresas/cmp-agro-norte",
+    "/para-empresas",
+  ]) {
     test(`${rota}: nada abaixo de 44 px`, async ({ page }) => {
       await conferir(page, rota);
     });
