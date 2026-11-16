@@ -715,6 +715,46 @@ export async function getCompany(id: string): Promise<Company | null> {
   return MOCK_COMPANIES.find((c) => c.profile_id === id) ?? null;
 }
 
+/**
+ * O que a página pública da empresa mostra além das vagas (#616): setor,
+ * porte e a descrição que ela escreveu no cadastro.
+ *
+ * Função à parte de `getCompany`, que serve o painel e de propósito não lê
+ * essas colunas. `perfis_empresa` é legível pela chave anônima — CNPJ é
+ * registro público, e CPF nunca mora nesta tabela —, então a página aberta
+ * lê com ela, como a vaga. Em demonstração as empresas não têm descrição, e
+ * a página simplesmente não mostra o bloco.
+ */
+export async function getPerfilPublicoDaEmpresa(id: string): Promise<{
+  setor: string | null;
+  porte: string | null;
+  descricao: string | null;
+} | null> {
+  if (isSupabaseConfigured) {
+    const supabase = await createClient();
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("perfis_empresa")
+        .select("setor, porte, descricao")
+        .eq("usuario_id", id)
+        .maybeSingle();
+      if (error) {
+        if (ehIdSemFormaDeUuid(error)) return null;
+        throw falhaDeConsulta("perfis_empresa", error);
+      }
+      if (!data) return null;
+      return {
+        setor: (data.setor as string | null) ?? null,
+        porte: (data.porte as string | null) ?? null,
+        descricao: (data.descricao as string | null) ?? null,
+      };
+    }
+  }
+  return MOCK_COMPANIES.some((c) => c.profile_id === id)
+    ? { setor: null, porte: null, descricao: null }
+    : null;
+}
+
 export async function getCompanyJobs(companyId: string): Promise<JobListing[]> {
   if (isSupabaseConfigured) {
     const supabase = await createClient();

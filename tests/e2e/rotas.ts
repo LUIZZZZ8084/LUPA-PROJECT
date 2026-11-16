@@ -29,6 +29,8 @@ export const ROTAS: readonly RotaVarrida[] = [
   { path: "/vagas/job-operador-maquinas", nome: "Detalhe da vaga" },
   { path: "/servicos", nome: "Busca de serviços" },
   { path: "/servicos/prv-joao-silva", nome: "Perfil do prestador" },
+  // A página pública da empresa (#616), aberta a partir da vaga.
+  { path: "/empresas/cmp-agro-norte", nome: "Página da empresa" },
   { path: "/cadastro", nome: "Escolha de papel" },
   { path: "/cadastro?tipo=prestador_servico", nome: "Cadastro de prestador" },
   { path: "/cadastro?tipo=empresa", nome: "Cadastro de empresa" },
