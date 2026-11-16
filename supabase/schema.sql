@@ -675,6 +675,30 @@ alter table historico_candidatura enable row level security;
  * está não grava nada. Devolve a candidatura, ou nenhuma linha se o id não
  * existe.
  */
+/*
+ * Talentos salvos (#618): quem a empresa guardou para uma próxima vaga.
+ *
+ * Uma linha por empresa e por pessoa, e não uma marca na candidatura: o
+ * talento é a pessoa, que pode ter se candidatado a várias vagas. Só a
+ * empresa lê — saber que uma empresa guardou alguém é informação dela. Cai
+ * em cascata com qualquer das duas contas: excluir a conta da pessoa apaga
+ * o registro, que é o que a LGPD pede.
+ */
+create table talentos_salvos (
+  empresa_id   uuid not null references usuarios(id) on delete cascade,
+  candidato_id uuid not null references usuarios(id) on delete cascade,
+  salvo_em     timestamptz not null default now(),
+
+  primary key (empresa_id, candidato_id),
+  constraint talento_nao_e_a_propria_empresa check (empresa_id <> candidato_id)
+);
+
+-- A chave do candidato também tem índice (#210): apagar a conta dele
+-- confere cada referência.
+create index talentos_salvos_candidato_idx on talentos_salvos (candidato_id);
+
+alter table talentos_salvos enable row level security;
+
 create or replace function mover_candidatura(
   p_id uuid,
   p_status status_candidatura,
@@ -2677,6 +2701,7 @@ revoke select on parceiros from anon, authenticated;
 -- O que a empresa anota sobre cada candidatura (#539): só dela.
 revoke select on acompanhamento_candidatura from anon, authenticated;
 revoke select on historico_candidatura      from anon, authenticated;
+revoke select on talentos_salvos            from anon, authenticated;
 
 /*
  * E a escrita, em tudo (#421). O Supabase concede a `anon` e

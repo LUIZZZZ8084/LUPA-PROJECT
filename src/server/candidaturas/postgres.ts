@@ -191,6 +191,33 @@ export class RepositorioCandidaturasPostgres
     return (data ?? []).map(paraEvento);
   }
 
+  async registrarContato(
+    candidaturaId: string,
+    nota: string,
+    autorId: string | null,
+  ): Promise<EventoDoHistorico> {
+    const supabase = await cliente();
+    const { data, error } = await supabase
+      .from("historico_candidatura")
+      .insert({
+        candidatura_id: candidaturaId,
+        tipo: "contato",
+        nota,
+        autor_id: autorId,
+      })
+      .select("*")
+      .single();
+
+    if (error) {
+      // Candidatura que não existe viola a chave estrangeira.
+      if (error.code === "23503" || ehIdInvalido(error)) {
+        throw erros.naoEncontrado("Candidatura");
+      }
+      throw erros.indisponivel(error.message);
+    }
+    return paraEvento(data);
+  }
+
   async ultimasMovimentacoes(
     candidaturaIds: readonly string[],
   ): Promise<Map<string, string>> {

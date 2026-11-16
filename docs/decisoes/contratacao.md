@@ -357,6 +357,30 @@ desta evolução pedia para não tocar em cobrança nem em publicação.
 Os cards saem de um lugar só (`cards-do-funil.ts`) para as duas telas:
 montados em cada uma, a segunda esqueceria a etiqueta ou a entrevista.
 
+## A ficha conta a história da candidatura, e guarda a pessoa (#618)
+
+Quarta etapa do mini ATS. A ficha mostrava só a etapa de agora.
+
+**Histórico**: cada mudança de etapa (#608) e cada contato registrado, do
+mais novo ao mais velho, terminando no dia da candidatura. A mudança feita
+pelo sistema — abrir a ficha tira de "Nova" — aparece como "automático".
+O histórico começou em 10/11/2026, e a ficha diz isso quando não há nada:
+inventar o caminho das antigas seria registrar o que ninguém viu.
+
+**Registrar contato** é uma nota curta (até 500 letras) que entra na mesma
+linha do tempo, na mesma tabela, com quem registrou. Separado das anotações
+porque o tempo importa: anotação é o que se sabe da pessoa, contato é o que
+aconteceu e quando. Não muda a etapa — quem decide isso é a empresa.
+
+**Salvar nos talentos** grava a **pessoa**, não a candidatura, numa tabela
+própria (`talentos_salvos`, empresa e pessoa), só da empresa. Começa sempre
+de uma candidatura desta empresa: é o que prova que a pessoa procurou a
+empresa, e é a base para a empresa guardar o contato dela. Salvar não avisa
+a pessoa. Excluir a conta apaga em cascata. Quem tinha a etiqueta "banco de
+talentos" (#545) entrou salvo na migração.
+
+A aba Talentos passa a mostrar só os salvos na etapa seguinte.
+
 ## O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
 
 Três pedidos do Luiz em 26/10/2026, todos do lado de quem contrata, e todos

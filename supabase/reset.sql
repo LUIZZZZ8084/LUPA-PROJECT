@@ -65,6 +65,7 @@ drop table if exists execucoes_varredura cascade;
 drop table if exists pedidos_verificacao cascade;
 drop table if exists publicacoes cascade;
 drop table if exists avaliacoes cascade;
+drop table if exists talentos_salvos cascade;
 drop table if exists historico_candidatura cascade;
 drop table if exists acompanhamento_candidatura cascade;
 drop table if exists candidaturas cascade;

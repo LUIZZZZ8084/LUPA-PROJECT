@@ -119,6 +119,9 @@ export const ORCAMENTOS: Record<string, Orcamento> = {
   "vaga.editar": porJanela(20),
   // Anotar e marcar entrevista (#539): o mesmo ritmo de mover de estágio.
   "candidatura.acompanhamento": porJanela(60),
+  // A ficha do candidato (#618): registrar contato e salvar nos talentos.
+  "candidatura.contato": porJanela(60),
+  "talento.salvar": porJanela(60),
 
   /*
    * Publicar já custa uma vaga do saldo, então o dinheiro é o primeiro

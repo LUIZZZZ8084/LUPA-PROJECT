@@ -132,6 +132,7 @@ describe("schema.sql roda de uma vez num banco limpo", () => {
       "perfis_prestador",
       "preferencias_notificacao",
       "publicacoes",
+      "talentos_salvos",
       "tentativas_de_acesso",
       "tokens_recuperacao",
       "usuarios",
@@ -971,6 +972,8 @@ describe("grants de anon e authenticated", () => {
     "acompanhamento_candidatura",
     // Por onde a candidatura passou e os contatos da empresa (#608): só dela.
     "historico_candidatura",
+    // Quem a empresa guardou para uma próxima vaga (#618): só dela.
+    "talentos_salvos",
     /*
      * Saber quem está de olho em vaga de motorista é a mesma classe de
      * informação que o currículo — numa cidade do tamanho de Sinop, diz
@@ -1369,8 +1372,9 @@ describe("reset.sql devolve o banco ao estado limpo", () => {
        order by table_name`,
     );
     // 23 desde a #235, que acrescentou `mensagens_suporte`; 28 com
-    // `contagens_prestador` (#604); 29 com `historico_candidatura` (#608).
-    expect(tabelas.rows).toHaveLength(29);
+    // `contagens_prestador` (#604); 29 com `historico_candidatura` (#608);
+    // 30 com `talentos_salvos` (#618).
+    expect(tabelas.rows).toHaveLength(30);
 
     const views = await banco.query<{ total: string }>(
       `select count(*) as total from information_schema.views
@@ -4791,6 +4795,111 @@ describe("etapas e histórico da candidatura", () => {
     );
     expect(sobrou.rows).toHaveLength(0);
   });
+});
+
+describe("talentos salvos", () => {
+  it("uma linha por empresa e pessoa, e cai com a conta da pessoa", async () => {
+    const pessoa = await db.query<{ id: string }>(
+      `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+       values ('talento@teste.lupa', 'h', 'candidato_clt', 'Pessoa', '66999110099', 'Sinop - MT')
+       returning id`,
+    );
+    const empresa = await db.query<{ empresa_id: string }>(
+      "select empresa_id from vagas limit 1",
+    );
+    const par = [empresa.rows[0].empresa_id, pessoa.rows[0].id];
+    await db.query(
+      "insert into talentos_salvos (empresa_id, candidato_id) values ($1, $2)",
+      par,
+    );
+    await expect(
+      db.query(
+        "insert into talentos_salvos (empresa_id, candidato_id) values ($1, $2)",
+        par,
+      ),
+    ).rejects.toThrow();
+    await expect(
+      db.query(
+        "insert into talentos_salvos (empresa_id, candidato_id) values ($1, $1)",
+        [par[0]],
+      ),
+    ).rejects.toThrow();
+
+    await db.query("delete from usuarios where id = $1", [par[1]]);
+    const sobrou = await db.query(
+      "select 1 from talentos_salvos where candidato_id = $1",
+      [par[1]],
+    );
+    expect(sobrou.rows).toHaveLength(0);
+  });
+});
+
+describe("aplica-talentos-salvos.sql", () => {
+  it("cria a tabela, salva quem tinha a etiqueta, roda de novo e fecha", async () => {
+    const banco = await PGlite.create();
+    try {
+      await banco.exec(SCHEMA);
+      await banco.exec("drop table talentos_salvos");
+
+      // Uma candidatura com a etiqueta e outra sem.
+      const pessoas = await banco.query<{ id: string }>(
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('e1@teste.lupa', 'h', 'candidato_clt', 'Um', '66999110101', 'Sinop - MT'),
+                ('e2@teste.lupa', 'h', 'candidato_clt', 'Dois', '66999110102', 'Sinop - MT')
+         returning id`,
+      );
+      // O banco do teste nasce sem seed: a empresa e a vaga são criadas aqui.
+      const empresa = await banco.query<{ id: string }>(
+        `insert into usuarios (email, senha_hash, papel, nome_completo, telefone, cidade)
+         values ('emp@teste.lupa', 'h', 'empresa', 'Empresa', '66999110103', 'Sinop - MT')
+         returning id`,
+      );
+      await banco.query(
+        "insert into perfis_empresa (usuario_id, razao_social) values ($1, 'Empresa')",
+        [empresa.rows[0].id],
+      );
+      const vaga = await banco.query<{ id: string }>(
+        `insert into vagas (empresa_id, titulo, descricao, cidade)
+         values ($1, 'Vaga', 'Descrição', 'Sinop - MT') returning id`,
+        [empresa.rows[0].id],
+      );
+      for (const [i, p] of pessoas.rows.entries()) {
+        const c = await banco.query<{ id: string }>(
+          "insert into candidaturas (vaga_id, candidato_id) values ($1, $2) returning id",
+          [vaga.rows[0].id, p.id],
+        );
+        await banco.query(
+          "insert into acompanhamento_candidatura (candidatura_id, etiquetas) values ($1, $2)",
+          [c.rows[0].id, i === 0 ? ["banco de talentos"] : ["chamar depois"]],
+        );
+      }
+
+      const script = readFileSync(
+        join(process.cwd(), "supabase/aplica-talentos-salvos.sql"),
+        "utf8",
+      );
+      await banco.exec(script);
+      await banco.exec("grant all on talentos_salvos to anon, authenticated");
+      await banco.exec(script);
+
+      const salvos = await banco.query<{ candidato_id: string }>(
+        "select candidato_id from talentos_salvos",
+      );
+      expect(salvos.rows.map((r) => r.candidato_id)).toEqual([
+        pessoas.rows[0].id,
+      ]);
+
+      const privilegio = await banco.query<{ algum: boolean }>(
+        `select bool_or(has_table_privilege(papel, 'talentos_salvos', p)) as algum
+           from unnest(array['anon', 'authenticated']) as papel,
+                unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE',
+                             'TRUNCATE']) as p`,
+      );
+      expect(privilegio.rows[0].algum).toBe(false);
+    } finally {
+      await banco.close();
+    }
+  }, 60_000);
 });
 
 describe("aplica-etapas-e-historico.sql", () => {
