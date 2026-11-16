@@ -1,10 +1,14 @@
 import {
+  ArrowRight,
   Briefcase,
   CalendarClock,
   FileText,
+  History,
   Mail,
   MapPin,
   MessageCircle,
+  Phone,
+  Send,
 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
@@ -21,13 +25,17 @@ import { formatPhone, timeAgo, whatsappLink } from "@/lib/format";
 import { motivosDeNaoAtender } from "@/lib/triagem";
 import { acompanhamentosDe } from "@/server/acompanhamento/servico";
 import { sessaoAtual } from "@/server/auth/cookies";
+import { repositorioCandidaturas } from "@/server/candidaturas";
 import {
   fichaDaCandidatura,
   marcarComoVisualizada,
 } from "@/server/candidaturas/ficha";
+import type { EventoDoHistorico } from "@/server/candidaturas/tipos";
+import { talentosSalvosDa } from "@/server/talentos/servico";
 import { FormularioDeAcompanhamento } from "./acompanhamento-form";
 import type { AreaDeContratacao } from "./area";
 import { CopiarEmail } from "./copiar-email";
+import { RegistrarContato, SalvarNosTalentos } from "./ficha-do-candidato";
 import { MoverCandidaturaSelect } from "./mover-candidatura-select";
 
 export async function FichaDaCandidatura({
@@ -78,6 +86,15 @@ export async function FichaDaCandidatura({
   const acompanhamento = (await acompanhamentosDe([candidatura.id])).get(
     candidatura.id,
   );
+
+  /*
+   * O histórico e o talento salvo (#618), lidos depois de a ficha provar que
+   * a candidatura é desta empresa.
+   */
+  const [historico, salvos] = await Promise.all([
+    repositorioCandidaturas().historicoDe(candidatura.id),
+    talentosSalvosDa(sessao),
+  ]);
   const entrevista = acompanhamento?.entrevistaEm
     ? formatarEntrevista(acompanhamento.entrevistaEm)
     : null;
@@ -111,10 +128,20 @@ export async function FichaDaCandidatura({
               </span>{" "}
               · {timeAgo(candidatura.created_at)}
             </p>
-            <div className="mt-2.5">
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <Badge tone={APPLICATION_TONE[candidatura.status]}>
                 {APPLICATION_LABELS[candidatura.status]}
               </Badge>
+            </div>
+            {/*
+              Guardar a pessoa para uma próxima vaga (#618). Fica no topo
+              porque a decisão é sobre a pessoa, não sobre esta vaga.
+            */}
+            <div className="mt-3">
+              <SalvarNosTalentos
+                candidaturaId={candidatura.id}
+                salvo={salvos.has(candidatura.candidate_id)}
+              />
             </div>
           </div>
         </div>
@@ -354,7 +381,110 @@ export async function FichaDaCandidatura({
           />
         </div>
       </Panel>
+
+      {/*
+        O histórico (#618): por onde a candidatura passou e os contatos que a
+        empresa registrou, do mais recente ao mais antigo, terminando no dia
+        em que a pessoa se candidatou. Só a empresa vê.
+      */}
+      <Panel className="mt-5">
+        <h2 className="flex items-center gap-2 text-base font-bold">
+          <History size={18} className="text-empresas" aria-hidden />
+          Histórico
+        </h2>
+        <p className="mt-1 text-xs text-muted">
+          Só você vê isto. Mudanças de etapa entram sozinhas; contatos, você
+          registra.
+        </p>
+
+        <RegistrarContato
+          key={historico.length}
+          candidaturaId={candidatura.id}
+        />
+
+        <ol className="mt-5 space-y-3 border-line border-t pt-4">
+          {historico.map((e) => (
+            <ItemDoHistorico key={e.id} evento={e} />
+          ))}
+          <li className="flex gap-3 text-sm">
+            <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-panel-2 text-muted">
+              <Send size={14} aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block">
+                Candidatou-se a {candidatura.job_title}
+              </span>
+              <span className="block text-faint text-xs">
+                {quando(candidatura.created_at)}
+              </span>
+            </span>
+          </li>
+        </ol>
+        {historico.length === 0 && (
+          <p className="mt-3 text-faint text-xs">
+            As mudanças de etapa passaram a ser registradas em 10/11/2026. Antes
+            disso, só a data da candidatura é conhecida.
+          </p>
+        )}
+      </Panel>
     </PageShell>
+  );
+}
+
+/** "16/11 às 09:30", no horário de Brasília. */
+function quando(iso: string): string {
+  const d = new Date(iso);
+  const dia = d.toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const hora = d.toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${dia} às ${hora}`;
+}
+
+function ItemDoHistorico({ evento }: { evento: EventoDoHistorico }) {
+  const contato = evento.tipo === "contato";
+  return (
+    <li className="flex gap-3 text-sm">
+      <span
+        className={
+          contato
+            ? "mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-empresas/15 text-empresas"
+            : "mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-panel-2 text-muted"
+        }
+      >
+        {contato ? (
+          <Phone size={14} aria-hidden />
+        ) : (
+          <ArrowRight size={14} aria-hidden />
+        )}
+      </span>
+      <span className="min-w-0">
+        {evento.tipo === "contato" ? (
+          <span className="block whitespace-pre-line break-words">
+            {evento.nota}
+          </span>
+        ) : (
+          <span className="block">
+            {APPLICATION_LABELS[evento.de]} → {APPLICATION_LABELS[evento.para]}
+          </span>
+        )}
+        <span className="block text-faint text-xs">
+          {quando(evento.criadoEm)}
+          {evento.tipo === "contato"
+            ? " · contato registrado"
+            : evento.autorId === null
+              ? " · automático"
+              : ""}
+        </span>
+      </span>
+    </li>
   );
 }
 

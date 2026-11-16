@@ -100,6 +100,26 @@ export class RepositorioCandidaturasMemoria implements RepositorioCandidaturas {
       .reverse();
   }
 
+  async registrarContato(
+    candidaturaId: string,
+    nota: string,
+    autorId: string | null,
+  ): Promise<EventoDoHistorico> {
+    if (!this.itens.has(candidaturaId)) {
+      throw erros.naoEncontrado("Candidatura");
+    }
+    const evento: EventoDoHistorico = {
+      id: crypto.randomUUID(),
+      candidaturaId,
+      tipo: "contato",
+      nota,
+      autorId,
+      criadoEm: new Date().toISOString(),
+    };
+    this.historico.push(evento);
+    return evento;
+  }
+
   async ultimasMovimentacoes(
     candidaturaIds: readonly string[],
   ): Promise<Map<string, string>> {

@@ -225,6 +225,7 @@ As duas portas de contratação, os campos da vaga, a triagem, o funil de candid
 - Sete etapas, e o histórico de cada candidatura (#608)
 - O painel responde "como estão os processos" e "o que eu faço agora" (#610)
 - Cada vaga tem a página do seu processo seletivo (#612)
+- A ficha conta a história da candidatura, e guarda a pessoa (#618)
 - O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
 - Perguntas de triagem: separar sem esconder (#491)
 - A área de contratação como mini CRM: abas, funil e o resumo do dia (#511)

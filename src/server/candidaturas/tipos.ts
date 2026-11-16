@@ -70,6 +70,16 @@ export interface RepositorioCandidaturas {
   historicoDe(candidaturaId: string): Promise<EventoDoHistorico[]>;
 
   /**
+   * Registra um contato da empresa com a pessoa ("liguei, retorna amanhã")
+   * no histórico (#618). Quem chama já conferiu que a candidatura é dela.
+   */
+  registrarContato(
+    candidaturaId: string,
+    nota: string,
+    autorId: string | null,
+  ): Promise<EventoDoHistorico>;
+
+  /**
    * Quando cada candidatura foi mexida pela última vez (#610), indexado pelo
    * id. Quem nunca foi movida não está no mapa — quem lê usa a data em que
    * ela chegou.

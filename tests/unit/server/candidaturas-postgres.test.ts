@@ -206,6 +206,42 @@ describe("RepositorioCandidaturasPostgres", () => {
     expect(chamadas).toHaveLength(0);
   });
 
+  it("registrarContato grava no histórico com o tipo contato", async () => {
+    chamadas.length = 0;
+    resposta = {
+      data: {
+        id: "h3",
+        candidatura_id: LINHA.id,
+        tipo: "contato",
+        nota: "Liguei.",
+        autor_id: "empresa-1",
+        criado_em: "2026-11-16T12:00:00Z",
+      },
+      error: null,
+    };
+    const evento = await repo.registrarContato(
+      LINHA.id,
+      "Liguei.",
+      "empresa-1",
+    );
+    expect(evento).toMatchObject({ tipo: "contato", nota: "Liguei." });
+    const insercao = chamadas.find((c) => c.metodo === "insert");
+    expect(insercao?.tabela).toBe("historico_candidatura");
+    expect(insercao?.args[0]).toEqual({
+      candidatura_id: LINHA.id,
+      tipo: "contato",
+      nota: "Liguei.",
+      autor_id: "empresa-1",
+    });
+  });
+
+  it("contato em candidatura que não existe é 'não encontrado'", async () => {
+    resposta = { data: null, error: { message: "fk", code: "23503" } };
+    await expect(
+      repo.registrarContato("nao-existe", "x", null),
+    ).rejects.toMatchObject({ codigo: "nao_encontrado" });
+  });
+
   it("historicoDe devolve etapas e contatos, cada um com a sua forma", async () => {
     resposta = {
       data: [
