@@ -169,10 +169,74 @@ describe("contas do funil", () => {
     expect(vencendo.map((v) => v.id)).toEqual(["1"]);
   });
 
-  it("estágio só vale se for um dos cinco", () => {
+  it("estágio só vale se for um dos sete", () => {
     expect(ehEstagio("entrevista")).toBe(true);
+    expect(ehEstagio("contratada")).toBe(true);
     expect(ehEstagio("contratado")).toBe(false);
     expect(ehEstagio(undefined)).toBe(false);
+  });
+});
+
+/*
+ * A busca por nome, os reprovados recolhidos e o quadro de uma vaga só
+ * (#612).
+ */
+describe("quadro do funil: busca, reprovados e vaga única", () => {
+  it("a busca filtra pelo nome, sem acento nem maiúscula, e ajusta a contagem", () => {
+    montar([
+      ...CARDS,
+      card({ id: "d", nome: "João Pereira", status: "entrevista" }),
+    ]);
+    fireEvent.change(screen.getByLabelText("Buscar candidato pelo nome"), {
+      target: { value: "joao" },
+    });
+
+    expect(screen.getByText("João Pereira")).toBeInTheDocument();
+    expect(screen.queryByText("Everton Rodrigues")).toBeNull();
+    expect(coluna(/^Entrevista: 1$/)).toBeInTheDocument();
+    expect(coluna(/^Nova: 0$/)).toBeInTheDocument();
+  });
+
+  it("busca sem ninguém diz isso, em vez de sete colunas vazias sem explicação", () => {
+    montar();
+    fireEvent.change(screen.getByLabelText("Buscar candidato pelo nome"), {
+      target: { value: "zzz" },
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /Ninguém com esse nome/,
+    );
+  });
+
+  it("reprovados começam recolhidos, com a contagem à vista, e o botão abre", () => {
+    montar([
+      ...CARDS,
+      card({ id: "r", nome: "Rui Reprovado", status: "rejeitada" }),
+    ]);
+
+    expect(coluna(/^Reprovado: 1$/)).toBeInTheDocument();
+    const botao = screen.getByRole("button", { name: /Mostrar reprovados/ });
+    expect(botao).toHaveAttribute("aria-expanded", "false");
+    // Recolhido é `md:hidden`: no celular a coluna continua pelo botão de
+    // estágio, então o card segue no documento.
+    const lista = screen.getByText("Rui Reprovado").closest("ul");
+    expect(lista?.className).toContain("md:hidden");
+
+    fireEvent.click(botao);
+    expect(
+      screen.getByRole("button", { name: /Esconder reprovados/ }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByText("Rui Reprovado").closest("ul")?.className,
+    ).not.toContain("md:hidden");
+  });
+
+  it("sem lista de vagas é o quadro de uma vaga: sem seletor e sem cargo no card", () => {
+    render(
+      <QuadroDoFunil cards={CARDS} base="/empresa" estagioInicial="enviada" />,
+    );
+    expect(screen.queryByLabelText("Vaga")).toBeNull();
+    expect(screen.queryByText("Motorista de carreta")).toBeNull();
+    expect(screen.getByText("Everton Rodrigues")).toBeInTheDocument();
   });
 });
 

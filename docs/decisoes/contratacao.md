@@ -326,6 +326,37 @@ O cartão da empresa perdeu "Vagas ativas" e "Currículos", que a visão geral
 mostra logo acima, e ficou com o movimento de 30 dias (candidaturas e
 visualizações).
 
+## Cada vaga tem a página do seu processo seletivo (#612)
+
+Terceira etapa do mini ATS. A vaga era uma linha na aba Vagas e um filtro
+no quadro geral; quem recruta pensa por vaga. `/empresa/vagas/<id>` (e
+`/contratar/vagas/<id>`) mostra o estado e o prazo, quantos em cada etapa,
+as ações da vaga e o quadro só dela. A aba Vagas leva até lá por "Ver
+processo seletivo", sempre, mesmo sem candidato.
+
+**Só o dono abre.** A vaga é procurada entre as da empresa da sessão, e id
+de outra empresa responde o mesmo 404 de id que não existe.
+
+**A contagem do cabeçalho é a etapa de agora**, não o alcance do painel:
+aqui a pergunta é "onde está cada um?".
+
+**Reprovados não é coluna.** Fica numa faixa recolhida abaixo das seis
+etapas, com a contagem à vista e ainda como alvo de arrastar: quem saiu do
+processo não disputa espaço com quem está nele. No celular continua sendo
+um dos botões de etapa. Vale também para a aba Candidatos, que usa o mesmo
+quadro.
+
+**A busca por nome filtra na tela**, sem ir ao servidor: o quadro já tem
+todos os cards. Ignora acento e maiúscula.
+
+**Sem pausar.** A vaga é aberta ou encerrada. O limite dos planos conta
+vagas no ar: pausar liberando o lugar seria rodar mais vagas que o plano
+paga, e pausar sem liberar não difere de encerrar e reativar. O pedido
+desta evolução pedia para não tocar em cobrança nem em publicação.
+
+Os cards saem de um lugar só (`cards-do-funil.ts`) para as duas telas:
+montados em cada uma, a segunda esqueceria a etiqueta ou a entrevista.
+
 ## O resultado da vaga, o chamado no WhatsApp e quem já se candidatou (#492, #493, #494)
 
 Três pedidos do Luiz em 26/10/2026, todos do lado de quem contrata, e todos

@@ -6,25 +6,20 @@ import {
   PageTitle,
 } from "@/components/layout/page-shell";
 import { umParametro } from "@/lib/busca";
-import { mensagemParaCandidato } from "@/lib/chamada";
 import {
   empresaDoPainel,
   getCompany,
   getCompanyApplications,
   getCompanyJobs,
 } from "@/lib/data";
-import { formatarEntrevista } from "@/lib/entrevista";
-import { timeAgo, whatsappLink } from "@/lib/format";
 import { ehEstagio } from "@/lib/funil-de-candidaturas";
 import { TETO_CANDIDATURAS } from "@/lib/limites-de-lista";
-import { motivosDeNaoAtender } from "@/lib/triagem";
-import { acompanhamentosDe } from "@/server/acompanhamento/servico";
 import { sessaoOuEntrar } from "@/server/auth/cookies";
-import { matchPorCandidatura } from "@/server/candidaturas/match";
 import { temPainelDeEmpresa } from "@/server/visualizacoes/servico";
 import { AbasDaContratacao } from "./abas";
 import type { AreaDeContratacao } from "./area";
-import { type CardDoFunil, QuadroDoFunil } from "./quadro-do-funil";
+import { montarCardsDoFunil } from "./cards-do-funil";
+import { QuadroDoFunil } from "./quadro-do-funil";
 
 /**
  * O funil de candidatos (#511): cada candidatura no estágio em que está.
@@ -63,48 +58,14 @@ export async function FunilDaContratacao({
   const pedido = umParametro(params, "estagio");
   const estagioInicial = ehEstagio(pedido) ? pedido : "enviada";
 
-  const match = matchPorCandidatura(candidaturas, vagas);
-  const acompanhamentos = await acompanhamentosDe(
-    candidaturas.map((c) => c.id),
-  );
-  const nomeDaEmpresa = empresa?.company_name ?? "nossa empresa";
-
-  const cards: CardDoFunil[] = candidaturas
-    .filter((c) => !vagaEscolhida || c.job_id === vagaEscolhida)
-    .map((c) => {
-      const m = match.get(c.id);
-      const acompanhamento = acompanhamentos.get(c.id);
-      const entrevistaEm = acompanhamento?.entrevistaEm;
-      return {
-        id: c.id,
-        nome: c.candidate.full_name,
-        avatar: c.candidate.avatar_url,
-        vagaId: c.job_id,
-        vaga: c.job_title,
-        status: c.status,
-        ha: timeAgo(c.created_at),
-        match: m
-          ? {
-              porcentagem: m.porcentagem,
-              pontos: m.pontos,
-              deQuantas: m.deQuantas,
-            }
-          : null,
-        motivos: motivosDeNaoAtender(c.job_questions ?? [], c.answers),
-        whatsapp: c.candidate.phone
-          ? whatsappLink(
-              c.candidate.phone,
-              mensagemParaCandidato({
-                candidato: c.candidate.full_name,
-                vaga: c.job_title,
-                empresa: nomeDaEmpresa,
-              }),
-            )
-          : null,
-        entrevista: entrevistaEm ? formatarEntrevista(entrevistaEm) : null,
-        etiquetas: acompanhamento?.etiquetas ?? [],
-      };
-    });
+  const cards = await montarCardsDoFunil({
+    candidaturas: candidaturas.filter(
+      (c) => !vagaEscolhida || c.job_id === vagaEscolhida,
+    ),
+    todas: candidaturas,
+    vagas,
+    nomeDaEmpresa: empresa?.company_name ?? "nossa empresa",
+  });
 
   return (
     <PageShell width="wide">

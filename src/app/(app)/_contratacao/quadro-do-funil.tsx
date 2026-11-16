@@ -1,11 +1,16 @@
 "use client";
 
-import { CalendarClock, MessageCircle } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronDown,
+  MessageCircle,
+  Search,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type DragEvent, useId, useState, useTransition } from "react";
 import { Avatar } from "@/components/ui/avatar";
-import { Select } from "@/components/ui/field";
+import { Input, Select } from "@/components/ui/field";
 import { APPLICATION_LABELS } from "@/lib/constants";
 import { ESTAGIOS } from "@/lib/funil-de-candidaturas";
 import type { ApplicationStatus } from "@/lib/types";
@@ -54,7 +59,17 @@ const COR_DA_COLUNA: Record<ApplicationStatus, string> = {
  *
  * **No celular, uma coluna por vez**, escolhida pelos botões de estágio no
  * topo, que quebram de linha em vez de rolar para o lado (#460). No `md` as
- * cinco colunas aparecem lado a lado.
+ * colunas aparecem lado a lado.
+ *
+ * **Reprovados não é coluna (#612).** Fica numa faixa recolhida abaixo das
+ * seis etapas: quem saiu do processo não disputa espaço com quem está nele.
+ * Recolhida, continua sendo alvo de arrastar, e a contagem aparece sempre.
+ *
+ * **A busca por nome filtra os cards na tela**, sem ir ao servidor: o quadro
+ * já tem todos. As contagens das colunas passam a ser as do filtro.
+ *
+ * **Sem `vagas`, o quadro é de uma vaga só** (a página do processo, #612):
+ * o seletor de vaga some e o card não repete o cargo.
  *
  * **A mudança aparece na hora**, antes da resposta do servidor, e volta se
  * ele recusar, com o motivo no card. O estado local é só o que foi movido
@@ -73,10 +88,14 @@ export function QuadroDoFunil({
 }: {
   cards: CardDoFunil[];
   base: string;
-  vagas: { id: string; titulo: string }[];
-  vagaEscolhida: string | null;
+  /** As vagas do seletor. Sem elas, o quadro é de uma vaga só. */
+  vagas?: { id: string; titulo: string }[];
+  vagaEscolhida?: string | null;
   estagioInicial: ApplicationStatus;
 }) {
+  const [busca, setBusca] = useState("");
+  const [reprovadosAbertos, setReprovadosAbertos] = useState(false);
+  const idDaBusca = useId();
   const [movidos, setMovidos] = useState<Record<string, ApplicationStatus>>({});
   const [erros, setErros] = useState<Record<string, string>>({});
   const [estagioNoCelular, setEstagioNoCelular] = useState(estagioInicial);
@@ -114,34 +133,58 @@ export function QuadroDoFunil({
     if (id) mover(id, estagio);
   };
 
+  const procurado = semAcento(busca.trim());
+  const visiveis = procurado
+    ? cards.filter((c) => semAcento(c.nome).includes(procurado))
+    : cards;
   const porEstagio = Object.fromEntries(
-    ESTAGIOS.map((e) => [e, cards.filter((c) => estagioDe(c) === e)]),
+    ESTAGIOS.map((e) => [e, visiveis.filter((c) => estagioDe(c) === e)]),
   ) as Record<ApplicationStatus, CardDoFunil[]>;
 
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <label htmlFor={idDoFiltro} className="text-muted text-sm">
-            Vaga
+        <div className="relative w-full sm:w-64">
+          <label htmlFor={idDaBusca} className="sr-only">
+            Buscar candidato pelo nome
           </label>
-          <Select
-            id={idDoFiltro}
-            className="h-11 w-auto max-w-[16rem] py-0 pl-3 text-sm"
-            value={vagaEscolhida ?? ""}
-            onChange={(e) => {
-              const vaga = e.target.value;
-              router.replace(vaga ? `${caminho}?vaga=${vaga}` : caminho);
-            }}
-          >
-            <option value="">Todas as vagas</option>
-            {vagas.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.titulo}
-              </option>
-            ))}
-          </Select>
+          <Search
+            size={16}
+            aria-hidden
+            className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-muted"
+          />
+          <Input
+            id={idDaBusca}
+            type="search"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar pelo nome…"
+            className="h-11 pl-9 text-sm"
+          />
         </div>
+        {vagas && (
+          <div className="flex items-center gap-2">
+            <label htmlFor={idDoFiltro} className="text-muted text-sm">
+              Vaga
+            </label>
+            <Select
+              id={idDoFiltro}
+              className="h-11 w-auto max-w-[16rem] py-0 pl-3 text-sm"
+              value={vagaEscolhida ?? ""}
+              onChange={(e) => {
+                const vaga = e.target.value;
+                router.replace(vaga ? `${caminho}?vaga=${vaga}` : caminho);
+              }}
+            >
+              <option value="">Todas as vagas</option>
+              {vagas.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.titulo}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
         <p className="hidden text-faint text-xs md:block">
           Arraste o card para mudar o estágio, ou use o seletor dele.
         </p>
@@ -171,9 +214,18 @@ export function QuadroDoFunil({
         </div>
       </fieldset>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4 xl:grid-cols-7">
+      {procurado && visiveis.length === 0 && (
+        <p role="status" className="mb-3 text-muted text-sm">
+          Ninguém com esse nome. Confira a grafia ou limpe a busca.
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {ESTAGIOS.map((estagio) => {
           const lista = porEstagio[estagio];
+          // Reprovados: faixa da largura toda, recolhida no computador.
+          const discreta = estagio === "rejeitada";
+          const recolhida = discreta && !reprovadosAbertos;
           const atendem = lista.filter((c) => c.motivos.length === 0);
           const naoAtendem = lista.filter((c) => c.motivos.length > 0);
           return (
@@ -188,12 +240,41 @@ export function QuadroDoFunil({
               onDrop={soltar(estagio)}
               className={cn(
                 "min-w-0 flex-col rounded-[var(--radius-card)] border border-line bg-panel-2 p-2 transition-colors md:flex",
+                discreta && "md:col-[1/-1] md:bg-transparent",
                 estagioNoCelular === estagio ? "flex" : "hidden",
                 sobre === estagio && "border-empresas bg-empresas/8",
               )}
             >
-              <h2 className="mb-2 flex items-center justify-between gap-2 px-1 pt-1 font-semibold text-sm">
-                <span className="flex min-w-0 items-center gap-2">
+              <h2
+                className={cn(
+                  "flex items-center justify-between gap-2 px-1 pt-1 font-semibold text-sm",
+                  recolhida ? "mb-2 md:mb-0 md:pt-0" : "mb-2",
+                )}
+              >
+                {discreta && (
+                  <button
+                    type="button"
+                    aria-expanded={reprovadosAbertos}
+                    onClick={() => setReprovadosAbertos((a) => !a)}
+                    className="hidden min-h-11 flex-1 items-center gap-2 text-left text-muted hover:text-ink md:flex"
+                  >
+                    <ChevronDown
+                      size={16}
+                      aria-hidden
+                      className={cn(
+                        "flex-none transition-transform",
+                        reprovadosAbertos && "rotate-180",
+                      )}
+                    />
+                    {reprovadosAbertos ? "Esconder" : "Mostrar"} reprovados
+                  </button>
+                )}
+                <span
+                  className={cn(
+                    "flex min-w-0 items-center gap-2",
+                    discreta && "md:hidden",
+                  )}
+                >
                   <i
                     aria-hidden
                     className={cn(
@@ -209,11 +290,22 @@ export function QuadroDoFunil({
               </h2>
 
               {lista.length === 0 ? (
-                <p className="px-1 py-6 text-center text-faint text-xs">
+                <p
+                  className={cn(
+                    "px-1 py-6 text-center text-faint text-xs",
+                    recolhida && "md:hidden",
+                  )}
+                >
                   Ninguém neste estágio.
                 </p>
               ) : (
-                <ul className="flex flex-col gap-2">
+                <ul
+                  className={cn(
+                    "flex flex-col gap-2",
+                    discreta && "md:grid md:grid-cols-3 xl:grid-cols-6",
+                    recolhida && "md:hidden",
+                  )}
+                >
                   {atendem.map((c) => (
                     <Cartao
                       key={c.id}
@@ -224,6 +316,7 @@ export function QuadroDoFunil({
                       arrastando={arrastando === c.id}
                       aoArrastar={setArrastando}
                       aoMover={mover}
+                      semVaga={!vagas}
                     />
                   ))}
                   {naoAtendem.length > 0 && (
@@ -241,6 +334,7 @@ export function QuadroDoFunil({
                       arrastando={arrastando === c.id}
                       aoArrastar={setArrastando}
                       aoMover={mover}
+                      semVaga={!vagas}
                     />
                   ))}
                 </ul>
@@ -253,6 +347,14 @@ export function QuadroDoFunil({
   );
 }
 
+/** Minúsculas e sem acento: "joao" acha "João". */
+function semAcento(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 function Cartao({
   card,
   estagio,
@@ -261,7 +363,10 @@ function Cartao({
   arrastando,
   aoArrastar,
   aoMover,
+  semVaga,
 }: {
+  /** No quadro de uma vaga só, o cargo no card seria o mesmo em todos. */
+  semVaga: boolean;
   card: CardDoFunil;
   estagio: ApplicationStatus;
   base: string;
@@ -296,10 +401,14 @@ function Cartao({
       >
         <Avatar name={card.nome} src={card.avatar} size="sm" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-semibold text-sm underline-offset-2 group-hover:underline">
+          <span className="line-clamp-2 break-words font-semibold text-sm underline-offset-2 group-hover:underline">
             {card.nome}
           </span>
-          <span className="block truncate text-muted text-xs">{card.vaga}</span>
+          {!semVaga && (
+            <span className="block truncate text-muted text-xs">
+              {card.vaga}
+            </span>
+          )}
         </span>
       </Link>
 

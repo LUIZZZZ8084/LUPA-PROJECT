@@ -90,6 +90,11 @@ export const ROTAS_EMPRESA: readonly RotaVarrida[] = [
     path: "/empresa/vagas/job-operador-maquinas/editar",
     nome: "Editar vaga",
   },
+  // O processo seletivo da mesma vaga de exemplo (#612).
+  {
+    path: "/empresa/vagas/job-operador-maquinas",
+    nome: "Processo seletivo da vaga",
+  },
   { path: "/candidatos", nome: "Candidatos disponíveis" },
 ] as const;
 
@@ -134,6 +139,8 @@ export const ROTAS_NAO_VARRIDAS: Record<string, string> = {
     "mesma implementação de /empresa/vagas/nova, que é varrida — só muda a base. Exercitada em virar-prestador.spec.ts",
   "/contratar/vagas":
     "mesma implementação de /empresa/vagas, que é varrida — só muda a base. A área do prestador é exercitada em virar-prestador.spec.ts",
+  "/contratar/vagas/[id]":
+    "mesma implementação de /empresa/vagas/[id], que é varrida e tem e2e próprio em processo-da-vaga.spec.ts — só muda a base. Pela área do prestador não há e2e: exige sessão de prestador, que a suíte não compartilha.",
   "/contratar/vagas/[id]/editar":
     "mesma implementação de /empresa/vagas/[id]/editar, que é varrida e tem e2e próprio em editar-vaga.spec.ts — só muda a base. A edição pela área do prestador não tem e2e: a regra mora no serviço, coberto em vagas-edicao.test.ts para os três papéis",
   "/contratar/funil":
