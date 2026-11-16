@@ -33,7 +33,7 @@ export function CopiarEmail({ email }: { email: string }) {
              */
             .catch(() => setCopiado(false));
         }}
-        className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 font-semibold transition-colors hover:bg-panel-2 hover:text-ink"
+        className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 font-semibold transition-colors hover:bg-panel-2 hover:text-ink pointer-coarse:min-h-11 pointer-coarse:px-3"
       >
         {copiado ? <Check size={12} /> : <Copy size={12} />}
         {copiado ? "Copiado" : "Copiar"}

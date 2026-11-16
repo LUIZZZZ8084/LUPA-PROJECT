@@ -113,320 +113,357 @@ export async function FichaDaCandidatura({
       : null;
 
   return (
-    <PageShell width="formulario">
-      <BackLink href={area.base} label={`Voltar para ${area.nome}`} />
+    <PageShell width="colunas">
+      {/*
+        Voltar leva aos candidatos (#625): é a aba que fica ativa na ficha
+        (#620), e é de lá que se chega aqui na maior parte das vezes.
+      */}
+      <BackLink
+        href={`${area.base}/candidaturas`}
+        label="Voltar para os candidatos"
+      />
 
-      <Panel>
-        <div className="flex items-start gap-4">
-          <Avatar name={c.full_name} src={c.avatar_url} size="lg" />
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl leading-tight font-bold">{c.full_name}</h1>
-            <p className="mt-1 text-xs text-muted">
-              Candidatou-se a{" "}
-              <span className="font-semibold text-ink">
-                {candidatura.job_title}
-              </span>{" "}
-              · {timeAgo(candidatura.created_at)}
-            </p>
-            <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              <Badge tone={APPLICATION_TONE[candidatura.status]}>
-                {APPLICATION_LABELS[candidatura.status]}
-              </Badge>
-            </div>
-            {/*
+      {/*
+        No computador (#625), duas colunas: a pessoa à esquerda (contato,
+        etapa, respostas, currículo) e o caderno de quem recruta à direita
+        (anotações e histórico). Era uma coluna de 830 px no meio da tela, e
+        a etapa, a ação mais usada, ficava depois de tudo. Abaixo de `lg`
+        os invólucros são `contents` e a ordem é a de sempre, com a etapa
+        logo depois do contato.
+      */}
+      <div className="contents lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
+        <div className="contents lg:block">
+          <Panel>
+            <div className="flex items-start gap-4">
+              <Avatar name={c.full_name} src={c.avatar_url} size="lg" />
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl leading-tight font-bold">
+                  {c.full_name}
+                </h1>
+                <p className="mt-1 text-xs text-muted">
+                  Candidatou-se a{" "}
+                  <span className="font-semibold text-ink">
+                    {candidatura.job_title}
+                  </span>{" "}
+                  · {timeAgo(candidatura.created_at)}
+                </p>
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  <Badge tone={APPLICATION_TONE[candidatura.status]}>
+                    {APPLICATION_LABELS[candidatura.status]}
+                  </Badge>
+                </div>
+                {/*
               Guardar a pessoa para uma próxima vaga (#618). Fica no topo
               porque a decisão é sobre a pessoa, não sobre esta vaga.
             */}
-            <div className="mt-3">
-              <SalvarNosTalentos
-                candidaturaId={candidatura.id}
-                salvo={salvos.has(candidatura.candidate_id)}
-              />
+                <div className="mt-3">
+                  <SalvarNosTalentos
+                    candidaturaId={candidatura.id}
+                    salvo={salvos.has(candidatura.candidate_id)}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/*
+            {/*
           O contato vem primeiro, antes do currículo.
           Currículo que chega e não vira conversa é a mesma coisa que
           currículo que não chegou — o caminho até "chamar a pessoa" tem
           que ser o mais curto da tela.
         */}
-        <div className="mt-5 flex flex-wrap gap-2">
-          {c.phone && (
-            <ButtonLink
-              href={whatsappLink(c.phone, mensagem)}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="whatsapp"
-            >
-              <MessageCircle size={17} />
-              Chamar no WhatsApp
-            </ButtonLink>
-          )}
-          {c.email && (
-            <ButtonLink href={`mailto:${c.email}`} variant="outline">
-              <Mail size={17} />
-              Enviar e-mail
-            </ButtonLink>
-          )}
-        </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {c.phone && (
+                <ButtonLink
+                  href={whatsappLink(c.phone, mensagem)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="whatsapp"
+                >
+                  <MessageCircle size={17} />
+                  Chamar no WhatsApp
+                </ButtonLink>
+              )}
+              {c.email && (
+                <ButtonLink href={`mailto:${c.email}`} variant="outline">
+                  <Mail size={17} />
+                  Enviar e-mail
+                </ButtonLink>
+              )}
+            </div>
 
-        {c.email && <CopiarEmail email={c.email} />}
-        {c.phone && (
-          <p className="mt-1 text-xs text-muted">
-            WhatsApp: {formatPhone(c.phone)}
-          </p>
-        )}
-        {/*
+            {c.email && <CopiarEmail email={c.email} />}
+            {c.phone && (
+              <p className="mt-1 text-xs text-muted">
+                WhatsApp: {formatPhone(c.phone)}
+              </p>
+            )}
+            {/*
           A mensagem é só o ponto de partida (#493): ela abre escrita no
           campo do WhatsApp, e a empresa edita antes de enviar.
         */}
-        {c.phone && (
-          <p className="mt-1 text-faint text-xs leading-relaxed">
-            A mensagem abre pronta, com seu nome e o cargo da vaga. Edite antes
-            de enviar.
-          </p>
-        )}
-      </Panel>
+            {c.phone && (
+              <p className="mt-1 text-faint text-xs leading-relaxed">
+                A mensagem abre pronta, com seu nome e o cargo da vaga. Edite
+                antes de enviar.
+              </p>
+            )}
+          </Panel>
 
-      {/*
+          {/*
+        A etapa logo depois do contato (#625): é o que se muda a cada
+        conversa, e antes ficava depois do currículo e das anotações.
+      */}
+          <Panel className="mt-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-bold">Estágio no seu processo</h2>
+                <p className="mt-1 text-xs text-muted">
+                  Só você vê isto. A pessoa não é avisada da mudança.
+                </p>
+              </div>
+              <MoverCandidaturaSelect
+                id={candidatura.id}
+                statusAtual={candidatura.status}
+              />
+            </div>
+          </Panel>
+
+          {/*
         As respostas à triagem (#491), ao lado das perguntas. Vêm antes do
         currículo: foi para isso que a empresa perguntou, e é o que decide se
         vale abrir o resto.
       */}
-      {perguntas.length > 0 && (
-        <Panel className="mt-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-bold">Respostas às perguntas</h2>
-            <Badge tone={naoAtende.length === 0 ? "vagas" : "warn"}>
-              {naoAtende.length === 0
-                ? "Respondeu o que a vaga exigia"
-                : "Não respondeu o que a vaga exigia"}
-            </Badge>
-          </div>
-          <ul className="mt-3 space-y-2.5 text-sm">
-            {perguntas.map((p, i) => {
-              const resposta = candidatura.answers?.[i];
-              return (
-                <li
-                  key={p.texto}
-                  className="flex flex-wrap items-baseline gap-x-2"
-                >
-                  <span className="min-w-0 flex-1">{p.texto}</span>
-                  <strong
-                    className={
-                      p.eliminatoria && resposta !== true
-                        ? "text-warn"
-                        : "text-ink"
-                    }
-                  >
-                    {resposta === true
-                      ? "Sim"
-                      : resposta === false
-                        ? "Não"
-                        : "Sem resposta"}
-                  </strong>
-                  {p.eliminatoria && (
-                    <span className="text-faint text-xs">eliminatória</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </Panel>
-      )}
-
-      <Panel className="mt-5">
-        <h2 className="text-base font-bold">Sobre a pessoa</h2>
-
-        <dl className="mt-3 space-y-3 text-sm">
-          <Linha icone={<MapPin size={15} />} rotulo="Onde mora">
-            {c.city ?? "Não informado"}
-          </Linha>
-          <Linha icone={<Briefcase size={15} />} rotulo="Área desejada">
-            {c.desired_area ?? "Não informada"}
-          </Linha>
-          <Linha icone={<CalendarClock size={15} />} rotulo="Disponibilidade">
-            {c.availability ?? "Não informada"}
-          </Linha>
-        </dl>
-
-        {c.summary && (
-          <Secao titulo="Resumo">
-            <p className="leading-relaxed whitespace-pre-line">{c.summary}</p>
-          </Secao>
-        )}
-
-        {c.experiences.length > 0 && (
-          <Secao titulo="Experiência">
-            <ul className="space-y-3">
-              {c.experiences.map((e) => (
-                <li key={`${e.company}-${e.role}-${e.period}`}>
-                  <p className="font-semibold">{e.role}</p>
-                  <p className="text-xs text-muted">
-                    {e.company} · {e.period}
-                  </p>
-                  {e.description && (
-                    <p className="mt-1 leading-relaxed">{e.description}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </Secao>
-        )}
-
-        {c.education && (
-          <Secao titulo="Formação">
-            <p>{c.education}</p>
-          </Secao>
-        )}
-
-        {c.skills.length > 0 && (
-          <Secao titulo="Habilidades">
-            <div className="flex flex-wrap gap-1.5">
-              {c.skills.map((h) => (
-                <Badge key={h} tone="neutral">
-                  {h}
+          {perguntas.length > 0 && (
+            <Panel className="mt-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-bold">Respostas às perguntas</h2>
+                <Badge tone={naoAtende.length === 0 ? "vagas" : "warn"}>
+                  {naoAtende.length === 0
+                    ? "Respondeu o que a vaga exigia"
+                    : "Não respondeu o que a vaga exigia"}
                 </Badge>
-              ))}
-            </div>
-          </Secao>
-        )}
+              </div>
+              <ul className="mt-3 space-y-2.5 text-sm">
+                {perguntas.map((p, i) => {
+                  const resposta = candidatura.answers?.[i];
+                  return (
+                    <li
+                      key={p.texto}
+                      className="flex flex-wrap items-baseline gap-x-2"
+                    >
+                      <span className="min-w-0 flex-1">{p.texto}</span>
+                      <strong
+                        className={
+                          p.eliminatoria && resposta !== true
+                            ? "text-warn"
+                            : "text-ink"
+                        }
+                      >
+                        {resposta === true
+                          ? "Sim"
+                          : resposta === false
+                            ? "Não"
+                            : "Sem resposta"}
+                      </strong>
+                      {p.eliminatoria && (
+                        <span className="text-faint text-xs">eliminatória</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
+          )}
 
-        {/*
+          <Panel className="mt-5">
+            <h2 className="text-base font-bold">Sobre a pessoa</h2>
+
+            <dl className="mt-3 space-y-3 text-sm">
+              <Linha icone={<MapPin size={15} />} rotulo="Onde mora">
+                {c.city ?? "Não informado"}
+              </Linha>
+              <Linha icone={<Briefcase size={15} />} rotulo="Área desejada">
+                {c.desired_area ?? "Não informada"}
+              </Linha>
+              <Linha
+                icone={<CalendarClock size={15} />}
+                rotulo="Disponibilidade"
+              >
+                {c.availability ?? "Não informada"}
+              </Linha>
+            </dl>
+
+            {c.summary && (
+              <Secao titulo="Resumo">
+                <p className="leading-relaxed whitespace-pre-line">
+                  {c.summary}
+                </p>
+              </Secao>
+            )}
+
+            {c.experiences.length > 0 && (
+              <Secao titulo="Experiência">
+                <ul className="space-y-3">
+                  {c.experiences.map((e) => (
+                    <li key={`${e.company}-${e.role}-${e.period}`}>
+                      <p className="font-semibold">{e.role}</p>
+                      <p className="text-xs text-muted">
+                        {e.company} · {e.period}
+                      </p>
+                      {e.description && (
+                        <p className="mt-1 leading-relaxed">{e.description}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </Secao>
+            )}
+
+            {c.education && (
+              <Secao titulo="Formação">
+                <p>{c.education}</p>
+              </Secao>
+            )}
+
+            {c.skills.length > 0 && (
+              <Secao titulo="Habilidades">
+                <div className="flex flex-wrap gap-1.5">
+                  {c.skills.map((h) => (
+                    <Badge key={h} tone="neutral">
+                      {h}
+                    </Badge>
+                  ))}
+                </div>
+              </Secao>
+            )}
+
+            {/*
           O link do currículo nasce a cada visita e expira em um minuto: o
           arquivo mora em bucket privado, e o banco guarda o caminho, não a
           URL. Por isso ele não é copiável nem compartilhável — de
           propósito.
         */}
-        <Secao titulo="Currículo em PDF">
-          {linkCurriculo ? (
-            <ButtonLink
-              href={linkCurriculo}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="outline"
-              size="sm"
-            >
-              <FileText size={16} />
-              Abrir currículo
-            </ButtonLink>
-          ) : (
-            <p className="text-muted">
-              A pessoa ainda não enviou currículo em PDF.
-            </p>
-          )}
-        </Secao>
-      </Panel>
+            <Secao titulo="Currículo em PDF">
+              {linkCurriculo ? (
+                <ButtonLink
+                  href={linkCurriculo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="outline"
+                  size="sm"
+                >
+                  <FileText size={16} />
+                  Abrir currículo
+                </ButtonLink>
+              ) : (
+                <p className="text-muted">
+                  A pessoa ainda não enviou currículo em PDF.
+                </p>
+              )}
+            </Secao>
+          </Panel>
+        </div>
 
-      {/*
+        <div className="contents lg:block">
+          {/*
         Anotações e entrevista (#539): o caderno de quem recruta, preso à
         candidatura. Só a empresa lê — a frase diz isso antes do campo, porque
         quem escreve "pede salário alto" precisa saber que a pessoa não vê.
       */}
-      <Panel className="mt-5">
-        <h2 className="text-base font-bold">Anotações e entrevista</h2>
-        <p className="mt-1 text-xs text-muted">
-          Só você vê isto. A pessoa não recebe nada até você mandar o convite.
-        </p>
-
-        {entrevista && (
-          <div className="mt-4 rounded-xl border border-empresas/25 bg-empresas/8 p-3.5">
-            <p className="flex items-center gap-2 font-semibold text-sm">
-              <CalendarClock size={16} className="text-empresas" aria-hidden />
-              Entrevista {entrevista}
-            </p>
-            {acompanhamento?.entrevistaLocal && (
-              <p className="mt-0.5 pl-6 text-muted text-sm">
-                {acompanhamento.entrevistaLocal}
-              </p>
-            )}
-            {convite && (
-              <ButtonLink
-                href={convite}
-                target="_blank"
-                rel="noopener noreferrer"
-                variant="whatsapp"
-                size="sm"
-                className="mt-3"
-              >
-                <MessageCircle size={16} />
-                Enviar convite no WhatsApp
-              </ButtonLink>
-            )}
-          </div>
-        )}
-
-        <FormularioDeAcompanhamento
-          candidaturaId={candidatura.id}
-          anotacao={acompanhamento?.anotacao ?? ""}
-          entrevistaEm={acompanhamento?.entrevistaEm ?? null}
-          entrevistaLocal={acompanhamento?.entrevistaLocal ?? null}
-          etiquetas={acompanhamento?.etiquetas ?? []}
-        />
-      </Panel>
-
-      <Panel className="mt-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold">Estágio no seu processo</h2>
+          <Panel className="mt-5 lg:mt-0">
+            <h2 className="text-base font-bold">Anotações e entrevista</h2>
             <p className="mt-1 text-xs text-muted">
-              Só você vê isto. A pessoa não é avisada da mudança.
+              Só você vê isto. A pessoa não recebe nada até você mandar o
+              convite.
             </p>
-          </div>
-          <MoverCandidaturaSelect
-            id={candidatura.id}
-            statusAtual={candidatura.status}
-          />
-        </div>
-      </Panel>
 
-      {/*
+            {entrevista && (
+              <div className="mt-4 rounded-xl border border-empresas/25 bg-empresas/8 p-3.5">
+                <p className="flex items-center gap-2 font-semibold text-sm">
+                  <CalendarClock
+                    size={16}
+                    className="text-empresas"
+                    aria-hidden
+                  />
+                  Entrevista {entrevista}
+                </p>
+                {acompanhamento?.entrevistaLocal && (
+                  <p className="mt-0.5 pl-6 text-muted text-sm">
+                    {acompanhamento.entrevistaLocal}
+                  </p>
+                )}
+                {convite && (
+                  <ButtonLink
+                    href={convite}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="whatsapp"
+                    size="sm"
+                    className="mt-3"
+                  >
+                    <MessageCircle size={16} />
+                    Enviar convite no WhatsApp
+                  </ButtonLink>
+                )}
+              </div>
+            )}
+
+            <FormularioDeAcompanhamento
+              candidaturaId={candidatura.id}
+              anotacao={acompanhamento?.anotacao ?? ""}
+              entrevistaEm={acompanhamento?.entrevistaEm ?? null}
+              entrevistaLocal={acompanhamento?.entrevistaLocal ?? null}
+              etiquetas={acompanhamento?.etiquetas ?? []}
+            />
+          </Panel>
+
+          {/*
         O histórico (#618): por onde a candidatura passou e os contatos que a
         empresa registrou, do mais recente ao mais antigo, terminando no dia
         em que a pessoa se candidatou. Só a empresa vê.
       */}
-      <Panel className="mt-5">
-        <h2 className="flex items-center gap-2 text-base font-bold">
-          <History size={18} className="text-empresas" aria-hidden />
-          Histórico
-        </h2>
-        <p className="mt-1 text-xs text-muted">
-          Só você vê isto. Mudanças de etapa entram sozinhas; contatos, você
-          registra.
-        </p>
+          <Panel className="mt-5">
+            <h2 className="flex items-center gap-2 text-base font-bold">
+              <History size={18} className="text-empresas" aria-hidden />
+              Histórico
+            </h2>
+            <p className="mt-1 text-xs text-muted">
+              Só você vê isto. Mudanças de etapa entram sozinhas; contatos, você
+              registra.
+            </p>
 
-        <RegistrarContato
-          key={historico.length}
-          candidaturaId={candidatura.id}
-        />
+            <RegistrarContato
+              key={historico.length}
+              candidaturaId={candidatura.id}
+            />
 
-        <ol className="mt-5 space-y-3 border-line border-t pt-4">
-          {historico.map((e) => (
-            <ItemDoHistorico key={e.id} evento={e} />
-          ))}
-          <li className="flex gap-3 text-sm">
-            <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-panel-2 text-muted">
-              <Send size={14} aria-hidden />
-            </span>
-            <span className="min-w-0">
-              <span className="block">
-                Candidatou-se a {candidatura.job_title}
-              </span>
-              <span className="block text-faint text-xs">
-                {quando(candidatura.created_at)}
-              </span>
-            </span>
-          </li>
-        </ol>
-        {historico.length === 0 && (
-          <p className="mt-3 text-faint text-xs">
-            As mudanças de etapa passaram a ser registradas em 10/11/2026. Antes
-            disso, só a data da candidatura é conhecida.
-          </p>
-        )}
-      </Panel>
+            <ol className="mt-5 space-y-3 border-line border-t pt-4">
+              {historico.map((e) => (
+                <ItemDoHistorico key={e.id} evento={e} />
+              ))}
+              <li className="flex gap-3 text-sm">
+                <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-panel-2 text-muted">
+                  <Send size={14} aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block">
+                    Candidatou-se a {candidatura.job_title}
+                  </span>
+                  <span className="block text-faint text-xs">
+                    {quando(candidatura.created_at)}
+                  </span>
+                </span>
+              </li>
+            </ol>
+            {historico.length === 0 && (
+              <p className="mt-3 text-faint text-xs">
+                As mudanças de etapa passaram a ser registradas em 10/11/2026.
+                Antes disso, só a data da candidatura é conhecida.
+              </p>
+            )}
+          </Panel>
+        </div>
+      </div>
     </PageShell>
   );
 }

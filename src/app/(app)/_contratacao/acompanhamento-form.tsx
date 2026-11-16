@@ -43,10 +43,15 @@ export function FormularioDeAcompanhamento({
     <form action={action} {...envio} className="mt-4 space-y-4">
       <input type="hidden" name="candidaturaId" value={candidaturaId} />
 
+      {/*
+        Anotação e contato são dois campos de texto na mesma ficha (#625), e
+        a ajuda diz a diferença: aqui um texto só, reescrito; no histórico,
+        uma linha com data por contato.
+      */}
       <Field
         label="Anotações"
         error={state.campos?.anotacao}
-        hint="O que conversaram, o que a pessoa pediu, o que falta conferir."
+        hint="O que você achou da pessoa, num texto só que você reescreve quando quiser. Cada ligação ou mensagem vai no histórico, abaixo, com a data."
       >
         <Textarea
           name="anotacao"
