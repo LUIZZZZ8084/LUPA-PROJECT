@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 /**
- * Gera os avatares dos perfis de teste.
+ * Gera os avatares desenhados dos perfis de teste.
+ *
+ * **Desde a #614 só uma parte dos exemplos usa avatar desenhado.** Os 9
+ * prestadores têm retrato fotográfico gerado por IA e três empresas têm
+ * logo própria, em `.webp`, fora deste script. Os candidatos e as outras
+ * três empresas continuam saindo daqui. Rodar de novo não toca nos
+ * `.webp`.
  *
  *   node scripts/gerar-avatares.mjs
  *
@@ -39,15 +45,6 @@ const DESTINO = join(process.cwd(), "public", "avatares");
 const FUNDOS = ["121821", "161d28", "1b2330"];
 
 const PESSOAS = [
-  "prv-joao-silva",
-  "prv-carlos-souza",
-  "prv-marcos-lima",
-  "prv-jose-moreira",
-  "prv-ana-paula",
-  "prv-rosa-mendes",
-  "prv-pedro-alves",
-  "prv-luciana-costa",
-  "prv-antonio-ferreira",
   "cnd-everton-rodrigues",
   "cnd-wesley-barbosa",
   "cnd-adriano-klein",
@@ -57,9 +54,6 @@ const PESSOAS = [
 ];
 
 const EMPRESAS = [
-  "cmp-agro-norte",
-  "cmp-comercial-sinop",
-  "cmp-casa-construcao",
   "cmp-bom-preco",
   "cmp-transportes-brasil",
   "cmp-clinica-vida",

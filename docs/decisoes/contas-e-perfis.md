@@ -327,3 +327,29 @@ Trigger em `publicacoes`, não só checagem na aplicação. A aplicação també
 confere, para dar mensagem decente antes de gravar — mas duas requisições
 simultâneas passariam pela checagem e criariam a décima primeira. O banco é
 o único lugar onde essa corrida não existe.
+
+## Retratos e logos dos perfis de exemplo (#614)
+
+Pedido do Luiz em 16/11/2026: os avatares desenhados deixavam a
+demonstração menos apresentável. **Os 9 prestadores de exemplo ganharam
+retrato fotográfico gerado por IA** (ChatGPT, contas do Luiz), de pessoas
+que não existem, com o mesmo enquadramento, luz e fundo. Ficam em
+`public/avatares/prv-*.webp`, 256×256, entre 6 e 11 KB.
+
+**Banco de imagem foi descartado.** No Pexels, os retratos com tag de IA
+eram fotos de câmera de verdade (Canon, Nikon, Sony) com a tag posta para
+aparecer na busca, e nada na página marca uma foto como gerada. Pôr o rosto
+de alguém real num perfil inventado, com nome, profissão e nota, seria
+falar por essa pessoa — e a licença do Pexels proíbe uso que sugira apoio
+de quem aparece na foto.
+
+**Três empresas de exemplo ganharam logo** (Agro Norte, Comercial Sinop e
+Casa & Construção), recortada só no símbolo para caber no quadrado do card.
+Vieram de uma busca do Luiz no ChatGPT; duas delas — a do supermercado e a
+da casa — têm cara de portfólio e de banco de vetores, e não foi possível
+confirmar a licença. O Luiz decidiu usar assim por serem dados de teste. Se
+algum desses perfis deixar de ser exemplo, a logo sai antes.
+
+Os candidatos e as outras três empresas continuam com o desenho do
+DiceBear.
+

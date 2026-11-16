@@ -71,7 +71,8 @@ describe("matcher do proxy", () => {
   );
 
   it.each([
-    "/avatares/cmp-agro-norte.svg",
+    "/avatares/cmp-agro-norte.webp",
+    "/avatares/prv-joao-silva.webp",
     "/banner/trabalhador-recortado-v2.webp",
     "/_next/static/chunks/main.js",
     "/_next/image",
