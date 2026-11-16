@@ -60,7 +60,7 @@ export function RegistrarContato({ candidaturaId }: { candidaturaId: string }) {
 }
 
 /**
- * Salvar nos talentos (#618). A mudança aparece na hora e volta se o
+ * Guardar nos talentos (#618). A mudança aparece na hora e volta se o
  * servidor recusar, com o motivo — o mesmo desenho do seletor de etapa.
  */
 export function SalvarNosTalentos({
@@ -102,7 +102,7 @@ export function SalvarNosTalentos({
         ) : (
           <Bookmark size={15} aria-hidden />
         )}
-        {salvo ? "Salvo nos talentos" : "Salvar nos talentos"}
+        {salvo ? "Guardado nos talentos" : "Guardar nos talentos"}
       </Button>
       {erro && (
         <p role="alert" className="mt-1 text-danger text-xs">

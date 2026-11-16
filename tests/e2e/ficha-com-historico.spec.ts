@@ -11,10 +11,20 @@ import { ARQUIVO_SESSAO_EMPRESA, aguardarHidratacao } from "./helpers";
  */
 test.use({ storageState: ARQUIVO_SESSAO_EMPRESA });
 
+/*
+ * Abre a ficha de alguém que já está "Em triagem". Abrir a ficha de quem
+ * está em "Nova" a tira de lá, e a coluna das novas é a que o celular mostra
+ * primeiro: esvaziá-la quebrava os specs seguintes, que procuram um card
+ * ali. Quem já foi visto continua onde está.
+ */
 async function abrirUmaFicha(page: import("@playwright/test").Page) {
   await page.goto("/empresa/funil");
   const href = await page
-    .locator('main a[href^="/empresa/candidaturas/"]')
+    // Pelo atributo, e não por papel: no celular a coluna fica escondida, e
+    // coluna escondida não aparece na árvore de acessibilidade.
+    .locator(
+      'section[aria-label^="Em triagem"] a[href^="/empresa/candidaturas/"]',
+    )
     .first()
     .getAttribute("href");
   expect(href).toBeTruthy();
