@@ -446,7 +446,7 @@ export default async function JobDetailPage({
                   Ainda não tem conta?{" "}
                   <Link
                     href={`/cadastro?tipo=candidato_clt&destino=${encodeURIComponent(destino)}`}
-                    className="-my-3 inline-flex items-center py-3 font-medium text-vagas underline-offset-2 hover:underline"
+                    className="-my-3.5 inline-flex items-center py-3.5 font-medium text-vagas underline-offset-2 hover:underline"
                   >
                     Criar conta grátis
                   </Link>

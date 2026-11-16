@@ -278,9 +278,12 @@ test.describe("virar prestador", () => {
     await ficha.click();
 
     await page.waitForURL(/\/contratar\/candidaturas\//);
-    await expect(
-      page.getByRole("link", { name: /voltar para contratar/i }),
-    ).toBeVisible();
+    // Voltar leva aos candidatos da mesma área (#625), nunca à da empresa.
+    const voltar = page.getByRole("link", {
+      name: /voltar para os candidatos/i,
+    });
+    await expect(voltar).toBeVisible();
+    await expect(voltar).toHaveAttribute("href", "/contratar/candidaturas");
   });
 
   /** Cada porta atende o próprio papel — nunca a área escrita para CNPJ. */

@@ -172,8 +172,8 @@ export async function cadastrar(
       formacao: null,
       habilidades: [],
       experiencias: [],
-      // A escolha feita no cadastro (#622): "Sim" vem marcado na tela, e
-      // sem a escolha no envio é desligado.
+      // A escolha feita no cadastro (#622, #627): a tela obriga a responder,
+      // e sem a escolha no envio é desligado.
       visivelParaEmpresas: dados.visivelParaEmpresas ?? false,
       // Gerador de currículo pago (#47) — libera na compra, não no cadastro.
       geradorCurriculoLiberado: false,

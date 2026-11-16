@@ -32,7 +32,7 @@ export function RegistrarContato({ candidaturaId }: { candidaturaId: string }) {
       <Field
         label="Registrar contato"
         error={state.campos?.nota}
-        hint="Ligação, mensagem, recado: o que foi falado e o que ficou combinado."
+        hint="Ligação, mensagem, recado: o que foi falado e o que ficou combinado. Cada contato entra como uma linha nova, com a data."
       >
         <Textarea
           name="nota"

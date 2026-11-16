@@ -8,9 +8,26 @@ Detalhe de arquitetura e o porquê de cada decisão está no
 [AGENTS.md](AGENTS.md); o desenho do sistema, com diagramas, em
 [docs/arquitetura.md](docs/arquitetura.md).
 
-**Última atualização: 07/11/2026.**
+**Última atualização: 16/11/2026.**
 
 ## Concluído
+
+Em 16/11/2026:
+
+- Revisão de design das telas novas da área de quem contrata e do
+  cadastro: o painel da empresa abre em "Precisa da sua atenção", sem o
+  cartão de vagas para publicar quando o plano é ilimitado, e o funil fala
+  no passado ("Passaram pela triagem") para não bater de frente com a
+  visão geral; a ficha do candidato vira duas colunas no computador, com a
+  etapa logo depois do contato; o porte da empresa sai por extenso
+  ("Média empresa"); no cadastro, "ser encontrado por empresas" chega sem
+  opção marcada e precisa de resposta; e o "Criar conta grátis" da vaga
+  aberta ganha alvo de toque de 44 px —
+  [#624](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/624),
+  [#625](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/625),
+  [#626](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/626),
+  [#627](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/627),
+  [#628](https://github.com/LUIZZZZ8084/LUPA-PROJECT/issues/628)
 
 Em 07/11/2026:
 

@@ -189,6 +189,8 @@ test.describe("criar conta a partir da vaga", () => {
     await page.getByLabel("CPF").fill(cpfDeTeste());
     await page.getByLabel("Área desejada").selectOption({ index: 1 });
     await escolherCidade(page);
+    // A pergunta de ser encontrado é obrigatória (#627).
+    await page.getByLabel(/Não, só pelas vagas/).check();
     await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
     await page.getByRole("button", { name: /criar conta/i }).click();
 
@@ -221,6 +223,8 @@ test.describe("criar conta a partir da vaga", () => {
     await page.getByLabel("CPF").fill(cpfDeTeste());
     await page.getByLabel("Área desejada").selectOption({ index: 1 });
     await escolherCidade(page);
+    // A pergunta de ser encontrado é obrigatória (#627).
+    await page.getByLabel(/Não, só pelas vagas/).check();
     await page.getByLabel("Senha").fill(SENHA_DE_TESTE);
     await page.getByRole("button", { name: /criar conta/i }).click();
 

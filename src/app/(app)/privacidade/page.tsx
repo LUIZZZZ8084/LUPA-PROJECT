@@ -175,13 +175,14 @@ export default function PrivacidadePage() {
         <p>
           <strong>Ser encontrado por empresas é escolha sua.</strong> No
           cadastro de candidato você escolhe se empresas podem encontrar você
-          sem que você tenha se candidatado; a resposta &ldquo;sim&rdquo; vem
-          marcada, e &ldquo;não&rdquo; está ao lado. Ligada, a opção entrega{" "}
-          <em>contato</em>, não currículo. Só empresa com o CNPJ conferido na
-          Receita faz essa busca, e cada uma abre um número limitado de perfis
-          por dia. Você muda a escolha quando quiser, em Editar perfil — e vale
-          pensar nisso se estiver empregado: numa cidade pequena, o seu patrão
-          atual pode estar entre as empresas cadastradas.
+          sem que você tenha se candidatado: nenhuma resposta vem marcada, e o
+          cadastro só segue depois que você escolhe &ldquo;sim&rdquo; ou
+          &ldquo;não&rdquo;. Ligada, a opção entrega <em>contato</em>, não
+          currículo. Só empresa com o CNPJ conferido na Receita faz essa busca,
+          e cada uma abre um número limitado de perfis por dia. Você muda a
+          escolha quando quiser, em Editar perfil — e vale pensar nisso se
+          estiver empregado: numa cidade pequena, o seu patrão atual pode estar
+          entre as empresas cadastradas.
         </p>
       </Artigo>
 
@@ -200,12 +201,12 @@ export default function PrivacidadePage() {
             </li>
             <li>
               <strong>Consentimento</strong> (inciso I) — ser encontrado por
-              empresas, e receber aviso de vaga nova. Os dois nascem desligados
-              e você desliga quando quiser. Quem pede aviso entra, sem nome,
-              numa contagem que a empresa vê ao escolher um plano — &quot;N
-              pessoas da sua cidade pediram aviso&quot; —, e ela só aparece com
-              dez pessoas ou mais na cidade, para o número não apontar para
-              ninguém.
+              empresas, que você responde no cadastro, e receber aviso de vaga
+              nova, que nasce desligado. Os dois você desliga quando quiser.
+              Quem pede aviso entra, sem nome, numa contagem que a empresa vê ao
+              escolher um plano — &quot;N pessoas da sua cidade pediram
+              aviso&quot; —, e ela só aparece com dez pessoas ou mais na cidade,
+              para o número não apontar para ninguém.
             </li>
             <li>
               <strong>Legítimo interesse</strong> (inciso IX) — conter fraude e
